@@ -81,7 +81,9 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 			r := rig.NewReleases(t)
 			s := updatesScene(t, r)
 			updatesOf(s).WaitStartup() // an automatic start's own check, done: Check below isn't turned away as one runs
-			s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, mode)
+			if err := s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, mode); err != nil {
+				t.Fatal(err)
+			}
 			r.Publish("1.1.0", "")
 			updatesOf(s).Check()
 			cached := filepath.Join(updatesOf(s).Updater().CacheDir, "1.1.0", "oriel-"+strings.ReplaceAll(update.Platform(), "/", "-"))
@@ -122,7 +124,9 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 func TestUpdatedSaysSo(t *testing.T) {
 	r := rig.NewReleases(t)
 	state := t.TempDir()
-	os.WriteFile(filepath.Join(state, "version"), []byte("0.9.0\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(state, "version"), []byte("0.9.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	cfg := func(c *apptest.Config) { c.StateDir = state }
 	s := updatesScene(t, r, cfg)
 	if !hasNotice(s.Store().State(), "update.done") {

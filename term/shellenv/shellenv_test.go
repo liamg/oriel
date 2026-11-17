@@ -141,13 +141,13 @@ func TestAgentSocketIsTakenOnlyWhenItsThere(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	sock := filepath.Join(dir, "a.sock")
 	l, err := net.Listen("unix", sock)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { l.Close() })
+	t.Cleanup(func() { _ = l.Close() })
 	plain := filepath.Join(dir, "file")
 	if err := os.WriteFile(plain, nil, 0o600); err != nil {
 		t.Fatal(err)

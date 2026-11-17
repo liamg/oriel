@@ -56,7 +56,7 @@ func TestJobFormNoAgents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(w)})
 	s.Run("jobs.new", nil)
 	x := jobsOf(s)

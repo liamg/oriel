@@ -15,10 +15,12 @@ func TestShotDrawsTheRecordedFrame(t *testing.T) {
 	be := NewWith(ts)
 	w, _ := be.NewWindow(render.WindowOpts{Width: 100, Height: 40})
 	hw := w.(*Window)
-	hw.Frame(func(f render.Frame) {
+	if err := hw.Frame(func(f render.Frame) {
 		f.Rect(render.XYWH(0, 0, 50, 40), render.Style{Fill: render.Color{R: 255, A: 255}})
 		f.Glyphs(be.Shaper().Shape("Hi", typeset.FontSpec{Family: typeset.Mono, Size: 20}), render.Point{X: 60, Y: 30}, render.Color{G: 255, A: 255})
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	img := hw.Shot(hw.Frames()[0], render.Color{A: 255})
 	if img.Bounds().Dx() != 100 || img.RGBAAt(10, 10).R != 255 {
 		t.Errorf("shot %v, pixel %v", img.Bounds(), img.RGBAAt(10, 10))
@@ -53,11 +55,13 @@ func TestZoomScalesTheWindow(t *testing.T) {
 	default:
 		t.Error("no resize for the app")
 	}
-	hw.Frame(func(f render.Frame) {
+	if err := hw.Frame(func(f render.Frame) {
 		if f.Scale() != 1.5 {
 			t.Errorf("the frame records at %v", f.Scale())
 		}
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if img := hw.Shot(hw.Frames()[0], render.Color{A: 255}); img.Bounds().Dx() != 1500 {
 		t.Errorf("the shot is %v wide, want the window's 1500 device pixels", img.Bounds().Dx())
 	}

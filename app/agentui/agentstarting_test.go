@@ -61,9 +61,11 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	}()
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		return r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	r.TypeKeys("<D-n>")
 	r.WaitText("NEW SESSION")

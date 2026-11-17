@@ -143,17 +143,15 @@ func TestDiffUnifiedIsRemembered(t *testing.T) {
 		t.Error("unified lines have no - and + signs")
 	}
 	var v any
-	app.Do(func() error { v, _, _ = app.Host.Options().Get("diff.layout", registry.At{}); return nil })
+	if err := app.Do(func() error { v, _, _ = app.Host.Options().Get("diff.layout", registry.At{}); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	if v != "unified" {
 		t.Errorf("diff.layout is %v", v)
 	}
-	app.Do(func() error {
-		return app.Host.Run(context.Background(), "view.close", registry.Args{"id": gitui.DiffView, "instance": r.Dir})
-	})
+	app.Run("view.close", registry.Args{"id": gitui.DiffView, "instance": r.Dir})
 	app.WaitGone("MARK REVIEWED")
-	app.Do(func() error {
-		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, "internal/pricing/round.go")})
-	})
+	app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "internal/pricing/round.go")})
 	app.Latest("unified again", func(f headless.Frame) bool {
 		o, n := glyphs(f, "Round"), glyphs(f, "Truncate")
 		return len(o) > 0 && len(n) > 0 && o[0].At.Y < n[0].At.Y
@@ -206,12 +204,18 @@ func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	r, _, _ := apptest.AgentWindow(t)
 	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundWork), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) })
+	if err := os.WriteFile(path, []byte(rig.RoundWork), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the session's diff, both hunks against main", func(s string) bool {
 		return apptest.HasAll(s, "func roundHalfEven", "func RoundMinor") && strings.Count(s, "MARK REVIEWED") == 2
 	})
@@ -226,8 +230,12 @@ func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	}
 	r.WaitFrame("one hunk reviewed", func(s string) bool { return strings.Count(s, "MARK REVIEWED") == 1 })
 	// The agent edits the other hunk; the first stays reviewed.
-	os.WriteFile(path, []byte(strings.Replace(rig.RoundWork, "if !ok { p = 2 }", "if !ok { p = fallback }", 1)), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "git.refresh", nil) })
+	if err := os.WriteFile(path, []byte(strings.Replace(rig.RoundWork, "if !ok { p = 2 }", "if !ok { p = fallback }", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "git.refresh", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("fallback")
 	r.WaitFrame("the first hunk still reviewed", func(s string) bool { return strings.Count(s, "MARK REVIEWED") == 1 && strings.Contains(s, "fallback") })
 }
@@ -238,12 +246,18 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	// Against main, not the whole file as new before main is read: a click as the diff is made again lands on the row
 	// in its place after.
 	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
@@ -271,12 +285,18 @@ func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	// Against main, not the whole file as new before main is read: a click as the diff is made again lands on the row
 	// in its place after.
 	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })

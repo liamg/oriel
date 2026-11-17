@@ -152,9 +152,13 @@ func TestLongTranscriptDrawsWhatShows(t *testing.T) {
 	for i := range 3000 {
 		items = append(items, core.Item{ID: fmt.Sprint("a", i), Kind: core.ItemAssistant, Text: fmt.Sprintf("step %d of the work", i)})
 	}
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
-		Agent: core.AgentState{Provider: "claude", Running: true}, Transcript: items}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
+		Agent: core.AgentState{Provider: "claude", Running: true}, Transcript: items}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("agent.console", nil)
 	s.Frame()
 	s.Frame()

@@ -59,7 +59,7 @@ func fakeAdapter(mode, addr string) {
 		seq++
 		m["seq"] = seq
 		b, _ := json.Marshal(m)
-		dap.WriteFrame(rw, b)
+		_ = dap.WriteFrame(rw, b)
 	}
 	reply := func(req dap.Message, ok bool, body any, msg string) {
 		send(map[string]any{"type": "response", "request_seq": req.Seq, "command": req.Command, "success": ok, "body": body, "message": msg})
@@ -70,7 +70,7 @@ func fakeAdapter(mode, addr string) {
 			return
 		}
 		var m dap.Message
-		json.Unmarshal(b, &m)
+		_ = json.Unmarshal(b, &m)
 		switch {
 		case m.Type == "response":
 			send(map[string]any{"type": "event", "event": "output", "body": map[string]any{"category": "console",
@@ -174,8 +174,12 @@ func TestConfigFromMap(t *testing.T) {
 
 func TestInferGo(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("// x\npackage main\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "lib.go"), []byte("package lib\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("// x\npackage main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "lib.go"), []byte("package lib\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	infer := dap.Builtins()[0].Infer
 	for file, mode := range map[string]string{"main.go": "debug", "lib.go": "test", "main_test.go": "test"} {
 		c, ok := infer(filepath.Join(dir, file))
@@ -198,7 +202,9 @@ func TestRequestsMatchSchema(t *testing.T) {
 	var schema struct {
 		Definitions map[string]json.RawMessage `json:"definitions"`
 	}
-	json.Unmarshal(b, &schema)
+	if err := json.Unmarshal(b, &schema); err != nil {
+		t.Fatal(err)
+	}
 	type obj struct {
 		Required   []string                   `json:"required"`
 		Properties map[string]json.RawMessage `json:"properties"`
@@ -215,7 +221,9 @@ func TestRequestsMatchSchema(t *testing.T) {
 		}
 		for _, e := range tr.Entries {
 			var m dap.Message
-			json.Unmarshal(e.Msg, &m)
+			if err := json.Unmarshal(e.Msg, &m); err != nil {
+				t.Fatal(err)
+			}
 			if e.Dir != daptest.Send || m.Type != "request" {
 				continue
 			}
@@ -229,7 +237,7 @@ func TestRequestsMatchSchema(t *testing.T) {
 				continue
 			}
 			var got map[string]any
-			json.Unmarshal(m.Arguments, &got)
+			_ = json.Unmarshal(m.Arguments, &got) // a request with no arguments has none of the required ones, said below
 			for _, k := range args.Required {
 				if _, ok := got[k]; !ok {
 					t.Errorf("%s: %s lacks %s", fx.name, m.Command, k)
@@ -264,10 +272,16 @@ func TestFailedStartWaitsForTheAdapter(t *testing.T) {
 			return
 		}
 		var m dap.Message
-		json.Unmarshal(body, &m)
+		if err := json.Unmarshal(body, &m); err != nil {
+			t.Error(err)
+		}
 		res, _ := json.Marshal(map[string]any{"seq": 1, "type": "response", "request_seq": m.Seq, "command": m.Command, "success": false, "message": "no"})
-		dap.WriteFrame(b, res)
-		io.Copy(io.Discard, b)
+		if err := dap.WriteFrame(b, res); err != nil {
+			t.Error(err)
+		}
+		if _, err := io.Copy(io.Discard, b); err != nil {
+			t.Error(err)
+		}
 	}()
 	launch := func(context.Context, dap.AdapterSpec, string, io.Writer) (dap.Process, error) { return p, nil }
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -68,7 +68,9 @@ func lazyScene(t *testing.T, lazy, init string) (*apptest.Scene, string) {
 		t.Fatalf("acme/hi doesn't wait for its first use; notices: %v", noticeTexts(s.Store().State().Notifications))
 	}
 	file := filepath.Join(t.TempDir(), "notes.txt")
-	os.WriteFile(file, []byte("notes\n"), 0o644)
+	if err := os.WriteFile(file, []byte("notes\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return s, file
 }
 
@@ -146,7 +148,9 @@ func TestLazyPluginLoadsOnItsFiletype(t *testing.T) {
 		t.Fatal("a .txt loaded it")
 	}
 	gofile := filepath.Join(filepath.Dir(file), "main.go")
-	os.WriteFile(gofile, []byte("package main\n"), 0o644)
+	if err := os.WriteFile(gofile, []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.OpenFile(gofile)
 	if !hiLoaded(s) || noticed(s, "opened") != 1 {
 		t.Errorf("loaded %v, its hook on the buffer that loaded it; notices: %v", hiLoaded(s), noticeTexts(s.Store().State().Notifications))

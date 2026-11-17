@@ -54,7 +54,9 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
 	touch := signsSlowly(t, p.Dir)
-	os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	done := make(chan error, 1)
 	go func() {
 		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
@@ -77,7 +79,9 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
 	signsSlowly(t, p.Dir)
-	os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	done := make(chan error, 1)
 	go func() {
 		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})

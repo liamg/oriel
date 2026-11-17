@@ -44,12 +44,16 @@ insert_final_newline = false
 	}
 	for name, src := range files {
 		p := filepath.Join(dir, filepath.FromSlash(name))
-		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	os.MkdirAll(filepath.Join(dir, ".git"), 0o755)
+	if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1000, Y: 700}})
 	return s, dir
 }
@@ -98,7 +102,9 @@ func TestEditorConfigApplies(t *testing.T) {
 
 	// Live: edit .editorconfig, and the next look applies it.
 	src, _ := os.ReadFile(filepath.Join(dir, ".editorconfig"))
-	os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte(strings.Replace(string(src), "tab_width = 3", "tab_width = 5", 1)), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte(strings.Replace(string(src), "tab_width = 3", "tab_width = 5", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	editorOf(s).RefreshConventions()
 	if v, _ := option(s, t, "editor.tab_stop", at); v != 5 {
 		t.Errorf("after the edit tab_stop = %v", v)
@@ -120,7 +126,9 @@ func TestGitAttributesApply(t *testing.T) {
 	if v, src := option(s, t, "editor.end_of_line", at); v != "lf" || src != ".editorconfig:6" {
 		t.Errorf("run.bat end_of_line = %v from %q; .editorconfig's comes first", v, src)
 	}
-	os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("root = true\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("root = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	editorOf(s).RefreshConventions()
 	if v, src := option(s, t, "editor.end_of_line", at); v != "crlf" || src != ".gitattributes:1" {
 		t.Errorf("run.bat end_of_line = %v from %q without .editorconfig", v, src)

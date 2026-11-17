@@ -90,7 +90,7 @@ func Parse(path string) ([]Case, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var (
 		out   []Case
 		c     *Case
@@ -185,7 +185,7 @@ func (c Case) Run(t *testing.T, mk func(cols, rows int, reply func([]byte)) term
 	}
 	var reply []byte
 	e := mk(c.Cols, c.Rows, func(p []byte) { reply = append(reply, p...) })
-	defer e.Close()
+	defer func() { _ = e.Close() }()
 	if c.Setup != "" {
 		e.Write([]byte(c.Setup))
 		e.Grid()

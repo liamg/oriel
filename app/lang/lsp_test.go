@@ -183,9 +183,13 @@ func TestLSPInspect(t *testing.T) {
 func TestLSPStartsWithTheProject(t *testing.T) {
 	for _, mode := range []string{"project", "file"} {
 		root := t.TempDir()
-		os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/greet\n\ngo 1.22\n"), 0o644)
+		if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/greet\n\ngo 1.22\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		s := apptest.New(t, apptest.Options{WorkDir: root})
-		s.Registry().Options().Set("lsp.start", registry.LayerUser, registry.At{}, mode)
+		if err := s.Registry().Options().Set("lsp.start", registry.LayerUser, registry.At{}, mode); err != nil {
+			t.Fatal(err)
+		}
 		resp := rig.Recorded(t, "go")
 		s.Registry().Contribute(rig.ServerAnswering(t, "gopls", resp))
 		lspSettle(s)

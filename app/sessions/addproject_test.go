@@ -26,14 +26,16 @@ func TestAddProjectWorksOffTheLoop(t *testing.T) {
 	if _, err := lw.W.AddRepoPath(context.Background(), other); err != nil {
 		t.Fatal(err)
 	}
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		for _, p := range r.Host.Pickers() {
 			if p.ID == "projects.add" {
 				return p.Run(context.Background(), uireg.PickerItem{ID: "billing-ui"})
 			}
 		}
 		return errors.New("no projects.add picker")
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("Adding billing-ui to the session")
 	r.UntilState("billing-ui in the session", func(st core.State) bool {
 		se, _ := st.Session(apptest.Named(st, "w"))

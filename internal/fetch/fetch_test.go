@@ -17,7 +17,11 @@ import (
 func TestDownload(t *testing.T) {
 	isolate.Test(t)
 	body := []byte("#!/bin/sh\necho claude\n")
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(body) }))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write(body); err != nil {
+			t.Error(err)
+		}
+	}))
 	defer srv.Close()
 	ctx, dir := context.Background(), t.TempDir()
 	dst := filepath.Join(dir, "claude")
@@ -45,7 +49,11 @@ func TestDownload(t *testing.T) {
 // Verified is the body once it checks; the sum may be upper case or carry its "sha256:" prefix.
 func TestVerified(t *testing.T) {
 	isolate.Test(t)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("archive")) }))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write([]byte("archive")); err != nil {
+			t.Error(err)
+		}
+	}))
 	defer srv.Close()
 	ctx := context.Background()
 	for _, want := range []string{Sum([]byte("archive")), strings.ToUpper(Sum([]byte("archive"))), "sha256:" + Sum([]byte("archive"))} {

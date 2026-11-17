@@ -44,11 +44,19 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 	methods := plugin.HostMethods(h)
 	toProc, procIn := io.Pipe()
 	procOut, fromProc := io.Pipe()
-	go Serve(toProc, fromProc)
+	go func() {
+		if err := Serve(toProc, fromProc); err != nil {
+			t.Error(err)
+		}
+	}()
 	conn := jsonrpc.NewConn(procOut, procIn, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
-		go func() { r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)) }()
+		go func() {
+			if err := r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)); err != nil {
+				t.Error(err)
+			}
+		}()
 	}}, jsonrpc.Options{Version: "2.0"})
-	t.Cleanup(func() { conn.Close() })
+	t.Cleanup(func() { _ = conn.Close() })
 	return conn
 }
 
@@ -66,7 +74,9 @@ func TestServeThroughTheHost(t *testing.T) {
 		t.Fatalf("with no key: %v", err)
 	}
 
-	secrets.SetSecret(Secret, lineartest.Key)
+	if err := secrets.SetSecret(Secret, lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	var got struct {
 		Tickets []registry.Ticket `json:"tickets"`
 	}

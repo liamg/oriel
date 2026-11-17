@@ -66,11 +66,15 @@ func TestHousekeeping(t *testing.T) {
 	// dirty: merged, in a worktree with changes.
 	wt := filepath.Join(t.TempDir(), "dirty")
 	g.Git("worktree", "add", "-q", "-b", "dirty", wt)
-	os.WriteFile(filepath.Join(wt, "x.txt"), []byte("wip\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(wt, "x.txt"), []byte("wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	// stale: a worktree whose directory went.
 	stale := filepath.Join(t.TempDir(), "stale")
 	g.Git("worktree", "add", "-q", "-b", "stale-wt", stale)
-	os.RemoveAll(stale)
+	if err := os.RemoveAll(stale); err != nil {
+		t.Fatal(err)
+	}
 
 	plan, err := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID, Fetch: true})
 	if err != nil {
@@ -203,7 +207,9 @@ func TestTagRefusesDirtyPull(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()
 	repo, g := r.cloned()
-	os.WriteFile(filepath.Join(g.Dir, "round.go"), []byte("changed\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(g.Dir, "round.go"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v1.0.0", Message: "v1", Pull: true}); err == nil || !strings.Contains(err.Error(), "uncommitted") {
 		t.Fatalf("tag over a dirty branch: %v", err)
 	}

@@ -22,7 +22,7 @@ func TestSplitterDragsAllTheWay(t *testing.T) {
 	}
 	at := apptest.Settled(r, "the split", func(headless.Frame) (split, bool) {
 		var sp split
-		r.Do(func() error {
+		if err := r.Do(func() error {
 			for _, v := range r.Host.Layout().All() {
 				if v.ID == kit.RequestView {
 					sp.left, _ = r.Host.PaneRect(v)
@@ -33,7 +33,9 @@ func TestSplitterDragsAllTheWay(t *testing.T) {
 				}
 			}
 			return nil
-		})
+		}); err != nil {
+			t.Error(err)
+		}
 		return sp, sp.left.Dx() > 0 && sp.width > sp.left.Dx()
 	})
 	left, width := at.left, at.width

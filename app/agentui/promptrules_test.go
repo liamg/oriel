@@ -117,7 +117,9 @@ func TestPromptRulesForThisSessionAndAllSessions(t *testing.T) {
 	if err := r.s.Headless.Close(); err != nil {
 		t.Fatal(err)
 	}
-	r.lw.W.Close()
+	if err := r.lw.W.Close(); err != nil {
+		t.Fatal(err)
+	}
 	r = newRulesRig(t, home)
 	three := r.start("three")
 	r.noPrompt(goCmd(three, "p6", "go vet ./..."), "go vet in a session after a restart")

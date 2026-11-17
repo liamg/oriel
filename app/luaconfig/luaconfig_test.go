@@ -94,7 +94,9 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 	}
 
 	path := filepath.Join(s.ConfigDir, "init.lua")
-	os.WriteFile(path, []byte(`oriel.command("Hello", function() end, { desc = "hi" })`), 0o644)
+	if err := os.WriteFile(path, []byte(`oriel.command("Hello", function() end, { desc = "hi" })`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if !x.Changed() {
 		t.Fatal("the save went unseen")
 	}
@@ -105,7 +107,9 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 	if n := noticesWith(s.Store().State(), "lua.reload"); len(n) != 1 || !strings.Contains(n[0].Text, "reloaded init.lua") {
 		t.Errorf("no reload toast: %+v", n)
 	}
-	os.WriteFile(path, []byte("local a = 1\nx = = 1\n"), 0o644)
+	if err := os.WriteFile(path, []byte("local a = 1\nx = = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	x.Reload(true)
 	if n := noticesWith(s.Store().State(), "lua.load"); len(n) != 1 || n[0].Location != "init.lua:2" {
 		t.Errorf("a syntax error's notice: %+v", n)

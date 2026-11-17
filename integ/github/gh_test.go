@@ -44,12 +44,12 @@ func fakeGH(base string, args []string) int {
 	var in any
 	if input {
 		b, _ := io.ReadAll(os.Stdin)
-		json.Unmarshal(b, &in)
+		_ = json.Unmarshal(b, &in)
 	}
 	var out string
 	if err := (gh.HTTP{Base: base}).Do(context.Background(), method, path, in, &out); err != nil {
 		e := err.(*gh.Error)
-		fmt.Fprintf(os.Stdout, `{"message":%q}`, e.Message)
+		_, _ = fmt.Fprintf(os.Stdout, `{"message":%q}`, e.Message)
 		fmt.Fprintf(os.Stderr, "gh: %s (HTTP %d)\n", e.Message, e.Status)
 		return 1
 	}
@@ -210,8 +210,12 @@ func TestParseRepo(t *testing.T) {
 func TestTemplateAndOwners(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, body string) {
-		os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755)
-		os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644)
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, name)), 0o755); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Error(err)
+		}
 	}
 	if b, f := gh.Template(dir); b != "" || f != "" {
 		t.Fatalf("no template: %q %q", b, f)

@@ -73,10 +73,16 @@ func TestMarkdownRemoteImages(t *testing.T) {
 // beside it.
 func readmeScene(t *testing.T, images *http.Client) *apptest.Scene {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "docs"), 0o755)
-	os.WriteFile(filepath.Join(dir, "logo.png"), editor.PNGBytes(t, photo(256, 256)), 0o644)
-	os.WriteFile(filepath.Join(dir, "docs", "shot.png"), editor.PNGBytes(t, photo(1200, 700)), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte(`<p align="center">
+	if err := os.MkdirAll(filepath.Join(dir, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "logo.png"), editor.PNGBytes(t, photo(256, 256)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "docs", "shot.png"), editor.PNGBytes(t, photo(1200, 700)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(`<p align="center">
   <img src="logo.png" alt="Oriel logo" width="120">
 </p>
 
@@ -96,7 +102,9 @@ func readmeScene(t *testing.T, images *http.Client) *apptest.Scene {
 Run <code>make build</code>.
 
 </details>
-`), 0o644)
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsSceneWith(t, apptest.Options{WorkDir: dir, ImageNet: images})
 	s.Run("editor.open", registry.Args{"path": "README.md"})
 	s.Frames(3)
@@ -143,10 +151,18 @@ func TestMarkdownPreviewImages(t *testing.T) {
 // at 144 DPI. One at 72 or 96 DPI, or that says none, is a pixel a point.
 func TestMarkdownImageDensity(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "retina.png"), rig.PNGAtDPI(t, photo(400, 200), 144), 0o644)
-	os.WriteFile(filepath.Join(dir, "windows.png"), rig.PNGAtDPI(t, photo(400, 200), 96), 0o644)
-	os.WriteFile(filepath.Join(dir, "plain.png"), editor.PNGBytes(t, photo(400, 200)), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("![retina](retina.png)\n\n![windows](windows.png)\n\n![plain](plain.png)\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "retina.png"), rig.PNGAtDPI(t, photo(400, 200), 144), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "windows.png"), rig.PNGAtDPI(t, photo(400, 200), 96), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plain.png"), editor.PNGBytes(t, photo(400, 200)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("![retina](retina.png)\n\n![windows](windows.png)\n\n![plain](plain.png)\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsSceneWith(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": "README.md"})
 	s.Frames(3)

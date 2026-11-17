@@ -29,12 +29,14 @@ func TestSettingsFileIsWatched(t *testing.T) {
 		return v == false && l == registry.LayerUser
 	})
 	var fastest time.Duration
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		if w, ok := kit.WindowOf(r.Host); ok {
 			fastest = w.Polls().FastestNow()
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if fastest > 0 && fastest < time.Second {
 		t.Errorf("a poll runs every %v", fastest)
 	}
@@ -55,8 +57,12 @@ func TestInitLuaIsWatched(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(conf, "lua"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	os.WriteFile(filepath.Join(conf, "lua", "more.lua"), []byte(`oriel.command("MoreWatched", function() end, {})`), 0o644)
-	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(src+"\nrequire(\"more\")\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(conf, "lua", "more.lua"), []byte(`oriel.command("MoreWatched", function() end, {})`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(conf, "init.lua"), []byte(src+"\nrequire(\"more\")\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFor("the command lua/more.lua registers", func() bool {
 		return hostHasCommand(r.Host, "MoreWatched")
 	})

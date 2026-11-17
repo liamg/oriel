@@ -29,7 +29,7 @@ func TestHomeHasNoRail(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { w.Close() })
+		t.Cleanup(func() { _ = w.Close() })
 		s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.Host, cfg.Store = w, w.Store() }})
 		s.Frame()
 		return s
@@ -79,14 +79,20 @@ func TestFrameFollowsSessions(t *testing.T) {
 	if railShown(s) || s.Find("Start") == nil {
 		t.Fatal("the window doesn't start on Home")
 	}
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Frame()
 	if !railShown(s) {
 		t.Error("a running session has no rail")
 	}
-	s.Store().Apply(core.SessionArchived{ID: "w", Archived: true})
+	if err := s.Store().Apply(core.SessionArchived{ID: "w", Archived: true}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Frame()
 	if railShown(s) {
@@ -121,7 +127,9 @@ func TestHomeShowsGlobalStatus(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Releasing(r)})
 	s.Registry().View(kit.StatusLeft+"98-bound", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("SESSION ONLY") }))
 	s.Registry().View(kit.StatusLeft+"99-global", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("EVERYWHERE") })})
-	s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, "automatic")
+	if err := s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, "automatic"); err != nil {
+		t.Fatal(err)
+	}
 	r.Publish("1.1.0", "")
 	s.CheckUpdates()
 	s.Until("the install", func() bool { return s.Registry().Available("update.restart", nil) })
@@ -143,8 +151,12 @@ func TestHomeShowsGlobalStatus(t *testing.T) {
 	if strings.Contains(text, "SESSION ONLY") {
 		t.Error("a session's segment shows on Home")
 	}
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "SESSION ONLY") || !strings.Contains(text, "EVERYWHERE") {

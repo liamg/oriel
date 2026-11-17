@@ -16,7 +16,9 @@ func roundTrip(t *testing.T, v any) any {
 	if err := encode(w, v); err != nil {
 		t.Fatalf("encode %#v: %v", v, err)
 	}
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		t.Fatal(err)
+	}
 	got, err := decode(bufio.NewReader(&buf))
 	if err != nil {
 		t.Fatalf("decode %#v: %v", v, err)

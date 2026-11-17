@@ -37,7 +37,7 @@ func mustNew(t testing.TB, cols, rows int, opts Options) *Terminal {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { e.Close() })
+	t.Cleanup(func() { _ = e.Close() })
 	return e
 }
 
@@ -253,7 +253,9 @@ func TestHoldTimeout(t *testing.T) {
 func TestScrollback(t *testing.T) {
 	e := mustNew(t, 10, 2, Options{})
 	for i := range 5 {
-		fmt.Fprintf(writer{e}, "line %d\r\n", i)
+		if _, err := fmt.Fprintf(writer{e}, "line %d\r\n", i); err != nil {
+			t.Fatal(err)
+		}
 	}
 	sb := e.Scrollbar()
 	if sb.Total != 6 || sb.Len != 2 || sb.Offset != 4 {
@@ -299,7 +301,9 @@ func TestConcurrentUse(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := range 2000 {
-			fmt.Fprintf(writer{e}, "\x1b[3%dmline %d\x1b[0m\r\n", i%8, i)
+			if _, err := fmt.Fprintf(writer{e}, "\x1b[3%dmline %d\x1b[0m\r\n", i%8, i); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	go func() {
@@ -315,7 +319,9 @@ func TestConcurrentUse(t *testing.T) {
 
 func TestClosed(t *testing.T) {
 	e := mustNew(t, 10, 2, Options{})
-	e.Close()
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
 	e.Write([]byte("abc"))
 	if g := e.Grid(); len(g.Lines) != 0 || e.Title() != "" {
 		t.Errorf("a closed terminal shows %+v", g)

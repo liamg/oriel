@@ -42,21 +42,21 @@ func TestLandlockNetwork(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	go func() {
 		for {
 			c, err := l.Accept()
 			if err != nil {
 				return
 			}
-			c.Close()
+			_ = c.Close()
 		}
 	}()
 	l2, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Skip(err)
 	}
-	defer l2.Close()
+	defer func() { _ = l2.Close() }()
 	addr, addr2 := l.Addr().String(), l2.Addr().String()
 	ops := []string{"tcp:" + addr, "udp:127.0.0.1:9", "tcp:" + addr2}
 	expect(t, ops, run(t, Profile{}, ops...), false, false, false)

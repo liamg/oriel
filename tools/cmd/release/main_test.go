@@ -21,7 +21,9 @@ func TestReleaseIsWhatTheUpdaterVerifies(t *testing.T) {
 		"oriel-0.4.0-linux-amd64.tar.gz": "skipped", "oriel-0.5.0-rc.1-linux.tar.gz": "skipped", "oriel-darwin-arm64": "mach-o", "oriel-darwin-arm64.app.tar.gz": "bundle",
 		"Oriel-0.5.0-rc.1-arm64.dmg": "skipped", "oriel-darwin-arm64.dmg": "skipped", "notes.txt": "skipped"}
 	for name, body := range files {
-		os.WriteFile(filepath.Join(in, name), []byte(body), 0o755)
+		if err := os.WriteFile(filepath.Join(in, name), []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	seed := make([]byte, ed25519.SeedSize)
 	key, err := parseKey(hex.EncodeToString(seed))

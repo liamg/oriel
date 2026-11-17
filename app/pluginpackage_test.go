@@ -112,7 +112,9 @@ help    = ["assets/help/*.md"]
 func TestContributesMatchingNothing(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	dir := writePlugin(t, map[string]string{"oriel.toml": "id = \"acme/typo\"\nversion = \"1.0.0\"\n[contributes]\nthemes = [\"asset/themes/*.toml\"]\n"})
-	s.Activate(app.DirPlugin(dir, app.PluginOpts{}))
+	if err := s.Activate(app.DirPlugin(dir, app.PluginOpts{})); err != nil {
+		t.Fatal(err)
+	}
 	if msg := loadFailed(s, "acme/typo"); !strings.Contains(msg, "matches nothing") {
 		t.Errorf("load notice %q, want one saying the pattern matches nothing", msg)
 	}

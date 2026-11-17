@@ -40,7 +40,7 @@ func TestParseAllowlist(t *testing.T) {
 func TestRequires(t *testing.T) {
 	dir := t.TempDir()
 	gomod := filepath.Join(dir, "go.mod")
-	os.WriteFile(gomod, []byte(`module example.com/a
+	if err := os.WriteFile(gomod, []byte(`module example.com/a
 
 go 1.26.0
 
@@ -50,7 +50,9 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	github.com/liamg/oriel/text v0.0.0
 )
-`), 0o644)
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	got, err := Requires(gomod)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +70,9 @@ require (
 func TestVendored(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "modules.txt")
-	os.WriteFile(f, []byte("# gioui.org v0.8.0\n## explicit; go 1.21\ngioui.org/app\n# golang.org/x/image v0.20.0\n## explicit\ngolang.org/x/image/math/fixed\n# github.com/liamg/oriel/text\n"), 0o644)
+	if err := os.WriteFile(f, []byte("# gioui.org v0.8.0\n## explicit; go 1.21\ngioui.org/app\n# golang.org/x/image v0.20.0\n## explicit\ngolang.org/x/image/math/fixed\n# github.com/liamg/oriel/text\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	got, err := Vendored(f)
 	if err != nil {
 		t.Fatal(err)

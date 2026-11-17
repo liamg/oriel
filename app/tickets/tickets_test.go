@@ -93,7 +93,9 @@ func jiraCalls(vm *script.VM) []string {
 func TestTicketTrackersSideBySide(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{Config: change})
 	loadLinear(t, s)
 	loadJira(t, s)
@@ -177,8 +179,12 @@ func TestTicketTrackersSideBySide(t *testing.T) {
 func TestStartWorkFromAnyTracker(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
+	if err := secrets.SetSecret("JIRA_TOKEN", "jira-t0ken"); err != nil {
+		t.Fatal(err)
+	}
 	lw := rig.NewHost(t)
 	if _, err := lw.W.AddRepoPath(context.Background(), lw.Repo); err != nil {
 		t.Fatal(err)
@@ -240,8 +246,12 @@ func ticketScene(t *testing.T) (*apptest.Scene, *rig.Host, *lineartest.Linear, *
 	t.Helper()
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	secrets.SetSecret("JIRA_TOKEN", "jira-t0ken")
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
+	if err := secrets.SetSecret("JIRA_TOKEN", "jira-t0ken"); err != nil {
+		t.Fatal(err)
+	}
 	lw := rig.NewHost(t)
 	if _, err := lw.W.AddRepoPath(context.Background(), lw.Repo); err != nil {
 		t.Fatal(err)
@@ -458,7 +468,9 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 func TestLinearDoneOnMerge(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	s, _, hub, se, _ := apptest.ShipSceneWith(t, func(s *apptest.Scene) { loadLinear(t, s) }, change)
 	s.Until("the session's start moved", func() bool { return strings.Contains(s.FullText(), "ENG-2231 moved to In Progress in Linear") })
 	prs := shipPRs(t, s, hub, se, "search-api")

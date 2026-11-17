@@ -66,11 +66,11 @@ type fakeThread struct {
 
 func (t *fakeThread) stopMCP() {
 	if t.mcp != nil {
-		t.mcp.Close()
+		_ = t.mcp.Close()
 	}
 	if t.mcpCmd != nil {
-		t.mcpCmd.Process.Kill()
-		t.mcpCmd.Wait()
+		_ = t.mcpCmd.Process.Kill()
+		_ = t.mcpCmd.Wait()
 	}
 }
 
@@ -93,9 +93,9 @@ func (f *fake) save(t *fakeThread) {
 	if t.ephemeral {
 		return
 	}
-	os.MkdirAll(filepath.Join(f.home, "threads"), 0o755)
+	_ = os.MkdirAll(filepath.Join(f.home, "threads"), 0o755)
 	b, _ := json.Marshal(savedThread{t.history, t.instructions})
-	os.WriteFile(f.path(t.id), b, 0o644)
+	_ = os.WriteFile(f.path(t.id), b, 0o644)
 }
 
 type savedThread struct {
@@ -122,27 +122,27 @@ type fakeParams struct {
 
 func (f *fake) handle(r *jsonrpc.Request) {
 	var p fakeParams
-	json.Unmarshal(r.Params, &p)
+	_ = json.Unmarshal(r.Params, &p)
 	switch r.Method {
 	case "initialize":
-		r.Reply(map[string]any{"userAgent": "fake", "codexHome": f.home, "platformFamily": "unix", "platformOs": "linux"}, nil)
+		_ = r.Reply(map[string]any{"userAgent": "fake", "codexHome": f.home, "platformFamily": "unix", "platformOs": "linux"}, nil)
 	case "account/read":
 		switch a := os.Getenv("FAKE_CODEX_ACCOUNT"); a {
 		case "none":
-			r.Reply(map[string]any{"account": nil, "requiresOpenaiAuth": true}, nil)
+			_ = r.Reply(map[string]any{"account": nil, "requiresOpenaiAuth": true}, nil)
 		case "apiKey":
-			r.Reply(map[string]any{"account": map[string]any{"type": "apiKey"}, "requiresOpenaiAuth": true}, nil)
+			_ = r.Reply(map[string]any{"account": map[string]any{"type": "apiKey"}, "requiresOpenaiAuth": true}, nil)
 		default:
-			r.Reply(map[string]any{"account": map[string]any{"type": "chatgpt", "email": "you@example.com", "planType": "pro"}, "requiresOpenaiAuth": true}, nil)
+			_ = r.Reply(map[string]any{"account": map[string]any{"type": "chatgpt", "email": "you@example.com", "planType": "pro"}, "requiresOpenaiAuth": true}, nil)
 		}
 	case "account/rateLimits/read":
-		r.Reply(map[string]any{"rateLimits": map[string]any{
+		_ = r.Reply(map[string]any{"rateLimits": map[string]any{
 			"limitId": "codex", "planType": "pro",
 			"primary":   map[string]any{"usedPercent": 12, "windowDurationMins": 300, "resetsAt": 1700000000},
 			"secondary": map[string]any{"usedPercent": 40, "windowDurationMins": 10080, "resetsAt": 1700500000},
 		}}, nil)
 	case "model/list":
-		r.Reply(map[string]any{"data": []map[string]any{{
+		_ = r.Reply(map[string]any{"data": []map[string]any{{
 			"id": "m", "model": "gpt-fake-codex", "displayName": "GPT Fake", "hidden": false, "isDefault": true,
 			"supportedReasoningEfforts": []map[string]any{{"reasoningEffort": "low", "description": ""}, {"reasoningEffort": "high", "description": ""}},
 			"defaultReasoningEffort":    "low",
@@ -158,11 +158,11 @@ func (f *fake) handle(r *jsonrpc.Request) {
 				servers[name] = map[string]any{"command": name}
 			}
 		}
-		r.Reply(map[string]any{"config": map[string]any{"mcp_servers": servers}, "origins": map[string]any{}}, nil)
+		_ = r.Reply(map[string]any{"config": map[string]any{"mcp_servers": servers}, "origins": map[string]any{}}, nil)
 	case "account/login/start":
 		id := f.id("login")
-		r.Reply(map[string]any{"type": "chatgpt", "loginId": id, "authUrl": "https://auth.example/" + id}, nil)
-		f.rpc.Notify("account/login/completed", map[string]any{"loginId": id, "success": true, "error": nil})
+		_ = r.Reply(map[string]any{"type": "chatgpt", "loginId": id, "authUrl": "https://auth.example/" + id}, nil)
+		_ = f.rpc.Notify("account/login/completed", map[string]any{"loginId": id, "success": true, "error": nil})
 	case "thread/start", "thread/resume":
 		t := &fakeThread{id: p.ThreadID}
 		if r.Method == "thread/start" {
@@ -170,11 +170,11 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		} else {
 			b, err := os.ReadFile(f.path(p.ThreadID))
 			if err != nil {
-				r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no rollout for " + p.ThreadID})
+				_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no rollout for " + p.ThreadID})
 				return
 			}
 			var saved savedThread
-			json.Unmarshal(b, &saved)
+			_ = json.Unmarshal(b, &saved)
 			t.history, t.instructions = saved.History, saved.Instructions
 		}
 		if p.Instructions != nil {
@@ -186,25 +186,25 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		}
 		go func() {
 			if err := f.startMCP(t, p.Config["mcp_servers.oriel"]); err != nil {
-				r.Reply(nil, err)
+				_ = r.Reply(nil, err)
 				return
 			}
 			f.mu.Lock()
 			f.threads[t.id] = t
 			f.mu.Unlock()
-			r.Reply(map[string]any{"thread": map[string]any{"id": t.id}, "model": model, "modelProvider": "openai"}, nil)
-			f.rpc.Notify("thread/started", map[string]any{"thread": map[string]any{"id": t.id}})
+			_ = r.Reply(map[string]any{"thread": map[string]any{"id": t.id}, "model": model, "modelProvider": "openai"}, nil)
+			_ = f.rpc.Notify("thread/started", map[string]any{"thread": map[string]any{"id": t.id}})
 		}()
 	case "thread/fork":
 		src := f.thread(p.ThreadID)
 		if src == nil {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no thread"})
+			_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no thread"})
 			return
 		}
 		src.mu.Lock()
 		off := func(key string) bool { return string(p.Config[key]) == "false" }
 		var oriel struct{ Enabled *bool }
-		json.Unmarshal(p.Config["mcp_servers.oriel"], &oriel)
+		_ = json.Unmarshal(p.Config["mcp_servers.oriel"], &oriel)
 		t := &fakeThread{id: f.id("fork"), ephemeral: p.Ephemeral, history: append([]string(nil), src.history...),
 			toolless: off("features.shell_tool") && off("features.unified_exec") && string(p.Config["web_search"]) == `"disabled"` &&
 				oriel.Enabled != nil && !*oriel.Enabled}
@@ -212,15 +212,15 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		f.mu.Lock()
 		f.threads[t.id] = t
 		f.mu.Unlock()
-		r.Reply(map[string]any{"thread": map[string]any{"id": t.id, "forkedFromId": src.id}}, nil)
+		_ = r.Reply(map[string]any{"thread": map[string]any{"id": t.id, "forkedFromId": src.id}}, nil)
 	case "thread/unsubscribe":
-		r.Reply(map[string]any{}, nil)
+		_ = r.Reply(map[string]any{}, nil)
 	case "thread/backgroundTerminals/list", "thread/backgroundTerminals/terminate":
 		f.terminal(r, p)
 	case "turn/start":
 		t := f.thread(p.ThreadID)
 		if t == nil || len(p.Input) == 0 {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread or no input"})
+			_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread or no input"})
 			return
 		}
 		id := f.id("turn")
@@ -230,12 +230,12 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			t.toolless = false
 		}
 		t.mu.Unlock()
-		r.Reply(map[string]any{"turn": map[string]any{"id": id, "status": "inProgress", "items": []any{}}}, nil)
+		_ = r.Reply(map[string]any{"turn": map[string]any{"id": id, "status": "inProgress", "items": []any{}}}, nil)
 		go f.run(t, id, p.Input[0].Text)
 	case "turn/interrupt":
 		t := f.thread(p.ThreadID)
 		if t == nil {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread"})
+			_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread"})
 			return
 		}
 		t.mu.Lock()
@@ -244,11 +244,11 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			t.interrupted = true
 		}
 		t.mu.Unlock()
-		r.Reply(map[string]any{}, nil)
+		_ = r.Reply(map[string]any{}, nil)
 	case "turn/steer":
 		t := f.thread(p.ThreadID)
 		if t == nil || len(p.Input) == 0 {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread or no input"})
+			_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "no thread or no input"})
 			return
 		}
 		t.mu.Lock()
@@ -256,16 +256,16 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		steer := t.steer
 		t.mu.Unlock()
 		if !ok {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no active turn to steer"})
+			_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no active turn to steer"})
 			return
 		}
 		select {
 		case steer <- p.Input[0].Text:
 		default:
 		}
-		r.Reply(map[string]any{"turnId": p.ExpectedTurnID}, nil)
+		_ = r.Reply(map[string]any{"turnId": p.ExpectedTurnID}, nil)
 	default:
-		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
+		_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
 	}
 }
 
@@ -273,7 +273,7 @@ func (f *fake) handle(r *jsonrpc.Request) {
 func (f *fake) terminal(r *jsonrpc.Request, p fakeParams) {
 	t := f.thread(p.ThreadID)
 	if os.Getenv("FAKE_CODEX_NO_TERMINALS") == "1" || t == nil {
-		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
+		_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
 		return
 	}
 	t.mu.Lock()
@@ -281,7 +281,7 @@ func (f *fake) terminal(r *jsonrpc.Request, p fakeParams) {
 	if r.Method == "thread/backgroundTerminals/terminate" {
 		n := len(t.terminals)
 		t.terminals = slices.DeleteFunc(t.terminals, func(m map[string]any) bool { return m["processId"] == p.ProcessID })
-		r.Reply(map[string]any{"terminated": len(t.terminals) < n}, nil)
+		_ = r.Reply(map[string]any{"terminated": len(t.terminals) < n}, nil)
 		return
 	}
 	at := 0
@@ -295,7 +295,7 @@ func (f *fake) terminal(r *jsonrpc.Request, p fakeParams) {
 			page["nextCursor"] = strconv.Itoa(at + 1)
 		}
 	}
-	r.Reply(page, nil)
+	_ = r.Reply(page, nil)
 }
 
 // startMCP launches the configured oriel MCP server, as codex does, with only the environment it names.
@@ -336,7 +336,7 @@ func (f *fake) startMCP(t *fakeThread, raw json.RawMessage) error {
 		"clientInfo": map[string]any{"name": "fake-codex", "version": "0"}}, nil); err != nil {
 		return err
 	}
-	t.mcp.Notify("notifications/initialized", nil)
+	_ = t.mcp.Notify("notifications/initialized", nil)
 	return t.mcp.Call(ctx, "tools/list", map[string]any{}, nil)
 }
 
@@ -344,7 +344,7 @@ func (f *fake) startMCP(t *fakeThread, raw json.RawMessage) error {
 func (f *fake) run(t *fakeThread, turn, text string) {
 	note := func(method string, params map[string]any) {
 		params["threadId"], params["turnId"] = t.id, turn
-		f.rpc.Notify(method, params)
+		_ = f.rpc.Notify(method, params)
 	}
 	item := func(method string, it map[string]any) { note(method, map[string]any{"item": it}) }
 	say := func(text string) {
@@ -360,7 +360,7 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 	t.history = append(t.history, text)
 	history := append([]string(nil), t.history...)
 	t.mu.Unlock()
-	f.rpc.Notify("turn/started", map[string]any{"threadId": t.id, "turn": map[string]any{"id": turn, "status": "inProgress", "items": []any{}}})
+	_ = f.rpc.Notify("turn/started", map[string]any{"threadId": t.id, "turn": map[string]any{"id": turn, "status": "inProgress", "items": []any{}}})
 	item("item/completed", map[string]any{"type": "userMessage", "id": f.id("user"), "content": []map[string]any{{"type": "text", "text": text}}})
 	status := "completed"
 	ctx := context.Background()
@@ -473,11 +473,11 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 		"last":               map[string]any{"totalTokens": 30, "inputTokens": 20, "cachedInputTokens": 5, "outputTokens": 10, "reasoningOutputTokens": 0},
 		"modelContextWindow": 272000,
 	}})
-	f.rpc.Notify("account/rateLimits/updated", map[string]any{"rateLimits": map[string]any{
+	_ = f.rpc.Notify("account/rateLimits/updated", map[string]any{"rateLimits": map[string]any{
 		"primary": map[string]any{"usedPercent": 13, "windowDurationMins": 300, "resetsAt": 1700000000},
 	}})
 	t.mu.Lock()
 	t.turn, t.interrupt = "", nil
 	t.mu.Unlock()
-	f.rpc.Notify("turn/completed", map[string]any{"threadId": t.id, "turn": map[string]any{"id": turn, "status": status, "items": []any{}, "durationMs": 12}})
+	_ = f.rpc.Notify("turn/completed", map[string]any{"threadId": t.id, "turn": map[string]any{"id": turn, "status": status, "items": []any{}, "durationMs": 12}})
 }

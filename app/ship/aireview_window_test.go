@@ -201,7 +201,9 @@ func TestAIReviewPromptAndReReview(t *testing.T) {
 	r.ClickText("Prompt…")
 	r.WaitText("# AI review")
 	var path string
-	r.Do(func() error { path = r.Host.Here().Buffer; return nil })
+	if err := r.Do(func() error { path = r.Host.Here().Buffer; return nil }); err != nil {
+		t.Fatal(err)
+	}
 	if filepath.Base(path) != "ai-review.md" || filepath.Base(filepath.Dir(path)) != "agents" {
 		t.Fatalf("the editor is on %q", path)
 	}
@@ -209,9 +211,15 @@ func TestAIReviewPromptAndReReview(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), "mcp__oriel__finding") {
 		t.Fatalf("the prompt file: %v %q", err, b)
 	}
-	os.WriteFile(path, []byte(strings.Replace(string(b), "# AI review", "# AI review\n\nBe brief.", 1)), 0o644)
-	os.WriteFile(filepath.Join(r.ProjectDir(r.Session), "round.go"), []byte(rig.RoundWork), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "review.ai.run", nil) })
+	if err := os.WriteFile(path, []byte(strings.Replace(string(b), "# AI review", "# AI review\n\nBe brief.", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(r.ProjectDir(r.Session), "round.go"), []byte(rig.RoundWork), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "review.ai.run", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	rv = waitReviewer(t, codex)
 	if !strings.Contains(rv.Spec.Pack.Text, "Be brief.") {
 		t.Errorf("the reviewer's pack isn't the user's:\n%s", rv.Spec.Pack.Text)

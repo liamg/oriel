@@ -17,7 +17,9 @@ func TestOutputOutlivesAQuickExit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		p.Wait()
+		if err := p.Wait(); err != nil {
+			t.Fatal(err)
+		}
 		got, _ := io.ReadAll(p.Stdout())
 		if string(got) != want {
 			t.Fatalf("read %d bytes of 4000 after the process ended", len(got))

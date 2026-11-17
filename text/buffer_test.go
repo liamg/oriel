@@ -181,7 +181,9 @@ func TestSnapshotsAreSafeAcrossGoroutines(t *testing.T) {
 				s := b.Snapshot()
 				_ = s.Line(s.Lines() - 1)
 				if w == 0 {
-					b.Apply(Edit{Ranges: []Replace{ins(s.Len(), "x")}, Author: you}) // may be stale after an undo: errors are fine
+					if _, err := b.Apply(Edit{Ranges: []Replace{ins(s.Len(), "x")}, Author: you}); err != nil {
+						t.Error(err)
+					} // may be stale after an undo: errors are fine
 
 				}
 				if w == 1 && i%10 == 0 {

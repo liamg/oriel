@@ -103,7 +103,7 @@ func StartIn(t *testing.T, h Harness, dir, id string) *Session {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { s.Close() })
+	t.Cleanup(func() { _ = s.Close() })
 	return &Session{t: t, h: h, S: s}
 }
 

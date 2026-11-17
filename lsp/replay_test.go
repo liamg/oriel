@@ -103,7 +103,9 @@ func (r *result) span(t *testing.T, spec string) lsp.Location {
 	path, src := r.file(name)
 	n := 0
 	if i := strings.LastIndex(re, "#"); i > 0 {
-		fmt.Sscan(re[i+1:], &n)
+		if _, err := fmt.Sscan(re[i+1:], &n); err != nil {
+			t.Fatal(err)
+		}
 		re = re[:i]
 	}
 	ms := regexp.MustCompile(re).FindAllStringSubmatchIndex(src, -1)

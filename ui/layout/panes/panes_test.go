@@ -178,7 +178,9 @@ func TestClickTabAndContent(t *testing.T) {
 
 func TestSplitterDrag(t *testing.T) {
 	h := newHarness(t)
-	h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight})
+	if err := h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight}); err != nil {
+		t.Fatal(err)
+	}
 	h.frame()
 	h.frame()
 	rects := h.panes.Rects(h.u)
@@ -204,7 +206,9 @@ func TestSplitterDrag(t *testing.T) {
 // they do on a busy machine: the drag is measured from where the press went down.
 func TestSplitterDragBeforeAFrame(t *testing.T) {
 	h := newHarness(t)
-	h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight})
+	if err := h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight}); err != nil {
+		t.Fatal(err)
+	}
 	h.frame()
 	h.frame()
 	var left, right render.Rect
@@ -238,7 +242,9 @@ func TestSplitterDragBeforeAFrame(t *testing.T) {
 
 func TestFocusDir(t *testing.T) {
 	h := newHarness(t)
-	h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight})
+	if err := h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight}); err != nil {
+		t.Fatal(err)
+	}
 	h.r.Focus = &code
 	h.frame()
 	h.frame()
@@ -448,7 +454,9 @@ func TestDockedViewAloneHasAHeader(t *testing.T) {
 	if !header {
 		t.Error("no header naming the docked view")
 	}
-	h.r.Open(layout.ViewRef{ID: "outline"}, layout.Docked, layout.Opts{Edge: layout.Left})
+	if err := h.r.Open(layout.ViewRef{ID: "outline"}, layout.Docked, layout.Opts{Edge: layout.Left}); err != nil {
+		t.Fatal(err)
+	}
 	h.frame()
 	if lists, _, _ := tabs(); lists != 3 {
 		t.Errorf("with two views in the left dock: %d tab lists, want 3", lists)

@@ -41,8 +41,12 @@ func photo(w, h int) *image.NRGBA {
 func TestImageFileTab(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "assets", "hero.png")
-	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, editor.PNGBytes(t, photo(640, 400)), 0o644)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, editor.PNGBytes(t, photo(640, 400)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	s.Now = apptest.At(9, 0, 0)
 	s.Run("editor.open", registry.Args{"path": "assets/hero.png", "line": 3})
@@ -74,7 +78,9 @@ func TestImageFileTab(t *testing.T) {
 
 	// Opened again, it's the same tab; changed on disk, it's read again.
 	s.Run("editor.open", registry.Args{"path": p})
-	os.WriteFile(p, editor.PNGBytes(t, photo(320, 200)), 0o644)
+	if err := os.WriteFile(p, editor.PNGBytes(t, photo(320, 200)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	framesUntil(s, t, "the tab to follow the file", func(int) {}, func() bool { return drew(s, "320 × 200 · ") })
 	if n := strings.Count(s.Text(), "hero.png"); n > 2 {
 		t.Errorf("hero.png is open %d times", n)
@@ -85,8 +91,12 @@ func TestImageFileTab(t *testing.T) {
 // (`open` on macOS, `xdg-open` on Linux).
 func TestMediaFileCard(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "demo.mp4"), make([]byte, 3<<20), 0o644)
-	os.WriteFile(filepath.Join(dir, "blob.bin"), []byte("ab\x00cd"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "demo.mp4"), make([]byte, 3<<20), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "blob.bin"), []byte("ab\x00cd"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	s.Run("editor.open", registry.Args{"path": "demo.mp4"})
 	s.Frames(3)
@@ -106,7 +116,9 @@ func TestMediaFileCard(t *testing.T) {
 		t.Errorf("a binary file's card:\n%s", s.Text())
 	}
 	// Text still opens as text.
-	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("hello\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": "notes.txt"})
 	s.Frames(2)
 	if !s.Showing(kit.EditorView) || !drew(s, "hello") {
@@ -117,8 +129,12 @@ func TestMediaFileCard(t *testing.T) {
 // An SVG is drawn the same way, as vectors; one that can't be read is a card saying why.
 func TestSVGFileTab(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "logo.svg"), []byte(editor.Badge), 0o644)
-	os.WriteFile(filepath.Join(dir, "broken.svg"), []byte("<svg width="), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "logo.svg"), []byte(editor.Badge), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "broken.svg"), []byte("<svg width="), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	s.Run("editor.open", registry.Args{"path": "logo.svg"})
 	s.Frames(3)

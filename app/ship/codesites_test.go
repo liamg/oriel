@@ -92,10 +92,18 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 	}
 
 	// gh's own config names a GitHub Enterprise server; glab's a GitLab.
-	os.MkdirAll(filepath.Join(sites.Config(), "gh"), 0o755)
-	os.WriteFile(filepath.Join(sites.Config(), "gh", "hosts.yml"), []byte("github.com:\n    user: you\nghe.acme.corp:\n    user: you\n    git_protocol: ssh\n"), 0o644)
-	os.MkdirAll(filepath.Join(sites.Config(), "glab-cli"), 0o755)
-	os.WriteFile(filepath.Join(sites.Config(), "glab-cli", "config.yml"), []byte("git_protocol: ssh\nhosts:\n  gitlab.com:\n    token: x\n  git.acme.corp:\n    api_host: git.acme.corp\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(sites.Config(), "gh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sites.Config(), "gh", "hosts.yml"), []byte("github.com:\n    user: you\nghe.acme.corp:\n    user: you\n    git_protocol: ssh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(sites.Config(), "glab-cli"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sites.Config(), "glab-cli", "config.yml"), []byte("git_protocol: ssh\nhosts:\n  gitlab.com:\n    token: x\n  git.acme.corp:\n    api_host: git.acme.corp\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if n, h, r := at("git@ghe.acme.corp:acme/api.git"); n != "github" || h != "ghe.acme.corp" || r != "acme/api" {
 		t.Errorf("gh's GitHub Enterprise server: %s %s %s", n, h, r)
 	}
@@ -108,8 +116,12 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 	}
 
 	// You say so, and code.api moves the API.
-	s.Registry().Options().Set(ship.CodeHostsOption, registry.LayerUser, registry.At{}, map[string]string{"code.internal": "gitlab"})
-	s.Registry().Options().Set(ship.CodeAPIOption, registry.LayerUser, registry.At{}, map[string]string{"code.internal": "https://code.internal/gitlab/api/v4"})
+	if err := s.Registry().Options().Set(ship.CodeHostsOption, registry.LayerUser, registry.At{}, map[string]string{"code.internal": "gitlab"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Registry().Options().Set(ship.CodeAPIOption, registry.LayerUser, registry.At{}, map[string]string{"code.internal": "https://code.internal/gitlab/api/v4"}); err != nil {
+		t.Fatal(err)
+	}
 	if hs, _, ok := sites.Remote("ssh://git@code.internal:2222/team/app.git"); !ok || hs.Site.API != "https://code.internal/gitlab/api/v4" {
 		t.Errorf("code.hosts and code.api: %+v %v", hs.Site, ok)
 	}
@@ -182,7 +194,9 @@ func TestCodeSiteTokens(t *testing.T) {
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	t.Setenv("GITLAB_TOKEN", "from-env")
 	bin, log := t.TempDir(), filepath.Join(t.TempDir(), "glab.log")
-	os.WriteFile(filepath.Join(bin, "glab"), []byte("#!/bin/sh\necho \"glab $*\" >> "+log+"\necho from-glab\n"), 0o755)
+	if err := os.WriteFile(filepath.Join(bin, "glab"), []byte("#!/bin/sh\necho \"glab $*\" >> "+log+"\necho from-glab\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.Secrets = secrets }})
 	var allowed []string
@@ -321,8 +335,12 @@ func TestLuaCodeHostCLIConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	sites := sitesOf(s)
-	os.MkdirAll(filepath.Join(sites.Config(), "forge"), 0o755)
-	os.WriteFile(filepath.Join(sites.Config(), "forge", "hosts.yml"), []byte("hosts:\n  code.acme.test:\n    user: you\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(sites.Config(), "forge"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sites.Config(), "forge", "hosts.yml"), []byte("hosts:\n  code.acme.test:\n    user: you\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if name, ok := sites.Named("code.acme.test"); !ok || name != "forge" {
 		t.Errorf("the forge CLI's server is named %q, %v", name, ok)
 	}

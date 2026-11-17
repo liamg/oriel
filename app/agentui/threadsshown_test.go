@@ -15,8 +15,12 @@ import (
 func threadsFile(t *testing.T) *apptest.Scene {
 	dir := t.TempDir()
 	src := "package pricing\n\nfunc Round() {\n\tfloor := scaled.Floor()\n\t_ = floor\n\n\treturn\n}\n"
-	os.WriteFile(filepath.Join(dir, "round.go"), []byte(src), 0o644)
-	os.WriteFile(filepath.Join(dir, "other.go"), []byte(src), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "round.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "other.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return apptest.ThreadsScene(t, apptest.Options{WorkDir: dir},
 		[4]string{"round.go", "4", "\tfloor := scaled.Floor()", "Floor goes the wrong way for negatives"},
 		[4]string{"round.go", "4", "\tfloor := scaled.Floor()", "And for zero?"},

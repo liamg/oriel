@@ -32,7 +32,9 @@ var spinning = []byte{
 func TestWASMLoadIsWatchdogged(t *testing.T) {
 	testhook.Set(t, &script.LoadBudget, 100*time.Millisecond)
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "spin.wasm"), spinning, 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "spin.wasm"), spinning, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	a := &APIs{Host: logHost{}, Plugin: plugin.Caller{ID: "acme/spin", Dir: dir}}
 	done := make(chan error, 1)
 	go func() {

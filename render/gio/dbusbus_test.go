@@ -51,7 +51,7 @@ func startDBusDaemon(t *testing.T) string {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait() })
+	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
 	addr, err := bufio.NewReader(out).ReadString('\n')
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func startTestBus(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { ln.Close() })
+	t.Cleanup(func() { _ = ln.Close() })
 	b := &testBus{conns: map[string]*testBusConn{}, owners: map[string]string{}}
 	go func() {
 		for {
@@ -97,7 +97,7 @@ func startTestBus(t *testing.T) string {
 }
 
 func (b *testBus) serve(c net.Conn) {
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	r := bufio.NewReader(c)
 	if _, err := r.ReadByte(); err != nil {
 		return
@@ -109,16 +109,16 @@ func (b *testBus) serve(c net.Conn) {
 		}
 		switch f := strings.Fields(line); {
 		case len(f) == 1 && f[0] == "AUTH":
-			fmt.Fprint(c, "REJECTED EXTERNAL\r\n")
+			_, _ = fmt.Fprint(c, "REJECTED EXTERNAL\r\n")
 		case len(f) >= 2 && f[0] == "AUTH" && f[1] == "EXTERNAL":
-			fmt.Fprint(c, "OK 0123456789abcdef0123456789abcdef\r\n")
+			_, _ = fmt.Fprint(c, "OK 0123456789abcdef0123456789abcdef\r\n")
 		case len(f) == 1 && f[0] == "NEGOTIATE_UNIX_FD":
-			fmt.Fprint(c, "ERROR\r\n")
+			_, _ = fmt.Fprint(c, "ERROR\r\n")
 		case len(f) == 1 && f[0] == "BEGIN":
 			b.run(c, r)
 			return
 		default:
-			fmt.Fprint(c, "ERROR\r\n")
+			_, _ = fmt.Fprint(c, "ERROR\r\n")
 		}
 	}
 }
@@ -250,7 +250,7 @@ func (x *testBusConn) forward(msg *dbus.Message, body []byte) {
 	binary.LittleEndian.PutUint32(raw[8:12], msg.Serial())
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	x.c.Write(append(raw, body...))
+	_, _ = x.c.Write(append(raw, body...))
 }
 
 // send writes msg, with serial in place of its own when it's the bus's.
@@ -265,5 +265,5 @@ func (x *testBusConn) send(msg *dbus.Message, serial uint32) {
 	}
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	x.c.Write(raw)
+	_, _ = x.c.Write(raw)
 }

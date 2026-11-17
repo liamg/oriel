@@ -189,20 +189,30 @@ func TestHUDUsageIsOfTheProvidersInUse(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 0, 0)
 	apptest.PluginOf[*stats.Stats](s, "stats").Clock = s.Clock()
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now.Add(-time.Hour),
-		Agent: core.AgentState{Provider: "claude"}}})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now.Add(-time.Hour),
+		Agent: core.AgentState{Provider: "claude"}}}); err != nil {
+		t.Fatal(err)
+	}
 	codex := core.ProviderUsage{Provider: "codex", Account: "me@x", Sampled: s.Now,
 		Windows: []core.UsageWindow{{Name: "5h", Used: .4, Resets: s.Now.Add(time.Hour)}}}
-	s.Store().Apply(core.UsageSampled{Usage: codex})
-	s.Store().Apply(core.UsageRead{Provider: "claude", Failure: &core.UsageFailure{Err: "no plan windows came"}})
+	if err := s.Store().Apply(core.UsageSampled{Usage: codex}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.UsageRead{Provider: "claude", Failure: &core.UsageFailure{Err: "no plan windows came"}}); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("hud.toggle", nil)
 	s.Until("the HUD", func() bool { return hudDown(s) })
 	s.Until("claude's unread plan", func() bool { return s.Has("plan couldn't be read") })
 	if s.Has("me@x") || s.Has("40%") {
 		t.Errorf("the HUD shows codex's plan, unused:\n%s", s.Text())
 	}
-	s.Store().Apply(core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "liam", AccountName: "liam@x", Sampled: s.Now,
-		Windows: []core.UsageWindow{{Name: "5h", Used: .2, Resets: s.Now.Add(time.Hour)}}}})
-	s.Store().Apply(core.UsageRead{Provider: "claude"})
+	if err := s.Store().Apply(core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "liam", AccountName: "liam@x", Sampled: s.Now,
+		Windows: []core.UsageWindow{{Name: "5h", Used: .2, Resets: s.Now.Add(time.Hour)}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.UsageRead{Provider: "claude"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("claude's plan", func() bool { return s.Has("liam@x") && !s.Has("plan couldn't be read") })
 }

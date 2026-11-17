@@ -26,7 +26,9 @@ func TestDiffRevealOfAGoneFileSettles(t *testing.T) {
 			case "never there":
 				file = filepath.Join(r, "gone.go")
 			case "deleted":
-				os.Remove(file)
+				if err := os.Remove(file); err != nil {
+					t.Fatal(err)
+				}
 			case "reverted":
 				repo.Git("checkout", "--", "internal/pricing/round.go")
 			}

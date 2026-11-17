@@ -55,7 +55,9 @@ func pane(t *testing.T, s *apptest.Scene, dir, name string) registry.EditorWindo
 // place. Two windows on one file can be in Edit and Preview at once, and an edit in one shows in the other.
 func TestMarkdownPreview(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.ThreadsScene(t, apptest.Options{WorkDir: dir}, [4]string{"notes.md", "3", "Intro paragraph.", "Is this intro enough?"})
 	s.Run("editor.open", registry.Args{"path": "notes.md"})
 	s.Frames(3)
@@ -180,7 +182,9 @@ func opStarting(f headless.Frame, prefix string) (render.Point, bool) {
 func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	path := filepath.Join(r.ProjectDir(r.Session), "prices.csv")
-	os.WriteFile(path, []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\nE-5,50\n"), 0o644)
+	if err := os.WriteFile(path, []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\nE-5,50\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.Run("lua", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
 		`when = function(p) return p:match("%.csv$") ~= nil end, ` +
 		`build = function(ctx) for i, l in ipairs(ctx.lines) do if l ~= "" then ` +
@@ -220,7 +224,9 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 // A window's presentation comes back after a restart, as its file and cursor do.
 func TestPresentationComesBackAfterARestart(t *testing.T) {
 	state, dir := t.TempDir(), t.TempDir()
-	os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r.Run("editor.open", registry.Args{"path": filepath.Join(dir, "notes.md")})
 	r.Run("editor.present", registry.Args{"name": "markdown"})
@@ -248,7 +254,9 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
   when = function(path) return path:match("%.csv$") ~= nil end,
   on = function(window) return window.presenter == "csv" end,
   note = function(window) return "#" .. window.id end }`)
-	os.WriteFile(filepath.Join(s.Editor().Dir(), "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(s.Editor().Dir(), "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": "prices.csv"})
 	s.Frames(2)
 	label := "Table #" + s.EditorWindow().ID
@@ -267,9 +275,15 @@ func TestPresentKey(t *testing.T) {
   when = function(path) return path:match("%.csv$") ~= nil end,
   build = function(ctx) ctx.block(1, #ctx.lines, function() return oriel.ui.text("a table") end) end }`)
 	dir := s.Editor().Dir()
-	os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644)
-	os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "plain.txt"), []byte("just text\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plain.txt"), []byte("just text\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range []struct{ file, presenter string }{{"notes.md", "markdown"}, {"prices.csv", "csv"}, {"plain.txt", ""}} {
 		s.Run("editor.open", registry.Args{"path": c.file})
 		s.Frames(2)

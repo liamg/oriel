@@ -32,8 +32,12 @@ func newFakeRepo(t *testing.T, versions [][2]string) fakeRepo {
 	r := fakeRepo{dir: t.TempDir(), commits: map[string]string{}}
 	git(t, r.dir, "init", "-q", "-b", "main")
 	for _, v := range versions {
-		os.WriteFile(filepath.Join(r.dir, "oriel.toml"), []byte(v[1]), 0o644)
-		os.WriteFile(filepath.Join(r.dir, "init.lua"), []byte("oriel.notify(\"hi\")\n"), 0o644)
+		if err := os.WriteFile(filepath.Join(r.dir, "oriel.toml"), []byte(v[1]), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(r.dir, "init.lua"), []byte("oriel.notify(\"hi\")\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		git(t, r.dir, "add", ".")
 		git(t, r.dir, "commit", "-q", "-m", v[0])
 		git(t, r.dir, "tag", "v"+v[0])
@@ -64,7 +68,9 @@ func (g fakeGitHub) check(t *testing.T, base, head map[string]string, author str
 			dir := t.TempDir()
 			git(t, dir, "clone", "-q", g.repos[repo].dir, ".")
 			git(t, dir, "checkout", "-q", "--detach", commit)
-			os.RemoveAll(filepath.Join(dir, ".git"))
+			if err := os.RemoveAll(filepath.Join(dir, ".git")); err != nil {
+				t.Error(err)
+			}
 			return dir, nil
 		},
 		Tag: func(_ context.Context, repo, tag string) (string, error) {

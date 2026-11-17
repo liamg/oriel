@@ -23,9 +23,13 @@ func TestIDsStayInThePluginsDir(t *testing.T) {
 
 	root := t.TempDir()
 	keep := filepath.Join(root, "keep")
-	os.WriteFile(keep, []byte("mine"), 0o644)
+	if err := os.WriteFile(keep, []byte("mine"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := Store{Dir: filepath.Join(root, "data", "plugins")}
-	os.MkdirAll(s.Dir, 0o755)
+	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	for _, id := range []string{"../..", "../data", "x/..", ".."} {
 		if err := s.Remove(id); err == nil {
 			t.Errorf("Remove(%q) is allowed", id)

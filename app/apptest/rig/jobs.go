@@ -61,7 +61,9 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	root := t.TempDir()
 	for _, name := range []string{"api", "web", "pricing"} {
 		g := &gittest.Repo{T: t, Dir: filepath.Join(root, name), When: time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)}
-		os.MkdirAll(g.Dir, 0o755)
+		if err := os.MkdirAll(g.Dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
 		g.Git("init", "-q", "-b", "main")
 		g.Write(map[string]string{"README": name + "\n"})
 		g.Commit("Ada", "first")
@@ -74,7 +76,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	r.W = w
 	ctx := context.Background()
 	for _, name := range []string{"api", "web", "pricing"} {
@@ -140,7 +142,9 @@ func (r *Jobs) Run(job string, fx FxRun) core.SessionID {
 	}
 	if len(lines) > 0 {
 		p := filepath.Join(t.TempDir(), string(id)+".jsonl")
-		os.WriteFile(p, []byte(strings.Join(lines, "\n")+"\n"), 0o644)
+		if err := os.WriteFile(p, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+			r.T.Fatal(err)
+		}
 		r.Claude.SetLog(se.Snapshot().Dir, p)
 	}
 	r.Clock.Set(fx.Start.Add(fx.Took))

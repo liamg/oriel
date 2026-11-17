@@ -44,9 +44,11 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	// The test host has no sandbox factory.
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		return r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	prompt := func(text string) {
 		r.ClickTop(sessions.PromptPlaceholder)
@@ -209,17 +211,17 @@ func TestStartViewListsSessions(t *testing.T) {
 func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	lw := rig.NewHost(t)
 	outside := filepath.Join(t.TempDir(), "other.go")
-	os.WriteFile(outside, []byte("package other\n"), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
-	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "repos": []string{lw.Repo}})
-	}); err != nil {
+	if err := os.WriteFile(outside, []byte("package other\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	r.Run("session.start", registry.Args{"kind": "work", "name": "w", "repos": []string{lw.Repo}})
 	p, _ := r.WaitSessionOpen("w").Primary()
 	inside := filepath.Join(p.Dir, "round.go")
-	os.WriteFile(inside, []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(inside, []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitProject(p.Dir)
 
 	open := func(path string) {
@@ -390,7 +392,7 @@ func TestLauncherProbeFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.Host, cfg.Store = w, w.Store() }})
 	s.Run("session.new", registry.Args{"prompt": "notes"})
 	s.Until("the failure", func() bool { return strings.Contains(s.Text(), "no agents are set up on this machine") })
@@ -480,11 +482,7 @@ func TestLauncherContinuingSaysWhichAgent(t *testing.T) {
 		t.Fatal(err)
 	}
 	first := r.UntilState("the first session", func(st core.State) bool { return len(st.Sessions) == 1 }).Sessions[0]
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "session.new", registry.Args{"kind": "plan", "prompt": "Try it again", "ticket": "try-1"})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	r.Run("session.new", registry.Args{"kind": "plan", "prompt": "Try it again", "ticket": "try-1"})
 	r.WaitText(first.Name + " carries on with Alpha")
 	if fs := r.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "Beta") {
 		text := fs[len(fs)-1].Text()

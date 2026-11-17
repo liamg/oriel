@@ -56,7 +56,9 @@ func TestIdlePollsNoFasterThanASecond(t *testing.T) {
 		t.Fatal("no window service")
 	}
 	var fastest time.Duration
-	r.Do(func() error { fastest = w.Polls().FastestNow(); return nil })
+	if err := r.Do(func() error { fastest = w.Polls().FastestNow(); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	if fastest > 0 && fastest < time.Second {
 		t.Errorf("a poll runs every %v while idle, want a second or slower", fastest)
 	}
@@ -103,7 +105,9 @@ func TestNoFramesWhileHidden(t *testing.T) {
 	before := len(r.Win.Frames())
 	r.Host.Notify(core.Notice{ID: "hidden.test", Severity: core.SevInfo, Text: "changed while hidden"})
 	for range 2 { // the loop goes round after the notice, where a shown window would build its frame
-		r.Do(func() error { return nil })
+		if err := r.Do(func() error { return nil }); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if n := len(r.Win.Frames()) - before; n > 0 {
 		t.Errorf("drew %d frames while hidden", n)

@@ -117,7 +117,9 @@ func TestAMoveWaitsForWhatHoldsIt(t *testing.T) {
 	release := <-p.release
 	r.WaitText("Opening")
 	before := len(r.Win.Frames())
-	r.Do(func() error { r.Host.Redraw(); return nil })
+	if err := r.Do(func() error { r.Host.Redraw(); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	if f := r.WaitAfter("a frame while it's held", before, func(string) bool { return true }); !strings.Contains(f, "Opening") {
 		t.Fatalf("the window laid the directory out while a plugin held it:\n%s", f)
 	}

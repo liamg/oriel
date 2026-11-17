@@ -43,7 +43,9 @@ func TestWorkspacePage(t *testing.T) {
 	if p, ok := se.Primary(); root == "" && ok {
 		root = p.Dir
 	}
-	os.MkdirAll(sandbox.TmpDir(root), 0o700)
+	if err := os.MkdirAll(sandbox.TmpDir(root), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(sandbox.TmpDir(root), "notes.md"), []byte("hi"), 0o600); err != nil {
 		t.Fatal(err)
 	}

@@ -67,7 +67,9 @@ func (w *Window) Taken() {
 		_, built := w.look()
 		Recv(w.T, "a frame after what was sent", built)
 	}
-	w.Do(func() error { return nil })
+	if err := w.Do(func() error { return nil }); err != nil {
+		w.T.Fatal(err)
+	}
 }
 
 // WaitSearch frames until project search has finished and the frame has want, and answers the frame's text.
@@ -115,13 +117,15 @@ func (w *Window) Idle() {
 // frame is built.
 func (w *Window) look() (busy []string, built <-chan struct{}) {
 	done := make(chan struct{})
-	w.Do(func() error {
+	if err := w.Do(func() error {
 		busy = append(registry.BusyNow(w.Host), dueSources(w.Host, w.Store.State())...)
 		var once sync.Once
 		var cancel registry.Disposable
 		cancel = w.Host.Framed(func() { once.Do(func() { cancel.Dispose(); close(done) }) })
 		return nil
-	})
+	}); err != nil {
+		w.T.Fatal(err)
+	}
 	return busy, done
 }
 

@@ -106,7 +106,9 @@ func (s *Scene) WriteConfig(files map[string]string) {
 	s.T.Helper()
 	for name, src := range files {
 		p := filepath.Join(s.ConfigDir, name)
-		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			s.T.Fatal(err)
+		}
 		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
 			s.T.Fatal(err)
 		}

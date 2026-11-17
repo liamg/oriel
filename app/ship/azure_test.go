@@ -80,7 +80,9 @@ func TestAzureShipAndReviews(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	az := azuretest.New(t)
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret(azure.Secret, azuretest.Token)
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
 	hub := ghtest.New(t)
 	lw := rig.NewHostWith(t, host.Options{})
 	dash := azureRepo(t, "dashboard")

@@ -14,7 +14,9 @@ import (
 // With 'nowrap' a wide line builds only the text the window shows, from its left column to its right edge.
 func TestNowrapBuildsOnlyTheVisibleText(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "wide.txt"), []byte("short\n"+strings.Repeat("x", 20_000)+"END\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "wide.txt"), []byte("short\n"+strings.Repeat("x", 20_000)+"END\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 600}})
 	s.Run("editor.open", registry.Args{"path": "wide.txt"})
 	s.Frame()

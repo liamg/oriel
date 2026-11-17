@@ -79,7 +79,9 @@ func TestGuardRejectsUndeclared(t *testing.T) {
 // A symlink inside a granted directory doesn't reach out of it.
 func TestGuardFollowsSymlinks(t *testing.T) {
 	work, outside := t.TempDir(), t.TempDir()
-	os.WriteFile(filepath.Join(outside, "secret"), []byte("x"), 0o644)
+	if err := os.WriteFile(filepath.Join(outside, "secret"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Symlink(outside, filepath.Join(work, "link")); err != nil {
 		t.Skip(err)
 	}
@@ -174,8 +176,12 @@ runs = "everywhere"`} {
 func TestCheckProgram(t *testing.T) {
 	dir := t.TempDir()
 	server := filepath.Join(dir, "bin", "server")
-	os.MkdirAll(filepath.Dir(server), 0o755)
-	os.WriteFile(server, []byte("#!/bin/sh\n"), 0o755)
+	if err := os.MkdirAll(filepath.Dir(server), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(server, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	g := NewGrants()
 	g.Grant("p/q", []Grant{{Cap: CapExec, Scope: []string{RealPath(server), "gopls"}}})
 	c := Caller{ID: "p/q", Dir: dir, Guard: g}

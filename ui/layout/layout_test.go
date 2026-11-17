@@ -70,28 +70,38 @@ func TestMovesAndDrops(t *testing.T) {
 			return r.Drop(term, Target{Float: &f})
 		}},
 		{"split twice the same way: one split, three children", func(r *Root) error {
-			r.Move(term, Split, Opts{Side: SideRight})
+			if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+				t.Error(err)
+			}
 			return r.Move(probs, Split, Opts{Side: SideRight, Beside: &term})
 		}},
 		{"moving the last view out of a split collapses it", func(r *Root) error {
-			r.Move(term, Split, Opts{Side: SideRight})
+			if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+				t.Error(err)
+			}
 			return r.Move(term, Docked, Opts{Edge: Bottom})
 		}},
 		{"close the focused tab: focus goes to its neighbour", func(r *Root) error { r.Close(code); return nil }},
 		{"⌃J: close the bottom dock", func(r *Root) error { r.ToggleDock(Bottom); return nil }},
 		{"⌃W =: even out the splits", func(r *Root) error {
-			r.Move(term, Split, Opts{Side: SideRight})
+			if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+				t.Error(err)
+			}
 			r.Main.Weights = []float32{3, 1}
 			r.Equalize()
 			return nil
 		}},
 		{"⌃W Z: zoom the terminal", func(r *Root) error {
-			r.Move(term, Split, Opts{Side: SideRight})
+			if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+				t.Error(err)
+			}
 			r.ToggleZoom(term)
 			return nil
 		}},
 		{"⌃W Z again: the exact tree comes back", func(r *Root) error {
-			r.Move(term, Split, Opts{Side: SideRight})
+			if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+				t.Error(err)
+			}
 			before := r.Dump()
 			r.ToggleZoom(term)
 			r.ToggleZoom(term)
@@ -121,8 +131,12 @@ func errorf(f string, args ...any) error { return errString(fmt.Sprintf(f, args.
 
 func TestSaveAndRestore(t *testing.T) {
 	r := start(t)
-	r.Move(term, Split, Opts{Side: SideRight})
-	r.Move(probs, Floating, Opts{Rect: render.XYWH(1, 2, 3, 4)})
+	if err := r.Move(term, Split, Opts{Side: SideRight}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Move(probs, Floating, Opts{Rect: render.XYWH(1, 2, 3, 4)}); err != nil {
+		t.Fatal(err)
+	}
 	r.ToggleZoom(term)
 	got, err := Restore(r.Save())
 	if err != nil {
@@ -149,7 +163,9 @@ func TestMoveErrors(t *testing.T) {
 // All lists every view wherever it is; Rename moves one's place, focus and zoom to another reference.
 func TestAllAndRename(t *testing.T) {
 	r := start(t)
-	r.Move(probs, Floating, Opts{Rect: render.XYWH(1, 2, 3, 4)})
+	if err := r.Move(probs, Floating, Opts{Rect: render.XYWH(1, 2, 3, 4)}); err != nil {
+		t.Fatal(err)
+	}
 	r.ToggleZoom(code)
 	focus := code
 	r.Focus = &focus
@@ -218,7 +234,11 @@ func TestMovesDoNotClose(t *testing.T) {
 
 // A drop where the view already is leaves the tree as it was, and shows the view.
 func TestDropInPlace(t *testing.T) {
-	split := func(r *Root) { r.Move(test, Split, Opts{Side: SideRight}) }
+	split := func(r *Root) {
+		if err := r.Move(test, Split, Opts{Side: SideRight}); err != nil {
+			t.Error(err)
+		}
+	}
 	for _, tc := range []struct {
 		name  string
 		setup func(r *Root)

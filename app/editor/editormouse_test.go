@@ -29,7 +29,9 @@ func charAt(s *apptest.Scene, t *testing.T, line string, col int) render.Point {
 func editorMouseScene(t *testing.T) *apptest.Scene {
 	t.Helper()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("round half even\nsecond line\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("round half even\nsecond line\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	open(s, t, "a.txt")
 	s.Frame()
@@ -113,7 +115,9 @@ func TestHelpTextSelects(t *testing.T) {
 func TestEditorScrollsSideways(t *testing.T) {
 	dir := t.TempDir()
 	long := "start " + strings.Repeat("middle ", 60) + "finish"
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte(long+"\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte(long+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 900, Y: 600}})
 	open(s, t, "a.txt")
 	s.Frame()
@@ -154,7 +158,9 @@ func TestEditorScrollsSideways(t *testing.T) {
 func TestEditorWrapsLongLines(t *testing.T) {
 	dir := t.TempDir()
 	long := "start " + strings.Repeat("middle ", 60) + "finish"
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte(long+"\nnext\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte(long+"\nnext\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 900, Y: 600}})
 	open(s, t, "a.txt")
 	s.Frame()
@@ -211,7 +217,9 @@ func TestEditorWrapsLongLines(t *testing.T) {
 // A click lands on the character under the pointer with a block between the lines above it.
 func TestEditorClickBelowABlock(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("first\nsecond line\nthird\nfourth\nfifth\nsixth\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("first\nsecond line\nthird\nfourth\nfifth\nsixth\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	open(s, t, "a.txt")
 	s.Registry().Decoration("test.block", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration {

@@ -16,7 +16,9 @@ import (
 func commentScene(t *testing.T, where, body string) *apptest.Scene {
 	t.Helper()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "round.go"), []byte("package pricing\n\nfunc Round() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "round.go"), []byte("package pricing\n\nfunc Round() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.ThreadsScene(t, apptest.Options{WorkDir: dir}, [4]string{"round.go", "4", "\tfloor := scaled.Floor()", body})
 	if where == "request" {
 		s.Run("request.open", registry.Args{"thread": "t000000"})

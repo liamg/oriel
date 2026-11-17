@@ -36,7 +36,9 @@ func TestApplyAndSubscribe(t *testing.T) {
 	}
 
 	cancel()
-	s.Apply(core.SessionStatusChanged{ID: "s2", Status: core.StatusQuiet})
+	if err := s.Apply(core.SessionStatusChanged{ID: "s2", Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
 	if len(s2) != 2 {
 		t.Error("a cancelled subscription still received events")
 	}
@@ -59,7 +61,9 @@ func TestApplyDropsNoOpEvents(t *testing.T) {
 	s := New()
 	var got []core.Event
 	s.Subscribe(core.Filter{}, func(ev core.Event) { got = append(got, ev) })
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
 	working := core.AgentChanged{ID: "s1", Agent: core.AgentState{Provider: "fake", Running: true, Working: true}}
 	for range 3 {
 		if err := s.Apply(working); err != nil {
@@ -72,7 +76,9 @@ func TestApplyDropsNoOpEvents(t *testing.T) {
 	if seq := s.State().Seq; seq != 2 {
 		t.Errorf("seq %d, want 2", seq)
 	}
-	s.Apply(noted{Session: "s1", Text: "hi"})
+	if err := s.Apply(noted{Session: "s1", Text: "hi"}); err != nil {
+		t.Fatal(err)
+	}
 	if len(got) != 3 {
 		t.Error("a Logged event that changes no state wasn't published")
 	}
@@ -86,12 +92,16 @@ func TestEventTimesAreUTC(t *testing.T) {
 	s.Subscribe(core.Filter{}, core.NewRecorder(&log).Record)
 	paris := time.FixedZone("CEST", 2*3600)
 	at := time.Date(2026, 10, 14, 11, 0, 0, 0, paris)
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
 	th := core.Thread{ID: "t1", Created: at, Comments: []core.Comment{{ID: "c1", Body: "hi", Time: at}}}
 	if err := s.Apply(core.ThreadUpdated{Session: "s1", Thread: th}); err != nil {
 		t.Fatal(err)
 	}
-	s.Apply(core.Notified{Notice: core.Notice{ID: "n", Text: "x", Time: at}})
+	if err := s.Apply(core.Notified{Notice: core.Notice{ID: "n", Text: "x", Time: at}}); err != nil {
+		t.Fatal(err)
+	}
 	se, _ := s.State().Session("s1")
 	got, _ := se.Snapshot().Thread("t1")
 	if got.Created.Location() != time.UTC || got.Comments[0].Time.Location() != time.UTC || !got.Created.Equal(at) {

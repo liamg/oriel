@@ -18,14 +18,18 @@ import (
 // call to the host goes through the guard, and an undeclared one is an error naming the capability.
 func TestWASMPlugin(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	work := t.TempDir()
-	os.WriteFile(filepath.Join(work, "a.txt"), []byte("hello"), 0o644)
+	if err := os.WriteFile(filepath.Join(work, "a.txt"), []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	g := NewGrants()
 	g.Grant("acme/w", []Grant{{Cap: CapFSRead, Scope: []string{work}}})
 	w := &WASM{Methods: HostMethods(nopReporter{})}
 	ctx := context.Background()
-	defer w.Close(ctx)
+	defer func() { _ = w.Close(ctx) }()
 	p := Caller{ID: "acme/w", Dir: dir, Guard: g}
 	m, err := w.Load(ctx, p, "m.wasm", WASMOpts{})
 	if err != nil {
@@ -68,9 +72,11 @@ func TestWASMPlugin(t *testing.T) {
 // Loading a .wasm from outside the plugin's directory needs fs.read for it.
 func TestWASMLoadNeedsFSReadOutside(t *testing.T) {
 	elsewhere := t.TempDir()
-	os.WriteFile(filepath.Join(elsewhere, "m.wasm"), hosttest.Module(), 0o644)
+	if err := os.WriteFile(filepath.Join(elsewhere, "m.wasm"), hosttest.Module(), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	w := &WASM{}
-	defer w.Close(context.Background())
+	defer func() { _ = w.Close(context.Background()) }()
 	g := NewGrants()
 	p := Caller{ID: "acme/w", Dir: t.TempDir(), Guard: g}
 	if _, err := w.Load(context.Background(), p, filepath.Join(elsewhere, "m.wasm"), WASMOpts{}); !errors.Is(err, ErrNotDeclared) {

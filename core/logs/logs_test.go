@@ -89,7 +89,9 @@ func TestFileRotates(t *testing.T) {
 	if err := f.Err(); err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"oriel.log", "oriel.log.1", "oriel.log.2"} {
 		st, err := os.Stat(filepath.Join(dir, "sub", name))
 		if err != nil {
@@ -115,7 +117,9 @@ func TestSessionLogSurvivesRestart(t *testing.T) {
 	if err := r1.Err(); err != nil {
 		t.Fatal(err)
 	}
-	r1.Close()
+	if err := r1.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if len(oriel) != 1 || oriel[0].Msg != "reloaded init.lua" {
 		t.Errorf("oriel log = %v", oriel)
 	}
@@ -132,7 +136,9 @@ func TestSessionLogSurvivesRestart(t *testing.T) {
 	if strings.Join(got, "|") != "worktree ready|gopls started|after" {
 		t.Errorf("ring after restart = %v", got)
 	}
-	r2.Close()
+	if err := r2.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := (Dirs{Root: root}).Open("../escape"); err == nil {
 		t.Error("opened a session log outside the root")
 	}
@@ -144,13 +150,21 @@ func TestSessionLogSkipsTornLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l.Append(Record{Msg: "one"})
-	l.Close()
+	if err := l.Append(Record{Msg: "one"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := l.Close(); err != nil {
+		t.Fatal(err)
+	}
 	f, _ := os.OpenFile(filepath.Join(root, "s1", "session.log"), os.O_APPEND|os.O_WRONLY, 0)
-	f.WriteString(`{"msg":"tor`)
-	f.Close()
+	if _, err := f.WriteString(`{"msg":"tor`); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	l, _ = Dirs{Root: root}.Open("s1")
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	recs, err := l.Records()
 	if err != nil || len(recs) != 1 || recs[0].Msg != "one" {
 		t.Errorf("records = %v, %v", recs, err)
@@ -161,9 +175,15 @@ func TestSessionLogSkipsTornLine(t *testing.T) {
 func TestLinesCapturesStderr(t *testing.T) {
 	ring := NewRing(10)
 	w := &Lines{Log: slog.New(NewHandler(ring, nil, nil)).With("source", "lsp:gopls"), Level: slog.LevelWarn}
-	w.Write([]byte("gopls: loading packa"))
-	w.Write([]byte("ges\r\n\nsecond line\npartial"))
-	w.Close()
+	if _, err := w.Write([]byte("gopls: loading packa")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Write([]byte("ges\r\n\nsecond line\npartial")); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
 	var got []string
 	for _, r := range ring.Records() {
 		if r.Source != "lsp:gopls" || r.Level != slog.LevelWarn {

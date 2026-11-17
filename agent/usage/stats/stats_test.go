@@ -45,7 +45,7 @@ func appendTo(t *testing.T, p string, lines ...string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.WriteString(strings.Join(lines, "\n") + "\n"); err != nil {
 		t.Fatal(err)
 	}
@@ -158,13 +158,17 @@ func TestReadResumesFromTheOffset(t *testing.T) {
 func TestPartialTrailingLineIsLeftForNextTime(t *testing.T) {
 	full := asst("2026-09-01T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 1, 1, 0, 0, 0)
 	p := filepath.Join(t.TempDir(), "s.jsonl")
-	os.WriteFile(p, []byte(full+"\n"+full[:len(full)/2]), 0o644)
+	if err := os.WriteFile(p, []byte(full+"\n"+full[:len(full)/2]), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := New(p, claude.UsageLog)
 	s.Read()
 	if s.Requests != 1 {
 		t.Fatalf("requests = %d, want 1: the half line can't count", s.Requests)
 	}
-	os.WriteFile(p, []byte(full+"\n"+full+"\n"), 0o644)
+	if err := os.WriteFile(p, []byte(full+"\n"+full+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Read()
 	if s.Requests != 2 {
 		t.Errorf("requests = %d, want 2 once the line is whole", s.Requests)
@@ -176,7 +180,9 @@ func TestShrunkFileIsReadFromTheStart(t *testing.T) {
 	p := write(t, long, long)
 	s := New(p, claude.UsageLog)
 	s.Read()
-	os.WriteFile(p, []byte(asst("2026-09-02T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 1, 1, 0, 0, 0)+"\n"), 0o644)
+	if err := os.WriteFile(p, []byte(asst("2026-09-02T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 1, 1, 0, 0, 0)+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Read()
 	if s.Requests != 1 {
 		t.Errorf("requests = %d, want 1: the tally starts over", s.Requests)
@@ -357,7 +363,9 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	st.Save()
 	// The same length, saying something else: a reread would count it.
 	b, _ := os.ReadFile(p)
-	os.WriteFile(p, []byte(strings.Replace(string(b), `"output_tokens":1000`, `"output_tokens":9999`, 1)), 0o644)
+	if err := os.WriteFile(p, []byte(strings.Replace(string(b), `"output_tokens":1000`, `"output_tokens":9999`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	appendTo(t, p, asst("2026-10-01T09:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 0, 1, 0, 0, 0))
 	sc := NewStore(file, nil, testFormats).Scan("s", logs)
 	if sc[0].Requests != 2 || sc[0].Tokens.Output != 1001 {
@@ -387,7 +395,9 @@ func TestStoreRepricesWhenThePricesChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	book = cheaper
-	os.Remove(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
 	sc := NewStore(file, prices, testFormats).Scan("s", logs)
 	if !near(sc[0].Cost(), 2) || sc[0].Requests != 1 {
 		t.Errorf("read again: $%v over %d requests, want $2 over 1", sc[0].Cost(), sc[0].Requests)
@@ -547,7 +557,9 @@ func TestStoreSavesOnce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(file)
+	if err := os.Remove(file); err != nil {
+		t.Fatal(err)
+	}
 	st.Save()
 	if _, err := os.Stat(file); err == nil {
 		t.Fatalf("a save with nothing read wrote %d bytes again", fi.Size())

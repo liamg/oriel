@@ -40,7 +40,9 @@ func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 	}
 	step("first", 1)
 	step("nothing changed", 1)
-	buf.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: 0}, Text: []byte("z")}}})
+	if _, err := buf.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: 0}, Text: []byte("z")}}}); err != nil {
+		t.Fatal(err)
+	}
 	step("an edit", 2)
 	key = 2
 	step("its key", 3)

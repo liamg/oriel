@@ -41,7 +41,9 @@ func TestADiffLineClickCommentsOnIt(t *testing.T) {
 			r.Write(map[string]string{"f.txt": base.String()})
 			r.Commit("Ada", "base")
 			path := filepath.Join(r.Dir, "f.txt")
-			os.WriteFile(path, []byte(strings.Replace(base.String(), "line 15\n", "line 15, changed\n", 1)), 0o644)
+			if err := os.WriteFile(path, []byte(strings.Replace(base.String(), "line 15\n", "line 15, changed\n", 1)), 0o644); err != nil {
+				t.Fatal(err)
+			}
 			s := apptest.New(t, apptest.Options{WorkDir: r.Dir, Size: render.Point{X: 1200, Y: 800}})
 			if err := s.Registry().Options().Set("diff.layout", registry.LayerUser, registry.At{}, layout); err != nil {
 				t.Fatal(err)

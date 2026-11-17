@@ -63,7 +63,7 @@ func (f *fake) notify(method string, params json.RawMessage) {
 	var p struct {
 		SessionID string `json:"sessionId"`
 	}
-	json.Unmarshal(params, &p)
+	_ = json.Unmarshal(params, &p)
 	f.mu.Lock()
 	s := f.sessions[p.SessionID]
 	f.mu.Unlock()
@@ -76,7 +76,7 @@ func (f *fake) notify(method string, params json.RawMessage) {
 }
 
 func (f *fake) request(r *jsonrpc.Request) {
-	go func() { r.Reply(f.answer(r.Method, r.Params)) }()
+	go func() { _ = r.Reply(f.answer(r.Method, r.Params)) }()
 }
 
 func (f *fake) answer(method string, params json.RawMessage) (any, error) {
@@ -85,8 +85,8 @@ func (f *fake) answer(method string, params json.RawMessage) (any, error) {
 		var p struct {
 			ClientCapabilities json.RawMessage `json:"clientCapabilities"`
 		}
-		json.Unmarshal(params, &p)
-		json.Unmarshal(p.ClientCapabilities, &f.client)
+		_ = json.Unmarshal(params, &p)
+		_ = json.Unmarshal(p.ClientCapabilities, &f.client)
 		return map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
 			"promptCapabilities": map[string]any{"image": true}}, "agentInfo": map[string]any{"name": "fake", "version": "1"},
 			"authMethods": []any{}}, nil
@@ -96,7 +96,7 @@ func (f *fake) answer(method string, params json.RawMessage) (any, error) {
 			Cwd        string           `json:"cwd"`
 			MCPServers []map[string]any `json:"mcpServers"`
 		}
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		s := &fakeSession{id: p.SessionID, cwd: p.Cwd, cancel: make(chan struct{}, 1)}
 		if len(p.MCPServers) > 0 {
 			s.mcp = p.MCPServers[0]
@@ -111,7 +111,7 @@ func (f *fake) answer(method string, params json.RawMessage) (any, error) {
 			if err != nil {
 				return nil, &jsonrpc.Error{Code: -32002, Message: "no session " + s.id}
 			}
-			json.Unmarshal(b, &s.prompts)
+			_ = json.Unmarshal(b, &s.prompts)
 			for _, p := range s.prompts {
 				f.update(s, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": p}})
 				f.update(s, map[string]any{"sessionUpdate": "agent_message_chunk", "content": map[string]any{"type": "text", "text": "replayed"}})
@@ -137,7 +137,7 @@ func (f *fake) answer(method string, params json.RawMessage) (any, error) {
 				MimeType string `json:"mimeType"`
 			} `json:"prompt"`
 		}
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		f.mu.Lock()
 		s := f.sessions[p.SessionID]
 		f.mu.Unlock()
@@ -159,7 +159,7 @@ func (f *fake) answer(method string, params json.RawMessage) (any, error) {
 }
 
 func (f *fake) update(s *fakeSession, u map[string]any) {
-	f.conn.Notify("session/update", map[string]any{"sessionId": s.id, "update": u})
+	_ = f.conn.Notify("session/update", map[string]any{"sessionId": s.id, "update": u})
 }
 
 func (f *fake) say(s *fakeSession, text string) {
@@ -177,7 +177,7 @@ func (f *fake) play(s *fakeSession, text string, images int) (any, error) {
 	}
 	s.prompts = append(s.prompts, text)
 	if b, err := json.Marshal(s.prompts); err == nil {
-		os.WriteFile(filepath.Join(f.dir, s.id), b, 0o600)
+		_ = os.WriteFile(filepath.Join(f.dir, s.id), b, 0o600)
 	}
 	ctx := context.Background()
 	switch {
@@ -273,12 +273,12 @@ func (f *fake) play(s *fakeSession, text string, images int) (any, error) {
 		var w struct {
 			ExitCode int `json:"exitCode"`
 		}
-		f.conn.Call(ctx, "terminal/wait_for_exit", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, &w)
+		_ = f.conn.Call(ctx, "terminal/wait_for_exit", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, &w)
 		var o struct {
 			Output string `json:"output"`
 		}
-		f.conn.Call(ctx, "terminal/output", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, &o)
-		f.conn.Call(ctx, "terminal/release", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, nil)
+		_ = f.conn.Call(ctx, "terminal/output", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, &o)
+		_ = f.conn.Call(ctx, "terminal/release", map[string]any{"sessionId": s.id, "terminalId": c.TerminalID}, nil)
 		f.say(s, fmt.Sprintf("exit %d: %s", w.ExitCode, strings.Join(strings.Fields(o.Output), " ")))
 	case text == "look":
 		f.say(s, fmt.Sprintf("%d images", images))
@@ -301,7 +301,7 @@ func (f *fake) callEcho(s *fakeSession) (string, error) {
 			Name, Value string
 		} `json:"env"`
 	}
-	json.Unmarshal(b, &m)
+	_ = json.Unmarshal(b, &m)
 	cmd := exec.Command(m.Command, m.Args...)
 	cmd.Env = os.Environ()
 	for _, e := range m.Env {
@@ -312,12 +312,12 @@ func (f *fake) callEcho(s *fakeSession) (string, error) {
 	if err := cmd.Start(); err != nil {
 		return "", err
 	}
-	defer cmd.Wait()
-	defer in.Close()
+	defer func() { _ = cmd.Wait() }()
+	defer func() { _ = in.Close() }()
 	rd := bufio.NewReader(out)
-	io.WriteString(in, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`+"\n")
-	rd.ReadString('\n')
-	io.WriteString(in, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hi"}}}`+"\n")
+	_, _ = io.WriteString(in, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`+"\n")
+	_, _ = rd.ReadString('\n')
+	_, _ = io.WriteString(in, `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"echo","arguments":{"text":"hi"}}}`+"\n")
 	line, err := rd.ReadString('\n')
 	if err != nil {
 		return "", err
@@ -327,7 +327,7 @@ func (f *fake) callEcho(s *fakeSession) (string, error) {
 			Content []struct{ Text string } `json:"content"`
 		} `json:"result"`
 	}
-	json.Unmarshal([]byte(line), &r)
+	_ = json.Unmarshal([]byte(line), &r)
 	if len(r.Result.Content) == 0 {
 		return "", fmt.Errorf("tools/call: %s", line)
 	}

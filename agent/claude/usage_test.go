@@ -212,7 +212,7 @@ func TestUsageWhileAProbeFailsSaysWhy(t *testing.T) {
 	if !errors.As(err, &pe) || pe.Usage != "Invalid time value" {
 		t.Errorf("the second call's err = %v", err)
 	}
-	<-first
+	_ = <-first // waits for the first call to end
 	if started, _ := runs(); started != 1 {
 		t.Errorf("%d claudes started", started)
 	}

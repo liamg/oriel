@@ -150,7 +150,9 @@ func TestTerminalKeepsControlKeys(t *testing.T) {
 // A click outside a terminal takes the keys from it, and one on it gives them back.
 func TestTerminalClickMovesKeys(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Frame()
 	s.Run("editor.open", registry.Args{"path": "a.txt"})

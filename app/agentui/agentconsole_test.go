@@ -229,7 +229,9 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	if n := st.Notifications[len(st.Notifications)-1]; n.Session != "" || !strings.Contains(n.Text, "/login") {
 		t.Errorf("notice = %+v", n)
 	}
-	r.Do(func() error { return r.Host.Run(context.Background(), "session.new", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "session.new", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("Signed out: OAuth token revoked · Please run /login")
 	r.TypeKeys("<Esc>")
 	r.WaitGone("Signed out: OAuth token revoked")
@@ -310,7 +312,9 @@ func TestConsoleScrollsBack(t *testing.T) {
 		se, _ := r.Store.Session(r.Session)
 		return slices.ContainsFunc(se.Snapshot().Transcript, func(it core.Item) bool { return it.ID == "m40" })
 	})
-	r.Do(func() error { return nil }) // the loop has taken it, and draws it next
+	if err := r.Do(func() error { return nil }); err != nil {
+		t.Fatal(err)
+	} // the loop has taken it, and draws it next
 	r.Latest("the start still in view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 }
 

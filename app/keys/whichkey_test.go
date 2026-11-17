@@ -25,7 +25,11 @@ var agentKeys = []registry.Keymap{
 
 func whichKeyApp(t *testing.T) *apptest.Window {
 	t.Helper()
-	return whichKeyAppWith(t, func(h plugin.Host) { h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false) })
+	return whichKeyAppWith(t, func(h plugin.Host) {
+		if err := h.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false); err != nil {
+			t.Error(err)
+		}
+	})
 }
 
 func whichKeyAppWith(t *testing.T, opts func(h plugin.Host)) *apptest.Window {

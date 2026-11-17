@@ -19,7 +19,9 @@ import (
 // quote: "However, if you are writing in an .md file, the example above would render on one line without a line break."
 func TestDocumentsJoinSoftBreaks(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "notes.md"), []byte("# Notes\n\nTies go to even\nin every currency.\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.md"), []byte("# Notes\n\nTies go to even\nin every currency.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir, [4]string{"notes.md", "3", "Ties go to even", "Negatives too\nand zero."})
 	s.Run("editor.open", registry.Args{"path": "notes.md"})
 	s.Frames(3)

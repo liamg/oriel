@@ -54,7 +54,7 @@ func (r *Responder) Err() error {
 
 func (r *Responder) serve(conn net.Conn, done chan struct{}) {
 	defer close(done)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	type entry struct {
 		dir  string
 		msg  dap.Message
@@ -92,7 +92,7 @@ func (r *Responder) serve(conn net.Conn, done chan struct{}) {
 		if at < 0 && last >= 0 {
 			// Asked again: the same answer, without the events that followed it.
 			if body, ok := r.response(entries[last].msg.Seq); ok {
-				dap.WriteFrame(conn, withRequestSeq(body, m.Seq))
+				_ = dap.WriteFrame(conn, withRequestSeq(body, m.Seq))
 			}
 			continue
 		}
@@ -102,7 +102,7 @@ func (r *Responder) serve(conn net.Conn, done chan struct{}) {
 			r.mu.Unlock()
 			b, _ := json.Marshal(map[string]any{"seq": 0, "type": "response", "request_seq": m.Seq, "success": false, "command": m.Command,
 				"message": "no recorded answer"})
-			dap.WriteFrame(conn, b)
+			_ = dap.WriteFrame(conn, b)
 			continue
 		}
 		used[at] = true
@@ -113,7 +113,7 @@ func (r *Responder) serve(conn net.Conn, done chan struct{}) {
 				body = withRequestSeq(body, live[entries[i].msg.RequestSeq])
 			}
 			sent[i] = true
-			dap.WriteFrame(conn, body)
+			_ = dap.WriteFrame(conn, body)
 		}
 		for i := at + 1; i < len(entries) && entries[i].dir == Recv; i++ {
 			e := entries[i]

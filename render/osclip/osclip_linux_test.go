@@ -11,7 +11,9 @@ import (
 func fakeXclip(t *testing.T, types string, content map[string]string) {
 	dir := t.TempDir()
 	for mime, body := range content {
-		os.WriteFile(filepath.Join(dir, filepath.Base(mime)), []byte(body), 0o644)
+		if err := os.WriteFile(filepath.Join(dir, filepath.Base(mime)), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	script := "#!/bin/sh\nif [ \"$4\" = TARGETS ]; then printf '" + types + "'; exit 0; fi\nexec /bin/cat \"" + dir + "/${4##*/}\"\n"
 	if err := os.WriteFile(filepath.Join(dir, "xclip"), []byte(script), 0o755); err != nil {

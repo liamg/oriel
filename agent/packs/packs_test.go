@@ -200,8 +200,12 @@ func TestLoadDirRejectsBadFiles(t *testing.T) {
 		"include":  "# x\n<!-- include: nope -->\n",
 	} {
 		dir := t.TempDir()
-		os.WriteFile(filepath.Join(dir, "good.md"), []byte("# good\n"), 0o644)
-		os.WriteFile(filepath.Join(dir, "x.md"), []byte(src), 0o644)
+		if err := os.WriteFile(filepath.Join(dir, "good.md"), []byte("# good\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "x.md"), []byte(src), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		if _, err := set.LoadDir(dir); err == nil {
 			t.Errorf("%s: no error", name)
 		}

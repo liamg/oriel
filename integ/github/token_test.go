@@ -104,7 +104,9 @@ func TestHTTPEnterpriseGraphQL(t *testing.T) {
 	var paths []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.URL.Path)
-		w.Write([]byte("{}"))
+		if _, err := w.Write([]byte("{}")); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer srv.Close()
 	c := gh.HTTP{Base: srv.URL + "/api/v3", Token: "t"}

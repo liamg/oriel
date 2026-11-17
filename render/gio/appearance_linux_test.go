@@ -16,7 +16,7 @@ func TestPortalSettingChangedReadsAppearance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	changed := make(chan struct{}, 4)
 	stop, err := watchPortal(conn, func() { changed <- struct{}{} })
 	if err != nil {
@@ -27,7 +27,7 @@ func TestPortalSettingChangedReadsAppearance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer portal.Close()
+	defer func() { _ = portal.Close() }()
 	emit := func(ns, key string) {
 		if err := portal.Emit(portalPath, portalSettings+".SettingChanged", ns, key, dbus.MakeVariant(uint32(1))); err != nil {
 			t.Fatal(err)

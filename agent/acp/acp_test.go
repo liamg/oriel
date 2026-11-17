@@ -50,7 +50,7 @@ func TestConformanceOverTheAgentProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { c.(interface{ Close() error }).Close(); bw.Close(); <-done })
+	t.Cleanup(func() { _ = c.(interface{ Close() error }).Close(); _ = bw.Close(); _ = <-done })
 	agenttest.Run(t, harness(c))
 }
 
@@ -78,7 +78,9 @@ func start(t *testing.T, spec agent.StartSpec) *agenttest.Session {
 func TestFilesDiffsAndPlans(t *testing.T) {
 	s := start(t, agent.StartSpec{})
 	dir := s.S.(*session).spec.Cwd
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\ntwo\nthree\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\ntwo\nthree\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Send("edit a.txt")
 	if got := s.Reply(); !strings.Contains(got, "line 2 was two") {
 		t.Errorf("reply = %q, want the line it read", got)
@@ -156,7 +158,9 @@ func TestTerminalsInASandbox(t *testing.T) {
 func TestImages(t *testing.T) {
 	s := start(t, agent.StartSpec{})
 	img := filepath.Join(t.TempDir(), "shot.png")
-	os.WriteFile(img, []byte("\x89PNG"), 0o644)
+	if err := os.WriteFile(img, []byte("\x89PNG"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.S.Send(context.Background(), agent.Input{Text: "look", Images: []string{img}}); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +179,9 @@ func TestLoadDoesNotRepeatTheHistory(t *testing.T) {
 	s.Send("say hello")
 	s.Reply()
 	id := s.S.ID()
-	s.S.Close()
+	if err := s.S.Close(); err != nil {
+		t.Fatal(err)
+	}
 	r := agenttest.StartIn(t, h, dir, id)
 	r.Send("say hello")
 	r.Reply()
@@ -219,7 +225,9 @@ func TestPermissionOptions(t *testing.T) {
 	if p.Tool != "Bash" || !strings.Contains(string(p.Input), "go test") {
 		t.Errorf("permission = %+v", p)
 	}
-	s.S.Answer(context.Background(), p.ID, agent.Decision{Allow: true, Always: true})
+	if err := s.S.Answer(context.Background(), p.ID, agent.Decision{Allow: true, Always: true}); err != nil {
+		t.Fatal(err)
+	}
 	if got := s.Reply(); !strings.Contains(got, "ran: ok") {
 		t.Errorf("reply = %q", got)
 	}

@@ -134,7 +134,7 @@ func TestAgentDebuggerTools(t *testing.T) {
 	}
 	// An answer that doesn't say what it decides lets nothing through: the ask still waits.
 	var refused error
-	s.Registry().Run(registry.OnDone(context.Background(), func(e error) { refused = e }), "ask.answer", registry.Args{"id": string(apptest.Named(s.Store().State(), "w"))})
+	_ = s.Registry().Run(registry.OnDone(context.Background(), func(e error) { refused = e }), "ask.answer", registry.Args{"id": string(apptest.Named(s.Store().State(), "w"))}) // refused: OnDone hears it
 	s.Until("ask.answer to finish", func() bool { return refused != nil })
 	if se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "w")); len(se.Snapshot().Asks) != 1 || len(x.Breakpoints(main)) != 1 {
 		t.Fatalf("an answer with no decision was taken: asks %+v, breakpoints %+v", se.Snapshot().Asks, x.Breakpoints(main))

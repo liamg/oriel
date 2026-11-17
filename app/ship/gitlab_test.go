@@ -52,7 +52,9 @@ func loadGitlab(t *testing.T, s *apptest.Scene) {
 // gitlabConfig is the app reaching the fake gitlab.com for the internet, with the token set.
 func gitlabConfig(t *testing.T, g *gitlabtest.GitLab) func(*apptest.Config) {
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret(gitlab.Secret, gitlabtest.Key)
+	if err := secrets.SetSecret(gitlab.Secret, gitlabtest.Key); err != nil {
+		t.Fatal(err)
+	}
 	return func(cfg *apptest.Config) { cfg.Net, cfg.Secrets = g.Client(), secrets }
 }
 

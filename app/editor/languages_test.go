@@ -86,13 +86,23 @@ func TestLanguagePack(t *testing.T) {
 		{"gox", "name = \"gox\"\nextensions = [\".gox\"]\n", "(package_identifier) @pack.package\n"},
 	} {
 		dir := filepath.Join(conf, "languages", pack.dir)
-		os.MkdirAll(filepath.Join(dir, "queries"), 0o755)
-		os.WriteFile(filepath.Join(dir, "grammar.wasm"), wasm, 0o644)
-		os.WriteFile(filepath.Join(dir, "queries", "highlights.scm"), []byte(pack.query), 0o644)
+		if err := os.MkdirAll(filepath.Join(dir, "queries"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "grammar.wasm"), wasm, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "queries", "highlights.scm"), []byte(pack.query), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		if pack.manifest != "" {
-			os.WriteFile(filepath.Join(dir, "language.toml"), []byte(pack.manifest), 0o644)
+			if err := os.WriteFile(filepath.Join(dir, "language.toml"), []byte(pack.manifest), 0o644); err != nil {
+				t.Fatal(err)
+			}
 		} else {
-			os.WriteFile(filepath.Join(dir, "language.toml"), []byte("extensions = [\".go\"]\n"), 0o644)
+			if err := os.WriteFile(filepath.Join(dir, "language.toml"), []byte("extensions = [\".go\"]\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Size: render.Point{X: 800, Y: 600}})
@@ -116,13 +126,21 @@ func packArchive(t *testing.T, name string, files map[string][]byte) (string, []
 	tw := tar.NewWriter(zw)
 	var sums strings.Builder
 	for _, f := range slices.Sorted(maps.Keys(files)) {
-		tw.WriteHeader(&tar.Header{Name: name + "/" + f, Mode: 0o644, Size: int64(len(files[f])), Typeflag: tar.TypeReg})
-		tw.Write(files[f])
+		if err := tw.WriteHeader(&tar.Header{Name: name + "/" + f, Mode: 0o644, Size: int64(len(files[f])), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write(files[f]); err != nil {
+			t.Fatal(err)
+		}
 		s := sha256.Sum256(files[f])
 		fmt.Fprintf(&sums, "%x  %s/%s\n", s, name, f)
 	}
-	tw.Close()
-	zw.Close()
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
 	path := filepath.Join(t.TempDir(), name+".tar.gz")
 	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
 		t.Fatal(err)

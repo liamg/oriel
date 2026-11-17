@@ -47,10 +47,18 @@ help      = ["assets/help/*.md"]
 // and a link can't lead out of it.
 func TestAsset(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "assets", "icons"), 0o755)
-	os.WriteFile(filepath.Join(dir, "assets", "icons", "x.svg"), []byte("<svg/>"), 0o644)
-	os.WriteFile(filepath.Join(dir, "secret"), []byte("no"), 0o644)
-	os.Symlink(filepath.Join(dir, "secret"), filepath.Join(dir, "assets", "link"))
+	if err := os.MkdirAll(filepath.Join(dir, "assets", "icons"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "assets", "icons", "x.svg"), []byte("<svg/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "secret"), []byte("no"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(dir, "secret"), filepath.Join(dir, "assets", "link")); err != nil {
+		t.Fatal(err)
+	}
 	if b, err := Asset(dir, "icons/x.svg"); err != nil || string(b) != "<svg/>" {
 		t.Errorf("Asset = %q, %v", b, err)
 	}

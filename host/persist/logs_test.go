@@ -22,7 +22,9 @@ func TestALogThatFailsSaysSo(t *testing.T) {
 		t.Fatal(err)
 	}
 	l.mu.Lock()
-	l.recs[id].f.Close()
+	if err := l.recs[id].f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	l.mu.Unlock()
 	failed := func() []core.Notification {
 		var out []core.Notification

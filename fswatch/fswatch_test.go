@@ -20,7 +20,7 @@ func start(t *testing.T) *Watcher {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	return w
 }
 
@@ -36,7 +36,9 @@ func write(t *testing.T, p, s string) {
 	if _, err := f.WriteString(s); err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // expect waits for an event for p: the OS's, which a busy machine (FSEvents especially) can be seconds delivering.
@@ -117,7 +119,7 @@ func TestFileSiblingsAreQuiet(t *testing.T) {
 func clocked(t *testing.T, c *clocktest.Fake) *Watcher {
 	t.Helper()
 	w := newWatcher(&scripted{done: make(chan struct{})}, c)
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	return w
 }
 
@@ -336,7 +338,9 @@ func TestAddAfterCloseIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err := w.AddTree(dir, nil); !errors.Is(err, ErrClosed) {
 		t.Fatalf("AddTree after Close: %v, want ErrClosed", err)
 	}
@@ -348,7 +352,7 @@ func TestAddAfterCloseIsRefused(t *testing.T) {
 // A scripted watcher sends what its script says, at once, and nothing the disk does.
 func TestScriptedSendsOnlyItsScript(t *testing.T) {
 	w, s := NewScripted()
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	dir := t.TempDir()
 	if err := w.AddTree(dir, nil); err != nil {
 		t.Fatal(err)

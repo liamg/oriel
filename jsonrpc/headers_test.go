@@ -26,13 +26,15 @@ type peer struct {
 func newPair(t *testing.T, h Handlers) (*Conn, *peer) {
 	a, b := net.Pipe()
 	c := NewConn(a, a, h, lspOptions)
-	t.Cleanup(func() { c.Close() })
+	t.Cleanup(func() { _ = c.Close() })
 	return c, &peer{t: t, rw: b, r: bufio.NewReader(b)}
 }
 
 func (p *peer) read() map[string]any {
 	p.t.Helper()
-	p.rw.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if err := p.rw.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		p.t.Fatal(err)
+	}
 	b, err := ReadFrame(p.r)
 	if err != nil {
 		p.t.Fatalf("peer read: %v", err)
@@ -116,7 +118,11 @@ func TestCallCancel(t *testing.T) {
 // quote: "A processed notification message must not send a response back."
 func TestNotify(t *testing.T) {
 	c, p := newPair(t, Handlers{})
-	go c.Notify("initialized", struct{}{})
+	go func() {
+		if err := c.Notify("initialized", struct{}{}); err != nil {
+			t.Error(err)
+		}
+	}()
 	m := p.read()
 	if _, ok := m["id"]; ok || m["method"] != "initialized" {
 		t.Errorf("notification = %v", m)
@@ -174,7 +180,9 @@ func TestClosedConn(t *testing.T) {
 	done := make(chan error)
 	go func() { done <- c.Call(context.Background(), "x", nil, nil) }()
 	p.read()
-	p.rw.Close()
+	if err := p.rw.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err := <-done; !errors.Is(err, ErrClosed) {
 		t.Errorf("Call on a closed conn = %v", err)
 	}
@@ -225,7 +233,9 @@ func TestSendsQueueInOrder(t *testing.T) {
 	sent := make(chan struct{})
 	go func() {
 		for i := range 3 {
-			c.Notify("textDocument/didChange", map[string]any{"version": i + 2, "text": big})
+			if err := c.Notify("textDocument/didChange", map[string]any{"version": i + 2, "text": big}); err != nil {
+				t.Error(err)
+			}
 		}
 		close(sent)
 	}()

@@ -72,7 +72,9 @@ func newFakeGitea(t *testing.T) *fakeGitea {
 	reply := func(w http.ResponseWriter, status int, v any) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)
-		json.NewEncoder(w).Encode(v)
+		if err := json.NewEncoder(w).Encode(v); err != nil {
+			t.Error(err)
+		}
 	}
 	repo := func(r *http.Request) string { return r.PathValue("o") + "/" + r.PathValue("r") }
 	find := func(r *http.Request) *giteaPR {
@@ -101,7 +103,9 @@ func newFakeGitea(t *testing.T) *fakeGitea {
 	})
 	mux.HandleFunc("POST /api/v1/repos/{o}/{r}/pulls", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Title, Body, Head, Base string }
-		json.NewDecoder(r.Body).Decode(&in)
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+		}
 		n := 100 + len(f.prs[repo(r)])
 		p := &giteaPR{Number: n, ID: 9000 + n, Title: in.Title, Body: in.Body, State: "open", Mergeable: true,
 			HTMLURL: fmt.Sprintf("https://gitea.com/%s/pulls/%d", repo(r), n), Reviewers: []map[string]string{}}
@@ -112,7 +116,9 @@ func newFakeGitea(t *testing.T) *fakeGitea {
 	mux.HandleFunc("GET /api/v1/repos/{o}/{r}/pulls/{n}", func(w http.ResponseWriter, r *http.Request) { reply(w, 200, find(r)) })
 	mux.HandleFunc("PATCH /api/v1/repos/{o}/{r}/pulls/{n}", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Title, Body *string }
-		json.NewDecoder(r.Body).Decode(&in)
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+		}
 		p := find(r)
 		if in.Title != nil {
 			p.Title = *in.Title
@@ -140,7 +146,9 @@ func newFakeGitea(t *testing.T) *fakeGitea {
 	})
 	mux.HandleFunc("POST /api/v1/repos/{o}/{r}/issues/{n}/comments", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Body string }
-		json.NewDecoder(r.Body).Decode(&in)
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+		}
 		k := repo(r) + "#" + r.PathValue("n")
 		c := map[string]any{"id": 500 + len(f.issue[k]), "body": in.Body, "user": map[string]string{"login": "you"}, "created_at": "2026-10-19T10:00:00Z"}
 		f.issue[k] = append(f.issue[k], c)
@@ -158,7 +166,9 @@ func newFakeGitea(t *testing.T) *fakeGitea {
 			Do   string `json:"Do"`
 			Head string `json:"head_commit_id"`
 		}
-		json.NewDecoder(r.Body).Decode(&in)
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+		}
 		p := find(r)
 		if in.Head != p.Head.SHA {
 			reply(w, 409, map[string]string{"message": "head out of date"})
@@ -233,7 +243,9 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	// Asked from the start: the Reviews page lists what the poll last read, whenever the plugin's loading set it off.
 	gt.asks = []giteaAsk{{repo: "acme/api", number: 12, title: "Cache the token lookup", author: "priya"}}
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret("GITEA_TOKEN", giteaToken)
+	if err := secrets.SetSecret("GITEA_TOKEN", giteaToken); err != nil {
+		t.Fatal(err)
+	}
 	hub := ghtest.New(t)
 	lw := rig.NewHostWith(t, host.Options{})
 	app := giteaRepo(t, "app")

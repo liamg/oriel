@@ -18,8 +18,12 @@ func TestAPlusInTheGutterOpensAThreadOnTheLine(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("floor := scaled.Floor()")
 	if r.Access("Comment on line 4") != nil {
 		t.Fatal("line 4 shows its + with the pointer nowhere near it")

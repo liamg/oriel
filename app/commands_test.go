@@ -101,7 +101,7 @@ func runLiterals(t *testing.T, root string) []runLiteral {
 	var out []runLiteral
 	fset := token.NewFileSet()
 	for _, dir := range []string{"app", "host", "ui", "plugin", "script", "registry", "agent", "assistant", "catalog"} {
-		filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
+		if err := filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() && (d.Name() == "testdata" || d.Name() == "apptest") {
 				if d != nil && d.IsDir() {
 					return filepath.SkipDir
@@ -139,7 +139,9 @@ func runLiterals(t *testing.T, root string) []runLiteral {
 				return true
 			})
 			return nil
-		})
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return out
 }

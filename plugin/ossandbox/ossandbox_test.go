@@ -37,7 +37,7 @@ func probe(ops []string) {
 		case "tcp", "udp":
 			var c net.Conn
 			if c, err = net.Dial(kind, arg); err == nil {
-				c.Close()
+				_ = c.Close()
 			}
 		}
 		if err != nil {

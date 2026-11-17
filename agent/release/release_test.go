@@ -13,7 +13,9 @@ import (
 func TestGetJSON(t *testing.T) {
 	isolate.Test(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"accept":"` + r.Header.Get("Accept") + `"}`))
+		if _, err := w.Write([]byte(`{"accept":"` + r.Header.Get("Accept") + `"}`)); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer srv.Close()
 	var v struct{ Accept string }

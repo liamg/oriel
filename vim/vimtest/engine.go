@@ -98,7 +98,7 @@ func play(newEngine NewEngine, c Case, extra []Key, q Query) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	defer e.Close()
+	defer func() { _ = e.Close() }()
 	if err := e.Load(c.Given); err != nil {
 		return Result{}, fmt.Errorf("load: %w", err)
 	}

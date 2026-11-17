@@ -43,6 +43,8 @@ func (s *Scene) Shot(name string) {
 	if err != nil {
 		s.T.Fatal(err)
 	}
-	defer f.Close()
-	png.Encode(f, img)
+	defer func() { _ = f.Close() }()
+	if err := png.Encode(f, img); err != nil {
+		s.T.Fatal(err)
+	}
 }

@@ -25,7 +25,9 @@ func TestADiffClickStaysOnItsLineThroughARedraw(t *testing.T) {
 	r.Commit("Ada", "base")
 	changed := strings.Replace(base.String(), "line 15\n", "line 15, changed\n", 1)
 	path := filepath.Join(r.Dir, "f.txt")
-	os.WriteFile(path, []byte(changed), 0o644)
+	if err := os.WriteFile(path, []byte(changed), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Run("diff.open", registry.Args{"path": path})
@@ -38,7 +40,9 @@ func TestADiffClickStaysOnItsLineThroughARedraw(t *testing.T) {
 	s.Frame()
 
 	// Three lines come in just above it: what sat three lines up now sits where it was pressed.
-	os.WriteFile(path, []byte(strings.Replace(changed, "line 14\n", "line 14\nnew a\nnew b\nnew c\n", 1)), 0o644)
+	if err := os.WriteFile(path, []byte(strings.Replace(changed, "line 14\n", "line 14\nnew a\nnew b\nnew c\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("git.refresh", nil)
 	s.Until("the diff made again", func() bool { return s.Find("new a") != nil })
 	s.Quiet()

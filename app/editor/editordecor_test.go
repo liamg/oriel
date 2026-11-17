@@ -129,7 +129,9 @@ func TestDecoratedEditorAgainstTheMockup(t *testing.T) {
 	d, side := snapshot.Compare(want, got, 0.1)
 	t.Logf("decorated editor column against 01-ide: %s", d)
 	if d.Mean > 0.036 || d.Off > 0.075 {
-		os.WriteFile("testdata/editor-decorated-mockup.failed.png", encodePNG(side), 0o644)
+		if err := os.WriteFile("testdata/editor-decorated-mockup.failed.png", encodePNG(side), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		t.Errorf("the decorated editor column is %s off the mockup (testdata/editor-decorated-mockup.failed.png)", d)
 	}
 }

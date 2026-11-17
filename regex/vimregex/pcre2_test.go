@@ -218,7 +218,7 @@ func loadPCRE(t *testing.T, name string) []*pcreCase {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1<<20), 1<<24)
 	var lines []string
@@ -500,8 +500,12 @@ func TestPCRE2Suite(t *testing.T) {
 	golden := filepath.Join("testdata", "pcre2-unsupported.txt")
 	got := strings.Join(all, "\n") + "\n"
 	if os.Getenv("ORIEL_UPDATE") != "" {
-		os.MkdirAll("testdata", 0o755)
-		os.WriteFile(golden, []byte(got), 0o644)
+		if err := os.MkdirAll("testdata", 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	want, _ := os.ReadFile(golden)
 	if string(want) != got {
@@ -522,6 +526,8 @@ func FuzzPCRE(f *testing.F) {
 		if err != nil {
 			return
 		}
-		re.Find(linesOf(subj), Pos{}, false)
+		if _, _, err := re.Find(linesOf(subj), Pos{}, false); err != nil {
+			t.Error(err)
+		}
 	})
 }

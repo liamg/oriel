@@ -70,7 +70,9 @@ func TestReplay(t *testing.T) {
 	if m := <-shown; m != "window/showMessage" {
 		t.Errorf("notification = %s", m)
 	}
-	c.Notify("initialized", map[string]any{})
+	if err := c.Notify("initialized", map[string]any{}); err != nil {
+		t.Fatal(err)
+	}
 	var hover struct {
 		Contents struct{ Value string }
 	}
@@ -92,7 +94,7 @@ func TestReplayMismatch(t *testing.T) {
 	c := client(t, f, "/r", jsonrpc.Handlers{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	c.Call(ctx, "initialize", map[string]any{"rootUri": "file:///elsewhere"}, nil)
+	_ = c.Call(ctx, "initialize", map[string]any{"rootUri": "file:///elsewhere"}, nil) // refused: f.Wait says why
 	err := f.Wait()
 	if err == nil || !strings.Contains(err.Error(), "initialize") {
 		t.Errorf("replay of a different request = %v", err)
@@ -118,8 +120,12 @@ func (p *pipe) Kill() error                 { return nil }
 
 func TestRecorder(t *testing.T) {
 	var server bytes.Buffer
-	jsonrpc.WriteFrame(&server, []byte(`{"jsonrpc":"2.0","method":"window/logMessage","params":{"message":"/root/secret"}}`))
-	jsonrpc.WriteFrame(&server, []byte(`{"jsonrpc":"2.0", "id":1, "result":{"uri":"file:///root/a.go"}}`))
+	if err := jsonrpc.WriteFrame(&server, []byte(`{"jsonrpc":"2.0","method":"window/logMessage","params":{"message":"/root/secret"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := jsonrpc.WriteFrame(&server, []byte(`{"jsonrpc":"2.0", "id":1, "result":{"uri":"file:///root/a.go"}}`)); err != nil {
+		t.Fatal(err)
+	}
 	p := &pipe{in: &server}
 	rec := &Recorder{}
 	launch := rec.Launcher(func(context.Context, lsp.ServerSpec, string, io.Writer) (lsp.Process, error) { return p, nil })
@@ -128,11 +134,19 @@ func TestRecorder(t *testing.T) {
 		t.Fatal(err)
 	}
 	var req bytes.Buffer
-	jsonrpc.WriteFrame(&req, []byte(`{"jsonrpc":"2.0","id":1,"method":"x","params":{"path":"/root/b"}}`))
+	if err := jsonrpc.WriteFrame(&req, []byte(`{"jsonrpc":"2.0","id":1,"method":"x","params":{"path":"/root/b"}}`)); err != nil {
+		t.Fatal(err)
+	}
 	b := req.Bytes()
-	proc.Write(b[:10])
-	proc.Write(b[10:])
-	io.ReadAll(proc)
+	if _, err := proc.Write(b[:10]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := proc.Write(b[10:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.ReadAll(proc); err != nil {
+		t.Fatal(err)
+	}
 	tr := rec.Transcript(Header{Server: "s"})
 	var got []string
 	for _, e := range tr.Entries {

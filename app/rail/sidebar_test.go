@@ -74,7 +74,9 @@ func TestSidebarSnapshots(t *testing.T) {
 		t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 		s := apptest.New(t, apptest.Options{Size: apptest.SidebarSize, Config: func(cfg *apptest.Config) {
 			src := filepath.Join(os.Getenv("HOME"), "src")
-			os.MkdirAll(src, 0o755)
+			if err := os.MkdirAll(src, 0o755); err != nil {
+				t.Error(err)
+			}
 			cfg.WorkDir = apptest.FixtureRepo(t, src, "blog", "main", map[string]string{"posts/2026-09-vim.md": "# vim\n", "config.toml": "\n"}, 0, false)
 		}})
 		s.Run("sidebar.form", registry.Args{"form": "wide"})

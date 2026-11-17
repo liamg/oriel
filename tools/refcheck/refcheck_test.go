@@ -12,7 +12,9 @@ import (
 func write(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	p := filepath.Join(dir, filepath.FromSlash(name))
-	os.MkdirAll(filepath.Dir(p), 0o755)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}

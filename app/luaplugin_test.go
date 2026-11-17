@@ -35,7 +35,9 @@ func TestPluginLuaGuard(t *testing.T) {
 	s := apptest.LuaScene(t, "")
 	g := plugin.NewGrants()
 	p := plugin.Caller{ID: "acme/x", Dir: t.TempDir(), Guard: g}
-	os.WriteFile(filepath.Join(p.Dir, "notes.txt"), []byte("own"), 0o644)
+	if err := os.WriteFile(filepath.Join(p.Dir, "notes.txt"), []byte("own"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	vm := s.PluginVM(p)
 	if err := luaErr(t, vm, `oriel.keymap.set("n", "<leader>x", "noop"); oriel.command("X", function() end)
 own = oriel.read("notes.txt")`); err != "" {
@@ -196,7 +198,9 @@ func TestPluginGateHooks(t *testing.T) {
 func TestLuaWASM(t *testing.T) {
 	s := apptest.LuaScene(t, "")
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "m.wasm"), hosttest.Module(), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	vm := s.PluginVM(plugin.Caller{ID: "acme/w", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `local m = oriel.wasm.load("m.wasm", { on = { ["fs.read"] = function(p) return "lua read " .. p.path end } })
 sum = m:call("add", 2, 3)
@@ -241,8 +245,12 @@ func TestLuaProcess(t *testing.T) {
 	}
 	s := apptest.LuaScene(t, "")
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "bin"), 0o755)
-	os.WriteFile(filepath.Join(dir, "bin", "plugin"), []byte(rpcScript), 0o755)
+	if err := os.MkdirAll(filepath.Join(dir, "bin"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bin", "plugin"), []byte(rpcScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	vm := s.PluginVM(plugin.Caller{ID: "acme/p", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `proc = oriel.process.spawn("bin/plugin", {
   on = { greet = function(p) greeted = p.n; return "hi" end, hello = function(p) hello = p end },
@@ -358,9 +366,13 @@ func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
 	}
 	dir := t.TempDir()
 	tool := filepath.Join(dir, "tool")
-	os.WriteFile(tool, []byte("#!/bin/sh\necho mine\n"), 0o755)
+	if err := os.WriteFile(tool, []byte("#!/bin/sh\necho mine\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	other := t.TempDir()
-	os.WriteFile(filepath.Join(other, "tool"), []byte("#!/bin/sh\necho other\n"), 0o755)
+	if err := os.WriteFile(filepath.Join(other, "tool"), []byte("#!/bin/sh\necho other\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.LuaScene(t, "")
 	g := plugin.NewGrants()
 	g.Grant("acme/x", []plugin.Grant{{Cap: plugin.CapExec, Scope: []string{plugin.RealPath(tool)}}})

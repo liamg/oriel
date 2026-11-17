@@ -43,7 +43,7 @@ func failingHost(t *testing.T, err error) (*apptest.Scene, *stats.Stats) {
 	if herr != nil {
 		t.Fatal(herr)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(w)})
 	return s, apptest.PluginOf[*stats.Stats](s, "stats")
 }
@@ -114,7 +114,7 @@ func TestUsageShowsAProviderWhileItsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(w)})
 	s.Run("usage.open", nil)
 	wait := func(want string) {

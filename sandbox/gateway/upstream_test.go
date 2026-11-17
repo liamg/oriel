@@ -126,7 +126,9 @@ func TestListingFromTheCacheStartsNoServer(t *testing.T) {
 	if n := starts(); n != 2 {
 		t.Fatalf("the call should start the server once: %d starts", n)
 	}
-	warm.Call(context.Background(), Tool{Server: "aws", Upstream: "list_buckets"}, nil)
+	if _, err := warm.Call(context.Background(), Tool{Server: "aws", Upstream: "list_buckets"}, nil); err != nil {
+		t.Fatal(err)
+	}
 	if n := starts(); n != 2 {
 		t.Fatalf("a second call started it again: %d starts", n)
 	}

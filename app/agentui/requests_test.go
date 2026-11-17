@@ -170,7 +170,9 @@ func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 		return apptest.HasAll(s, "go test ./internal/pricing/", "--- PASS: TestRoundHalfEven (0.00s)", "BY AGENT")
 	})
 
-	r.Do(func() error { return r.Host.Run(context.Background(), "tests.open", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "tests.open", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the agent's run in the Tests panel", func(s string) bool { return apptest.HasAll(s, "TESTS", "AGENT", "2 passed") })
 }
 
@@ -206,12 +208,18 @@ func TestInlineThreadsInTheEditor(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("floor := scaled.Floor()")
 	r.TypeKeys("4G")
 	r.WaitFrame("the cursor on line 4", func(s string) bool { return strings.Contains(s, "\n4:") })
-	r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("New thread")
 	r.TypeText("Floor goes the wrong way for negatives")
 	r.WaitText("Floor goes the wrong way for negatives")
@@ -240,8 +248,12 @@ func TestAskAboutThisFromTheMenu(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
 	path := filepath.Join(dir, "notes.txt")
-	os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("floor goes down")
 	r.RightClickText("floor goes down")
 	r.WaitText("Ask about this…")
@@ -260,12 +272,18 @@ func TestThreadOnASelection(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
 	path := filepath.Join(dir, "notes.txt")
-	os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("floor goes down")
 	r.TypeKeys("3G0wvj")
 	r.WaitFrame("the selection to line 4", func(s string) bool { return strings.Contains(s, "VISUAL") && strings.Contains(s, "\n4:") })
-	r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("New thread")
 	r.TypeText("why these?")
 	r.WaitText("why these?")
@@ -278,7 +296,9 @@ func TestThreadOnASelection(t *testing.T) {
 // ⌃a in a picker attaches the item to the request being written, and ␣r picks a thread.
 func TestPickersAttachAndPickThreads(t *testing.T) {
 	r, a, _ := requestsSession(t)
-	os.WriteFile(filepath.Join(projectDir(t, r), "invoice.go"), []byte("package billing\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(projectDir(t, r), "invoice.go"), []byte("package billing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.ClickText("New request")
 	r.WaitText("Write a request")
 	r.Run("picker.open", registry.Args{"source": "files"})
@@ -294,9 +314,7 @@ func TestPickersAttachAndPickThreads(t *testing.T) {
 	}
 	threadWith(t, r, "don't touch stored invoices\n\n@invoice.go")
 
-	r.Do(func() error {
-		return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": filepath.Join(projectDir(t, r), "invoice.go")})
-	})
+	r.Run("editor.open", registry.Args{"path": filepath.Join(projectDir(t, r), "invoice.go")})
 	r.WaitText("package billing")
 	r.TypeKeys("<Space>r")
 	r.WaitFrame("the threads picker", func(s string) bool { return apptest.HasAll(s, "THREADS ␣R", "1 / 1", "don't touch stored invoices") })
@@ -333,7 +351,9 @@ func TestLuaThreads(t *testing.T) {
 // plan's usage windows as the provider reports them.
 func TestTasksRailStatsAndUsage(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	r.Do(func() error { return r.Host.Run(context.Background(), "requests.summary", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "requests.summary", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("No tasks yet")
 	a.Call(t, "task_add", map[string]any{"subject": "Add RoundingMode type"})
 	a.Call(t, "task_add", map[string]any{"subject": "Negative tie handling"})
@@ -390,11 +410,15 @@ func TestComposerTakesPastedPicturesAndFiles(t *testing.T) {
 	inFrame("![image](")
 
 	outside := filepath.Join(t.TempDir(), "notes.txt")
-	os.WriteFile(outside, []byte("hi"), 0o644)
+	if err := os.WriteFile(outside, []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.DropFiles("this looks off ", outside)
 	inFrame("[notes.txt](")
 	own := filepath.Join(projectDir(t, r), "round.go")
-	os.WriteFile(own, []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(own, []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.Win.CopyFiles(own)
 	r.TypeKeys(paste)
 	inFrame("[round.go](" + own + ")")
@@ -507,9 +531,13 @@ func TestClosedRequestsChipsAreNotStale(t *testing.T) {
 		{ID: "c3", Author: core.AuthorYou, Body: "and the zero case"},
 		{ID: "c4", Author: core.AuthorAgent, Name: "fake", Body: "Done."},
 	}}
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
-		Threads: []core.Thread{th}}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
+		Threads: []core.Thread{th}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("request.open", registry.Args{"thread": "t1"})
 	s.Until("the request", func() bool { return s.Has("and the zero case", "Done.") })
 	if s.Has("WORKING ON IT") || s.Has("QUEUED") {

@@ -118,7 +118,7 @@ func (s *Server) merge(w http.ResponseWriter, r *http.Request) {
 		Method string `json:"merge_method"`
 		SHA    string `json:"sha"`
 	}
-	json.NewDecoder(r.Body).Decode(&in)
+	_ = json.NewDecoder(r.Body).Decode(&in)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	repo := repoOf(r)

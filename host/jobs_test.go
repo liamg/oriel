@@ -151,7 +151,9 @@ func TestAStopSaysWho(t *testing.T) {
 	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
 	ctx := context.Background()
 	quits, _ := r.w.RunJob(ctx, j.Name)
-	r.agent().Close() // the agent's process ends by itself
+	if err := r.agent().Close(); err != nil {
+		t.Fatal(err)
+	} // the agent's process ends by itself
 	if got := hostapi.RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Live() })); got.StoppedBy != core.StoppedByAgent {
 		t.Errorf("an agent that quit: %+v", got)
 	}
@@ -189,7 +191,9 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 		}
 		return n
 	}
-	r.w.Close()
+	if err := r.w.Close(); err != nil {
+		t.Fatal(err)
+	}
 	r.setNow(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)) // Wednesday: Monday's, Tuesday's and Wednesday's 07:00 missed
 	r.open()
 	r.w.RunDue(context.Background())
@@ -240,7 +244,9 @@ func TestDeleteThrowsARunAway(t *testing.T) {
 		t.Fatal(err)
 	}
 	se := r.session(id)
-	os.WriteFile(filepath.Join(se.Projects[0].Dir, "wip.txt"), []byte("uncommitted"), 0o644)
+	if err := os.WriteFile(filepath.Join(se.Projects[0].Dir, "wip.txt"), []byte("uncommitted"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.w.Delete(ctx, id); err != nil {
 		t.Fatal(err)
 	}

@@ -251,7 +251,7 @@ func TestWriteMatchesNvim(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer n.Close()
+			defer func() { _ = n.Close() }()
 			if err := n.Exec("edit f.txt"); err != nil {
 				t.Fatal(err)
 			}
@@ -352,7 +352,9 @@ func TestPaneFileBytes(t *testing.T) {
 		}
 		dir := t.TempDir()
 		p := filepath.Join(dir, "f.txt")
-		os.WriteFile(p, []byte(body), 0o644)
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		ed := edit.New(text.New(nil, text.Author{}), text.Author{Kind: text.User})
 		e := vim.New(ed)
 		e.SetHost(vim.Disk{Dir: dir})

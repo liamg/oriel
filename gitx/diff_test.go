@@ -105,8 +105,12 @@ func TestHunkIDFollowsContent(t *testing.T) {
 // letters, digits and _, or any other single character.
 func gitWordDiff(t *testing.T, a, b string) (del, add []string) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a"), []byte(a+"\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "b"), []byte(b+"\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a"), []byte(a+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b"), []byte(b+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	cmd := exec.Command("git", "diff", "--no-index", "--word-diff=porcelain", "--word-diff-regex=[[:alnum:]_]+|[^[:space:]]", "a", "b")
 	cmd.Dir = dir
 	out, _ := cmd.Output()

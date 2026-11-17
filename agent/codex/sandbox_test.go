@@ -87,9 +87,15 @@ func tarGz(t *testing.T, name, body string) []byte {
 	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
 		t.Fatal(err)
 	}
-	tw.Write([]byte(body))
-	tw.Close()
-	zw.Close()
+	if _, err := tw.Write([]byte(body)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
 	return buf.Bytes()
 }
 
@@ -105,11 +111,15 @@ func TestSandboxDownloadsTheReleaseChecked(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/releases/tags/rust-v0.98.0":
-			json.NewEncoder(w).Encode(map[string]any{"assets": []map[string]string{
-				{"name": "codex-x86_64-unknown-linux-musl.tar.gz", "browser_download_url": "http://" + r.Host + "/dl", "digest": digest}}})
+			if err := json.NewEncoder(w).Encode(map[string]any{"assets": []map[string]string{
+				{"name": "codex-x86_64-unknown-linux-musl.tar.gz", "browser_download_url": "http://" + r.Host + "/dl", "digest": digest}}}); err != nil {
+				t.Error(err)
+			}
 		case "/dl":
 			gets++
-			w.Write(archive)
+			if _, err := w.Write(archive); err != nil {
+				t.Error(err)
+			}
 		default:
 			http.NotFound(w, r)
 		}
@@ -160,8 +170,12 @@ enabled = false
 		t.Fatalf("servers = %+v", got)
 	}
 	var docs, linear map[string]any
-	json.Unmarshal(got[0].Config, &docs)
-	json.Unmarshal(got[1].Config, &linear)
+	if err := json.Unmarshal(got[0].Config, &docs); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(got[1].Config, &linear); err != nil {
+		t.Fatal(err)
+	}
 	if docs["command"] != "docs-mcp" || linear["type"] != "http" || linear["url"] != "https://mcp.linear.app/mcp" {
 		t.Errorf("docs %v, linear %v", docs, linear)
 	}

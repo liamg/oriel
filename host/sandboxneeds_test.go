@@ -48,7 +48,9 @@ func TestTheSandboxGivesTheProviderWhatItNeeds(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, _ = io.ReadAll(proc.Stdout())
-	proc.Wait()
+	if err := proc.Wait(); err != nil {
+		t.Fatal(err)
+	}
 	at := <-p.at
 	if at.Dir != sandbox.AgentDir(b.Root(), "boxed") || at.StateDir != a.Spec.StateDir || at.OS != "linux" {
 		t.Errorf("asked at %+v", at)

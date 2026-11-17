@@ -93,7 +93,7 @@ func newSandboxRig(t *testing.T, more ...agent.Provider) *sandboxRig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(home) })
+	t.Cleanup(func() { _ = os.RemoveAll(home) })
 	t.Setenv("HOME", home)
 	s := &sandboxRig{launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOpts, 4)}
 	s.f = NewSandboxFactory(nil)
@@ -140,13 +140,15 @@ func get(t *testing.T, proxy, url string) (int, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
-	fmt.Fprintf(c, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", url, strings.TrimPrefix(url, "http://"))
+	defer func() { _ = c.Close() }()
+	if _, err := fmt.Fprintf(c, "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", url, strings.TrimPrefix(url, "http://")); err != nil {
+		t.Fatal(err)
+	}
 	res, err := http.ReadResponse(bufio.NewReader(c), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, _ := io.ReadAll(res.Body)
 	return res.StatusCode, string(body)
 }
@@ -166,7 +168,7 @@ func gatewayCall(t *testing.T, root, tool string, args any) mcp.CallResult {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	var out mcp.CallResult
 	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
 		t.Fatal(err)
@@ -219,7 +221,9 @@ func TestSandboxSpecNamesTheGateway(t *testing.T) {
 			Args    []string `json:"args"`
 		} `json:"mcpServers"`
 	}
-	json.Unmarshal(data, &cfg)
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatal(err)
+	}
 	if gw := cfg.MCPServers["oriel-gw"]; gw.Command != "oriel" || len(gw.Args) != 1 || gw.Args[0] != "mcp" {
 		t.Errorf("gateway MCP config = %s", data)
 	}
@@ -245,7 +249,9 @@ func TestSandboxExecRunsTheLaunchCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	out, _ := io.ReadAll(p.Stdout())
-	p.Wait()
+	if err := p.Wait(); err != nil {
+		t.Fatal(err)
+	}
 	if strings.TrimSpace(string(out)) != "in the container" || strings.TrimSpace(stderr.String()) != "its stderr" {
 		t.Errorf("ran %q, stderr %q", out, stderr.String())
 	}
@@ -267,12 +273,12 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	provider, err := net.Listen("unix", filepath.Join(dir, "hook.sock"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer provider.Close()
+	defer func() { _ = provider.Close() }()
 	go func() {
 		for {
 			c, err := provider.Accept()
@@ -281,8 +287,10 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 			}
 			go func() {
 				line, _ := bufio.NewReader(c).ReadString('\n')
-				io.WriteString(c, "hook got "+line)
-				c.Close()
+				if _, err := io.WriteString(c, "hook got "+line); err != nil {
+					t.Error(err)
+				}
+				_ = c.Close()
 			}()
 		}
 	}()
@@ -292,14 +300,20 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.ReadAll(p.Stdout())
-	p.Wait()
+	if _, err := io.ReadAll(p.Stdout()); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Wait(); err != nil {
+		t.Fatal(err)
+	}
 	<-s.launched
 	<-s.opts
 	roundTrip := func(how string, c net.Conn) {
 		t.Helper()
-		defer c.Close()
-		io.WriteString(c, "PreToolUse\n")
+		defer func() { _ = c.Close() }()
+		if _, err := io.WriteString(c, "PreToolUse\n"); err != nil {
+			t.Error(err)
+		}
 		got, _ := io.ReadAll(c)
 		if string(got) != "hook got PreToolUse\n" {
 			t.Errorf("%s: %q", how, got)
@@ -326,7 +340,11 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { io.WriteString(w, "upstream") }))
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := io.WriteString(w, "upstream"); err != nil {
+			t.Error(err)
+		}
+	}))
 	defer up.Close()
 	proxy := httptest.NewServer(&egress.Proxy{Decider: b.Egress()})
 	defer proxy.Close()
@@ -357,7 +375,9 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 		t.Fatalf("not held: %+v", r)
 	default:
 	}
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; r.code != http.StatusForbidden || !strings.Contains(r.body, "not allowed") {
 		t.Errorf("denied: %+v", r)
 	}
@@ -365,7 +385,9 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Allow: the dial goes through, and the next asks again.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; r.code != 200 || r.body != "upstream" {
 		t.Errorf("allowed: %+v", r)
 	}
@@ -373,7 +395,9 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Always: recorded, and the next goes through with no ask.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; r.code != 200 {
 		t.Errorf("always: %+v", r)
 	}
@@ -403,7 +427,9 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 		res := make(chan int, 1)
 		go func() { code, _ := get(t, paddr, up.URL); res <- code }()
 		ask := s.waitAsk(id, core.AskNetwork)
-		s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"})
+		if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"}); err != nil {
+			t.Fatal(err)
+		}
 		if code := <-res; code != http.StatusForbidden {
 			t.Fatalf("denied: %d", code)
 		}
@@ -445,7 +471,9 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(ctx, "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"}); err != nil {
+		t.Fatal(err)
+	}
 	if !<-done {
 		t.Fatal("not allowed")
 	}
@@ -462,7 +490,9 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	other, _, ob := s.sandboxed()
 	go func() { done <- ob.Egress().Allow(ctx, "cdn.mirror.test", 443) }()
 	ask = s.waitAsk(other, core.AskNetwork)
-	s.w.Answer(hostapi.AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: agentrun.ForAll})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: agentrun.ForAll}); err != nil {
+		t.Fatal(err)
+	}
 	if !<-done {
 		t.Fatal("not allowed for all sessions")
 	}
@@ -483,7 +513,9 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
 	p, _ := s.session(id).Primary()
-	os.WriteFile(filepath.Join(p.Dir, "new.go"), []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(p.Dir, "new.go"), []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	call := func(tool string, args any) chan mcp.CallResult {
 		ch := make(chan mcp.CallResult, 1)
@@ -496,7 +528,9 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 	if ask.Tool != "oriel__commit" || ask.Rule != "oriel__commit" || !strings.Contains(ask.Summary, "Add new.go") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; r.IsError || r.Text() != "Committed 1 file(s)." {
 		t.Fatalf("commit = %q", r.Text())
 	}
@@ -508,7 +542,9 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 		t.Fatalf("not held: %q", r.Text())
 	default:
 	}
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "the user denied oriel__push") || !strings.Contains(r.Text(), "open a PR instead") {
 		t.Errorf("deny = %q, want who denied it and their note", r.Text())
 	}
@@ -518,7 +554,9 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 
 	res = call("oriel__push", map[string]any{})
 	ask = s.waitAsk(id, core.AskGateway)
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; r.IsError || r.Text() != "Pushed." {
 		t.Fatalf("push = %q", r.Text())
 	}
@@ -577,7 +615,9 @@ func TestRequestHostRefusalHolds(t *testing.T) {
 	if ask.Tool != "oriel__request_host" || !strings.Contains(ask.Summary, "needs docker") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
+		t.Fatal(err)
+	}
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "refused") {
 		t.Errorf("deny = %q", r.Text())
 	}
@@ -590,7 +630,9 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 	s := newSandboxRig(t)
 	_, _, b := s.sandboxed()
 	other := t.TempDir()
-	exec.Command("git", "init", "-q", other).Run()
+	if err := exec.Command("git", "init", "-q", other).Run(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := s.w.addRepo(context.Background(), other, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
@@ -622,8 +664,12 @@ func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.ReadAll(p.Stdout())
-	p.Wait()
+	if _, err := io.ReadAll(p.Stdout()); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Wait(); err != nil {
+		t.Fatal(err)
+	}
 	if o := <-s.opts; o.Config.Memory != "2g" || o.Config.PidsLimit != 512 {
 		t.Errorf("the container launches with %+v", o.Config)
 	}
@@ -665,7 +711,9 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 		t.Errorf("the gateway's upstreams are %q", got)
 	}
 	cfg.Hidden = nil
-	s.w.SetSandboxConfig(cfg)
+	if err := s.w.SetSandboxConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
 	_, _, b = s.sandboxed()
 	got = nil
 	for _, sv := range b.Gateway().Up.Servers {
@@ -902,7 +950,9 @@ func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: agentrun.ForAll})
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: agentrun.ForAll}); err != nil {
+		t.Fatal(err)
+	}
 	if !<-done {
 		t.Fatal("not allowed")
 	}

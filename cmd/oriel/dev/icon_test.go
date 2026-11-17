@@ -34,7 +34,9 @@ func TestIconsMakeAnIconset(t *testing.T) {
 			continue
 		}
 		img, err := png.Decode(f)
-		f.Close()
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
 		if err != nil {
 			t.Errorf("%s: %v", name, err)
 			continue

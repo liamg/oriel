@@ -72,7 +72,9 @@ func TestPackRejectsOversize(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
 		"oriel.toml": "id = \"acme/big\"\nversion = \"1.0.0\"\n[contributes]\nfonts = [\"assets/fonts/*.ttf\"]\n",
 	})
-	os.MkdirAll(filepath.Join(dir, "assets", "fonts"), 0o755)
+	if err := os.MkdirAll(filepath.Join(dir, "assets", "fonts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "assets", "fonts", "huge.ttf"), make([]byte, plugin.MaxSize+1), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -154,10 +154,14 @@ func TestUnstageHunkMatchesGitApplyReverse(t *testing.T) {
 func TestStageHunkNewAndExecutable(t *testing.T) {
 	r := gittest.New(t)
 	r.Write(map[string]string{"run.sh": "echo 1\n"})
-	os.Chmod(filepath.Join(r.Dir, "run.sh"), 0o755)
+	if err := os.Chmod(filepath.Join(r.Dir, "run.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	r.Commit("Ada", "base")
 	r.Write(map[string]string{"run.sh": "echo 2\n", "new.txt": "a\nb\n"})
-	os.Chmod(filepath.Join(r.Dir, "run.sh"), 0o755)
+	if err := os.Chmod(filepath.Join(r.Dir, "run.sh"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	repo, ctx := Repo{Dir: r.Dir}, context.Background()
 	for _, f := range []struct{ path, body string }{{"run.sh", "echo 2\n"}, {"new.txt", "a\nb\n"}} {
 		hs, err := repo.UnstagedHunks(ctx, f.path, []byte(f.body))
@@ -234,7 +238,9 @@ func TestHunksTellMissingFromFailed(t *testing.T) {
 		t.Errorf("a new file's staged hunks: %+v, %v", hs, err)
 	}
 	gone := Repo{Dir: filepath.Join(t.TempDir(), "no-repo")}
-	os.MkdirAll(gone.Dir, 0o755)
+	if err := os.MkdirAll(gone.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := gone.UnstagedHunks(ctx, "f.txt", []byte("x\n")); err == nil {
 		t.Error("outside a repo, the file read as all added")
 	}

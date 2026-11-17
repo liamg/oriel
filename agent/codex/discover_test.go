@@ -32,7 +32,9 @@ func TestDiscoverFindsRollouts(t *testing.T) {
 	}
 	for f := range files {
 		p := filepath.Join(dir, f)
-		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(p, []byte("{}\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +67,9 @@ func TestLogsFollowCompression(t *testing.T) {
 	t.Setenv("CODEX_HOME", dir)
 	id := "0199a213-81c0-7800-8aa1-bbab2a035a53"
 	p := filepath.Join(dir, "sessions/2026/10/01/rollout-2026-10-01T09-00-00-"+id+".jsonl")
-	os.MkdirAll(filepath.Dir(p), 0o755)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(p, []byte("{}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -161,7 +161,9 @@ func TestNoMicWithDictationOff(t *testing.T) {
 	if s.Find("Dictate") == nil {
 		t.Fatal("a long field has no mic")
 	}
-	s.Registry().Options().Set("voice.dictation", registry.LayerUser, registry.At{}, false)
+	if err := s.Registry().Options().Set("voice.dictation", registry.LayerUser, registry.At{}, false); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("the mic to go", func() bool { return s.Find("Dictate") == nil })
 }
 
@@ -228,7 +230,9 @@ func TestSpokenReplies(t *testing.T) {
 	if sp.Said()[0] != "The tests pass." {
 		t.Errorf("said %q", sp.Said())
 	}
-	s.Registry().Options().Set("voice.speech", registry.LayerUser, registry.At{}, "off")
+	if err := s.Registry().Options().Set("voice.speech", registry.LayerUser, registry.At{}, "off"); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.Registry().Run(context.Background(), "voice.speak", registry.Args{"text": "x"}); err == nil {
 		t.Error("speech is off, yet it spoke")
 	}

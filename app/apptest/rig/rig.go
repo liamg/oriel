@@ -188,7 +188,9 @@ func NewStats(t *testing.T) *Stats {
 	root := t.TempDir()
 	for _, name := range []string{"pricing", "billing-ui", "admin-ui", "api", "web", "infra"} {
 		g := &gittest.Repo{T: t, Dir: filepath.Join(root, name), When: time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)}
-		os.MkdirAll(g.Dir, 0o755)
+		if err := os.MkdirAll(g.Dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
 		g.Git("init", "-q", "-b", "main")
 		g.Write(map[string]string{"README": name + "\n"})
 		g.Commit("Ada", "first")
@@ -202,7 +204,7 @@ func NewStats(t *testing.T) *Stats {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	r.W = w
 	return r
 }
@@ -267,13 +269,19 @@ func (r *Stats) Build() {
 		body := []byte(strings.Join(lines, "\n") + "\n")
 		if fx.Provider == "codex" {
 			p := filepath.Join(r.Home, "sessions", string(id), "agent", "events.jsonl")
-			os.MkdirAll(filepath.Dir(p), 0o755)
-			os.WriteFile(p, body, 0o644)
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+				r.T.Fatal(err)
+			}
+			if err := os.WriteFile(p, body, 0o644); err != nil {
+				r.T.Fatal(err)
+			}
 			r.Logs = append(r.Logs, p)
 			continue
 		}
 		p := filepath.Join(t.TempDir(), string(id)+".jsonl")
-		os.WriteFile(p, body, 0o644)
+		if err := os.WriteFile(p, body, 0o644); err != nil {
+			r.T.Fatal(err)
+		}
 		r.Logs = append(r.Logs, p)
 		r.Claude.SetLog(se.Dir, p)
 	}
@@ -549,7 +557,7 @@ func NewHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *Host {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	h.W = w
 	return h
 }
@@ -576,7 +584,9 @@ func Changed(a, b string) (removed, added int) {
 // WriteFile writes src to path, making its directory.
 func WriteFile(t *testing.T, path, src string) {
 	t.Helper()
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -607,11 +617,17 @@ func GitRepo(t testing.TB, dir string, files map[string]string, commits int) {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
-	os.MkdirAll(dir, 0o755)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	run(nil, "init", "-q", "-b", "fix/stale-results")
 	for name, body := range files {
-		os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755)
-		os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644)
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	run(nil, "add", ".")
 	authors := []string{"Liam Galvin", "Claude", "Alex Rivera", "Sam Kim", "Jo Park"}
@@ -662,12 +678,16 @@ func PluginDir(t *testing.T, files map[string]string) string {
 // WritableAfter makes dir writable again when the test ends, so installed plugins, kept read-only, can go.
 func WritableAfter(t *testing.T, dir string) string {
 	t.Cleanup(func() {
-		filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+		if err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 			if err == nil && d.IsDir() {
-				os.Chmod(p, 0o755)
+				if err := os.Chmod(p, 0o755); err != nil {
+					t.Error(err)
+				}
 			}
 			return nil
-		})
+		}); err != nil {
+			t.Fatal(err)
+		}
 	})
 	return dir
 }

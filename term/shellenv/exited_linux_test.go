@@ -14,7 +14,7 @@ func exited(pid int, d time.Duration) bool {
 	if err != nil {
 		return errors.Is(err, unix.ESRCH)
 	}
-	defer unix.Close(fd)
+	defer func() { _ = unix.Close(fd) }()
 	fds := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}
 	for {
 		n, err := unix.Poll(fds, int(d.Milliseconds()))

@@ -50,7 +50,9 @@ func TestWatchdog(t *testing.T) {
 		_, err := vm.Call(f)
 		return nil, err
 	}})
-	vm.Load(Chunk{Name: "spin.lua", Source: []byte("function spin() while true do end end\nfunction quick() return 1 end")})
+	if err := vm.Load(Chunk{Name: "spin.lua", Source: []byte("function spin() while true do end end\nfunction quick() return 1 end")}); err != nil {
+		t.Fatal(err)
+	}
 	fns, _ := vm.Eval(Chunk{Name: "x", Source: []byte("return spin, quick")})
 	if _, err := vm.Call(fns[0].(*Fn)); err == nil || !strings.Contains(err.Error(), "interrupted") {
 		t.Errorf("a spinning call: %v", err)

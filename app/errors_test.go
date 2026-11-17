@@ -272,7 +272,9 @@ func TestSecretsAreRedacted(t *testing.T) {
 		t.Errorf("report:\n%s", report)
 	}
 	b.close(t)
-	cfg.Logs.Close()
+	if err := cfg.Logs.Close(); err != nil {
+		t.Fatal(err)
+	}
 	file, err := os.ReadFile(filepath.Join(dir, "oriel.log"))
 	if err != nil {
 		t.Fatal(err)

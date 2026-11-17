@@ -40,7 +40,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 			http.Redirect(w, r, "https://evil.example/steal", http.StatusFound)
 			return
 		}
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer srv.Close()
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
@@ -63,7 +65,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), "SLACK_WEBHOOK isn't set") {
 		t.Fatalf("an unset secret: %v", err)
 	}
-	secrets.SetSecret("SLACK_WEBHOOK", hook)
+	if err := secrets.SetSecret("SLACK_WEBHOOK", hook); err != nil {
+		t.Fatal(err)
+	}
 	res, err := call(post)
 	if err != nil {
 		t.Fatal(err)
@@ -74,7 +78,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	}
 
 	// Bound to hooks.slack.com: a webhook set to another host isn't sent there, by net or by the secret's binding.
-	secrets.SetSecret("SLACK_WEBHOOK", "https://evil.example/XXXXSECRET")
+	if err := secrets.SetSecret("SLACK_WEBHOOK", "https://evil.example/XXXXSECRET"); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), `"net" capability isn't declared for evil.example`) {
 		t.Errorf("sent to another host: %v", err)
 	}
@@ -87,7 +93,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	}
 
 	// A token is sent as a bearer only to its host, and never over plain http.
-	secrets.SetSecret("TOKEN", "tok-XXXXSECRET")
+	if err := secrets.SetSecret("TOKEN", "tok-XXXXSECRET"); err != nil {
+		t.Fatal(err)
+	}
 	g.Grant(p.ID, append(g.Declared(p.ID), plugin.Grant{Cap: plugin.CapNet, Scope: []string{"api.linear.app"}}))
 	if _, err := call(map[string]any{"url": "https://evil.example/x", "auth": "TOKEN"}); err == nil {
 		t.Error("a bearer token sent to another host")
@@ -119,7 +127,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	n0 += 2
 
 	// A request carrying a secret doesn't follow a redirect.
-	secrets.SetSecret("SLACK_WEBHOOK", "https://hooks.slack.com/redirect?k=XXXXSECRET")
+	if err := secrets.SetSecret("SLACK_WEBHOOK", "https://hooks.slack.com/redirect?k=XXXXSECRET"); err != nil {
+		t.Fatal(err)
+	}
 	res, err = call(post)
 	if err != nil || res.Status != http.StatusFound || len(got) != n0+2 {
 		t.Errorf("a redirect: %+v %v, %d requests", res, err, len(got)-n0)
@@ -127,7 +137,9 @@ func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 
 	// Undeclared: no secrets grant, no net grant.
 	g.Grant(p.ID, []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{"hooks.slack.com"}}})
-	secrets.SetSecret("SLACK_WEBHOOK", hook)
+	if err := secrets.SetSecret("SLACK_WEBHOOK", hook); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := call(post); err == nil || !strings.Contains(err.Error(), `"secrets" capability isn't declared`) {
 		t.Errorf("without secrets: %v", err)
 	}
@@ -150,14 +162,18 @@ func TestSecretFile(t *testing.T) {
 	if err := f.SetSecret("A", "1"); err != nil {
 		t.Fatal(err)
 	}
-	f.SetSecret("B", "2")
+	if err := f.SetSecret("B", "2"); err != nil {
+		t.Fatal(err)
+	}
 	if v, ok := f.Secret("A"); !ok || v != "1" {
 		t.Errorf("A = %q %v", v, ok)
 	}
 	if got := strings.Join(f.SecretNames(), ","); got != "A,B" {
 		t.Errorf("names %s", got)
 	}
-	f.SetSecret("A", "")
+	if err := f.SetSecret("A", ""); err != nil {
+		t.Fatal(err)
+	}
 	if _, ok := f.Secret("A"); ok {
 		t.Error("A wasn't deleted")
 	}
@@ -185,7 +201,9 @@ func TestHTTPRedirectMeetsTheNetGrant(t *testing.T) {
 		case "/home":
 			http.Redirect(w, r, "https://api.linear.app/ok", http.StatusFound)
 		default:
-			w.Write([]byte("ok"))
+			if _, err := w.Write([]byte("ok")); err != nil {
+				t.Error(err)
+			}
 		}
 	}))
 	defer srv.Close()

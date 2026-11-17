@@ -75,7 +75,9 @@ var grabbers = []struct {
 // focusScene is the app on a project with a file and two sessions.
 func focusScene(t *testing.T) *apptest.Scene {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("one\ntwo\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("one\ntwo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	for _, ev := range []core.Event{
 		core.SessionOpened{ID: "config", Kind: core.KindWork, Status: core.StatusQuiet},
@@ -133,8 +135,12 @@ func keepsFocus(s *apptest.Scene, t *testing.T, what string, id ui.ID) {
 	for i := range 30 {
 		s.Now = s.Now.Add(100 * time.Millisecond)
 		if i%5 == 0 {
-			s.Store().Apply(core.SessionStatusChanged{ID: "pricing-rounding", Status: statuses[i/5%2]})
-			s.Store().Apply(core.SessionFocused{ID: "config"})
+			if err := s.Store().Apply(core.SessionStatusChanged{ID: "pricing-rounding", Status: statuses[i/5%2]}); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Store().Apply(core.SessionFocused{ID: "config"}); err != nil {
+				t.Fatal(err)
+			}
 		}
 		s.Quiet()
 		if f := s.UI().Focused(); f != id {

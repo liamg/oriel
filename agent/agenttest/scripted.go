@@ -89,7 +89,9 @@ func (p *Scripted) open(ctx context.Context, id string, spec agent.StartSpec) (*
 	}
 	s.emit(agent.Ready{ID: id})
 	if spec.Prompt != "" {
-		s.Send(ctx, agent.Input{Text: spec.Prompt})
+		if err := s.Send(ctx, agent.Input{Text: spec.Prompt}); err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
 }
@@ -239,7 +241,7 @@ func (s *scripted) run() (string, error) {
 	if err != nil {
 		return err.Error(), err
 	}
-	p.Stdin().Close()
+	_ = p.Stdin().Close()
 	b, _ := io.ReadAll(p.Stdout())
 	err = p.Wait()
 	return strings.TrimSpace(string(b)), err
@@ -286,7 +288,7 @@ func (s *scripted) Terminal() agent.Terminal {
 
 func (s *scripted) Close() error {
 	if s.term != nil {
-		s.term.pty.Close()
+		_ = s.term.pty.Close()
 		<-s.term.drained
 	}
 	s.mu.Lock()
@@ -317,7 +319,7 @@ func (t *ptyTerminal) drain() {
 			break
 		}
 	}
-	t.pty.Wait()
+	_ = t.pty.Wait()
 	t.Close()
 }
 

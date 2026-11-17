@@ -239,7 +239,9 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	if !se.FindingOpen(se.Findings[0]) {
 		t.Error("a finding whose thread is open isn't open")
 	}
-	r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadResolved})
+	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadResolved}); err != nil {
+		t.Fatal(err)
+	}
 	if se := r.session(id); se.FindingOpen(se.Findings[0]) {
 		t.Error("a finding whose thread is resolved is still open")
 	}
@@ -281,7 +283,7 @@ func TestCloseWaitsForAIReview(t *testing.T) {
 	reviewer(t, codex)
 	closed := make(chan struct{})
 	go func() {
-		r.w.Close()
+		_ = r.w.Close()
 		close(closed)
 	}()
 	select {

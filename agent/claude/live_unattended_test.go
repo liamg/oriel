@@ -43,7 +43,7 @@ func TestLiveRefuseNeverPrompts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	var evs []agent.Event
 	defer func() { t.Logf("the screen ended: %s", s.(*session).lastScreen()) }()
 	// What bounds a wait is go test's own -timeout: nothing here measures a while.

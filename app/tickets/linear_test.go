@@ -127,7 +127,9 @@ func TestLinearTicketsInTheOmnibox(t *testing.T) {
 func TestLinearStartWorkFromATicket(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { apptest.Connect(lw.W)(cfg); change(cfg) }})
 	// Under the scene's HOME, the repo's path reads the same on every machine.
@@ -198,7 +200,9 @@ func typeKeysIn(s *apptest.Scene, t *testing.T, text, placeholder string) {
 func TestLinearPRLinkedBack(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	s, _, hub, se, _ := apptest.ShipScene(t, change)
 	loadLinear(t, s)
 	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat: rate-limit headers", Head: se.Branch, Base: "main"})
@@ -407,8 +411,12 @@ func TestLinearDormantUntilKeyed(t *testing.T) {
 		t.Errorf("no Linear entry on the start view once keyed:\n%s", s.Text())
 	}
 	// The rail is a workspace's: a session running brings it, with the entry.
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	railEntry(s, t, "Linear tickets")
 
@@ -437,7 +445,9 @@ func TestLinearDormantUntilKeyed(t *testing.T) {
 func TestLinearTicketsPage(t *testing.T) {
 	l := lineartest.New(t)
 	s, secrets := bundledLinear(t, l, t.TempDir())
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Click(apptest.Centre(railEntry(s, t, "Linear tickets").Bounds), 0)
 	s.Until("the tickets", func() bool { return strings.Contains(s.Text(), "ENG-2252") })

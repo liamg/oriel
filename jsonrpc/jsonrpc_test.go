@@ -21,7 +21,7 @@ func pair(t *testing.T, a, b Handlers, opt Options) (*Conn, *Conn) {
 	br, aw := io.Pipe()
 	ca := NewConn(ar, aw, a, opt)
 	cb := NewConn(br, bw, b, opt)
-	t.Cleanup(func() { ca.Close(); cb.Close() })
+	t.Cleanup(func() { _ = ca.Close(); _ = cb.Close() })
 	return ca, cb
 }
 
@@ -30,14 +30,24 @@ func TestCallAndReply(t *testing.T) {
 		switch r.Method {
 		case "add":
 			var p struct{ A, B int }
-			json.Unmarshal(r.Params, &p)
-			r.Reply(map[string]int{"sum": p.A + p.B}, nil)
+			if err := json.Unmarshal(r.Params, &p); err != nil {
+				t.Error(err)
+			}
+			if err := r.Reply(map[string]int{"sum": p.A + p.B}, nil); err != nil {
+				t.Error(err)
+			}
 		case "fail":
-			r.Reply(nil, &Error{Code: InvalidParams, Message: "no"})
+			if err := r.Reply(nil, &Error{Code: InvalidParams, Message: "no"}); err != nil {
+				t.Error(err)
+			}
 		case "boom":
-			r.Reply(nil, errors.New("boom"))
+			if err := r.Reply(nil, errors.New("boom")); err != nil {
+				t.Error(err)
+			}
 		default:
-			r.Reply(nil, &Error{Code: MethodNotFound, Message: "no such method"})
+			if err := r.Reply(nil, &Error{Code: MethodNotFound, Message: "no such method"}); err != nil {
+				t.Error(err)
+			}
 		}
 	}}
 	c, _ := pair(t, Handlers{}, server, Options{})
@@ -74,8 +84,12 @@ func TestReplyLaterKeepsNotificationsFlowing(t *testing.T) {
 	answer := make(chan error, 1)
 	go func() { answer <- server.Call(context.Background(), "approve", nil, nil) }()
 	r := <-held
-	server.Notify("one", nil)
-	server.Notify("two", nil)
+	if err := server.Notify("one", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Notify("two", nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{"request", "one", "two"} {
 		select {
 		case m := <-got:
@@ -103,10 +117,16 @@ func TestCallsFromBothSides(t *testing.T) {
 		go func() {
 			var s string
 			err := srv.Call(context.Background(), "inner", nil, &s)
-			r.Reply("outer+"+s, err)
+			if err := r.Reply("outer+"+s, err); err != nil {
+				t.Error(err)
+			}
 		}()
 	}}
-	client := Handlers{Request: func(r *Request) { r.Reply("inner", nil) }}
+	client := Handlers{Request: func(r *Request) {
+		if err := r.Reply("inner", nil); err != nil {
+			t.Error(err)
+		}
+	}}
 	c, sc := pair(t, client, server, Options{})
 	srv = sc
 	var s string
@@ -121,7 +141,11 @@ func TestWireFormat(t *testing.T) {
 		r, w := io.Pipe()
 		idle, _ := io.Pipe() // nothing to read, and no EOF to close the connection before it writes
 		c := NewConn(idle, w, Handlers{}, Options{Version: version})
-		go c.Notify("initialized", map[string]any{})
+		go func() {
+			if err := c.Notify("initialized", map[string]any{}); err != nil {
+				t.Error(err)
+			}
+		}()
 		line, err := bufio.NewReader(r).ReadString('\n')
 		if err != nil {
 			t.Fatal(err)
@@ -133,7 +157,9 @@ func TestWireFormat(t *testing.T) {
 		if line != want {
 			t.Errorf("version %q: wrote %q, want %q", version, line, want)
 		}
-		c.Close()
+		if err := c.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -143,7 +169,11 @@ func TestReadsEitherFormAndStringIDs(t *testing.T) {
 	out := &strings.Builder{}
 	notes := make(chan string, 1)
 	c := NewConn(in, writerFunc(func(b []byte) (int, error) { return out.Write(b) }),
-		Handlers{Request: func(r *Request) { r.Reply(map[string]any{}, nil) }, Notify: func(m string, p json.RawMessage) { notes <- m + string(p) }},
+		Handlers{Request: func(r *Request) {
+			if err := r.Reply(map[string]any{}, nil); err != nil {
+				t.Error(err)
+			}
+		}, Notify: func(m string, p json.RawMessage) { notes <- m + string(p) }},
 		Options{})
 	<-c.Done()
 	if got := <-notes; got != `note{"x":1}` {
@@ -171,7 +201,9 @@ func TestCloseFailsPendingCalls(t *testing.T) {
 	errc := make(chan error, 1)
 	go func() { errc <- c.Call(context.Background(), "never", nil, nil) }()
 	<-arrived
-	c.Close()
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case err := <-errc:
 		if !errors.Is(err, ErrClosed) {
@@ -188,7 +220,9 @@ func TestCloseFailsPendingCalls(t *testing.T) {
 func TestEOFEndsTheConnection(t *testing.T) {
 	r, w := io.Pipe()
 	c := NewConn(r, io.Discard, Handlers{}, Options{})
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-c.Done():
 	case <-time.After(5 * time.Second):
@@ -213,7 +247,9 @@ func TestRequestsInFlightAreBounded(t *testing.T) {
 	held := make(chan *Request, maxRequests+1)
 	client, _ := pair(t, Handlers{}, Handlers{Request: func(r *Request) { held <- r }}, Options{})
 	for range maxRequests {
-		go client.Call(context.Background(), "wait", nil, nil)
+		go func() {
+			_ = client.Call(context.Background(), "wait", nil, nil) // all but the first wait until the pair closes
+		}()
 	}
 	var first *Request
 	for i := range maxRequests {
@@ -233,10 +269,16 @@ func TestRequestsInFlightAreBounded(t *testing.T) {
 	if len(held) != 0 {
 		t.Fatal("a refused request reached the handler")
 	}
-	first.Reply(nil, nil)
+	if err := first.Reply(nil, nil); err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	go func() { (<-held).Reply("ok", nil) }()
+	go func() {
+		if err := (<-held).Reply("ok", nil); err != nil {
+			t.Error(err)
+		}
+	}()
 	var got string
 	if err := client.Call(ctx, "after", nil, &got); err != nil || got != "ok" {
 		t.Fatalf("after a reply = %q, %v", got, err)
@@ -253,7 +295,9 @@ func TestCancelEndsTheRequestContext(t *testing.T) {
 			go func() {
 				<-r.Context().Done()
 				ended <- r.Context().Err()
-				r.Reply(nil, r.Context().Err())
+				if err := r.Reply(nil, r.Context().Err()); err != nil {
+					t.Error(err)
+				}
 			}()
 		},
 		Notify: func(m string, _ json.RawMessage) { notes <- m },
@@ -304,8 +348,12 @@ func TestCloseWritesWhatsQueued(t *testing.T) {
 		line, _ := bufio.NewReader(r).ReadString('\n')
 		got <- line
 	}()
-	c.Notify("bye", nil)
-	c.Close()
+	if err := c.Notify("bye", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case line := <-got:
 		if line != `{"method":"bye"}`+"\n" {
@@ -327,9 +375,13 @@ func TestSendReturnsOnceWritten(t *testing.T) {
 		defer mu.Unlock()
 		return out.Write(b)
 	}), Handlers{}, Options{})
-	defer c.Close()
-	c.Notify("one", nil)
-	c.Notify("two", nil)
+	defer func() { _ = c.Close() }()
+	if err := c.Notify("one", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Notify("two", nil); err != nil {
+		t.Fatal(err)
+	}
 	mu.Lock()
 	defer mu.Unlock()
 	if got := out.String(); got != `{"method":"one"}`+"\n"+`{"method":"two"}`+"\n" {
@@ -352,15 +404,19 @@ func TestInOrderResultsFollowTheirNotifications(t *testing.T) {
 	var server *Conn
 	serverH := Handlers{Request: func(r *Request) {
 		for i := 0; i < 20; i++ {
-			server.Notify("update", nil)
+			if err := server.Notify("update", nil); err != nil {
+				t.Error(err)
+			}
 		}
-		r.Reply("done", nil)
+		if err := r.Reply("done", nil); err != nil {
+			t.Error(err)
+		}
 	}}
 	ar, bw := io.Pipe()
 	br, aw := io.Pipe()
 	c := NewConn(ar, aw, client, Options{InOrder: true})
 	server = NewConn(br, bw, serverH, Options{})
-	t.Cleanup(func() { c.Close(); server.Close() })
+	t.Cleanup(func() { _ = c.Close(); _ = server.Close() })
 	if err := c.Call(context.Background(), "prompt", nil, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +435,11 @@ func (codedErr) RPCCode() int  { return -32010 }
 
 // A reply's error that says its code (RPCCode) goes with that code and its own message, wrapped or not.
 func TestAnErrorThatKnowsItsCode(t *testing.T) {
-	server := Handlers{Request: func(r *Request) { r.Reply(nil, fmt.Errorf("asking: %w", codedErr{})) }}
+	server := Handlers{Request: func(r *Request) {
+		if err := r.Reply(nil, fmt.Errorf("asking: %w", codedErr{})); err != nil {
+			t.Error(err)
+		}
+	}}
 	c, _ := pair(t, Handlers{}, server, Options{})
 	var e *Error
 	if err := c.Call(context.Background(), "x", nil, nil); !errors.As(err, &e) || e.Code != -32010 || e.Message != "asking: the secret X isn't set" {

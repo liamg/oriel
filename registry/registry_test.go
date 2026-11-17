@@ -19,11 +19,17 @@ func TestOverrideAndDispose(t *testing.T) {
 	over := r.Command(cmd("override"))
 	ctx := context.Background()
 
-	r.Run(ctx, "x.run", nil)
+	if err := r.Run(ctx, "x.run", nil); err != nil {
+		t.Fatal(err)
+	}
 	over.Dispose()
-	r.Run(ctx, "x.run", nil)
+	if err := r.Run(ctx, "x.run", nil); err != nil {
+		t.Fatal(err)
+	}
 	over.Dispose()
-	r.Run(ctx, "x.run", nil)
+	if err := r.Run(ctx, "x.run", nil); err != nil {
+		t.Fatal(err)
+	}
 	base.Dispose()
 	if err := r.Run(ctx, "x.run", nil); err == nil {
 		t.Error("ran a disposed command")

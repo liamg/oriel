@@ -29,7 +29,9 @@ func TestAIReviewFindings(t *testing.T) {
 	if ok, label := se.Snapshot().AIReviewGate(); ok || label != "running" {
 		t.Errorf("gate while running: %v %q", ok, label)
 	}
-	a.Apply(core.AIReviewChanged{Session: "pricing", Review: core.AIReview{ID: "r1", Provider: "codex"}})
+	if err := a.Apply(core.AIReviewChanged{Session: "pricing", Review: core.AIReview{ID: "r1", Provider: "codex"}}); err != nil {
+		t.Fatal(err)
+	}
 	se, _ = a.State().Session("pricing")
 	st := se.Snapshot()
 	if got := st.SortedFindings(); len(got) != 2 || got[0].ID != "f1" {

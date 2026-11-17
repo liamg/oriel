@@ -172,7 +172,9 @@ func TestExtendsAndStack(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, src string) Source {
 		p := filepath.Join(dir, name+".toml")
-		os.WriteFile(p, []byte(src), 0o644)
+		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
+			t.Error(err)
+		}
 		return File{Path: p}
 	}
 	sources := append(Builtins(),
@@ -204,13 +206,17 @@ func TestExtendsAndStack(t *testing.T) {
 
 func TestFileWatch(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "live.toml")
-	os.WriteFile(p, []byte("name = \"live\"\n"), 0o644)
+	if err := os.WriteFile(p, []byte("name = \"live\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	clk := clocktest.New(time.Unix(0, 0))
 	changed := 0
 	cancel := File{Path: p, PollEvery: time.Second, Clock: clk}.Watch(func() { changed++ })
 	defer cancel()
 	// Straight away, and the same size: a save right after Watch returns still counts.
-	os.WriteFile(p, []byte("name = \"evil\"\n"), 0o644)
+	if err := os.WriteFile(p, []byte("name = \"evil\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	clk.Advance(time.Second)
 	if changed != 1 {
 		t.Fatalf("%d changes seen after a save and a poll; want 1", changed)
@@ -220,7 +226,9 @@ func TestFileWatch(t *testing.T) {
 		t.Errorf("%d changes seen after a poll with no save; want 1", changed)
 	}
 	cancel()
-	os.WriteFile(p, []byte("name = \"gone\"\n"), 0o644)
+	if err := os.WriteFile(p, []byte("name = \"gone\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	clk.Advance(time.Second)
 	if changed != 1 || clk.Waiting() != 0 {
 		t.Errorf("after cancel: %d changes, %d polls waiting", changed, clk.Waiting())
@@ -230,7 +238,9 @@ func TestFileWatch(t *testing.T) {
 func BenchmarkResolve(b *testing.B) {
 	st, _ := Stack(Builtins(), "oriel")
 	for b.Loop() {
-		Resolve(st, Dark)
+		if _, err := Resolve(st, Dark); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

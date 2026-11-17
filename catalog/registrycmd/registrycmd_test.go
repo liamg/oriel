@@ -29,9 +29,13 @@ func TestKeygenAndIndex(t *testing.T) {
 	if fi, err := os.Stat(keyFile); err != nil || fi.Mode().Perm() != 0o600 {
 		t.Errorf("the private key file: %v %v", fi, err)
 	}
-	os.MkdirAll(filepath.Join(dir, "plugins", "liamg", "surround"), 0o755)
-	os.WriteFile(filepath.Join(dir, "plugins", "liamg", "surround", "plugin.toml"),
-		[]byte("repo = \"github.com/liamg/oriel-surround\"\ntrusted = true\nsince = \"2026-10-13\"\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, "plugins", "liamg", "surround"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "plugins", "liamg", "surround", "plugin.toml"),
+		[]byte("repo = \"github.com/liamg/oriel-surround\"\ntrusted = true\nsince = \"2026-10-13\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	out.Reset()
 	if err := Run([]string{"index", "--key", keyFile, dir}, &out, &out); err != nil {
 		t.Fatal(err)

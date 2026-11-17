@@ -23,7 +23,9 @@ func TestResponder(t *testing.T) {
 	root, _ := filepath.EvalSymlinks(t.TempDir())
 	for _, f := range []string{"go.mod", "lib.go", "main.go.in"} {
 		b, _ := os.ReadFile(filepath.Join("../testdata/go", f))
-		os.WriteFile(filepath.Join(root, strings.TrimSuffix(f, ".in")), b, 0o644)
+		if err := os.WriteFile(filepath.Join(root, strings.TrimSuffix(f, ".in")), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	r := lsptest.NewResponder(tr)
 	diags := make(chan lsp.DiagnosticSet, 10)

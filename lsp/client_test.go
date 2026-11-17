@@ -144,7 +144,9 @@ func (s *server) call(method string, params, result any) error {
 }
 
 func (s *server) notify(method string, params string) {
-	s.conn.Notify(method, json.RawMessage(params))
+	if err := s.conn.Notify(method, json.RawMessage(params)); err != nil {
+		s.t.Fatal(err)
+	}
 }
 
 type pipeProcess struct {
@@ -156,7 +158,7 @@ type pipeProcess struct {
 func (p *pipeProcess) Wait() error {
 	select {
 	case <-p.quit:
-		p.srv.Close()
+		_ = p.srv.Close()
 		return nil
 	case <-p.srv.Done():
 		return errors.New("exit status 2")
@@ -166,7 +168,11 @@ func (p *pipeProcess) Wait() error {
 func (p *pipeProcess) Kill() error { return p.srv.Close() }
 
 // crash ends the server without a shutdown.
-func (s *server) crash() { s.conn.Close() }
+func (s *server) crash() {
+	if err := s.conn.Close(); err != nil {
+		s.t.Fatal(err)
+	}
+}
 
 func startClient(t *testing.T, s *server, opts Options) *Client {
 	t.Helper()
@@ -178,7 +184,7 @@ func startClient(t *testing.T, s *server, opts Options) *Client {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		c.Shutdown(ctx)
+		_ = c.Shutdown(ctx)
 	})
 	<-s.ready
 	return c
@@ -325,7 +331,9 @@ func applyEvents(t *testing.T, s, enc string, events []protocol.TextDocumentCont
 // quote: "Documents are synced by always sending the full content"
 func TestDidChangeFull(t *testing.T) {
 	c, s, buf, path := open(t, `{"textDocumentSync":1}`, "abc")
-	c.DidChange(path, change(t, buf, text.Replace{Range: text.Range{Start: 1, End: 2}, Text: []byte("X")}))
+	if err := c.DidChange(path, change(t, buf, text.Replace{Range: text.Range{Start: 1, End: 2}, Text: []byte("X")})); err != nil {
+		t.Fatal(err)
+	}
 	p := decode[protocol.DidChangeTextDocumentParams](t, s.last("textDocument/didChange"))
 	if len(p.ContentChanges) != 1 || p.ContentChanges[0].Range != nil || p.ContentChanges[0].Text != "aXc" {
 		t.Errorf("full change = %+v", p.ContentChanges)
@@ -338,14 +346,20 @@ func TestDidChangeOutOfOrder(t *testing.T) {
 	c, s, buf, path := open(t, `{"textDocumentSync":2}`, "abc")
 	first := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("1")})
 	second := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("2")})
-	c.DidChange(path, second) // arrives first: it doesn't follow what was sent, so the whole text goes
+	if err := c.DidChange(path, second); err != nil {
+		t.Fatal(err)
+	} // arrives first: it doesn't follow what was sent, so the whole text goes
 	p := decode[protocol.DidChangeTextDocumentParams](t, s.last("textDocument/didChange"))
 	if len(p.ContentChanges) != 1 || p.ContentChanges[0].Range != nil || p.ContentChanges[0].Text != "21abc" {
 		t.Errorf("out of order change = %+v", p.ContentChanges)
 	}
-	c.DidChange(path, first) // older than what was sent: dropped
+	if err := c.DidChange(path, first); err != nil {
+		t.Fatal(err)
+	} // older than what was sent: dropped
 	third := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("3")})
-	c.DidChange(path, third)
+	if err := c.DidChange(path, third); err != nil {
+		t.Fatal(err)
+	}
 	p = decode[protocol.DidChangeTextDocumentParams](t, s.nth("textDocument/didChange", 2))
 	if len(p.ContentChanges) != 1 || p.ContentChanges[0].Text != "3" {
 		t.Errorf("the change after the dropped one = %+v, want the third", p.ContentChanges)
@@ -381,9 +395,9 @@ func TestDidSaveWaitsForSendOrder(t *testing.T) {
 		runtime.Gosched() // give DidSave every chance to get past the order
 	}
 	select {
-	case <-saved:
+	case err := <-saved:
 		c.sendMu.Unlock()
-		t.Fatal("DidSave sent while another document notification held the order")
+		t.Fatalf("DidSave sent (%v) while another document notification held the order", err)
 	default:
 	}
 	c.sendMu.Unlock()
@@ -404,7 +418,9 @@ func TestDiagnosticsDuringInitialize(t *testing.T) {
 	launch := s.launch
 	opts := Options{OnDiagnostics: func(d DiagnosticSet) { sets <- d }, Launch: func(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (Process, error) {
 		p, err := launch(ctx, spec, root, stderr)
-		s.conn.Notify("textDocument/publishDiagnostics", json.RawMessage(`{"uri":"`+string(URI(path))+`","diagnostics":[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"message":"m"}]}`))
+		if err := s.conn.Notify("textDocument/publishDiagnostics", json.RawMessage(`{"uri":"`+string(URI(path))+`","diagnostics":[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"message":"m"}]}`)); err != nil {
+			t.Error(err)
+		}
 		return p, err
 	}}
 	c, err := Start(context.Background(), ServerSpec{Name: "fake"}, t.TempDir(), opts)
@@ -414,7 +430,7 @@ func TestDiagnosticsDuringInitialize(t *testing.T) {
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		c.Shutdown(ctx)
+		_ = c.Shutdown(ctx)
 	})
 	select {
 	case <-sets:
@@ -430,7 +446,9 @@ func TestPublishDiagnostics(t *testing.T) {
 	s := newServer(t, `{"textDocumentSync":2}`)
 	c := startClient(t, s, Options{OnDiagnostics: func(d DiagnosticSet) { sets <- d }})
 	path := filepath.Join(c.Root(), "a.ts")
-	c.DidOpen(path, "typescript", text.New([]byte("const s = \"🎉\" + nope;\n"), text.Author{}).Snapshot())
+	if err := c.DidOpen(path, "typescript", text.New([]byte("const s = \"🎉\" + nope;\n"), text.Author{}).Snapshot()); err != nil {
+		t.Fatal(err)
+	}
 	s.notify("textDocument/publishDiagnostics", `{"uri":"`+string(URI(path))+`","version":1,"diagnostics":[{"range":{"start":{"line":0,"character":17},"end":{"line":0,"character":21}},`+
 		`"severity":1,"code":2304,"source":"ts","message":"Cannot find name 'nope'.","tags":[1],"relatedInformation":[{"location":{"uri":"`+string(URI(path))+`","range":{"start":{"line":0,"character":6},"end":{"line":0,"character":7}}},"message":"here"}]}]}`)
 	got := <-sets
@@ -540,7 +558,9 @@ func TestApplyEdit(t *testing.T) {
 	s := newServer(t, `{"positionEncoding":"utf-16"}`)
 	c := startClient(t, s, Options{OnApplyEdit: func(label string, e WorkspaceEdit) (bool, string) { got = e; return true, "" }})
 	path := filepath.Join(c.Root(), "a.txt")
-	os.WriteFile(path, []byte("é𝄞x\n"), 0o644) // not open: read from disk to convert
+	if err := os.WriteFile(path, []byte("é𝄞x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	} // not open: read from disk to convert
 	var res protocol.ApplyWorkspaceEditResult
 	err := s.call("workspace/applyEdit", map[string]any{"edit": map[string]any{"documentChanges": []any{
 		map[string]any{"kind": "create", "uri": URI(filepath.Join(c.Root(), "new.txt"))},
@@ -598,7 +618,7 @@ func TestDollarRequestsAreMethodNotFound(t *testing.T) {
 		return "ok", nil
 	})})
 	asks := NewConn(b, jsonrpc.Handlers{})
-	t.Cleanup(func() { answers.Close(); asks.Close() })
+	t.Cleanup(func() { _ = answers.Close(); _ = asks.Close() })
 	var got string
 	if err := asks.Call(context.Background(), "x", nil, &got); err != nil || got != "ok" {
 		t.Fatalf("x = %q, %v", got, err)

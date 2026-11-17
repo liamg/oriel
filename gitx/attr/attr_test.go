@@ -28,14 +28,18 @@ func fixture(t *testing.T) string {
 		if err != nil {
 			return err
 		}
-		os.MkdirAll(filepath.Join(root, filepath.Dir(rel)), 0o755)
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(rel)), 0o755); err != nil {
+			t.Error(err)
+		}
 		return os.WriteFile(filepath.Join(root, rel), b, 0o644)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	git(t, root, "init", "-q")
-	os.WriteFile(filepath.Join(root, ".git", "info", "attributes"), []byte("plain eol=crlf\n*.js -linguist-vendored\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(root, ".git", "info", "attributes"), []byte("plain eol=crlf\n*.js -linguist-vendored\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return root
 }
 
@@ -71,7 +75,7 @@ func TestMatchesGitCheckAttr(t *testing.T) {
 	}
 	root := fixture(t)
 	var paths []string
-	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if d.IsDir() && d.Name() == ".git" {
 			return filepath.SkipDir
 		}
@@ -80,7 +84,9 @@ func TestMatchesGitCheckAttr(t *testing.T) {
 			paths = append(paths, filepath.ToSlash(rel))
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	want := map[string]map[string]string{}
 	for _, l := range strings.Split(git(t, root, append([]string{"check-attr", "-a", "--"}, paths...)...), "\n") {
 		if l == "" {

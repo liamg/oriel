@@ -49,7 +49,7 @@ func appendTo(t *testing.T, path, body string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if _, err := f.WriteString(body); err != nil {
 		t.Fatal(err)
 	}

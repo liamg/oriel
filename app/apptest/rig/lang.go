@@ -30,7 +30,9 @@ func LSPProject(t *testing.T, fixture string) string {
 	ents, _ := os.ReadDir(src)
 	for _, e := range ents {
 		b, _ := os.ReadFile(filepath.Join(src, e.Name()))
-		os.WriteFile(filepath.Join(root, strings.TrimSuffix(e.Name(), ".in")), b, 0o644)
+		if err := os.WriteFile(filepath.Join(root, strings.TrimSuffix(e.Name(), ".in")), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return root
 }
@@ -78,7 +80,9 @@ func PricingPackage(t *testing.T) string {
 		"round.go":      roundGoSrc,
 		"round_test.go": strings.Replace(roundTestSrc, "FLIP", FlipFile(dir), 1),
 	} {
-		os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644)
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return dir
 }

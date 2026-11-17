@@ -21,7 +21,7 @@ func suiteFiles(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var out []string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {

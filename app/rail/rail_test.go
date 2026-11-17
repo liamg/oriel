@@ -156,14 +156,18 @@ func TestRailRequestsCountsWhatWantsYou(t *testing.T) {
 	you := core.Comment{ID: "c1", Author: core.AuthorYou, Body: "fix it", Delivered: true}
 	working := core.Comment{ID: "c2", Author: core.AuthorAgent, Body: "on it", Progress: true}
 	answer := core.Comment{ID: "c2", Author: core.AuthorAgent, Body: "Which one?"}
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
 		Threads: []core.Thread{
 			{ID: "busy", Status: core.ThreadOpen, Busy: true, Comments: []core.Comment{you, working}},
 			{ID: "owed", Status: core.ThreadOpen, Comments: []core.Comment{you}},
 			{ID: "asks", Status: core.ThreadOpen, Comments: []core.Comment{you, answer}},
 			{ID: "done", Status: core.ThreadResolved, Comments: []core.Comment{you, answer}},
-		}}})
-	s.Store().Apply(core.SessionFocused{ID: "w"})
+		}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	for _, c := range s.Registry().Contributions("rail.entry") {
 		if e := c.(uireg.RailEntry); e.Name == "requests" {

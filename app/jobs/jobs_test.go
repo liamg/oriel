@@ -253,7 +253,9 @@ func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *jobs.Jobs) {
 	st := s.UntilState("the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
 		if hostapi.RunOf(se).Status == hostapi.RunRunning {
-			s.Store().Apply(core.SessionFocused{ID: se.ID})
+			if err := s.Store().Apply(core.SessionFocused{ID: se.ID}); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	return s, r, x

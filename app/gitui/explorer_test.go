@@ -449,9 +449,15 @@ func TestExplorerShowsTheScratchpad(t *testing.T) {
 		root = p.Dir
 	}
 	shots := filepath.Join(sandbox.TmpDir(root), "shots")
-	os.MkdirAll(shots, 0o700)
-	os.WriteFile(filepath.Join(sandbox.TmpDir(root), "notes.md"), []byte("hi\n"), 0o600)
-	os.WriteFile(filepath.Join(shots, "login.png"), []byte("png"), 0o600)
+	if err := os.MkdirAll(shots, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sandbox.TmpDir(root), "notes.md"), []byte("hi\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(shots, "login.png"), []byte("png"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	s.Press("<M-3>")
 	s.Until("the scratchpad in All, open", func() bool { return s.Has("scratchpad", "the agent's temp dir", "shots", "notes.md") })
 	s.ClickText("shots")

@@ -290,24 +290,38 @@ func TestEmptyRegistryIsNotAnError(t *testing.T) {
 	empty := signed(t, key, DefaultRepo, time.Now(), nil)
 	for name, h := range map[string]http.HandlerFunc{
 		"no repo or no release yet": func(w http.ResponseWriter, r *http.Request) { http.NotFound(w, r) },
-		"no releases":               func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("[]")) },
+		"no releases": func(w http.ResponseWriter, r *http.Request) {
+			if _, err := w.Write([]byte("[]")); err != nil {
+				t.Error(err)
+			}
+		},
 		"a release with no index": func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"notes.txt","url":"/x"}]}]`))
+			if _, err := w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"notes.txt","url":"/x"}]}]`)); err != nil {
+				t.Error(err)
+			}
 		},
 		"an empty index.json": func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/a" {
 				return
 			}
-			w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"` + "http://" + r.Host + `/a"}]}]`))
+			if _, err := w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"` + "http://" + r.Host + `/a"}]}]`)); err != nil {
+				t.Error(err)
+			}
 		},
 		"an index listing nothing": func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/i":
-				w.Write(empty.files[IndexFile])
+				if _, err := w.Write(empty.files[IndexFile]); err != nil {
+					t.Error(err)
+				}
 			case "/s":
-				w.Write(empty.files[IndexSig])
+				if _, err := w.Write(empty.files[IndexSig]); err != nil {
+					t.Error(err)
+				}
 			default:
-				w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"http://` + r.Host + `/i"},{"name":"index.sig","url":"http://` + r.Host + `/s"}]}]`))
+				if _, err := w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"http://` + r.Host + `/i"},{"name":"index.sig","url":"http://` + r.Host + `/s"}]}]`)); err != nil {
+					t.Error(err)
+				}
 			}
 		},
 	} {

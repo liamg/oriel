@@ -34,8 +34,12 @@ func TestDescribeTheBaseImage(t *testing.T) {
 	ctx := container.WithEngine(context.Background(), describeEngine(t))
 	root := t.TempDir()
 	tag := container.BaseImage()
-	os.MkdirAll(filepath.Dir(BuildLog(tag)), 0o700)
-	os.WriteFile(BuildLog(tag), []byte("step 1\n"), 0o600)
+	if err := os.MkdirAll(filepath.Dir(BuildLog(tag)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(BuildLog(tag), []byte("step 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	d := Describe(ctx, root, sandbox.Config{})
 	if d.Image != tag || d.ImageFrom != "the base image" || d.Dockerfile != container.BaseDockerfile || !d.Built || !d.Running {
 		t.Errorf("description = %+v", d)

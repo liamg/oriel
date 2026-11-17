@@ -21,7 +21,9 @@ func githubRepo(t *testing.T, name string, files map[string]string) (checkout, u
 	root := t.TempDir()
 	bare := filepath.Join(root, "origins", "acme", name+".git")
 	checkout = &gittest.Repo{T: t, Dir: filepath.Join(root, name), When: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)}
-	os.MkdirAll(checkout.Dir, 0o755)
+	if err := os.MkdirAll(checkout.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	checkout.Git("init", "-q", "--bare", "-b", "main", bare)
 	checkout.Git("init", "-q", "-b", "main")
 	checkout.Write(files)
@@ -90,8 +92,12 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	}
 
 	// Uncommitted → committed: the draft it used goes.
-	os.WriteFile(filepath.Join(dirs["api"], "limiter.go"), []byte("package limiter\n\nfunc Allow() bool {\n\treturn false\n}\n"), 0o644)
-	os.WriteFile(filepath.Join(dirs["api"], "retry.go"), []byte("package limiter\n\nconst Retry = 1\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dirs["api"], "limiter.go"), []byte("package limiter\n\nfunc Allow() bool {\n\treturn false\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dirs["api"], "retry.go"), []byte("package limiter\n\nconst Retry = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s = r.ship(id, false)
 	if fs := s["api"].Files; len(fs) != 2 || fs[0].Path != "limiter.go" || fs[0].Add != 1 || fs[0].Del != 1 || fs[1].Code != "?" {
 		t.Fatalf("uncommitted %+v", fs)
@@ -107,7 +113,9 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if !slices.Equal(a.Changed, []string{"limiter.go"}) {
 		t.Errorf("the branch's change: %q", a.Changed)
 	}
-	r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: "api", Message: "test(api): retry"})
+	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: "api", Message: "test(api): retry"}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Behind its base: a fresh read fetches, and Sync rebases.
 	apiUp.Write(map[string]string{"README": "docs\n"})
@@ -162,9 +170,13 @@ func TestShipSyncConflicts(t *testing.T) {
 	api, up := githubRepo(t, "api", map[string]string{"limiter.go": "package limiter\n\nvar n = 1\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(api.Dir)}})
 	p, _ := r.session(id).Primary()
-	os.WriteFile(filepath.Join(p.Dir, "limiter.go"), []byte("package limiter\n\nvar n = 2\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(p.Dir, "limiter.go"), []byte("package limiter\n\nvar n = 2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
-	r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"}); err != nil {
+		t.Fatal(err)
+	}
 	up.Write(map[string]string{"limiter.go": "package limiter\n\nvar n = 3\n"})
 	up.Commit("Bo", "three")
 	up.Git("push", "-q", "origin", "main")
@@ -190,7 +202,9 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 		t.Fatalf("started on %q", p.Branch)
 	}
 	blog.Git("switch", "-q", "-c", "two")
-	os.WriteFile(filepath.Join(blog.Dir, "post.md"), []byte("# Two\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(blog.Dir, "post.md"), []byte("# Two\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	ctx := context.Background()
 	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "docs: two"}); err != nil {
 		t.Fatal(err)

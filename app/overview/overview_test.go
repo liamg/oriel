@@ -80,9 +80,15 @@ func TestOverviewSnapshot(t *testing.T) {
 func TestOverviewPlainDirectory(t *testing.T) {
 	s := overviewScene(t, func(home string) string {
 		dir := filepath.Join(home, "notes")
-		os.MkdirAll(filepath.Join(dir, "2026"), 0o755)
-		os.WriteFile(filepath.Join(dir, "todo.md"), []byte(lines(40, "- a thing")), 0o644)
-		os.WriteFile(filepath.Join(dir, "2026", "oct.md"), []byte(lines(12, "words")), 0o644)
+		if err := os.MkdirAll(filepath.Join(dir, "2026"), 0o755); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "todo.md"), []byte(lines(40, "- a thing")), 0o644); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "2026", "oct.md"), []byte(lines(12, "words")), 0o644); err != nil {
+			t.Error(err)
+		}
 		return dir
 	})
 	text := s.Text()
@@ -102,7 +108,9 @@ func TestOverviewPlainDirectory(t *testing.T) {
 // A plugin's panel computes off the loop and shows on the card; closing the last tab brings the overview back.
 func TestOverviewPluginPanelAndReturn(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.OverviewOff.Dispose()
 	s.Registry().Contribute(uireg.OverviewPanel{Name: "todos", Title: "TODOs", Order: 90, Dirs: true, Repos: true,
@@ -120,8 +128,12 @@ func TestOverviewPluginPanelAndReturn(t *testing.T) {
 func TestOverviewLuaPanel(t *testing.T) {
 	s := overviewScene(t, func(home string) string {
 		dir := filepath.Join(home, "proj")
-		os.MkdirAll(dir, 0o755)
-		os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644); err != nil {
+			t.Error(err)
+		}
 		return dir
 	})
 	s.WriteConfig(map[string]string{"init.lua": `oriel.overview.add{ name = "todo", title = "To do", order = 90,
@@ -134,8 +146,12 @@ func TestOverviewLuaPanel(t *testing.T) {
 func TestOverviewShowsTheReadme(t *testing.T) {
 	s := overviewScene(t, func(home string) string {
 		dir := filepath.Join(home, "pricing")
-		os.MkdirAll(dir, 0o755)
-		os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Pricing\n\nRounds **money** the way finance wants.\n"), 0o644)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Pricing\n\nRounds **money** the way finance wants.\n"), 0o644); err != nil {
+			t.Error(err)
+		}
 		return dir
 	})
 	s.Until("the README", func() bool { return s.Has("README.MD", "Pricing", "Rounds", "money", "the way finance wants.") })

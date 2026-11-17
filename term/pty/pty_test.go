@@ -44,7 +44,7 @@ func TestStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	var out bytes.Buffer
 	readUntil(t, p, &out, "24 80")
 	if !strings.HasPrefix(out.String(), "hi24 80") {
@@ -70,7 +70,7 @@ func TestResize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	var out bytes.Buffer
 	readUntil(t, p, &out, "24 80")
 	if err := p.Resize(132, 43); err != nil {
@@ -94,13 +94,15 @@ func TestControllingTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	var out bytes.Buffer
 	readUntil(t, p, &out, "yes")
 	if !strings.Contains(out.String(), "/dev/") {
 		t.Errorf("output %q", out.String())
 	}
-	cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Close hangs the terminal up: a Read in progress returns (on macOS once SIGHUP has ended the program).
@@ -110,15 +112,17 @@ func TestCloseEndsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cmd.Process.Kill()
+	defer func() { _ = cmd.Process.Kill() }()
 	var out bytes.Buffer
 	readUntil(t, p, &out, "ready") // the program has written all it will: the next Read waits
 	done := make(chan struct{})
 	go func() {
-		p.Read(make([]byte, 16))
+		_, _ = p.Read(make([]byte, 16)) // ends with the error Close gives it
 		close(done)
 	}()
-	p.Close()
+	if err := p.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):

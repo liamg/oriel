@@ -64,7 +64,9 @@ func TestEditorAgainstTheMockup(t *testing.T) {
 	d, side := snapshot.Compare(want, got, 0.1)
 	t.Logf("editor column against 01-ide: %s", d)
 	if d.Mean > 0.065 || d.Off > 0.095 {
-		os.WriteFile("testdata/editor-mockup.failed.png", encodePNG(side), 0o644)
+		if err := os.WriteFile("testdata/editor-mockup.failed.png", encodePNG(side), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		t.Errorf("the editor column is %s off the mockup (side by side in testdata/editor-mockup.failed.png)", d)
 	}
 }
@@ -82,7 +84,9 @@ func bigGo() string {
 // typingScene is the editor on a 10,000-line Go file, half way down, in insert mode.
 func typingScene(t testing.TB) *apptest.Scene {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "big.go"), []byte(bigGo()), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "big.go"), []byte(bigGo()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1600, Y: 1000}})
 	s.Run("editor.open", registry.Args{"path": "big.go"})
 	s.Frame()

@@ -62,7 +62,9 @@ func TestCompressedRollout(t *testing.T) {
 	if s.Requests == 0 || s.Requests >= want.Requests {
 		t.Fatalf("half the rollout: %d requests of %d", s.Requests, want.Requests)
 	}
-	os.Remove(plain)
+	if err := os.Remove(plain); err != nil {
+		t.Fatal(err)
+	}
 	if !s.Read() || s.Requests != want.Requests || s.Tokens != want.Tokens || s.Offset != int64(len(full)) {
 		t.Errorf("after compression: %d requests, %+v, offset %d; want %d, %+v, %d", s.Requests, s.Tokens, s.Offset,
 			want.Requests, want.Tokens, len(full))

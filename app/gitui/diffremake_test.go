@@ -22,11 +22,7 @@ func TestDiffSelectedLineSurvivesARemake(t *testing.T) {
 	r.Write(map[string]string{"round.go": rig.RoundAgent})
 	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	path := filepath.Join(r.Dir, "round.go")
-	if err := app.Do(func() error {
-		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": path, "line": 8})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	app.Run("diff.open", registry.Args{"path": path, "line": 8})
 	selected := func(app *apptest.Window) bool {
 		n := app.Access("\tt := scaled.Truncate(0)")
 		return n != nil && n.Selected
@@ -38,7 +34,9 @@ func TestDiffSelectedLineSurvivesARemake(t *testing.T) {
 	r.Commit("Ada", "round")
 	r.Write(map[string]string{"round.go": rig.RoundAgent})
 	r.Git("update-ref", "refs/heads/main", "HEAD")
-	app.Do(func() error { return app.Host.Run(context.Background(), "git.refresh", nil) })
+	if err := app.Do(func() error { return app.Host.Run(context.Background(), "git.refresh", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	app.WaitFrame("the diff against its base", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
 	app.WaitAccess("line 8 still selected", selected)
 }

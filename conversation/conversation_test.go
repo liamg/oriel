@@ -276,7 +276,9 @@ func TestFreshConversations(t *testing.T) {
 
 	r.c.Say("mid-turn", false)
 	_, d := r.started()
-	d.Close()
+	if err := d.Close(); err != nil {
+		t.Fatal(err)
+	}
 	r.until("why it stopped", func(l []Entry, busy bool) bool { return !busy && l[len(l)-1].Kind == KindError })
 
 	r.fail = errors.New("claude is signed out")

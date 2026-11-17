@@ -43,50 +43,50 @@ func fakePlugin() {
 		go func() {
 			switch r.Method {
 			case "echo":
-				r.Reply(r.Params, nil)
+				_ = r.Reply(r.Params, nil)
 			case "host":
 				var a struct {
 					Method string
 					Params json.RawMessage
 				}
-				json.Unmarshal(r.Params, &a)
+				_ = json.Unmarshal(r.Params, &a)
 				res, err := conn.CallRaw(context.Background(), a.Method, a.Params)
-				r.Reply(res, err)
+				_ = r.Reply(res, err)
 			case "read":
 				var a struct{ Path string }
-				json.Unmarshal(r.Params, &a)
+				_ = json.Unmarshal(r.Params, &a)
 				b, err := os.ReadFile(a.Path)
-				r.Reply(string(b), err)
+				_ = r.Reply(string(b), err)
 			case "write":
 				var a struct{ Path string }
-				json.Unmarshal(r.Params, &a)
+				_ = json.Unmarshal(r.Params, &a)
 				if a.Path == "" {
 					a.Path = filepath.Join(os.Getenv(EnvData), "kept")
 				}
-				r.Reply(a.Path, os.WriteFile(a.Path, []byte("kept"), 0o600))
+				_ = r.Reply(a.Path, os.WriteFile(a.Path, []byte("kept"), 0o600))
 			case "bye":
 				var n int
-				json.Unmarshal(r.Params, &n)
+				_ = json.Unmarshal(r.Params, &n)
 				pad := strings.Repeat("x", 4096)
 				for i := range n {
-					conn.Notify("note", map[string]any{"i": i, "pad": pad})
+					_ = conn.Notify("note", map[string]any{"i": i, "pad": pad})
 				}
-				r.Reply("bye", nil)
+				_ = r.Reply("bye", nil)
 				os.Exit(0)
 			case "flood":
 				var a struct {
 					N      int
 					Method string
 				}
-				json.Unmarshal(r.Params, &a)
+				_ = json.Unmarshal(r.Params, &a)
 				var wg sync.WaitGroup
 				for range a.N {
-					wg.Go(func() { conn.CallRaw(context.Background(), a.Method, nil) })
+					wg.Go(func() { _, _ = conn.CallRaw(context.Background(), a.Method, nil) })
 				}
 				wg.Wait()
-				r.Reply(a.N, nil)
+				_ = r.Reply(a.N, nil)
 			default:
-				r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method})
+				_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method})
 			}
 		}()
 	}}, jsonrpc.Options{Version: "2.0"})
@@ -128,7 +128,9 @@ func installed(t *testing.T) (dir, bin string) {
 		t.Fatal(err)
 	}
 	bin = filepath.Join(dir, "bin", "fake")
-	os.MkdirAll(filepath.Dir(bin), 0o755)
+	if err := os.MkdirAll(filepath.Dir(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(bin, b, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -151,9 +153,13 @@ func TestProcessPlugin(t *testing.T) {
 	}
 	dir, _ := installed(t)
 	work := t.TempDir()
-	os.WriteFile(filepath.Join(work, "a.txt"), []byte("in the worktree"), 0o644)
+	if err := os.WriteFile(filepath.Join(work, "a.txt"), []byte("in the worktree"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	secret := filepath.Join(t.TempDir(), "secret")
-	os.WriteFile(secret, []byte("s3cret"), 0o644)
+	if err := os.WriteFile(secret, []byte("s3cret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	g := NewGrants()
 	g.Places = func(string) []string { return []string{work} }
 	g.Grant("acme/fake", []Grant{{Cap: CapFSRead, Scope: []string{"worktree"}}})
@@ -166,7 +172,7 @@ func TestProcessPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pr.Stop()
+	defer func() { _ = pr.Stop() }()
 	if got, err := call(t, pr, "echo", map[string]int{"n": 1}); err != nil || got != `{"n":1}` {
 		t.Errorf("echo: %s, %v", got, err)
 	}
@@ -193,9 +199,12 @@ func TestProcessPlugin(t *testing.T) {
 	if len(ps.List()) != 1 || ps.List()[0].Plugin != "acme/fake" {
 		t.Errorf("running: %+v", ps.List())
 	}
-	pr.Stop()
+	if err := pr.Stop(); err != nil {
+		t.Fatal(err)
+	}
 	select {
-	case <-exited:
+	case err := <-exited:
+		t.Logf("the plugin exited: %v", err)
 	case <-time.After(5 * time.Second):
 		t.Fatal("no exit")
 	}
@@ -219,7 +228,7 @@ func TestProcessDataDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pr.Stop()
+	defer func() { _ = pr.Stop() }()
 	if got, err := call(t, pr, "write", map[string]string{}); err != nil || got != fmt.Sprintf("%q", filepath.Join(data, "kept")) {
 		t.Fatalf("write in its data directory: %s, %v", got, err)
 	}
@@ -276,7 +285,7 @@ func TestTrustedProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pr.Stop()
+	defer func() { _ = pr.Stop() }()
 	if got, err := call(t, pr, "echo", "hi"); err != nil || got != `"hi"` {
 		t.Errorf("echo: %s, %v", got, err)
 	}
@@ -316,7 +325,7 @@ func TestBundledProgramRunsAsOriel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pr.Stop()
+	defer func() { _ = pr.Stop() }()
 	if got, err := call(t, pr, "read", map[string]string{"path": outside}); err != nil || got != `"seen"` {
 		t.Errorf("the bundled program was confined: %s, %v", got, err)
 	}
@@ -376,7 +385,7 @@ func TestProcessRequestsAreBounded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer pr.Stop()
+	defer func() { _ = pr.Stop() }()
 	done := make(chan error, 1)
 	go func() {
 		_, err := call(t, pr, "flood", map[string]any{"n": maxRequests + 50, "method": "wait"})

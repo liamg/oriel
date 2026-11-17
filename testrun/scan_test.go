@@ -16,8 +16,12 @@ func TestScanFindsEveryTestFile(t *testing.T) {
 		t.Fatalf("%v %s", err, out)
 	}
 	for _, d := range []string{"vendor/v", ".git/g", "testdata/td", "a/node_modules/n"} {
-		os.MkdirAll(filepath.Join(root, d), 0o755)
-		os.WriteFile(filepath.Join(root, d, "x_test.go"), []byte("package x\n\nimport \"testing\"\n\nfunc TestHidden(t *testing.T) {}\n"), 0o644)
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, d, "x_test.go"), []byte("package x\n\nimport \"testing\"\n\nfunc TestHidden(t *testing.T) {}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	ws := Workspace{Root: root}
 	var got []string
@@ -29,7 +33,9 @@ func TestScanFindsEveryTestFile(t *testing.T) {
 		t.Errorf("scanned %s", s)
 	}
 	gone := filepath.Join(root, "d", "d_test.go")
-	os.Remove(gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
 	if items := Builtin().ScanFile(ws, gone); len(items) != 0 {
 		t.Errorf("a deleted file has tests: %+v", items)
 	}

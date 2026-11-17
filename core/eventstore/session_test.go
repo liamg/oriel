@@ -65,14 +65,20 @@ func TestCopiesDontSeeLaterEvents(t *testing.T) {
 	s := New()
 	evs := sessionEvents()
 	for _, ev := range evs[:3] {
-		s.Apply(ev)
+		if err := s.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
 	}
 	before := s.State()
 	want := snapshotOf(t, before)
 	for _, ev := range evs[3:] {
-		s.Apply(ev)
+		if err := s.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
 	}
-	s.Apply(core.ThreadUpdated{Session: "pricing", Thread: core.Thread{ID: "t1", Status: core.ThreadResolved}})
+	if err := s.Apply(core.ThreadUpdated{Session: "pricing", Thread: core.Thread{ID: "t1", Status: core.ThreadResolved}}); err != nil {
+		t.Fatal(err)
+	}
 	if got := snapshotOf(t, before); !bytes.Equal(got, want) {
 		t.Errorf("an old copy changed:\n%s\nwas:\n%s", got, want)
 	}

@@ -291,7 +291,9 @@ func TestUsageIsPerAccount(t *testing.T) {
 		t.Errorf("the switcher picked %s", u.Account)
 	}
 	for i, a := range accounts {
-		s.Store().Apply(core.SessionFocused{ID: sessions[i]})
+		if err := s.Store().Apply(core.SessionFocused{ID: sessions[i]}); err != nil {
+			t.Fatal(err)
+		}
 		if u, _ := x.FrontUsage(); u.Account != a.account {
 			t.Errorf("the session on %s shows %s's plan", a.account, u.Account)
 		}
@@ -364,7 +366,7 @@ func fixtureCalls(t *testing.T, r *rig.Stats, from, to time.Time) map[string][2]
 				UseID   string `json:"tool_use_id"`
 				IsError bool   `json:"is_error"`
 			}
-			json.Unmarshal(rec.Message.Content, &blocks)
+			_ = json.Unmarshal(rec.Message.Content, &blocks) // a plain message's content is a string, with no blocks
 			for _, bl := range blocks {
 				switch bl.Type {
 				case "tool_use":
@@ -399,7 +401,9 @@ func fixtureSpan(t *testing.T, r *rig.Stats, from, to time.Time) time.Duration {
 		requests := false
 		for line := range strings.SplitSeq(strings.TrimSpace(string(b)), "\n") {
 			var rec logRecord
-			json.Unmarshal([]byte(line), &rec)
+			if err := json.Unmarshal([]byte(line), &rec); err != nil {
+				t.Fatal(err)
+			}
 			at := rec.Timestamp
 			if at.IsZero() {
 				at = rec.At

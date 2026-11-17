@@ -47,11 +47,7 @@ func TestOpenDirectoryIsADirectSession(t *testing.T) {
 	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	open := func() core.SessionState {
-		if err := w.Do(func() error {
-			return w.Host.Run(context.Background(), "directory.open", registry.Args{"path": lw.Repo})
-		}); err != nil {
-			t.Fatal(err)
-		}
+		w.Run("directory.open", registry.Args{"path": lw.Repo})
 		st := w.UntilState("a direct session in front", func(st core.State) bool {
 			se, ok := st.Session(st.Focus)
 			return ok && se.Snapshot().Kind == core.KindDirect
@@ -98,9 +94,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 		}})
 	}})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	w.Do(func() error {
-		return w.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
-	})
+	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
 	a := lw.Fake.WaitStarted(t)
 	in, _ := json.Marshal(map[string]string{"command": "go test ./..."})
 	if d := apptest.Recv(t, "the hook's answer", a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: in})); !d.Allow {
@@ -126,9 +120,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 			}})
 	}})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	w.Do(func() error {
-		return w.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
-	})
+	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
 	a := lw.Fake.WaitStarted(t)
 	var tool agent.Tool
 	for _, x := range a.Spec.Tools {
@@ -155,9 +147,7 @@ func TestAgentTurnEndFires(t *testing.T) {
 		}})
 	}})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	w.Do(func() error {
-		return w.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
-	})
+	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
 	a := lw.Fake.WaitStarted(t)
 	a.Emit(agent.TurnStart{})
 	w.UntilState("the turn under way", func(st core.State) bool { // the window sees it start, as it would a turn of any length
