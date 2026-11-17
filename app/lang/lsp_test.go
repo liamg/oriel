@@ -18,6 +18,25 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
+// Completion asked for by hand says so when nothing matches, where completion as you type stays quiet.
+func TestLSPCompletionByHandSaysWhenThereAreNone(t *testing.T) {
+	s, _ := lspScene(t, "go", "gopls", "main.go")
+	s.EditorKeys("11GSzqxj")
+	lspSettle(s)
+	if _, ok := apptest.LastNotice(s.Store().State(), "lsp.complete"); ok || lspOf(s).CompletionOpen() {
+		t.Fatal("typing a word with no completions said something, or opened the menu")
+	}
+	s.Run("lsp.word.complete", nil)
+	lspSettle(s)
+	n, ok := apptest.LastNotice(s.Store().State(), "lsp.complete")
+	if !ok || !strings.HasPrefix(n.Text, "No completions") {
+		t.Errorf("completing by hand with nothing to offer: %+v", n)
+	}
+	if lspOf(s).CompletionOpen() {
+		t.Error("the menu opened with nothing in it")
+	}
+}
+
 // The recorded gopls session replays to the UI: the seeded error is a diagnostic on its line and in
 // Problems, and the server's state is in the status line.
 func TestLSPDiagnostics(t *testing.T) {

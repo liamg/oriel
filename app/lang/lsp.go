@@ -560,7 +560,8 @@ func (x *LSP) typed(d *lspDoc) {
 	}
 }
 
-// requestCompletion asks the server for the items at the cursor.
+// requestCompletion asks the server for the items at the cursor. Asked for by hand, it says when there are none, or
+// why the server gave none; as you type, an empty answer just leaves the menu shut.
 func (x *LSP) requestCompletion(d *lspDoc, manual bool) {
 	p := window(x.h)
 	pos := p.Cursor
@@ -572,18 +573,33 @@ func (x *LSP) requestCompletion(d *lspDoc, manual bool) {
 	async(x, func(ctx context.Context) (*lsp.CompletionList, error) {
 		return c.Complete(ctx, lsp.Loc{Path: d.path, Pos: text.Pos{Line: pos.Line, Col: col}})
 	}, func(list *lsp.CompletionList, err error) {
-		if gen != x.gen || err != nil || list == nil {
+		if gen != x.gen {
+			return
+		}
+		none := func(why string) {
+			if manual {
+				x.h.Notify(core.Notice{ID: "lsp.complete", Severity: core.SevInfo, AutoClear: true, Source: "lsp", Text: why})
+			}
+		}
+		if err != nil {
+			none("No completions: " + err.Error())
 			return
 		}
 		p := window(x.h)
 		now := p.Cursor
-		if p.Text == nil || now.Line != pos.Line || editorMode(x.h) != "insert" {
+		if list == nil || p.Text == nil || now.Line != pos.Line || editorMode(x.h) != "insert" {
+			if list == nil {
+				none("No completions")
+			}
 			return
 		}
 		ln := p.Text.Snapshot().Line(now.Line)
 		start := wordStart(ln, min(col, len(ln)))
 		x.comp = completion{path: d.path, line: pos.Line, start: start, items: list.Items, resolved: map[int]lsp.Completion{}, gen: gen}
 		x.filter(ln[start:min(now.Col, len(ln))])
+		if !x.comp.open {
+			none("No completions")
+		}
 	})
 }
 
