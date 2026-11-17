@@ -35,6 +35,20 @@ func (w *Window) WaitProject(dir string) {
 	w.WaitFor("the window on "+dir, func() bool { return filepath.Clean(w.Host.Here().Project) == filepath.Clean(dir) })
 }
 
+// WaitSessionOpen waits for the session named name to be in front with the window moved onto its project, and
+// answers it. The move lands after the session comes to the front and closes any page open over the old directory,
+// so a test clicks nothing before it.
+func (w *Window) WaitSessionOpen(name string) core.SessionState {
+	w.T.Helper()
+	st := w.UntilState(name+" in front", func(st core.State) bool { return FocusedOn(st, name) })
+	se, _ := st.Session(Named(st, name))
+	snap := se.Snapshot()
+	if p, ok := snap.Primary(); ok {
+		w.WaitProject(p.Dir)
+	}
+	return snap
+}
+
 // Drain waits for every event sent to the window to be taken, then for the app to go idle after them (Idle): what
 // a test waits for before it asserts that a click or a key did nothing, rather than a while.
 func (w *Window) Drain() {

@@ -51,6 +51,7 @@ func sandboxedSessionOn(t *testing.T, backend sandbox.Backend) (*apptest.Window,
 		t.Fatal(err)
 	}
 	lw.Fake.WaitStarted(t)
+	r.WaitSessionOpen("w")
 	st := r.UntilState("the sandboxed session in front", func(st core.State) bool {
 		se, ok := st.Session(apptest.Named(st, "w"))
 		return ok && apptest.FocusedOn(st, "w") && se.Snapshot().Agent.Sandboxed

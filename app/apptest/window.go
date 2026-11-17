@@ -654,22 +654,7 @@ func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOpts) (*Window, *agentte
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": h.Repo})
 	a := h.Fake.WaitStarted(t)
-	st := w.UntilState("the session in front", func(st core.State) bool { return FocusedOn(st, "w") })
-	w.Session = Named(st, "w")
-	se, _ := st.Session(w.Session)
-	p, _ := se.Snapshot().Primary()
-	deadline := time.Now().Add(Timeout)
-	for {
-		var dir string
-		w.Do(func() error { dir = w.Host.Here().Project; return nil })
-		if filepath.Clean(dir) == filepath.Clean(p.Dir) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the window never reopened on %s", p.Dir)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	w.Session = w.WaitSessionOpen("w").ID
 	return w, a, h
 }
 
