@@ -713,7 +713,7 @@ func (x *Plugin) usageFigure() string {
 	var parts []string
 	for _, w := range u.Windows {
 		if w.Length >= 24*time.Hour || strings.HasPrefix(strings.ToLower(w.Name), "week") {
-			parts = append(parts, fmt.Sprintf("%s %d%%", strings.ToLower(usageShort(w)), kit.Pct(w.Used)))
+			parts = append(parts, fmt.Sprintf("%s %d%%", strings.ToLower(usageShort(w)), pct(w.Used)))
 			break
 		}
 	}

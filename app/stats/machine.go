@@ -111,7 +111,7 @@ func (x *Machine) panel(c *ui.Ctx) {
 	m := st.Machine
 	c.Column("machine", ui.Style{W: ui.Flex(1), Gap: 5}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.HUDDot(c, "dot", th.C(theme.StatusQuiet))
+			hudDot(c, "dot", th.C(theme.StatusQuiet))
 			c.Text("n", cmp.Or(m.Host, "this machine"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			if m.Cores > 0 {
@@ -130,7 +130,7 @@ func (x *Machine) panel(c *ui.Ctx) {
 					k, v string
 					f    float64
 					tone render.Color
-				}{{"CPU", fmt.Sprintf("%d%%", kit.Pct(m.CPU)), m.CPU, loadTone(th, m.CPU)}, {"MEM", kit.Bytes(int64(m.Mem)), mem, th.C(theme.StatusWorking)}} {
+				}{{"CPU", fmt.Sprintf("%d%%", pct(m.CPU)), m.CPU, loadTone(th, m.CPU)}, {"MEM", kit.Bytes(int64(m.Mem)), mem, th.C(theme.StatusWorking)}} {
 					c.Row(r.k, ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Row("k", ui.Style{W: ui.Px(28)}, func(c *ui.Ctx) { c.Text("t", r.k, widget.MonoFont(10, th.C(theme.FgMuted))) })
 						widget.Meter(c, "m", r.f, widget.MeterOpts{Tone: r.tone, Width: ui.Px(80), Height: 6, Label: r.k})
@@ -154,11 +154,11 @@ func (x *Machine) status(c *ui.Ctx) {
 	if m.Sampled.IsZero() {
 		return
 	}
-	o := widget.IndicatorOpts{Label: "CPU", Value: fmt.Sprintf("%d%%", kit.Pct(m.CPU)), Help: kit.HUDHelp + "#indicators"}
+	o := widget.IndicatorOpts{Label: "CPU", Value: fmt.Sprintf("%d%%", pct(m.CPU)), Help: kit.HUDHelp + "#indicators"}
 	if m.CPU >= .8 {
 		o.Dot, o.Tone = th.C(theme.Warn), th.C(theme.Warn)
 	}
-	if widget.Clickable(c, "cpu", ui.Style{Radius: 4, Label: fmt.Sprintf("CPU %d%%, Performance", kit.Pct(m.CPU)),
+	if widget.Clickable(c, "cpu", ui.Style{Radius: 4, Label: fmt.Sprintf("CPU %d%%, Performance", pct(m.CPU)),
 		Help: PerfHelp}, func(c *ui.Ctx) { widget.Indicator(c, "i", o) }).Clicked {
 		if err := x.h.Run(context.Background(), "perf.open", nil); err != nil {
 			x.h.Log().Error("machine", "command", "perf.open", "err", err)

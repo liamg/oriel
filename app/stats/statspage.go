@@ -326,9 +326,9 @@ func (x *Plugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 		all := t.Tokens.Total()
 		statsTile(c, "tokens", "TOKENS", kit.Count(all), "", func(c *ui.Ctx) {
 			delta(c, "d", float64(all), float64(p.Tokens.Total()))
-			dim(c, "s", fmt.Sprintf("cache hit %d%%", kit.Pct(cacheHit(t.Tokens))))
+			dim(c, "s", fmt.Sprintf("cache hit %d%%", pct(cacheHit(t.Tokens))))
 			if out := outsideTokens(r); out > 0 && out < all {
-				c.Text("o", fmt.Sprintf("%d%% outside", kit.Pct(float64(out)/float64(all))), widget.MonoFont(10, c.Theme().C(theme.FgMuted)))
+				c.Text("o", fmt.Sprintf("%d%% outside", pct(float64(out)/float64(all))), widget.MonoFont(10, c.Theme().C(theme.FgMuted)))
 			}
 		})
 		statsTile(c, "requests", "REQUESTS", kit.Count(t.Requests), "", func(c *ui.Ctx) {

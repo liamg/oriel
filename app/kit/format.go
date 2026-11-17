@@ -81,14 +81,6 @@ func FirstLine(s string) string {
 // ExpandTabs is s with each tab as four spaces: text runs have no tab stops.
 func ExpandTabs(s string) string { return strings.ReplaceAll(s, "\t", "    ") }
 
-func Thousands(n int) string {
-	s := fmt.Sprint(n)
-	for i := len(s) - 3; i > 0 && s[i-1] != '-'; i -= 3 {
-		s = s[:i] + "," + s[i:]
-	}
-	return s
-}
-
 func Plural(n int, one, many string) string {
 	if n == 1 {
 		return one
@@ -119,8 +111,6 @@ func Money(v float64) string {
 	}
 	return fmt.Sprintf("$%.2f", v)
 }
-
-func Pct(f float64) int { return int(f*100 + .5) }
 
 // Count is a number as the tables show it: 9,840, 15.2k, 612M.
 func Count(n int64) string {

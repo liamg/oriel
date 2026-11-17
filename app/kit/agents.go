@@ -2,11 +2,9 @@ package kit
 
 import (
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -177,14 +175,6 @@ func SameFile(se core.SessionState, edited, path string) bool {
 		}
 	}
 	return filepath.Clean(edited) == filepath.Clean(path)
-}
-
-// EditedAgo is how long ago an edit was, to the second while it's fresh.
-func EditedAgo(now, t time.Time) string {
-	if d := now.Sub(t); d < time.Minute {
-		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
-	}
-	return widget.AgoLabel(now, t) + " ago"
 }
 
 // MainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.
