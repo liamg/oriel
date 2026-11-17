@@ -236,7 +236,7 @@ func source(root, rel string) string {
 	if err != nil {
 		return ""
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var src, commit string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {

@@ -105,7 +105,7 @@ func (s *state) insert(t string, alone bool) {
 	if s.group == 0 || alone {
 		s.group = s.ed.NewGroup()
 	}
-	s.ed.Replace(t, s.group)
+	_ = s.ed.Replace(t, s.group)
 	if alone {
 		s.group = 0
 	}

@@ -53,7 +53,7 @@ const MaxHTTPBody = 1 << 20
 func HTTPMethod(n Network) Method {
 	target := func(raw json.RawMessage) string {
 		var r HTTPRequest
-		json.Unmarshal(raw, &r)
+		_ = json.Unmarshal(raw, &r)
 		u, err := requestURL(n, r)
 		if err != nil {
 			return ""
@@ -184,7 +184,7 @@ func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPRespon
 		}
 		return nil, fmt.Errorf("%s %s: %s", method, u.Host, hide(err.Error(), secrets))
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxHTTPBody))
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %s", method, u.Host, hide(err.Error(), secrets))

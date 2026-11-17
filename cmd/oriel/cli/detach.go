@@ -24,7 +24,7 @@ var forwarded = []os.Signal{syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, sys
 // A program handed the terminal by path (GPG_TTY) can still open it.
 func detach() (fromTerminal bool) {
 	if os.Getenv(appEnv) != "" {
-		os.Unsetenv(appEnv)
+		_ = os.Unsetenv(appEnv)
 		return true
 	}
 	if !tty.IsTerminal(os.Stdin) {

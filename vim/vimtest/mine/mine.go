@@ -128,9 +128,11 @@ func mineFunc(file string, f Func, helpers string, newSim func() (Sim, error), o
 		m.dead = "nvim: " + err.Error()
 	} else {
 		m.sim = sim
-		defer sim.Close()
+		defer func() { _ = sim.Close() }()
 		if helpers != "" {
-			sim.Exec(helpers)
+			if err := sim.Exec(helpers); err != nil {
+				m.dead = "nvim helpers: " + err.Error()
+			}
 		}
 	}
 	for _, st := range f.Stmts {

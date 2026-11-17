@@ -39,7 +39,7 @@ func (g GitHub) Member(ctx context.Context, org, user string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	r.Body.Close()
+	_ = r.Body.Close()
 	switch r.StatusCode {
 	case http.StatusNoContent:
 		return true, nil

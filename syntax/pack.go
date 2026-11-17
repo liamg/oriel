@@ -97,7 +97,7 @@ func (s PackSums) Install(r io.Reader, dir string) (string, error) {
 	if err != nil {
 		return name, err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	for p, b := range files {
 		f := filepath.Join(tmp, filepath.FromSlash(p))
 		if err := os.MkdirAll(filepath.Dir(f), 0o755); err != nil {

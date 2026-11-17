@@ -405,7 +405,7 @@ func (c *Conversation) endLocked() {
 	if c.agent != nil {
 		a := c.agent
 		c.agent = nil
-		go a.Close()
+		go func() { _ = a.Close() }()
 	}
 	c.busy = false
 	c.changedLocked()
@@ -462,7 +462,7 @@ func (c *Conversation) launch(gen int, first string) {
 	c.mu.Lock()
 	if gen != c.gen {
 		c.mu.Unlock()
-		a.Close()
+		_ = a.Close()
 		return
 	}
 	c.agent = a
@@ -490,7 +490,7 @@ func (c *Conversation) failed(a Agent, why string) {
 	}
 	c.agent = nil
 	c.gen++
-	go a.Close()
+	go func() { _ = a.Close() }()
 	if c.busy {
 		c.emitLocked(Entry{Kind: KindError, Text: why})
 		c.busy = false

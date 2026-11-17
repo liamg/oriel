@@ -164,7 +164,7 @@ func loadFace(file string, r rune, tried map[string]bool) (*Face, int) {
 	if err != nil {
 		return nil, 0
 	}
-	defer unmap()
+	defer func() { _ = unmap() }()
 	lds, err := ot.NewLoaders(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0
@@ -196,7 +196,7 @@ func fontFilesIn(dirs []string) []string {
 		if strings.HasPrefix(d, "~/") {
 			d = filepath.Join(home, d[2:])
 		}
-		filepath.WalkDir(d, func(p string, e fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(d, func(p string, e fs.DirEntry, err error) error {
 			if err == nil && !e.IsDir() {
 				switch strings.ToLower(filepath.Ext(p)) {
 				case ".ttf", ".otf", ".ttc", ".otc":

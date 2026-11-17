@@ -113,7 +113,7 @@ func (u *Updater) Install(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	if err := u.Installer.stage(ctx, m, a, r, u.Progress); err != nil {
 		return err
 	}

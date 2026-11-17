@@ -173,7 +173,7 @@ func (p *Pricing) fetch(ctx context.Context, etag string) ([]byte, string, error
 	if err != nil {
 		return nil, "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	switch resp.StatusCode {
 	case http.StatusNotModified:
 		return nil, etag, nil

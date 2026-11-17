@@ -261,18 +261,18 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostap
 	if err := b.serve(func(ctx context.Context) error {
 		return b.ssh.Serve(ctx, filepath.Join(sandbox.RunDir(root), "ssh-agent.sock"))
 	}); err != nil {
-		b.Close()
+		_ = b.Close()
 		return nil, err
 	}
 	if err := b.serve(func(ctx context.Context) error {
 		return serveForward(ctx, filepath.Join(sandbox.RunDir(root), sandbox.HookSocket), b.hookSocket)
 	}); err != nil {
-		b.Close()
+		_ = b.Close()
 		return nil, err
 	}
 	b.mcp = filepath.Join(sandbox.AgentDir(root, cmp.Or(b.provider, "agent")), "oriel-gw.json")
 	if err := writeGatewayMCP(b.mcp); err != nil {
-		b.Close()
+		_ = b.Close()
 		return nil, err
 	}
 	return b, nil
@@ -299,12 +299,12 @@ func serveForward(ctx context.Context, path string, to func() string) error {
 			return nil
 		}
 		go func() {
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			up, err := net.Dial("unix", to())
 			if err != nil {
 				return
 			}
-			defer up.Close()
+			defer func() { _ = up.Close() }()
 			done := make(chan struct{}, 2)
 			go func() { _, _ = io.Copy(up, c); closeWrite(up); done <- struct{}{} }()
 			go func() { _, _ = io.Copy(c, up); closeWrite(c); done <- struct{}{} }()
@@ -539,16 +539,16 @@ func (b *Box) updateGrants(fn func([]gateway.Rule) []gateway.Rule) error {
 		return err
 	}
 	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 		return err
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 		return err
 	}
 	if err := os.Rename(f.Name(), path); err != nil {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name())
 		return err
 	}
 	return nil

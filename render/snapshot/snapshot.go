@@ -250,8 +250,8 @@ func GoldenPNG(t testing.TB, path string, got image.Image, threshold, maxOff flo
 	if d.Off > maxOff {
 		failed := strings.TrimSuffix(path, ".png") + ".failed.png"
 		var b bytes.Buffer
-		png.Encode(&b, side)
-		os.WriteFile(failed, b.Bytes(), 0o644)
+		_ = png.Encode(&b, side)
+		_ = os.WriteFile(failed, b.Bytes(), 0o644)
 		t.Errorf("%s: %s; allowed %.2f%% (want | got | diff in %s)", path, d, 100*maxOff, failed)
 	}
 	return d
@@ -262,6 +262,6 @@ func ReadPNG(path string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return png.Decode(f)
 }

@@ -36,6 +36,6 @@ func (e *exitWatch) fire() {
 	buf := make([]byte, 1<<20)
 	buf = buf[:runtime.Stack(buf, true)]
 	e.log.Error("the app hadn't ended after its window closed; exiting", "after", e.after, "goroutines", string(buf))
-	fmt.Fprintf(e.stderr, "oriel: still ending %v after the window closed, so exiting; what was stuck is in the log\n", e.after)
+	_, _ = fmt.Fprintf(e.stderr, "oriel: still ending %v after the window closed, so exiting; what was stuck is in the log\n", e.after)
 	e.exit(1)
 }

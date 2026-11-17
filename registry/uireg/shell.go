@@ -77,7 +77,7 @@ func (e RailEntry) Listed(project string) bool {
 		return true
 	}
 	ok := false
-	registry.Call(func() error { ok = e.Shown(project); return nil })
+	registry.Try(func() { ok = e.Shown(project) })
 	return ok
 }
 
@@ -114,7 +114,7 @@ func ProjectStateParts(r registry.Contributions, project, dir string) []StatePar
 			continue
 		}
 		var ps []StatePart
-		registry.Call(func() error { ps = s.State(project, dir); return nil })
+		registry.Try(func() { ps = s.State(project, dir) })
 		out = append(out, ps...)
 	}
 	return out
@@ -180,7 +180,7 @@ func (e StartEntry) Listed() bool {
 		return true
 	}
 	ok := false
-	registry.Call(func() error { ok = e.Shown(); return nil })
+	registry.Try(func() { ok = e.Shown() })
 	return ok
 }
 
@@ -228,7 +228,7 @@ func ShownPlace(r registry.Contributions) (name string, ok bool) {
 	for _, p := range registry.ContributionsOf[Place](r) {
 		shown := false
 		if p.Shown != nil {
-			registry.Call(func() error { shown = p.Shown(); return nil })
+			registry.Try(func() { shown = p.Shown() })
 		}
 		if !shown {
 			continue
@@ -347,9 +347,9 @@ func ClosePlaces(r registry.Contributions) {
 			continue
 		}
 		shown := false
-		registry.Call(func() error { shown = p.Shown(); return nil })
+		registry.Try(func() { shown = p.Shown() })
 		if shown {
-			registry.Call(func() error { p.Close(); return nil })
+			registry.Try(func() { p.Close() })
 		}
 	}
 }

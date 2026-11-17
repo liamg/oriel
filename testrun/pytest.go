@@ -437,7 +437,7 @@ func (p *Pytest) Parse(r io.Reader, emit func(Event)) error {
 		switch e.Event {
 		case "sessionstart":
 			var s struct{ Rootdir string }
-			json.Unmarshal([]byte(line[i+len(pytestMarker):]), &s)
+			_ = json.Unmarshal([]byte(line[i+len(pytestMarker):]), &s)
 			root = s.Rootdir
 		case "collecterror":
 			f := &Failure{Reason: ReasonBuild, Message: e.Longrepr}

@@ -392,7 +392,7 @@ func (e *Engine) refreshQfBuf(s *qfStack) {
 		return
 	}
 	t := s.buf.text
-	t.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: t.Snapshot().Len()}, Text: []byte(qfLines(s.list()))}}})
+	_, _ = t.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: t.Snapshot().Len()}, Text: []byte(qfLines(s.list()))}}})
 	s.buf.modified = false
 	e.refreshQfCursor(s)
 }

@@ -62,7 +62,7 @@ func Write(r io.Reader, want, dst string, perm os.FileMode, max int64) error {
 		err = os.Rename(tmp, dst)
 	}
 	if err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 	}
 	return err
 }
@@ -96,7 +96,7 @@ func Get(ctx context.Context, c *http.Client, url string, header http.Header) (*
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
 	}
 	return resp, nil
@@ -108,7 +108,7 @@ func Verified(ctx context.Context, c *http.Client, url, want string, max int64) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return Read(resp.Body, want, max)
 }
 
@@ -118,6 +118,6 @@ func Download(ctx context.Context, c *http.Client, url, want, dst string, perm o
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return Write(resp.Body, want, dst, perm, max)
 }

@@ -87,7 +87,7 @@ func (m *Manager) unwatch(n *node) {
 		last := len(fs) == 0
 		m.roots.mu.Unlock()
 		if last && m.fw != nil {
-			m.fw.Remove(p)
+			_ = m.fw.Remove(p)
 		}
 	}
 	n.watching = nil

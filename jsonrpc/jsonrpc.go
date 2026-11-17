@@ -149,7 +149,7 @@ func (r *Request) Reply(result any, err error) error {
 
 // Answer is a request handler that replies with what f returns, before the next message is handled.
 func Answer(f func(ctx context.Context, method string, params json.RawMessage) (any, error)) func(*Request) {
-	return func(r *Request) { r.Reply(f(r.Context(), r.Method, r.Params)) }
+	return func(r *Request) { _ = r.Reply(f(r.Context(), r.Method, r.Params)) }
 }
 
 // Handlers answer what the other side sends. Both are called on one goroutine in the order messages arrive, so
@@ -274,7 +274,7 @@ func (c *Conn) Close() error {
 		err = wc.Close()
 	}
 	if rc, ok := c.r.(io.Closer); ok {
-		rc.Close()
+		_ = rc.Close()
 	}
 	return err
 }
@@ -421,7 +421,7 @@ func (c *Conn) handle(in inbound) {
 		return
 	}
 	if c.h.Request == nil {
-		in.r.Reply(nil, &Error{Code: MethodNotFound, Message: "method not found: " + in.m.Method})
+		_ = in.r.Reply(nil, &Error{Code: MethodNotFound, Message: "method not found: " + in.m.Method})
 		return
 	}
 	c.h.Request(in.r)
@@ -432,7 +432,7 @@ func (c *Conn) handle(in inbound) {
 func (c *Conn) send(m *Message, params any) error { return c.queued(m, params, !c.opt.Queue) }
 
 // post queues m without waiting for it to be written, for the read loop, which mustn't wait on the other side.
-func (c *Conn) post(m *Message) { c.queued(m, nil, false) }
+func (c *Conn) post(m *Message) { _ = c.queued(m, nil, false) }
 
 func (c *Conn) queued(m *Message, params any, wait bool) error {
 	c.qmu.Lock()
@@ -597,7 +597,7 @@ func (c *Conn) CallRaw(ctx context.Context, method string, params any) (json.Raw
 	case <-ctx.Done():
 		c.forget(id)
 		if c.opt.Cancel != nil {
-			c.Notify(c.opt.Cancel.Method, map[string]json.RawMessage{c.opt.Cancel.Field: json.RawMessage(id)})
+			_ = c.Notify(c.opt.Cancel.Method, map[string]json.RawMessage{c.opt.Cancel.Field: json.RawMessage(id)})
 		}
 		return nil, ctx.Err()
 	}

@@ -344,7 +344,7 @@ func post(ctx context.Context, url string, wav []byte, fields map[string]string)
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	b, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("transcription failed: %s %s", res.Status, strings.TrimSpace(string(b)))

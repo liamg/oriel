@@ -288,7 +288,7 @@ func plainOf(v any) any {
 		return nil
 	}
 	var out any
-	json.Unmarshal(b, &out)
+	_ = json.Unmarshal(b, &out)
 	return out
 }
 

@@ -83,7 +83,7 @@ func Compare(out io.Writer, mockup, native, dst string) error {
 		return err
 	}
 	d, side := gio.Compare(a, b)
-	fmt.Fprintf(out, "mean abs diff %.2f/255, %.2f%% of pixels differ by more than 32/255\n", d.Mean, 100*d.Off)
+	_, _ = fmt.Fprintf(out, "mean abs diff %.2f/255, %.2f%% of pixels differ by more than 32/255\n", d.Mean, 100*d.Off)
 	return writePNG(dst, side)
 }
 
@@ -92,7 +92,7 @@ func readPNG(name string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return png.Decode(f)
 }
 
@@ -102,7 +102,7 @@ func writePNG(name string, img image.Image) error {
 		return err
 	}
 	if err := png.Encode(f, img); err != nil {
-		f.Close()
+		_ = f.Close()
 		return err
 	}
 	return f.Close()
@@ -120,7 +120,7 @@ func record(c *scenes.Canvas, s scenes.Scene, st *scenes.State, f render.Frame) 
 // submit it, and the GPU's time per frame when frames are submitted back to back.
 func Bench(out io.Writer, only string) error {
 	const frames = 300
-	fmt.Fprintf(out, "RSS at start: %.0f MB\n", currentRSS())
+	_, _ = fmt.Fprintf(out, "RSS at start: %.0f MB\n", currentRSS())
 	ts, err := typeset.New(nil)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func Bench(out io.Writer, only string) error {
 		return err
 	}
 	defer hl.Release()
-	fmt.Fprintf(out, "RSS with the GPU context: %.0f MB\n", currentRSS())
+	_, _ = fmt.Fprintf(out, "RSS with the GPU context: %.0f MB\n", currentRSS())
 	th, err := scenes.Builtin(theme.Dark)
 	if err != nil {
 		return err
@@ -144,11 +144,11 @@ func Bench(out io.Writer, only string) error {
 	if err := hl.Sync(); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "startup: first ide frame drawn %s after start (offscreen)\n", time.Since(started).Round(time.Millisecond))
-	fmt.Fprintf(out, "RSS after the first ide frame: %.0f MB now, %.0f MB peak\n", currentRSS(), peakRSS())
-	fmt.Fprintf(out, "%s %s/%s, %d frames per scene at %d×%d @1×\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, frames, scenes.IDEWidth, scenes.IDEHeight)
-	fmt.Fprintln(out, "build: record the scene and replay it into Gio ops. frame(): Gio's CPU work to encode and submit.")
-	fmt.Fprintln(out, "pipelined: frames submitted back to back, one sync per 30: time per frame beyond building it, so frame() plus any GPU wait.")
+	_, _ = fmt.Fprintf(out, "startup: first ide frame drawn %s after start (offscreen)\n", time.Since(started).Round(time.Millisecond))
+	_, _ = fmt.Fprintf(out, "RSS after the first ide frame: %.0f MB now, %.0f MB peak\n", currentRSS(), peakRSS())
+	_, _ = fmt.Fprintf(out, "%s %s/%s, %d frames per scene at %d×%d @1×\n", runtime.Version(), runtime.GOOS, runtime.GOARCH, frames, scenes.IDEWidth, scenes.IDEHeight)
+	_, _ = fmt.Fprintln(out, "build: record the scene and replay it into Gio ops. frame(): Gio's CPU work to encode and submit.")
+	_, _ = fmt.Fprintln(out, "pipelined: frames submitted back to back, one sync per 30: time per frame beyond building it, so frame() plus any GPU wait.")
 	for _, s := range scenes.All() {
 		if only != "" && !slices.Contains(strings.Split(only, ","), s.Name()) {
 			continue
@@ -196,11 +196,11 @@ func Bench(out io.Writer, only string) error {
 			}
 			piped = append(piped, max(0, time.Since(t)-cpu)/batch)
 		}
-		fmt.Fprintf(out, "%-7s build:     %s\n        frame():   %s\n        pipelined: %s\n        RSS now:   %.0f MB\n", s.Name(), build, frame, piped, currentRSS())
+		_, _ = fmt.Fprintf(out, "%-7s build:     %s\n        frame():   %s\n        pipelined: %s\n        RSS now:   %.0f MB\n", s.Name(), build, frame, piped, currentRSS())
 	}
 	names, missing := ts.Fallbacks()
-	fmt.Fprintf(out, "system fallback fonts loaded: %q; %d runes had none\n", names, len(missing))
-	fmt.Fprintf(out, "peak RSS after every scene: %.0f MB\n", peakRSS())
+	_, _ = fmt.Fprintf(out, "system fallback fonts loaded: %q; %d runes had none\n", names, len(missing))
+	_, _ = fmt.Fprintf(out, "peak RSS after every scene: %.0f MB\n", peakRSS())
 	memReport(out)
 	return nil
 }
@@ -212,7 +212,7 @@ func memReport(out io.Writer) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	const mb = 1 << 20
-	fmt.Fprintf(out, "RSS now %.0f MB, %.0f MB after returning free Go memory to the OS\n", before, currentRSS())
-	fmt.Fprintf(out, "go heap in use %.0f MB, go runtime total %.0f MB (%.0f MB of it released); the rest of RSS is outside Go\n",
+	_, _ = fmt.Fprintf(out, "RSS now %.0f MB, %.0f MB after returning free Go memory to the OS\n", before, currentRSS())
+	_, _ = fmt.Fprintf(out, "go heap in use %.0f MB, go runtime total %.0f MB (%.0f MB of it released); the rest of RSS is outside Go\n",
 		float64(m.HeapInuse)/mb, float64(m.Sys)/mb, float64(m.HeapReleased)/mb)
 }

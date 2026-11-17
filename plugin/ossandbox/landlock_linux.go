@@ -126,7 +126,7 @@ func confine(p Profile) error {
 	if errno != 0 {
 		return fmt.Errorf("landlock_create_ruleset: %v", errno)
 	}
-	defer unix.Close(int(fd))
+	defer func() { _ = unix.Close(int(fd)) }()
 	add := func(paths []string, rights uint64) error {
 		for _, path := range paths {
 			if err := addPath(int(fd), path, rights&fs); err != nil {
@@ -173,7 +173,7 @@ func addPath(ruleset int, path string, rights uint64) error {
 	if err != nil {
 		return nil
 	}
-	defer unix.Close(fd)
+	defer func() { _ = unix.Close(fd) }()
 	var st unix.Stat_t
 	if err := unix.Fstat(fd, &st); err != nil {
 		return nil

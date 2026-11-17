@@ -95,14 +95,14 @@ func newSim() (mine.Sim, error) {
 	}
 	s, err := nvim.Start(dir)
 	if err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return nil, err
 	}
 	return &sim{s, dir}, nil
 }
 
 func (s *sim) Close() error {
-	s.Session.Close()
+	_ = s.Session.Close()
 	return os.RemoveAll(s.dir)
 }
 
@@ -111,7 +111,7 @@ func oracle(c vimtest.Case) (vimtest.Result, error) {
 	if err != nil {
 		return vimtest.Result{}, err
 	}
-	defer e.Close()
+	defer func() { _ = e.Close() }()
 	if err := e.Load(c.Given); err != nil {
 		return vimtest.Result{}, err
 	}

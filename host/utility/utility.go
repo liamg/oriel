@@ -93,7 +93,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec hostapi.UtilitySpec, se
 	if err != nil {
 		return err
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 	x.mu.Lock()
 	x.runs[id] = sess
 	x.mu.Unlock()

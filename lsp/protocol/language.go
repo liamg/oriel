@@ -138,7 +138,7 @@ func HoverContents(raw json.RawMessage) MarkupContent {
 	}
 	if isArray(raw) {
 		var parts []json.RawMessage
-		json.Unmarshal(raw, &parts)
+		_ = json.Unmarshal(raw, &parts)
 		var out MarkupContent
 		out.Kind = Markdown
 		for i, p := range parts {
@@ -152,7 +152,7 @@ func HoverContents(raw json.RawMessage) MarkupContent {
 	}
 	if isString(raw) {
 		var s string
-		json.Unmarshal(raw, &s)
+		_ = json.Unmarshal(raw, &s)
 		return MarkupContent{Kind: Markdown, Value: s}
 	}
 	var m struct {
@@ -160,7 +160,7 @@ func HoverContents(raw json.RawMessage) MarkupContent {
 		Language string `json:"language"`
 		Value    string `json:"value"`
 	}
-	json.Unmarshal(raw, &m)
+	_ = json.Unmarshal(raw, &m)
 	if m.Kind != "" {
 		return MarkupContent{Kind: m.Kind, Value: m.Value}
 	}
@@ -343,7 +343,7 @@ func (d *DocumentSymbols) UnmarshalJSON(b []byte) error {
 	var probe struct {
 		Location json.RawMessage `json:"location"`
 	}
-	json.Unmarshal(raws[0], &probe)
+	_ = json.Unmarshal(raws[0], &probe)
 	if probe.Location != nil {
 		return json.Unmarshal(b, &d.Flat)
 	}
@@ -472,11 +472,11 @@ type InlayHintLabelPart struct {
 func InlayHintLabel(raw json.RawMessage) string {
 	if isString(raw) {
 		var s string
-		json.Unmarshal(raw, &s)
+		_ = json.Unmarshal(raw, &s)
 		return s
 	}
 	var parts []InlayHintLabelPart
-	json.Unmarshal(raw, &parts)
+	_ = json.Unmarshal(raw, &parts)
 	var s string
 	for _, p := range parts {
 		s += p.Value

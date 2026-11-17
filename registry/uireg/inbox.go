@@ -110,7 +110,7 @@ func InboxCards(r registry.Contributions) []InboxCard {
 			continue
 		}
 		var cs []InboxCard
-		registry.Call(func() error { cs = s.Cards(); return nil })
+		registry.Try(func() { cs = s.Cards() })
 		for _, card := range cs {
 			card.From = s.Name
 			out = append(out, card)

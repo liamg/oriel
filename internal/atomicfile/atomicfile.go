@@ -32,7 +32,7 @@ func write(name string, data []byte, perm fs.FileMode, keepPerm bool) error {
 	done := false
 	defer func() {
 		if !done {
-			os.Remove(tmp.Name())
+			_ = os.Remove(tmp.Name())
 		}
 	}()
 	_, err = tmp.Write(data)

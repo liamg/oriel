@@ -27,7 +27,7 @@ func lock(home string) (*os.File, error) {
 		return nil, err
 	}
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		f.Close()
+		_ = f.Close()
 		if errors.Is(err, syscall.EWOULDBLOCK) {
 			return nil, ErrRunning
 		}
@@ -39,7 +39,7 @@ func lock(home string) (*os.File, error) {
 // unlock lets the lock go before the process ends.
 func unlock() {
 	if held != nil {
-		held.Close()
+		_ = held.Close()
 		held = nil
 	}
 }
@@ -49,7 +49,7 @@ func unlock() {
 func oldWorker(home string) error {
 	path := filepath.Join(home, "worker.sock")
 	if c, err := net.DialTimeout("unix", path, time.Second); err == nil {
-		c.Close()
+		_ = c.Close()
 		return fmt.Errorf("an older `oriel worker` is still running: quit it with `pkill -f 'oriel worker'`")
 	}
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {

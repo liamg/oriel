@@ -53,7 +53,7 @@ func (s *Set) Scan(ctx context.Context, ws Workspace) []Item {
 			}
 		}()
 	}
-	filepath.WalkDir(ws.Root, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(ws.Root, func(path string, d fs.DirEntry, err error) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}

@@ -31,22 +31,22 @@ type Response struct {
 // answer, 1 when the session couldn't answer, 2 on bad usage.
 func Main(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) != 1 {
-		fmt.Fprintln(stderr, "usage: oriel hook <op>  (run by Oriel's Claude Code mod, with JSON on stdin)")
+		_, _ = fmt.Fprintln(stderr, "usage: oriel hook <op>  (run by Oriel's Claude Code mod, with JSON on stdin)")
 		return 2
 	}
 	sock := os.Getenv(SocketEnv)
 	if sock == "" {
-		fmt.Fprintln(stderr, "oriel hook: "+SocketEnv+" is not set: this runs inside a session Oriel started")
+		_, _ = fmt.Fprintln(stderr, "oriel hook: "+SocketEnv+" is not set: this runs inside a session Oriel started")
 		return 1
 	}
 	body, err := io.ReadAll(stdin)
 	if err != nil {
-		fmt.Fprintln(stderr, "oriel hook:", err)
+		_, _ = fmt.Fprintln(stderr, "oriel hook:", err)
 		return 1
 	}
 	out, err := Call(sock, args[0], body)
 	if err != nil {
-		fmt.Fprintln(stderr, "oriel hook:", err)
+		_, _ = fmt.Fprintln(stderr, "oriel hook:", err)
 		return 1
 	}
 	if len(out) == 0 {
@@ -70,7 +70,7 @@ func Call(sock, op string, body []byte) (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	if err := json.NewEncoder(conn).Encode(req); err != nil {
 		return nil, err
 	}

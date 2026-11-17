@@ -100,7 +100,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 			prof.Write = append(prof.Write, RealPath(p.Data))
 		}
 		if cmd, err = ossandbox.Command(prof, path, args...); err != nil {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 			return nil, fmt.Errorf("%s: can't sandbox its process: %w", p.ID, err)
 		}
 		cmd.Env = append(append(pluginEnv(tmp), data...), o.Env...)
@@ -128,11 +128,11 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 	}
 	cmd.Stderr = stderr
 	err = cmd.Start()
-	w.Close()
+	_ = w.Close()
 	if err != nil {
-		stdout.Close()
+		_ = stdout.Close()
 		if tmp != "" {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 		}
 		return nil, err
 	}
@@ -145,15 +145,15 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 				defer func() { <-running }()
 				if o.Request != nil {
 					if res, ok, err := o.Request(r.Method, r.Params); ok {
-						r.Reply(res, err)
+						_ = r.Reply(res, err)
 						return
 					}
 				}
 				if ps.Methods == nil {
-					r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no host method " + r.Method})
+					_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no host method " + r.Method})
 					return
 				}
-				r.Reply(ps.Methods.Call(context.Background(), p, r.Method, r.Params))
+				_ = r.Reply(ps.Methods.Call(context.Background(), p, r.Method, r.Params))
 			}()
 		},
 		Notify: func(method string, params json.RawMessage) {
@@ -163,7 +163,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 				}
 			}
 			if ps.Methods != nil {
-				ps.Methods.Call(context.Background(), p, method, params)
+				_, _ = ps.Methods.Call(context.Background(), p, method, params)
 			}
 		},
 	}, jsonrpc.Options{Version: "2.0", Cancel: o.Cancel})
@@ -176,12 +176,12 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		case <-pr.conn.Done():
 		case <-time.After(pr.stopAfter()):
 		}
-		pr.conn.Close()
+		_ = pr.conn.Close()
 		if lines != nil {
-			lines.Close()
+			_ = lines.Close()
 		}
 		if tmp != "" {
-			os.RemoveAll(tmp)
+			_ = os.RemoveAll(tmp)
 		}
 		pr.err = err
 		ps.mu.Lock()
@@ -299,7 +299,7 @@ func (ps *Processes) Close() {
 	var wg sync.WaitGroup
 	for _, pr := range ps.List() {
 		wg.Add(1)
-		go func() { defer wg.Done(); pr.Stop() }()
+		go func() { defer wg.Done(); _ = pr.Stop() }()
 	}
 	wg.Wait()
 }
@@ -330,11 +330,11 @@ func (pr *Process) Err() error {
 
 // Stop closes its stdin, which a plugin takes as the end, and kills it if it hasn't gone a little later.
 func (pr *Process) Stop() error {
-	pr.conn.Close()
+	_ = pr.conn.Close()
 	select {
 	case <-pr.done:
 	case <-time.After(pr.stopAfter()):
-		pr.cmd.Process.Kill()
+		_ = pr.cmd.Process.Kill()
 		<-pr.done
 	}
 	return nil

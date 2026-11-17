@@ -86,15 +86,15 @@ func (t *Transcript[H]) Write(w io.Writer) error {
 		return err
 	}
 	bw := bufio.NewWriter(w)
-	bw.Write(h)
-	bw.WriteByte('\n')
+	_, _ = bw.Write(h)
+	_ = bw.WriteByte('\n')
 	for _, e := range t.Entries {
 		b, err := json.Marshal(e)
 		if err != nil {
 			return err
 		}
-		bw.Write(b)
-		bw.WriteByte('\n')
+		_, _ = bw.Write(b)
+		_ = bw.WriteByte('\n')
 	}
 	return bw.Flush()
 }

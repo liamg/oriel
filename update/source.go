@@ -131,7 +131,7 @@ func (g *GitHub) read(ctx context.Context, name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return io.ReadAll(io.LimitReader(r, 1<<20))
 }
 
@@ -167,7 +167,7 @@ func (c Cache) Open(ctx context.Context, m Manifest, a Artifact) (io.ReadCloser,
 			_, _ = f.Seek(0, io.SeekStart)
 			return f, nil
 		}
-		f.Close()
+		_ = f.Close()
 	}
 	c.Progress.report(Step{Stage: StageDownload, Total: a.Size, Detail: a.Name})
 	r, err := c.Source.Open(ctx, a.Name)
@@ -175,7 +175,7 @@ func (c Cache) Open(ctx context.Context, m Manifest, a Artifact) (io.ReadCloser,
 		return nil, err
 	}
 	body, err := readChecked(&counting{r: r, total: a.Size, name: a.Name, p: c.Progress}, a)
-	r.Close()
+	_ = r.Close()
 	if err != nil {
 		return nil, err
 	}

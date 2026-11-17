@@ -75,7 +75,7 @@ func (e *Engine) split(vertical bool, b *buffer) {
 	e.enter(w)
 	if b != nil && b != old.buf {
 		w.fold = foldState{method: "manual", enable: true}
-		e.showBuffer(b, true)
+		_ = e.showBuffer(b, true)
 		e.resetPcmark()
 	}
 }
@@ -208,7 +208,7 @@ func (e *Engine) rotate(back bool, count int) {
 // newBufferWindow is :new and :vnew: a split with a new, empty buffer.
 func (e *Engine) newBufferWindow(vertical bool) {
 	e.split(vertical, nil)
-	e.editBuffer(e.newBuffer(text.New(nil, text.Author{})), true)
+	_ = e.editBuffer(e.newBuffer(text.New(nil, text.Author{})), true)
 }
 
 // Window is the current window's number, counting from 1 in CTRL-W w order, as winnr().

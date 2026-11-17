@@ -398,7 +398,7 @@ func (w *Window) loop() {
 							s := string(b)
 							w.read.Store(&s)
 						}
-						r.Close()
+						_ = r.Close()
 					}
 					continue
 				case key.Event, key.FocusEvent:

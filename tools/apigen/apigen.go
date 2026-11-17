@@ -164,7 +164,7 @@ func Parse(dir string) ([]Namespace, error) {
 
 func exprString(e ast.Expr) string {
 	var b bytes.Buffer
-	format.Node(&b, token.NewFileSet(), e)
+	_ = format.Node(&b, token.NewFileSet(), e)
 	return b.String()
 }
 

@@ -36,7 +36,7 @@ func Run(root string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	allow, err := gomod.ParseAllowlist(f)
 	if err != nil {
 		return nil, err

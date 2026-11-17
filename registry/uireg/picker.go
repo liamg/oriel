@@ -75,7 +75,7 @@ func (r *reg) Pickers() []PickerSource {
 	for _, s := range registry.ContributionsOf[PickerSource](r) {
 		ok := s.Available == nil
 		if !ok {
-			registry.Call(func() error { ok = s.Available(); return nil })
+			registry.Try(func() { ok = s.Available() })
 		}
 		if ok {
 			out = append(out, s)

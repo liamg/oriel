@@ -45,7 +45,7 @@ func (fs *families) scan() map[string][]fontRef {
 					}
 				}
 			}
-			unmap()
+			_ = unmap()
 		}
 	})
 	return fs.by
@@ -114,7 +114,7 @@ func loadIndex(r fontRef) *Face {
 	if err != nil {
 		return nil
 	}
-	defer unmap()
+	defer func() { _ = unmap() }()
 	lds, err := ot.NewLoaders(bytes.NewReader(data))
 	if err != nil || r.index >= len(lds) {
 		return nil

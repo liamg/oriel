@@ -55,7 +55,7 @@ func (r Repo) object(ctx context.Context, spec string) ([]byte, bool, error) {
 	}
 	c.timer.Reset(batchIdle)
 	proc := c.cmd.Process
-	stopKill := context.AfterFunc(ctx, func() { proc.Kill() })
+	stopKill := context.AfterFunc(ctx, func() { _ = proc.Kill() })
 	b, ok, err := c.read(spec)
 	stopKill()
 	if err != nil {
@@ -111,9 +111,9 @@ func (c *catFile) stop() {
 	if c.cmd == nil {
 		return
 	}
-	c.in.Close()
-	c.cmd.Process.Kill()
-	c.cmd.Wait()
+	_ = c.in.Close()
+	_ = c.cmd.Process.Kill()
+	_ = c.cmd.Wait()
 	c.cmd, c.in, c.out = nil, nil, nil
 }
 

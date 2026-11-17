@@ -44,7 +44,7 @@ func (l *Logs) Transcript(id core.SessionID) []core.Item {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var items []core.Item
 	seen := map[string]int{}
 	sc := bufio.NewScanner(f)

@@ -67,9 +67,9 @@ func (c *Client) Complete(ctx context.Context, at Loc) (*CompletionList, error) 
 		Items []json.RawMessage `json:"items"`
 	}
 	if strings.HasPrefix(strings.TrimSpace(string(raw)), "[") {
-		json.Unmarshal(raw, &items.Items)
+		_ = json.Unmarshal(raw, &items.Items)
 	} else {
-		json.Unmarshal(raw, &items)
+		_ = json.Unmarshal(raw, &items)
 	}
 	out := &CompletionList{Incomplete: list.IsIncomplete}
 	v := c.conv()
@@ -154,7 +154,7 @@ func (c *Client) completion(v *converter, at Loc, it protocol.CompletionItem, ra
 			Insert  *protocol.Range `json:"insert"`
 			Replace *protocol.Range `json:"replace"`
 		}
-		json.Unmarshal(defaults, &r)
+		_ = json.Unmarshal(defaults, &r)
 		if r.Insert != nil {
 			c.editRanges(v, &out, at.Path, nil, r.Insert, r.Replace)
 		} else {
@@ -430,7 +430,7 @@ func (c *Client) action(v *converter, path string, a *protocol.CodeAction, raw j
 	var ds struct {
 		Diagnostics []json.RawMessage `json:"diagnostics"`
 	}
-	json.Unmarshal(raw, &ds)
+	_ = json.Unmarshal(raw, &ds)
 	for _, d := range ds.Diagnostics {
 		if d, ok := v.diagnostic(path, d); ok {
 			out.Diagnostics = append(out.Diagnostics, d)
@@ -636,7 +636,7 @@ func (c *Client) calls(ctx context.Context, method, field string, item CallItem)
 			continue
 		}
 		var ranges []protocol.Range
-		json.Unmarshal(r["fromRanges"], &ranges)
+		_ = json.Unmarshal(r["fromRanges"], &ranges)
 		sites := it.Path
 		if field == "to" {
 			sites = item.Path

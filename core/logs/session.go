@@ -73,7 +73,7 @@ func (l *fileLog) Records() ([]Record, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var out []Record
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64<<10), 16<<20)

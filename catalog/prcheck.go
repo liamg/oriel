@@ -210,7 +210,7 @@ func (c PRCheck) version(ctx context.Context, id string, prev *Listing, l Listin
 		vc.fail("can't check out %s at %s: %v", l.Repo, short(v.Commit), err)
 		return vc.probs, vc.s.String()
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	m, err := plugin.LoadManifest(dir)
 	if err != nil {
 		vc.fail("%v", err)
@@ -229,7 +229,7 @@ func (c PRCheck) version(ctx context.Context, id string, prev *Listing, l Listin
 		vc.fail("%v", err)
 		return vc.probs, vc.s.String()
 	}
-	defer os.RemoveAll(out)
+	defer func() { _ = os.RemoveAll(out) }()
 	packed := vc.pack(dir, out)
 	_, goErr := os.Stat(filepath.Join(dir, "go.mod"))
 	isGo := goErr == nil
@@ -258,7 +258,7 @@ func (vc *versionCheck) since(m plugin.Manifest, prev *Listing) {
 				if om, err := plugin.LoadManifest(od); err == nil {
 					old = &om
 				}
-				os.RemoveAll(od)
+				_ = os.RemoveAll(od)
 			}
 		}
 	}
@@ -458,11 +458,11 @@ func (c PRCheck) fetch(ctx context.Context, repo, commit string) (string, error)
 		return "", err
 	}
 	if err := gitx.Clone(ctx, "https://"+strings.TrimPrefix(repo, "https://"), dir); err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", err
 	}
 	if _, err := (gitx.Repo{Dir: dir}).Run(ctx, "checkout", "--quiet", "--detach", commit); err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return "", err
 	}
 	return dir, nil

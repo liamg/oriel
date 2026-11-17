@@ -155,24 +155,24 @@ func runUpdate(args []string, stdout, stderr io.Writer) error {
 
 func updateSelf(ctx context.Context, u *update.Updater, channel string, check bool, stdout io.Writer) error {
 	if v, ok := u.Ready(); ok {
-		fmt.Fprintf(stdout, "Oriel %s is installed: restart Oriel to run it\n", v)
+		_, _ = fmt.Fprintf(stdout, "Oriel %s is installed: restart Oriel to run it\n", v)
 		return nil
 	}
 	m, err := u.Check(ctx, channel)
 	if errors.Is(err, update.ErrUpToDate) {
-		fmt.Fprintf(stdout, "Oriel %s is the newest on the %s channel\n", u.Version, channel)
+		_, _ = fmt.Fprintf(stdout, "Oriel %s is the newest on the %s channel\n", u.Version, channel)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 	if check {
-		fmt.Fprintf(stdout, "Oriel %s is out (you have %s): run oriel update to install it\n", m.Version, u.Version)
+		_, _ = fmt.Fprintf(stdout, "Oriel %s is out (you have %s): run oriel update to install it\n", m.Version, u.Version)
 		return nil
 	}
 	if err := u.Install(ctx); err != nil {
 		return err
 	}
-	fmt.Fprintf(stdout, "Oriel %s is installed: restart Oriel to run it\n", m.Version)
+	_, _ = fmt.Fprintf(stdout, "Oriel %s is installed: restart Oriel to run it\n", m.Version)
 	return nil
 }

@@ -266,7 +266,7 @@ func (w *Host) settle() {
 func (w *Host) HandOver() {
 	defer w.env.Recover("HandOver", nil)
 	w.runPart.HandOver()
-	w.Close()
+	_ = w.Close()
 }
 
 // Store is the session host's state, which the app shares.

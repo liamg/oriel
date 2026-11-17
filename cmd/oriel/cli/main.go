@@ -102,7 +102,7 @@ func runApp(args []string) {
 	cfg.Closed = watch.start
 	go func() {
 		err := app.Run(context.Background(), be, cfg)
-		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close(); sandboxes.Close() }, stopProfile))
+		os.Exit(shutdown(err, cfg.Logs, cancel, func() { _ = w.Close(); sandboxes.Close() }, stopProfile))
 	}()
 	gio.Main()
 }
@@ -168,7 +168,7 @@ func cpuProfile(path string) func() {
 	return func() {
 		once.Do(func() {
 			pprof.StopCPUProfile()
-			f.Close()
+			_ = f.Close()
 		})
 	}
 }
@@ -202,26 +202,26 @@ var subcommands = map[string]bool{"version": true, "dev": true, "hook": true, "b
 func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "version":
-		fmt.Fprintln(stdout, "oriel", version)
+		_, _ = fmt.Fprintln(stdout, "oriel", version)
 		for _, e := range plugin.Native() {
-			fmt.Fprintln(stdout, "with", e.Manifest().ID)
+			_, _ = fmt.Fprintln(stdout, "with", e.Manifest().ID)
 		}
 		return 0
 	case "build":
 		if err := runBuild(args[1:], stdout, stderr); err != nil {
-			fmt.Fprintln(stderr, "oriel build:", err)
+			_, _ = fmt.Fprintln(stderr, "oriel build:", err)
 			return 1
 		}
 		return 0
 	case "plugin":
 		if err := runPlugin(args[1:], stdout, stderr); err != nil {
-			fmt.Fprintln(stderr, "oriel plugin:", err)
+			_, _ = fmt.Fprintln(stderr, "oriel plugin:", err)
 			return 1
 		}
 		return 0
 	case "update":
 		if err := runUpdate(args[1:], stdout, stderr); err != nil {
-			fmt.Fprintln(stderr, "oriel update:", err)
+			_, _ = fmt.Fprintln(stderr, "oriel update:", err)
 			return 1
 		}
 		return 0
@@ -229,18 +229,18 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return runHook(args[1:], os.Stdin, stdout, stderr)
 	case "plugin-process":
 		if err := runPluginProcess(args[1:], os.Stdin, stdout); err != nil {
-			fmt.Fprintln(stderr, "oriel plugin-process:", err)
+			_, _ = fmt.Fprintln(stderr, "oriel plugin-process:", err)
 			return 1
 		}
 		return 0
 	case "dev":
 		if err := runDev(args[1:], stdout); err != nil {
-			fmt.Fprintln(stderr, "oriel dev:", err)
+			_, _ = fmt.Fprintln(stderr, "oriel dev:", err)
 			return 1
 		}
 		return 0
 	default:
-		fmt.Fprintf(stderr, "oriel: unknown command %q\n", args[0])
+		_, _ = fmt.Fprintf(stderr, "oriel: unknown command %q\n", args[0])
 		return 2
 	}
 }

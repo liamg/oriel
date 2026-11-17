@@ -67,7 +67,7 @@ func newWasm(cols, rows, scrollback int) (*wasmMachine, error) {
 	w := &wasmMachine{m: m, mem: m.Memory(), fns: map[string]api.Function{}, stack: make([]uint64, 8)}
 	w.t = uint32(w.raw("oriel_new", uint64(cols), uint64(rows), uint64(scrollback)))
 	if w.t == 0 {
-		m.Close(context.Background())
+		_ = m.Close(context.Background())
 		return nil, errors.New("out of memory")
 	}
 	return w, nil

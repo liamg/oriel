@@ -104,7 +104,7 @@ func Publish(ctx context.Context, o PublishOpts) (Published, error) {
 	if err != nil {
 		return out, err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	packed, err := Pack(ctx, o.Dir, PackOpts{Out: tmp, Go: o.Go})
 	if err != nil {
 		return out, fmt.Errorf("pack: %w", err)
@@ -224,7 +224,7 @@ func (g GH) OpenPR(ctx context.Context, registry, branch, path, title, body stri
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	_, name, _ := strings.Cut(registry, "/")
 	if _, err := g.gh(ctx, "", "repo", "clone", user+"/"+name, tmp, "--", "--depth", "1"); err != nil {
 		return "", err
