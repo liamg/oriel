@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"path/filepath"
 
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/plugin"
@@ -72,7 +73,7 @@ type Window interface {
 	// LaunchedEmpty says, the first time it's asked, whether the window started with nothing open; false after.
 	LaunchedEmpty() bool
 	// Polls are the periods of the window's periodic work while it runs, for the idle budget.
-	Polls() *PollSet
+	Polls() *work.PollSet
 	// Frames are the frames the window has drawn lately.
 	Frames() *FrameLog
 	// FSWatch starts one of the OS's file watchers (fswatch.New, unless the config gives another).
@@ -98,7 +99,7 @@ func OnDirChanged(r registry.Registry, label string, fn func(DirChanged)) regist
 }
 
 // Polls is r's window's periodic work; nil, noting nothing, without a window.
-func Polls(r registry.Registry) *PollSet {
+func Polls(r registry.Registry) *work.PollSet {
 	if w, ok := WindowOf(r); ok {
 		return w.Polls()
 	}

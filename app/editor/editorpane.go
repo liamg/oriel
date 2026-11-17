@@ -20,7 +20,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
-	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -400,7 +400,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m draw.PaneMetrics) {
 		}
 		last = p.NextRow(last)
 	}
-	var hl []syntax.Span
+	var hl []tree.Span
 	if h := x.highlights(p); h.doc != nil {
 		end := snap.Len()
 		if last < snap.Lines() {
@@ -536,7 +536,7 @@ func gutterWidth(lines int, m draw.PaneMetrics) float32 {
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop, over screen
 // columns [left, right): one row of a wrapped line, or the window scrolled sideways with 'nowrap'.
-func (x *Editor) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []uireg.Decoration, left, right int) {
+func (x *Editor) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []tree.Span, ts int, inl []uireg.Decoration, left, right int) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)

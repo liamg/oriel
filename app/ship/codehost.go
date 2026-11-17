@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -202,7 +203,7 @@ func (x *Ship) forBranch(ctx context.Context, h registry.CodeHost, repo registry
 
 // sawPR tells the session host whether a project's branch's PR is open.
 func (x *Ship) sawPR(repo registry.CodeRepo, branch string, open bool) {
-	if c, err := kit.ShipCalls(x.h); err == nil {
+	if c, err := sessionkit.ShipCalls(x.h); err == nil {
 		_ = c.SawPR(hostapi.PRSeenReq{Session: core.SessionID(repo.Session), Project: repo.Project, Branch: branch, Open: open})
 	}
 }
@@ -302,7 +303,7 @@ func (x *Ship) showRaised(id core.SessionID, project string, pr registry.PR) {
 // ownBranch refuses a PR from any branch but the one the session host raises the project's from: the worktree may
 // have been switched off it since it was read.
 func (x *Ship) ownBranch(ctx context.Context, id core.SessionID, s shipRead) error {
-	c, err := kit.ShipCalls(x.h)
+	c, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}

@@ -69,6 +69,24 @@ func TestCheckIsTransitive(t *testing.T) {
 	}
 }
 
+// A Never entry naming a host is another module's import path, not one of ours.
+func TestCheckOtherModules(t *testing.T) {
+	m := func(p string) string { return Module + "/" + p }
+	pkgs := []Package{
+		{ImportPath: m("registry/services"), Deps: []string{m("syntax/tree"), "github.com/tetratelabs/wazero/api"}},
+		{ImportPath: m("host/hostapi"), Deps: []string{m("sandbox/policy")}},
+	}
+	rules := []Rule{{From: []string{"registry/services", "host/hostapi"}, Never: []string{"github.com/tetratelabs/wazero"}}}
+	var got []string
+	for _, v := range Check(pkgs, rules) {
+		got = append(got, v.Package+" -> "+v.Via)
+	}
+	want := []string{m("registry/services") + " -> github.com/tetratelabs/wazero/api"}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+}
+
 // A rule's Except are packages under From it leaves to rules of their own.
 func TestCheckExcept(t *testing.T) {
 	m := func(p string) string { return Module + "/" + p }

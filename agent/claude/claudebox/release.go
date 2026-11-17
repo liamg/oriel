@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/release"
+	"github.com/liamg/oriel/internal/fetch"
 )
 
 // releases is where Claude Code's own installer downloads from.
@@ -106,7 +107,10 @@ func (x *Box) download(ctx context.Context, at agent.SandboxPlace, version strin
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", err
 	}
-	return dst, release.DownloadVerified(ctx, x.HTTP, releases+"/"+version+"/"+platform+"/claude", want, dst, 0o755, maxBinary, "Claude Code")
+	if err := fetch.Download(ctx, x.HTTP, releases+"/"+version+"/"+platform+"/claude", want, dst, 0o755, maxBinary); err != nil {
+		return "", fmt.Errorf("the Claude Code download: %w", err)
+	}
+	return dst, nil
 }
 
 // maxBinary bounds Claude Code's download.

@@ -209,10 +209,8 @@ func TestQuitDialogSnapshot(t *testing.T) {
 	s.Until("the quit taken back", func() bool { return !strings.Contains(s.Text(), "QUITTING ORIEL") })
 }
 
-// quitSessions is a session host with nothing to hand over.
+// quitSessions are a session host's calls, there for the window to have sessions; the quit doesn't make any.
 type quitSessions struct{ hostapi.SessionCalls }
-
-func (quitSessions) HandOver() {}
 
 // quitJobs are a session host's scheduled jobs.
 type quitJobs []hostapi.Job

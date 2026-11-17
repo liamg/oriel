@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -99,7 +100,7 @@ func highlightIn(lang *syntax.Language, path string, src []byte, line, before, a
 		return f
 	}
 	f.lines = all[first-1 : last]
-	var hl []syntax.Span
+	var hl []tree.Span
 	if lang != nil {
 		if ps, err := syntax.Borrow(lang); err == nil {
 			ps.Parse(src)
@@ -125,7 +126,7 @@ func OffsetOfLine(lines []string, n int) int {
 }
 
 // SplitSpans cuts one line at offset off into runs by highlight capture.
-func SplitSpans(ln string, off int, hl []syntax.Span) []Span {
+func SplitSpans(ln string, off int, hl []tree.Span) []Span {
 	var out []Span
 	pos := 0
 	for _, h := range hl {

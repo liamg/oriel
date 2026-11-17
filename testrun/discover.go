@@ -7,12 +7,13 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
 // testMatches runs the "tests" query over src: through its document when it has one, else on a parser, borrowed for
 // the call, of the language its path names in src.Languages.
-func testMatches(src Source) []syntax.Match {
+func testMatches(src Source) []tree.Match {
 	if src.Syntax != nil {
 		ms, _ := src.Syntax.Query("tests")
 		return ms
@@ -46,8 +47,8 @@ func firstLine(s text.Snapshot) []byte {
 
 // node is a capture with the match it came from, for working out what's inside what.
 type node struct {
-	syntax.Capture
-	m syntax.Match
+	tree.Capture
+	m tree.Match
 }
 
 func (n node) contains(o node) bool {
@@ -55,7 +56,7 @@ func (n node) contains(o node) bool {
 }
 
 // byCapture collects each capture called name across the matches, in source order.
-func byCapture(ms []syntax.Match, name string) []node {
+func byCapture(ms []tree.Match, name string) []node {
 	var out []node
 	seen := map[text.Range]bool{}
 	for _, m := range ms {

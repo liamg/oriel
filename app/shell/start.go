@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry/uireg"
 
@@ -226,7 +227,7 @@ func (sh *shell) openDir(ctx registry.Ctx, h plugin.Host, dir string) error {
 			return abs, nil
 		},
 		func(ctx registry.Ctx, dir string) error {
-			if kit.HasSessions(sh.cfg.Registry) && sh.cfg.Registry.Available("session.open-dir", nil) {
+			if sessionkit.HasSessions(sh.cfg.Registry) && sh.cfg.Registry.Available("session.open-dir", nil) {
 				return sh.cfg.Registry.Run(registry.OnDone(ctx, done), "session.open-dir", registry.Args{"dir": dir})
 			}
 			err := sh.reopenOn(reopenTo{dir: dir})

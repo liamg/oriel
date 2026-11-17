@@ -18,6 +18,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -257,7 +258,7 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(registry.DisposeFunc(x.sends.Stop))
 	x.Add(h.Contribute(registry.Busy{Name: "sandbox-settings", Busy: x.sends.Busy}))
-	if kit.HasSessions(h) {
+	if sessionkit.HasSessions(h) {
 		x.send()
 		x.Add(kit.OnDirChanged(h, "the sandbox's rules for the directory's project", func(kit.DirChanged) { x.send() }))
 	}
@@ -273,7 +274,7 @@ func (x *SandboxSettings) send() {
 		x.queued.Store(false)
 		h := x.h
 		cfg := sandboxConfig(h.Options(), projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules
-		if w, err := kit.SandboxCalls(h); err == nil {
+		if w, err := sessionkit.SandboxCalls(h); err == nil {
 			if err := w.SetSandboxConfig(cfg); err != nil {
 				h.Log().Warn("sandbox settings", "err", err)
 			}

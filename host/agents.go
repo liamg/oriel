@@ -7,6 +7,14 @@ import (
 )
 
 // SetApp is agentrun.Runner.SetApp.
+// Connect sets the app's tools and answers and its kinds before its providers, whose setting resumes the agents
+// handed over: they come back with all of it in place.
+func (w *Host) Connect(c hostapi.Connection) {
+	w.SetApp(c.App)
+	w.SetKinds(c.Kinds)
+	w.SetProviders(c.Providers)
+}
+
 func (w *Host) SetApp(a hostapi.App) {
 	defer w.env.Recover("SetApp", nil)
 	w.runPart.SetApp(a)

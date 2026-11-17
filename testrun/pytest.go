@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 )
 
 //go:embed pytest/oriel_pytest.py
@@ -208,7 +208,7 @@ func innerOf(n node, ns []node) (node, bool) {
 }
 
 // directIn is the nodes of all inside c and not inside another of them.
-func directIn(c syntax.Capture, all []node) []node {
+func directIn(c tree.Capture, all []node) []node {
 	outer := node{Capture: c}
 	var out []node
 	for _, n := range all {

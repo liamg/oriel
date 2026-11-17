@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -125,7 +126,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "react to a PR as its review starts"}, func(_ registry.Ctx, ev *kit.SessionStart) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "react to a PR as its review starts"}, func(_ registry.Ctx, ev *sessionkit.SessionStart) (registry.Verdict, error) {
 		x.reactOnStart(core.SessionID(ev.Session))
 		return registry.Verdict{}, nil
 	}))
@@ -230,7 +231,7 @@ func (x *PRReview) Deactivate(ctx context.Context) error {
 func (x *PRReview) wait() { x.busy.Wait() }
 
 func (x *PRReview) session(a registry.Args) (core.SessionState, error) {
-	return kit.SessionFrom(x.h, a)
+	return sessionkit.SessionFrom(x.h, a)
 }
 
 func (x *PRReview) form(id core.SessionID) *reviewForm {
@@ -271,7 +272,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 	x.drafts[id] = &d
 	x.seq++
 	n := x.seq
-	w, err := kit.ShipCalls(x.h)
+	w, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		close(done)
 		return done

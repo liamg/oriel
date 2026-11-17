@@ -104,7 +104,7 @@ func (x *Lua) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.InspectSection{Name: "KEYMAPS HERE", Order: 50, Rows: x.keymapRows}))
 	x.Add(h.Contribute(registry.InspectSection{Name: "VIEWS", Order: 60, Rows: x.viewRows}))
 	x.Reload(false)
-	w := kit.WatchPaths(h, LuaPoll, func() {
+	w := watchPaths(h, LuaPoll, func() {
 		if x.Changed() {
 			h.Do(func() { x.Reload(true) })
 		}

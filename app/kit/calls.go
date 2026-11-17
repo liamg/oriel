@@ -4,34 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
-
-// SessionStart is the SessionStart hook's event: a session just started, from the launcher, a command or a script.
-type SessionStart struct {
-	Session string `json:"session"`
-	Kind    string `json:"kind"`
-	Ticket  string `json:"ticket,omitempty"`
-	Prompt  string `json:"prompt,omitempty"`
-}
-
-// SpecFrom is a session spec from a command's args.
-func SpecFrom(a registry.Args) core.SessionSpec {
-	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
-		PR: a.String("pr"), PRRemote: a.String("pr_remote"), PRRef: a.String("pr_ref"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
-		Model: a.String("model"), Effort: a.String("effort"), Template: a.String("template"),
-		Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
-			Backend: a.String("backend"), CustomImage: a.Bool("custom_image")}}
-	if s.Kind == "" {
-		s.Kind = core.KindWork
-	}
-	for _, r := range a.Strings("repos") {
-		s.Repos = append(s.Repos, core.RepoID(r))
-	}
-	return s
-}
 
 // Call is a command to run, with its args: one step of a then, what a command runs once it's done.
 type Call struct {

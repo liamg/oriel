@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox/mcp"
+	"github.com/liamg/oriel/sandbox/policy"
 )
 
 // A fake upstream: the test binary re-executed as a stdio MCP server.
@@ -224,7 +225,7 @@ func TestReviewToolsFollowTheRules(t *testing.T) {
 		t.Errorf("an allowed review reply: %q, ran %v, asked %d", out, ok, h.asks())
 	}
 	for _, p := range h.g.Policy(context.Background()) {
-		if p.Name == "github__pull_request_review_write" && (p.Action != Allow || p.From != FromGlobal) {
+		if p.Name == "github__pull_request_review_write" && (p.Action != Allow || p.From != policy.FromGlobal) {
 			t.Errorf("policy shows %+v", p)
 		}
 	}
@@ -341,15 +342,15 @@ func TestExplainSaysWhichRuleDecided(t *testing.T) {
 	for _, c := range []struct {
 		tool string
 		ro   Hint
-		want Why
+		want policy.Why
 	}{
-		{"aws__list", Writes, Why{Allow, FromSession, "aws__*"}},
-		{"aws__delete_bucket", Writes, Why{Ask, FromGlobal, "aws__delete_*"}},
-		{"notes__secret", Writes, Why{Deny, FromProject, "notes__secret"}},
-		{"linear__get", Writes, Why{Allow, FromGlobal, "linear__*"}},
-		{"docs__read", SaysReadOnly, Why{Action: Allow, From: FromReadOnly}},
-		{"docs__write", Writes, Why{Ask, FromDefault, "*"}},
-		{"oriel__ci", OwnReadOnly, Why{Action: Allow, From: FromReadOnly}},
+		{"aws__list", Writes, policy.Why{Action: Allow, From: policy.FromSession, Rule: "aws__*"}},
+		{"aws__delete_bucket", Writes, policy.Why{Action: Ask, From: policy.FromGlobal, Rule: "aws__delete_*"}},
+		{"notes__secret", Writes, policy.Why{Action: Deny, From: policy.FromProject, Rule: "notes__secret"}},
+		{"linear__get", Writes, policy.Why{Action: Allow, From: policy.FromGlobal, Rule: "linear__*"}},
+		{"docs__read", SaysReadOnly, policy.Why{Action: Allow, From: policy.FromReadOnly}},
+		{"docs__write", Writes, policy.Why{Action: Ask, From: policy.FromDefault, Rule: "*"}},
+		{"oriel__ci", OwnReadOnly, policy.Why{Action: Allow, From: policy.FromReadOnly}},
 	} {
 		if got := Explain(c.tool, c.ro, l); got != c.want {
 			t.Errorf("%s: %+v, want %+v", c.tool, got, c.want)

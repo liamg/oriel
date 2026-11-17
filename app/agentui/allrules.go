@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -27,7 +27,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "rules.add", Grant: string(plugin.CapGate), Title: "Allow {rule} in every session without asking: {kind} permission (Bash(go test:*), Edit, a tool), gateway (a gateway's tool) or network (net(*.golang.org:443))",
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				w, err := kit.SandboxCalls(x.h)
+				w, err := sessionkit.SandboxCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -39,7 +39,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 				if rule == "" {
 					return errors.New("rules.remove needs a rule")
 				}
-				w, err := kit.SandboxCalls(x.h)
+				w, err := sessionkit.SandboxCalls(x.h)
 				if err != nil {
 					return err
 				}

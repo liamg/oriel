@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/shell/diag"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/watch"
 
@@ -439,6 +440,9 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, builtins: builtins, store: cfg.Store, events: events, poke: poke, reopen: make(chan reopenTo, 1), focus: newWindowFocus()}
 	sh.dir.Store(&cfg.WorkDir)
+	if cfg.Host != nil {
+		sh.hostHandOver = cfg.Host.HandOver
+	}
 	cfg.Logs.OnShownWrite(poke)
 	sh.holds.done = true // nothing waits to be laid out yet
 	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watches: func() *watch.Manager { return kit.ManagerFor(cfg.Registry, "") }, Frame: func() int {
@@ -447,7 +451,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 		}
 		return 0
 	}, Clock: windowClock{sh}})
-	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
+	sh.polls, sh.tools = &work.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
 	if cfg.StateDir != "" {
 		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}

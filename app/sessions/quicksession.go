@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -35,12 +36,11 @@ func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
 // the loop, as the launcher asks them.
 func (x *Launcher) quick() {
 	h, life := x.h, x.life
-	v, _ := registry.Option[string](h.Options(), "sandbox.default", registry.At{})
-	sandbox := v == "sandbox"
+	sandbox := sessionkit.DefaultSandbox(h.Options())
 	st := h.State()
 	plugin.Go(h, "launcher: quick session", func() {
 		err := plugin.Await(life, func(ctx registry.Ctx) error {
-			c, err := kit.SessionCalls(h)
+			c, err := sessionkit.SessionCalls(h)
 			if err != nil {
 				return err
 			}
@@ -48,12 +48,8 @@ func (x *Launcher) quick() {
 			if provider == "" {
 				return errors.New("no agents are set up on this machine: New session can start one with No agent")
 			}
-			a := registry.Args{"kind": string(core.KindWork), "prompt": "", "provider": provider, "model": model, "effort": "",
-				"sandbox": sandbox, "branch": "", "ticket": ""}
-			if sandbox {
-				a["network"] = "ask"
-			}
-			return h.Run(ctx, "session.start", a)
+			spec := core.SessionSpec{Kind: core.KindWork, Provider: provider, Model: model, Sandbox: sandbox}
+			return h.Run(ctx, "session.start", sessionkit.SpecArgs(spec))
 		})
 		if err != nil {
 			h.Notify(core.Notice{ID: "session.quick.start", Severity: core.SevError, Text: "Quick session: " + err.Error()})

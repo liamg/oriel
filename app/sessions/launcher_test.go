@@ -217,9 +217,7 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	st := r.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "w") })
-	se, _ := st.Session(apptest.Named(st, "w"))
-	p, _ := se.Snapshot().Primary()
+	p, _ := r.WaitSessionOpen("w").Primary()
 	inside := filepath.Join(p.Dir, "round.go")
 	os.WriteFile(inside, []byte("package pricing\n"), 0o644)
 	r.WaitProject(p.Dir)

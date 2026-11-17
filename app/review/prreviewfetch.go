@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -20,7 +21,7 @@ func (x *PRReview) fetch(ctx registry.Ctx, a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	w, err := kit.ShipCalls(x.h)
+	w, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	}
 	x.fetching[id] = true
 	x.mu.Unlock()
-	w, err := kit.ShipCalls(x.h)
+	w, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		return
 	}

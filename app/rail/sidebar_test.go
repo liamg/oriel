@@ -355,7 +355,7 @@ func TestSidebarAddsAProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
+	r.WaitSessionOpen("rounding")
 	r.WaitFrame("the window on the session", func(s string) bool {
 		return strings.Contains(s, "+") && !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening rounding")
 	})

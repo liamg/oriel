@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -100,7 +101,7 @@ func (x *Launcher) Manifest() plugin.Manifest { return plugin.Manifest{ID: "laun
 
 func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.life = h, x.Lifetime()
-	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
+	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	x.Add(h.Command(registry.Command{ID: "session.new",
 		Title:     "New session: the launcher, with {kind}, {prompt}, {ticket}, {pr}, {dir}, {repos} or {provider} filled in",
 		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
@@ -126,7 +127,7 @@ func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 
 // openWith opens the launcher afresh, with what a command gave filled in, and reads the kinds, providers and repos.
 func (x *Launcher) openWith(a registry.Args) {
-	spec := kit.SpecFrom(a)
+	spec := sessionkit.SpecFrom(a)
 	if x.providers != nil {
 		x.providers.Reset()
 	}
@@ -139,8 +140,7 @@ func (x *Launcher) openWith(a registry.Args) {
 		x.template = hostapi.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
-		v, _ := registry.Option[string](x.h.Options(), "sandbox.default", registry.At{})
-		x.sandbox = v == "sandbox"
+		x.sandbox = sessionkit.DefaultSandbox(x.h.Options()).Container
 	}
 	x.picked = x.provider != ""
 	x.load(core.Kind(a.String("kind")))
@@ -148,7 +148,7 @@ func (x *Launcher) openWith(a registry.Args) {
 
 // load reads the kinds, which are local, at once; the providers' probe runs off the loop.
 func (x *Launcher) load(want core.Kind) {
-	c, err := kit.SessionCalls(x.h)
+	c, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		x.loadErr = err.Error()
 		return
@@ -296,40 +296,31 @@ func (x *Launcher) home(p string) string {
 // args are session.start's for what the launcher holds.
 func (x *Launcher) args() registry.Args {
 	k, _ := x.current()
-	a := registry.Args{"kind": string(k.Kind), "prompt": strings.TrimSpace(x.prompt), "provider": x.provider, "model": x.model,
-		"effort": x.effort, "sandbox": x.sandbox, "branch": strings.TrimSpace(x.branch)}
+	s := core.SessionSpec{Kind: k.Kind, Prompt: strings.TrimSpace(x.prompt), Provider: x.provider, Model: x.model,
+		Effort: x.effort, Branch: strings.TrimSpace(x.branch)}
 	if x.sandbox {
-		a["network"] = "ask"
+		s.Sandbox = core.SandboxPolicy{Container: true, Backend: x.backend, CustomImage: x.customImage}
 		if x.openNet {
-			a["network"] = "open"
-		}
-		if x.backend != "" {
-			a["backend"] = x.backend
-		}
-		if x.customImage {
-			a["custom_image"] = true
+			s.Sandbox.Network = "open"
 		}
 	}
 	switch startsFrom(k) {
 	case core.FromPrompt:
-		a["ticket"] = strings.TrimSpace(x.ticket)
+		s.Ticket = strings.TrimSpace(x.ticket)
 		if t := x.ticketHere(); t != nil {
-			a["context"] = t.Context
+			s.Context = t.Context
 		}
 	case core.FromPR:
-		a["pr"] = strings.TrimSpace(x.pr)
+		s.PR = strings.TrimSpace(x.pr)
 	case core.FromName:
-		a["name"], a["template"], a["dir"] = strings.TrimSpace(x.name), x.template, x.home(x.parent)
+		s.Name, s.Template, s.Dir = strings.TrimSpace(x.name), x.template, x.home(x.parent)
 	case core.FromDir:
-		a["dir"] = x.home(x.dir)
+		s.Dir = x.home(x.dir)
 	}
 	if takesRepos(k) {
-		var repos []string
-		for _, r := range x.chosen {
-			repos = append(repos, string(r))
-		}
-		a["repos"] = repos
+		s.Repos = x.chosen
 	}
+	a := sessionkit.SpecArgs(s)
 	if a.String("prompt") != "" || a.String("ticket") != "" {
 		a["then"] = kit.Then(kit.Call{Command: "request.open"}) // the first request, as the agent gets it
 	}

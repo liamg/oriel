@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -17,7 +18,7 @@ type Document struct {
 	p       *Parser
 	pending []text.Change
 	version uint64 // the snapshot version spans were computed for
-	spans   []Span
+	spans   []tree.Span
 	err     error
 	busy    bool
 	closed  bool
@@ -94,7 +95,7 @@ func (d *Document) run() {
 
 // Highlights returns the spans in [start, end) of the latest snapshot the document was told about. Spans from
 // before changes still being parsed are moved through them, so they line up with the text, if a little stale.
-func (d *Document) Highlights(start, end int) ([]Span, error) {
+func (d *Document) Highlights(start, end int) ([]tree.Span, error) {
 	d.mu.Lock()
 	spans, err, pending := d.spans, d.err, d.pending
 	var moving []text.Change
@@ -119,7 +120,7 @@ func (d *Document) Highlights(start, end int) ([]Span, error) {
 }
 
 // within is the spans that overlap [start, end), found by bisecting spans, which are in order and don't overlap.
-func within(spans []Span, start, end int) []Span {
+func within(spans []tree.Span, start, end int) []tree.Span {
 	lo := sort.Search(len(spans), func(i int) bool { return spans[i].Range.End > start })
 	hi := sort.Search(len(spans), func(i int) bool { return spans[i].Range.Start >= end })
 	return spans[lo:max(lo, hi)]
@@ -143,8 +144,8 @@ func (d *Document) Close() {
 }
 
 // rehighlight is spans with the dirty ranges highlighted again: spans outside them kept, cut at their edges.
-func (d *Document) rehighlight(spans []Span, dirty []text.Range) ([]Span, error) {
-	var out []Span
+func (d *Document) rehighlight(spans []tree.Span, dirty []text.Range) ([]tree.Span, error) {
+	var out []tree.Span
 	i := 0
 	var err error
 	for _, r := range dirty {
@@ -172,7 +173,7 @@ func (d *Document) rehighlight(spans []Span, dirty []text.Range) ([]Span, error)
 		}
 	}
 	out = append(out, spans[i:]...)
-	slices.SortStableFunc(out, func(a, b Span) int { return cmp.Compare(a.Range.Start, b.Range.Start) })
+	slices.SortStableFunc(out, func(a, b tree.Span) int { return cmp.Compare(a.Range.Start, b.Range.Start) })
 	return out, err
 }
 
@@ -219,8 +220,8 @@ func shiftRanges(rs []text.Range, r text.Replace) []text.Range {
 
 // shiftSpans moves spans through changes made after they were computed: text after an edit moves with it,
 // and a span the edit touches stretches or shrinks to cover what's there now.
-func shiftSpans(spans []Span, chs []text.Change) []Span {
-	out := append([]Span(nil), spans...)
+func shiftSpans(spans []tree.Span, chs []text.Change) []tree.Span {
+	out := append([]tree.Span(nil), spans...)
 	for _, ch := range chs {
 		for _, r := range ch.Replaces {
 			from, to, n := r.Range.Start, r.Range.End, len(r.Text)

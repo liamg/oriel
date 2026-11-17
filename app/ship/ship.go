@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
@@ -161,12 +162,12 @@ func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
 // client is the session host's ship calls.
 func (x *Ship) client(id core.SessionID) (hostapi.ShipCalls, error) {
-	return kit.ShipCalls(x.h)
+	return sessionkit.ShipCalls(x.h)
 }
 
 // session is the session in front, or {id}.
 func (x *Ship) session(a registry.Args) (core.SessionState, bool) {
-	se, err := kit.SessionFrom(x.h, a)
+	se, err := sessionkit.SessionFrom(x.h, a)
 	return se, err == nil
 }
 
@@ -450,7 +451,7 @@ func (x *Ship) Wait() { x.wait() }
 // it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
 // the project and sent as a notice. The session is read again after, fetched.
 func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c hostapi.ShipCalls) error, done ...func()) error {
-	return stepWith(x, kit.ShipCalls, id, project, doing, fn, done...)
+	return stepWith(x, sessionkit.ShipCalls, id, project, doing, fn, done...)
 }
 
 // stepWith is step with the part of the session host part gives.

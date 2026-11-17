@@ -9,7 +9,8 @@ import (
 )
 
 // Rule says no package under From reaches a package under Never, through any chain of imports, tests included;
-// packages under Except are left to rules of their own. Paths are relative to Module.
+// packages under Except are left to rules of their own. Paths are relative to Module, except a Never entry whose
+// first element names a host (github.com/…): that's another module's import path.
 type Rule struct {
 	From   []string
 	Never  []string
@@ -34,6 +35,9 @@ var Rules = []Rule{
 	// The features' shared kit sees the host only through its contracts (host/hostapi): not its parts, the sandboxes'
 	// backends or Lua.
 	{From: []string{"app/kit"}, Never: append([]string{"host/hostcore", "sandbox/container", "sandbox/seatbelt", "script"}, hostParts...),
+		Built: true},
+	// The contracts features and plugins all link carry plain values: no wasm runtime, no MCP gateway.
+	{From: []string{"registry/services", "host/hostapi"}, Never: []string{"sandbox/gateway", "sandbox/mcp", "github.com/tetratelabs/wazero"},
 		Built: true},
 	// Libraries the host and the app both use, reaching neither.
 	{From: []string{"search", "sysload", "agent/usage/stats"}, Never: []string{"app", "host", "ui", "render"}},
@@ -95,6 +99,9 @@ func (v Violation) String() string {
 
 func under(path, dir string) bool {
 	p := Module + "/" + dir
+	if first, _, _ := strings.Cut(dir, "/"); strings.Contains(first, ".") {
+		p = dir
+	}
 	return path == p || strings.HasPrefix(path, p+"/")
 }
 

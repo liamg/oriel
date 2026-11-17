@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -138,7 +139,7 @@ func (x *Verify) shown() *quiz {
 
 // session is {id}, else the session in front.
 func (x *Verify) session(a registry.Args) (core.SessionState, bool) {
-	se, err := kit.SessionFrom(x.h, a)
+	se, err := sessionkit.SessionFrom(x.h, a)
 	return se, err == nil
 }
 
@@ -278,7 +279,7 @@ func (x *Verify) record(q *quiz, result string) {
 		At: time.Now()}
 	log := x.h.Log().With("session", string(q.session))
 	log.Info("verification "+result, "right", v.Count(core.VerdictRight), "partly", v.Count(core.VerdictPartly), "wrong", v.Count(core.VerdictWrong))
-	c, err := kit.ShipCalls(x.h)
+	c, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		log.Error("verification not recorded", "err", err)
 		return

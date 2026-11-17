@@ -5,14 +5,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
-
-// Span is a run of text and the highlight capture that won it, like "keyword" or "string.escape".
-type Span struct {
-	Range   text.Range
-	Capture string
-}
 
 // hl is one highlight capture before overlaps are resolved.
 type hl struct {
@@ -29,7 +24,7 @@ const maxInjectionDepth = 3
 // overlap, the one with the highest #set! priority wins, then text injected deeper, then the later pattern,
 // as nvim's highlighter has it. Captures named with a leading "_", and spell, nospell and conceal, aren't
 // highlights.
-func (p *Parser) Highlights(start, end int) ([]Span, error) {
+func (p *Parser) Highlights(start, end int) ([]tree.Span, error) {
 	var hls []hl
 	if err := p.collect(start, end, &hls); err != nil {
 		return nil, err
@@ -43,11 +38,11 @@ func (p *Parser) Highlights(start, end int) ([]Span, error) {
 const highlightChunk = 1 << 10
 
 // highlightsInChunks is Highlights over [0, n), queried a chunk at a time, each chunk's spans clipped to it.
-func (p *Parser) highlightsInChunks(n int) ([]Span, error) { return p.highlightsIn(0, n) }
+func (p *Parser) highlightsInChunks(n int) ([]tree.Span, error) { return p.highlightsIn(0, n) }
 
 // highlightsIn is Highlights over [from, to), queried a chunk at a time, each chunk's spans clipped to it.
-func (p *Parser) highlightsIn(from, to int) ([]Span, error) {
-	var out []Span
+func (p *Parser) highlightsIn(from, to int) ([]tree.Span, error) {
+	var out []tree.Span
 	for start := from; start < to; start += highlightChunk {
 		end := min(start+highlightChunk, to)
 		spans, err := p.Highlights(start, end)
@@ -205,7 +200,7 @@ func (a hl) beats(b hl) bool {
 }
 
 // resolve turns overlapping captures into non-overlapping spans, each taking the winning capture.
-func resolve(hls []hl) []Span {
+func resolve(hls []hl) []tree.Span {
 	if len(hls) == 0 {
 		return nil
 	}
@@ -216,7 +211,7 @@ func resolve(hls []hl) []Span {
 	slices.Sort(cuts)
 	cuts = slices.Compact(cuts)
 	slices.SortStableFunc(hls, func(a, b hl) int { return a.start - b.start })
-	var out []Span
+	var out []tree.Span
 	var active []hl
 	next := 0
 	for i := 0; i+1 < len(cuts); i++ {
@@ -239,7 +234,7 @@ func resolve(hls []hl) []Span {
 			out[n-1].Range.End = e
 			continue
 		}
-		out = append(out, Span{Range: text.Range{Start: s, End: e}, Capture: win.name})
+		out = append(out, tree.Span{Range: text.Range{Start: s, End: e}, Capture: win.name})
 	}
 	return out
 }

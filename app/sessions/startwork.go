@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -72,7 +73,7 @@ func (x *Plan) openStartWork() error {
 	if se.Agent.Provider != "" {
 		id := se.Agent.Provider
 		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.ProviderInfo, error) {
-			c, err := kit.SessionCalls(x.h)
+			c, err := sessionkit.SessionCalls(x.h)
 			if err != nil {
 				return hostapi.ProviderInfo{}, err
 			}

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -81,7 +83,7 @@ func (sh *shell) quit(ask bool) {
 		r.hidden = false
 		return
 	}
-	if !sh.holdsClose && !kit.HasSessions(sh.cfg.Registry) {
+	if !sh.holdsClose && !sessionkit.HasSessions(sh.cfg.Registry) {
 		sh.closeWindow()
 		return
 	}
@@ -131,10 +133,10 @@ func (sh *shell) handOver(r *quitDrain) error {
 	expired := make(chan struct{})
 	wait := windowClock{sh}.AfterFunc(r.deadline.Sub(sh.now()), func() { close(expired) })
 	defer wait.Stop()
-	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
+	tick := work.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
-	// A quit as the window opens waits for the sessions plugin to bring the host's calls.
-	w, err := kit.SessionCalls(sh.cfg.Registry)
+	// A quit as the window opens waits for the host plugin to bring the host's calls.
+	jobs, err := sessionkit.JobCalls(sh.cfg.Registry)
 	for err != nil && sh.holdsClose {
 		select {
 		case <-r.now:
@@ -145,12 +147,8 @@ func (sh *shell) handOver(r *quitDrain) error {
 			return nil
 		case <-tick.C:
 		}
-		w, err = kit.SessionCalls(sh.cfg.Registry)
+		jobs, err = sessionkit.JobCalls(sh.cfg.Registry)
 	}
-	if err != nil {
-		return nil
-	}
-	jobs, err := kit.JobCalls(sh.cfg.Registry)
 	if err != nil {
 		return nil
 	}
@@ -199,7 +197,9 @@ waiting:
 			}
 		}
 	}()
-	w.HandOver()
+	if sh.hostHandOver != nil {
+		sh.hostHandOver()
+	}
 	close(done)
 	return nil
 }

@@ -3,7 +3,7 @@ package hostapi
 import (
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/egress"
-	"github.com/liamg/oriel/sandbox/gateway"
+	"github.com/liamg/oriel/sandbox/policy"
 )
 
 // Permissions is what a sandboxed session's agent may do: each gateway tool and each network rule in force, with
@@ -21,7 +21,7 @@ type Permissions struct {
 
 // ToolPermission is one gateway tool: what a call meets, its source, and the session's own rule for it.
 type ToolPermission struct {
-	gateway.ToolPolicy
+	policy.ToolPolicy
 	Source  string
 	Session string
 }

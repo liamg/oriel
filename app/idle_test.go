@@ -58,7 +58,7 @@ func idleWindow(t *testing.T) *apptest.Window {
 			t.Fatal(err)
 		}
 		a := lw.Fake.WaitStarted(t)
-		rig.WaitState(t, r.Store, name+" in front", func(st core.State) bool { return apptest.FocusedOn(st, name) })
+		r.WaitSessionOpen(name)
 		if !working {
 			a.Emit(agent.TurnStart{})
 			working = true

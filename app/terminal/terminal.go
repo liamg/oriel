@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
@@ -317,7 +318,7 @@ func (x *Terminals) sandboxed(a registry.Args) (hostapi.SandboxCalls, core.Sessi
 	if src, _ := a["source"].(TermSource); src != nil || len(strList(a["cmd"])) > 0 || len(strList(a["args"])) > 0 || a.Bool("host") {
 		return nil, "", false
 	}
-	w, _ := kit.SandboxCalls(x.h)
+	w, _ := sessionkit.SandboxCalls(x.h)
 	if w == nil {
 		return nil, "", false
 	}

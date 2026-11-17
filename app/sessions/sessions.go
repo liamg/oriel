@@ -20,6 +20,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -48,16 +49,8 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	ctx, cancel := context.WithCancel(context.Background())
 	x.ctx, x.cancel = ctx, cancel
-	if w, err := kit.SessionCalls(h); err == nil {
-		w.SetApp(hostapi.App{
-			Tools:        func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
-			CallTool:     func(ctx context.Context, call hostapi.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
-			Decide:       func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
-			GatewayTools: func() []hostapi.GatewayTool { return gatewayTools(h) },
-		})
-		x.Add(registry.DisposeFunc(func() { w.SetApp(hostapi.App{}) }))
-	}
 	x.contributeKinds(h)
+	x.connect(h)
 	landAtLaunch(h)
 	x.Add(keepATabInFront(h))
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
@@ -68,7 +61,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.sendRestart()
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
-	if _, err := kit.SessionCalls(h); err == nil {
+	if _, err := sessionkit.SessionCalls(h); err == nil {
 		x.Add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer, Byline: x.explainerByline}))
 		x.Add(h.Contribute(registry.Forker{Name: "agent", Order: 10, Fork: x.fork, Label: x.forker}))
 	}
@@ -82,7 +75,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return registry.Verdict{}, nil
 		}))
-	x.Add(h.DeclareEvent(registry.EventInfo{Name: "SessionStart", Fired: true, Payload: kit.SessionStart{},
+	x.Add(h.DeclareEvent(registry.EventInfo{Name: "SessionStart", Fired: true, Payload: sessionkit.SessionStart{},
 		Doc: "A session just started; the subject is its id. { session, kind, ticket, prompt }"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "CommentSend", Fired: true, Payload: kit.CommentSend{},
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
@@ -131,7 +124,7 @@ func (x *Sessions) follow(id core.SessionID) {
 
 func (x *Sessions) commands() []registry.Command {
 	h := x.h
-	has := func(registry.Args) bool { _, err := kit.SessionCalls(x.h); return err == nil }
+	has := func(registry.Args) bool { _, err := sessionkit.SessionCalls(x.h); return err == nil }
 	focused := func(registry.Args) bool { return has(nil) && x.focused() != "" }
 	named := func(a registry.Args) bool { return has(nil) && (a.String("id") != "" || x.focused() != "") } // {id}, or the one in front
 	planning := func(registry.Args) bool {
@@ -263,7 +256,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 
 // host is the session host, or why there's none.
 func (x *Sessions) host() (hostapi.SessionCalls, error) {
-	w, err := kit.SessionCalls(x.h)
+	w, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return nil, errors.New("there are no sessions in this window")
 	}
@@ -415,7 +408,7 @@ const autoNameOption = "sessions.auto_name"
 const restartOption = "sessions.restart_on_exit"
 
 func (x *Sessions) sendRestart() {
-	w, err := kit.SessionCalls(x.h)
+	w, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return
 	}
@@ -462,7 +455,7 @@ func startName(a registry.Args) string {
 
 // launch prepares and starts a session from a, and fires SessionStart on the loop.
 func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID, error) {
-	spec := kit.SpecFrom(a)
+	spec := sessionkit.SpecFrom(a)
 	if on, _ := registry.Option[bool](x.h.Options(), autoNameOption, registry.At{}); on && spec.Name == "" {
 		spec.AutoName = true
 	}
@@ -479,7 +472,7 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 	if err != nil {
 		return "", err
 	}
-	ev := kit.SessionStart{Session: string(id), Kind: string(spec.Kind), Ticket: spec.Ticket, Prompt: spec.Prompt}
+	ev := sessionkit.SessionStart{Session: string(id), Kind: string(spec.Kind), Ticket: spec.Ticket, Prompt: spec.Prompt}
 	x.h.Do(func() { x.h.Fire(context.Background(), "SessionStart", string(id), &ev) })
 	return id, nil
 }

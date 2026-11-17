@@ -3,8 +3,10 @@
 package sessions
 
 import (
+	"context"
+
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -56,12 +58,28 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 		return registry.Gate{}
 	}}))
 	x.Add(h.Contribute(registry.Service{Name: registry.SessionsService, Impl: sessionsService{x}}))
-	if w, err := kit.SessionCalls(h); err == nil {
-		w.SetKinds(registryKinds{h})
-		x.Add(registry.DisposeFunc(func() { w.SetKinds(nil) }))
-		w.SetProviders(func() []agent.Provider { return registryProviders(h) })
-		x.Add(registry.DisposeFunc(func() { w.SetProviders(nil) }))
+}
+
+// connect gives the session host the app's side: its tools and answers, the registry's kinds and providers.
+func (x *Sessions) connect(h plugin.Host) {
+	wire, err := sessionkit.HostWiring(h)
+	if err != nil {
+		return
 	}
+	calls, _ := sessionkit.SessionCalls(h)
+	wire.Connect(hostapi.Connection{
+		App: hostapi.App{
+			Tools: func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
+			CallTool: func(ctx context.Context, call hostapi.ToolCall) (string, error) {
+				return x.callTool(ctx, h, calls, call)
+			},
+			Decide:       func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
+			GatewayTools: func() []hostapi.GatewayTool { return gatewayTools(h) },
+		},
+		Kinds:     registryKinds{h},
+		Providers: func() []agent.Provider { return registryProviders(h) },
+	})
+	x.Add(registry.DisposeFunc(func() { wire.Connect(hostapi.Connection{}) }))
 }
 
 // sessionsService is the registry's Sessions service.

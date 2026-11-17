@@ -54,7 +54,7 @@ type Content struct {
 // CallResult is the result of tools/call.
 type CallResult struct {
 	Content           []json.RawMessage `json:"content"`
-	IsError           bool              `json:"isError,omitempty"`
+	IsError           bool              `json:"isError"`
 	StructuredContent json.RawMessage   `json:"structuredContent,omitempty"`
 }
 

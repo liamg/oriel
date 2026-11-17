@@ -1,5 +1,5 @@
-// Package mcptools serves a session's Oriel tools to its agent as the MCP server oriel: a unix socket answering
-// tools/list and tools/call, which `oriel hook mcp` (mcpstdio) bridges to the agent over stdio.
+// Package mcptools serves a session's Oriel tools to its agent as the MCP server oriel: a unix socket speaking MCP
+// (sandbox/mcp's server, one per connection), which `oriel hook mcp` (mcpstdio) bridges to the agent over stdio.
 package mcptools
 
 import (
@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/jsonrpc"
+	"github.com/liamg/oriel/sandbox/mcp"
 )
 
 // SockEnv names the socket `oriel hook mcp` (mcpstdio) dials.
@@ -30,9 +30,9 @@ type Server struct {
 	stop  context.CancelFunc
 	wg    sync.WaitGroup
 
-	mu    sync.Mutex
-	conns []*jsonrpc.Conn
-	names []string // the tools' names when last listed or checked
+	mu      sync.Mutex
+	servers []*mcp.Server // one per connection
+	names   []string      // the tools' names when last listed or checked
 }
 
 // recheck is how often the tools are compared with those listed: a change sends notifications/tools/list_changed.
@@ -91,8 +91,8 @@ func (s *Server) changed(tools []agent.Tool) {
 		return
 	}
 	s.names = names
-	for _, c := range s.conns {
-		_ = c.Notify("notifications/tools/list_changed", nil)
+	for _, srv := range s.servers {
+		srv.NotifyToolsChanged()
 	}
 }
 
@@ -105,65 +105,52 @@ func (s *Server) accept() {
 		if err != nil {
 			return
 		}
-		c := jsonrpc.NewConn(nc, nc, jsonrpc.Handlers{Request: s.handle}, jsonrpc.Options{Version: "2.0"})
+		srv := &mcp.Server{Name: "oriel", Version: "0", Handler: tools{s}}
 		s.mu.Lock()
-		s.conns = append(s.conns, c)
+		s.servers = append(s.servers, srv)
 		s.mu.Unlock()
-	}
-}
-
-func (s *Server) handle(r *jsonrpc.Request) {
-	switch r.Method {
-	case "tools/list":
-		tools := s.tools()
-		s.changed(tools)
-		list := []map[string]any{}
-		for _, t := range tools {
-			schema := t.Schema
-			if len(schema) == 0 {
-				schema = json.RawMessage(`{"type":"object"}`)
-			}
-			m := map[string]any{"name": t.Name, "description": t.Description, "inputSchema": schema}
-			if t.ReadOnly {
-				m["annotations"] = map[string]any{"readOnlyHint": true}
-			}
-			list = append(list, m)
-		}
-		r.Reply(map[string]any{"tools": list}, nil)
-	case "tools/call":
-		var p struct {
-			Name      string          `json:"name"`
-			Arguments json.RawMessage `json:"arguments"`
-		}
-		if err := json.Unmarshal(r.Params, &p); err != nil || p.Name == "" {
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "invalid params"})
-			return
-		}
-		tools := s.tools()
-		i := slices.IndexFunc(tools, func(t agent.Tool) bool { return t.Name == p.Name })
-		if i < 0 || tools[i].Call == nil {
-			r.Reply(textResult("no such tool: "+p.Name, true), nil)
-			return
-		}
-		if len(p.Arguments) == 0 {
-			p.Arguments = json.RawMessage("{}")
-		}
-		call := tools[i].Call
 		s.wg.Go(func() {
-			out, err := call(s.ctx, p.Arguments)
-			if err != nil {
-				r.Reply(textResult(err.Error(), true), nil)
-				return
-			}
-			r.Reply(textResult(out, false), nil)
+			defer nc.Close()
+			srv.Serve(s.ctx, nc, nc)
+			s.mu.Lock()
+			s.servers = slices.DeleteFunc(s.servers, func(o *mcp.Server) bool { return o == srv })
+			s.mu.Unlock()
 		})
-	default:
-		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "method not found: " + r.Method})
 	}
 }
 
-func textResult(text string, isErr bool) map[string]any {
-	return map[string]any{"content": []map[string]any{{"type": "text", "text": text}}, "isError": isErr}
+// tools is the server's tools as an MCP handler.
+type tools struct{ s *Server }
+
+func (h tools) Tools(context.Context) ([]mcp.Tool, error) {
+	offered := h.s.tools()
+	h.s.changed(offered)
+	out := make([]mcp.Tool, 0, len(offered))
+	for _, t := range offered {
+		m := mcp.Tool{Name: t.Name, Description: t.Description, InputSchema: t.Schema}
+		if t.ReadOnly {
+			yes := true
+			m.Annotations = &mcp.ToolAnnotations{ReadOnlyHint: &yes}
+		}
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+func (h tools) Call(ctx context.Context, name string, args json.RawMessage) (mcp.CallResult, error) {
+	offered := h.s.tools()
+	i := slices.IndexFunc(offered, func(t agent.Tool) bool { return t.Name == name })
+	if i < 0 || offered[i].Call == nil {
+		return mcp.TextResult("no such tool: "+name, true), nil
+	}
+	if len(args) == 0 {
+		args = json.RawMessage("{}")
+	}
+	out, err := offered[i].Call(ctx, args)
+	if err != nil {
+		return mcp.TextResult(err.Error(), true), nil
+	}
+	return mcp.TextResult(out, false), nil
 }
 
 // Close stops listening, ends the tool calls running and removes the socket. A nil Server closes as nothing.
@@ -173,11 +160,6 @@ func (s *Server) Close() error {
 	}
 	err := s.ln.Close()
 	s.stop()
-	s.mu.Lock()
-	for _, c := range s.conns {
-		c.Close()
-	}
-	s.mu.Unlock()
 	s.wg.Wait()
 	os.RemoveAll(s.dir)
 	if errors.Is(err, net.ErrClosed) {

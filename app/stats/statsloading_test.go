@@ -8,7 +8,7 @@ import (
 	"time"
 
 	hoststats "github.com/liamg/oriel/agent/usage/stats"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -59,7 +59,7 @@ func (f *failingStats) SessionStats(r hostapi.StatsSessionReq) (hoststats.Detail
 func TestSessionStatsFailureRetries(t *testing.T) {
 	s, r, x := statsScene(t)
 	id := r.IDs["pricing-rounding"]
-	w, err := kit.StatsCalls(s.Registry())
+	w, err := sessionkit.StatsCalls(s.Registry())
 	if err != nil {
 		t.Fatal(err)
 	}

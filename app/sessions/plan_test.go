@@ -42,7 +42,7 @@ func planSession(t *testing.T) (*apptest.Window, *agenttest.FakeSession, *rig.Ho
 	if in := a.WaitSent(t); !strings.Contains(in.Text, `where="plan"`) {
 		t.Fatalf("the prompt reached the agent as %q", in.Text)
 	}
-	w.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
+	w.WaitSessionOpen("rounding")
 	return w, a, lw
 }
 
