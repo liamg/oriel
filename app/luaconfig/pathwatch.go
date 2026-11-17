@@ -1,4 +1,4 @@
-package kit
+package luaconfig
 
 import (
 	"fmt"
@@ -6,16 +6,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
 
-// PathWatch calls changed, off the loop, when what it watches changes: a subscription to a files source in the app's
+// pathWatch calls changed, off the loop, when what it watches changes: a subscription to a files source in the app's
 // freshness manager (services.Watches), which watches through the OS, polls every poll when it can't, and reads
 // nothing while the window is behind another app, catching up once it's back. A burst of changes is one call.
-type PathWatch struct {
+type pathWatch struct {
 	changed func()
 	m       *watch.Manager
 	done    func() // closes m, when it's its own
@@ -27,23 +28,23 @@ type PathWatch struct {
 	kicks work.Busy // Kick's calls with nothing watched
 }
 
-// WatchPaths watches with r's app manager, polling every poll once it can't.
-func WatchPaths(r registry.Registry, poll time.Duration, changed func()) *PathWatch {
-	p := &PathWatch{changed: changed}
-	p.m, p.done = FileManager(r, "paths", poll)
+// watchPaths watches with r's app manager, polling every poll once it can't.
+func watchPaths(r registry.Registry, poll time.Duration, changed func()) *pathWatch {
+	p := &pathWatch{changed: changed}
+	p.m, p.done = kit.FileManager(r, "paths", poll)
 	return p
 }
 
 // Add watches a file, or a folder and its entries; it needn't exist yet.
-func (p *PathWatch) Add(path string) { p.add(watch.Files{Path: path}) }
+func (p *pathWatch) Add(path string) { p.add(watch.Files{Path: path}) }
 
 // AddTree watches a folder and everything under it but what skip leaves out.
-func (p *PathWatch) AddTree(root string, skip func(rel string) bool) {
+func (p *pathWatch) AddTree(root string, skip func(rel string) bool) {
 	p.add(watch.Files{Path: root, Tree: true, Skip: skip})
 }
 
 // add subscribes again with f among the files.
-func (p *PathWatch) add(f watch.Files) {
+func (p *pathWatch) add(f watch.Files) {
 	p.mu.Lock()
 	p.files = append(p.files, f)
 	p.gen++
@@ -62,7 +63,7 @@ func (p *PathWatch) add(f watch.Files) {
 }
 
 // Kick calls changed as though something watched changed.
-func (p *PathWatch) Kick() {
+func (p *pathWatch) Kick() {
 	p.mu.Lock()
 	sub := p.sub
 	p.mu.Unlock()
@@ -73,7 +74,7 @@ func (p *PathWatch) Kick() {
 	}
 }
 
-func (p *PathWatch) Close() {
+func (p *pathWatch) Close() {
 	p.mu.Lock()
 	sub := p.sub
 	p.sub = watch.Sub[[]string]{}
