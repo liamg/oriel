@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 )
 
 // A pull request you've answered since you were asked (a review of any kind, or a comment in its conversation) is the

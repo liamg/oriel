@@ -15,7 +15,7 @@ import (
 	appsessions "github.com/liamg/oriel/app/sessions"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/integ/linear"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/plugin"

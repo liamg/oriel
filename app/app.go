@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/app/shell/diag"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/catalog"
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render"

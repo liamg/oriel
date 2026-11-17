@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/liamg/oriel/gh"
 	"maps"
 	"os"
 	"os/exec"
@@ -14,6 +13,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	gh "github.com/liamg/oriel/integ/github"
 
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"

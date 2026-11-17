@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 )
 
 // GitHub is the little of GitHub's REST API the registry needs: org membership, release assets, a repo's tags.

@@ -17,8 +17,8 @@ import (
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/review"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/gh/ghtest"
+	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 )
