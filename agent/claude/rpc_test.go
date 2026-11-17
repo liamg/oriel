@@ -30,7 +30,9 @@ func overRPC(t *testing.T) agenttest.Harness {
 	t.Cleanup(func() {
 		_ = c.(interface{ Close() error }).Close()
 		_ = bw.Close()
-		_ = <-done // Serve ends as the pipe closes
+		if err := <-done; err != nil { // Serve ends cleanly as the pipe closes
+			t.Error(err)
+		}
 	})
 	h.Provider = c
 	return h

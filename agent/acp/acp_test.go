@@ -50,7 +50,13 @@ func TestConformanceOverTheAgentProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = c.(interface{ Close() error }).Close(); _ = bw.Close(); _ = <-done })
+	t.Cleanup(func() {
+		_ = c.(interface{ Close() error }).Close()
+		_ = bw.Close()
+		if err := <-done; err != nil { // Serve ends cleanly as the pipe closes
+			t.Error(err)
+		}
+	})
 	agenttest.Run(t, harness(c))
 }
 

@@ -257,7 +257,13 @@ func TestExecOutsideASandboxIsAllowed(t *testing.T) {
 		asked = append(asked, path)
 		return errors.New("exec isn't granted for " + path)
 	}})
-	defer func() { _ = closer(c).Close(); _ = bw.Close(); _ = <-done }()
+	defer func() {
+		_ = closer(c).Close()
+		_ = bw.Close()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
 	_, err := c.Start(context.Background(), agent.StartSpec{Exec: &recordExec{}})
 	if err == nil || !strings.Contains(err.Error(), "isn't granted") || len(asked) != 1 || !strings.HasSuffix(asked[0], "/true") {
 		t.Errorf("start = %v, asked %v", err, asked)
