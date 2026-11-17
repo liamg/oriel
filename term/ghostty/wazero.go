@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 
+	"github.com/liamg/oriel/internal/wasmrt"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 )
@@ -17,53 +17,15 @@ import (
 //go:embed wasm/oriel-vt.wasm.gz
 var wasmGz []byte
 
-var runtime struct {
-	once     sync.Once
-	err      error
-	rt       wazero.Runtime
-	cm       wazero.CompiledModule
-	mu       sync.Mutex
-	cacheDir string
-	made     bool // the runtime is made: its cache dir is fixed
-}
+// vt is the process's runtime for the terminal's module, compiled once.
+var vt = wasmrt.Runtime{Name: "terminal"}
 
-// SetCacheDir keeps the compiled module in dir, so it compiles once per version rather than once per run. Once a
-// terminal has been made the runtime is, and another dir is refused.
-func SetCacheDir(dir string) error {
-	runtime.mu.Lock()
-	defer runtime.mu.Unlock()
-	if runtime.made && dir != runtime.cacheDir {
-		return fmt.Errorf("ghostty: the terminal runtime is running with the cache %q already, so %q isn't used", runtime.cacheDir, dir)
-	}
-	runtime.cacheDir = dir
-	return nil
-}
+// SetCacheDir keeps the compiled module in dir, so it compiles once per version rather than once per run. The
+// process's main sets it before any terminal is made; after that another dir is refused.
+func SetCacheDir(dir string) error { return vt.SetCacheDir(dir) }
 
 func compiled() (wazero.Runtime, wazero.CompiledModule, error) {
-	runtime.once.Do(func() {
-		runtime.mu.Lock()
-		dir := runtime.cacheDir
-		runtime.made = true
-		runtime.mu.Unlock()
-		ctx := context.Background()
-		cfg := wazero.NewRuntimeConfig()
-		if dir != "" {
-			cache, err := wazero.NewCompilationCacheWithDir(dir)
-			if err != nil {
-				runtime.err = err
-				return
-			}
-			cfg = cfg.WithCompilationCache(cache)
-		}
-		runtime.rt = wazero.NewRuntimeWithConfig(ctx, cfg)
-		wasm, err := wasmBytes()
-		if err != nil {
-			runtime.err = err
-			return
-		}
-		runtime.cm, runtime.err = runtime.rt.CompileModule(ctx, wasm)
-	})
-	return runtime.rt, runtime.cm, runtime.err
+	return vt.Compile([32]byte{}, wasmBytes)
 }
 
 func wasmBytes() ([]byte, error) {

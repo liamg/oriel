@@ -4,65 +4,24 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"sync"
 
+	"github.com/liamg/oriel/internal/wasmrt"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
-// runtime is the one wazero runtime every grammar runs in. Compiled grammars are cached; each parser gets
-// its own instance, so its memory is its own.
-var runtime struct {
-	once     sync.Once
-	err      error
-	rt       wazero.Runtime
-	mu       sync.Mutex
-	compiled map[[32]byte]wazero.CompiledModule // by the grammar's checksum
-	cacheDir string
-	made     bool // the runtime is made: its cache dir is fixed
-}
+// grammars is the one wazero runtime every grammar runs in, the process's. Compiled grammars are kept; each
+// parser gets its own instance, so its memory is its own. The runtime's libc needs WASI; grammars get no files,
+// environment or clock beyond the defaults.
+var grammars = wasmrt.Runtime{Name: "grammar", Init: func(ctx context.Context, rt wazero.Runtime) error {
+	_, err := wasi_snapshot_preview1.Instantiate(ctx, rt)
+	return err
+}}
 
 // SetCacheDir keeps compiled grammars in dir, so each compiles once per version of it and of wazero, not once per
-// run. Once a grammar has been used the runtime is made, and another dir is refused.
-func SetCacheDir(dir string) error {
-	runtime.mu.Lock()
-	defer runtime.mu.Unlock()
-	if runtime.made && dir != runtime.cacheDir {
-		return fmt.Errorf("syntax: the grammar runtime is running with the cache %q already, so %q isn't used", runtime.cacheDir, dir)
-	}
-	runtime.cacheDir = dir
-	return nil
-}
-
-func wasmRuntime() (wazero.Runtime, error) {
-	runtime.once.Do(func() {
-		runtime.mu.Lock()
-		dir := runtime.cacheDir
-		runtime.made = true
-		runtime.mu.Unlock()
-		runtime.rt, runtime.err = newRuntime(dir)
-		runtime.compiled = map[[32]byte]wazero.CompiledModule{}
-	})
-	return runtime.rt, runtime.err
-}
-
-// newRuntime is a wazero runtime, compiling into a cache in dir when it's set.
-func newRuntime(dir string) (wazero.Runtime, error) {
-	ctx := context.Background()
-	cfg := wazero.NewRuntimeConfig()
-	if dir != "" {
-		cache, err := wazero.NewCompilationCacheWithDir(dir)
-		if err != nil {
-			return nil, err
-		}
-		cfg = cfg.WithCompilationCache(cache)
-	}
-	rt := wazero.NewRuntimeWithConfig(ctx, cfg)
-	// The runtime's libc needs WASI; grammars get no files, environment or clock beyond the defaults.
-	_, err := wasi_snapshot_preview1.Instantiate(ctx, rt)
-	return rt, err
-}
+// run. The process's main sets it before any grammar is used; after that another dir is refused.
+func SetCacheDir(dir string) error { return grammars.SetCacheDir(dir) }
 
 // module is one instance of a grammar's WASM: the tree-sitter runtime, the grammar and shim.c.
 type module struct {
@@ -71,27 +30,15 @@ type module struct {
 }
 
 func instantiate(l *Language) (*module, error) {
-	rt, err := wasmRuntime()
-	if err != nil {
-		return nil, err
-	}
 	wasm, sum, err := l.load()
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.Background()
-	runtime.mu.Lock()
-	cm, ok := runtime.compiled[sum]
-	if !ok {
-		cm, err = rt.CompileModule(ctx, wasm)
-		if err != nil {
-			runtime.mu.Unlock()
-			return nil, fmt.Errorf("syntax: compiling %s: %w", l.Name, err)
-		}
-		runtime.compiled[sum] = cm
+	rt, cm, err := grammars.Compile(sum, func() ([]byte, error) { return wasm, nil })
+	if err != nil {
+		return nil, fmt.Errorf("syntax: compiling %s: %w", l.Name, err)
 	}
-	runtime.mu.Unlock()
-	m, err := rt.InstantiateModule(ctx, cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))
+	m, err := rt.InstantiateModule(context.Background(), cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))
 	if err != nil {
 		return nil, fmt.Errorf("syntax: starting %s: %w", l.Name, err)
 	}

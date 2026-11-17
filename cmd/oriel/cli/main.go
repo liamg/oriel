@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -73,6 +74,7 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	log := cfg.Logs.Logger("host")
+	wasmCaches(cmp.Or(cfg.CacheDir, app.DefaultCacheDir()), log)
 	loginPath(log, fromTerminal)
 	// load reads the machine's load in-process, only while it's wanted, and says when it moves.
 	load := sysload.NewSampler(5*time.Second, nil)
@@ -100,7 +102,7 @@ func runApp(args []string) {
 	cfg.Closed = watch.start
 	go func() {
 		err := app.Run(context.Background(), be, cfg)
-		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close() }, stopProfile))
+		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close(); sandboxes.Close() }, stopProfile))
 	}()
 	gio.Main()
 }

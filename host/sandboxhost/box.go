@@ -48,6 +48,7 @@ type Factory struct {
 	mu       sync.Mutex
 	deps     Deps
 	attached bool
+	builds   *runner.Builds // the base image's builds, for the Known engines
 }
 
 var _ hostapi.SandboxFactory = (*Factory)(nil)
@@ -57,10 +58,25 @@ func Known() sandbox.Backends {
 	return sandbox.Backends{runner.Docker, runner.OrbStack, runner.Colima, runner.Podman, &seatbelt.Seatbelt{}}
 }
 
-// NewFactory makes the real sandbox factory, over the Known backends.
+// NewFactory makes the real sandbox factory, over the Known backends, its engines building the base image with
+// builds of its own. Close it when done.
 func NewFactory(config func() sandbox.Config) *Factory {
+	builds := &runner.Builds{}
 	known := Known()
-	return &Factory{Config: config, Backend: known.For, Available: known.Available}
+	for i, b := range known {
+		if e, ok := b.(runner.Engine); ok {
+			e.Builds = builds
+			known[i] = e
+		}
+	}
+	return &Factory{Config: config, Backend: known.For, Available: known.Available, builds: builds}
+}
+
+// Close cancels a base image build under way and waits for it.
+func (s *Factory) Close() {
+	if s.builds != nil {
+		s.builds.Close()
+	}
 }
 
 func (s *Factory) Backends() []string { return s.Available() }

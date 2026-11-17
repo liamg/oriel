@@ -49,6 +49,7 @@ func (e errNoGrammar) Error() string { return "syntax: " + string(e) + " has que
 // name shadows it, and one claiming the same files is chosen first.
 type Set struct {
 	langs []*Language
+	idle  pool // parsers given back, for Borrow
 }
 
 // NewSet is a set of ls, in order. A language looks the languages it names up in the first set it joins.

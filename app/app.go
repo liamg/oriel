@@ -82,6 +82,9 @@ func NewLogs(o LogOpts) *Logs { return diag.NewLogs(o) }
 // DefaultConfigDir is $XDG_CONFIG_HOME/oriel, or ~/.config/oriel, on every platform.
 func DefaultConfigDir() string { return shell.DefaultConfigDir() }
 
+// DefaultCacheDir is the user's cache directory's oriel/, "" when there's none.
+func DefaultCacheDir() string { return shell.DefaultCacheDir() }
+
 // DefaultDataDir is $XDG_DATA_HOME/oriel, or ~/.local/share/oriel, on every platform.
 func DefaultDataDir() string {
 	if d := os.Getenv("XDG_DATA_HOME"); d != "" {

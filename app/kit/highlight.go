@@ -34,15 +34,18 @@ func WindowRegistry(r registry.Registry) registry.Registry {
 	return r
 }
 
-// Languages is the set of languages r has now: the window's kept set, else one made now.
+// Languages is the set of languages r has now: the window's kept set, else one made now, closed so it keeps no
+// idle parsers (nothing would close them).
 func Languages(r registry.Registry) *syntax.Set {
 	if s, ok := registry.ServiceOf[LanguageSet](r, LanguagesService); ok {
 		return s.Set()
 	}
-	return LanguageSetFrom(r)
+	s := LanguageSetFrom(r)
+	s.Close()
+	return s
 }
 
-// LanguageSetFrom makes r's languages into a syntax.Set.
+// LanguageSetFrom makes r's languages into a syntax.Set; its owner closes it.
 func LanguageSetFrom(r registry.Registry) *syntax.Set {
 	ls, _ := r.Languages()
 	var out []*syntax.Language
