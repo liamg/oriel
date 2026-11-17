@@ -660,15 +660,12 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 	if err != nil {
 		return err
 	}
-	v, _ := registry.Option[string](h.Options(), "sandbox.default", registry.At{})
-	sandbox := v == "sandbox"
+	sandbox := kit.DefaultSandbox(h.Options())
 	return plugin.RunSlow(ctx, h, plugin.Slow{ID: "reviews.start:" + url, Doing: "Starting a review of " + name},
 		func(ctx context.Context) (struct{}, error) {
 			provider, model := kit.DefaultAgent(st, w.ProviderInfo(ctx))
-			a := registry.Args{"kind": string(core.KindReview), "pr": url, "provider": provider, "model": model, "sandbox": sandbox, "background": true}
-			if sandbox {
-				a["network"] = "ask"
-			}
+			a := kit.SpecArgs(core.SessionSpec{Kind: core.KindReview, PR: url, Provider: provider, Model: model, Sandbox: sandbox})
+			a["background"] = true
 			return struct{}{}, plugin.Await(ctx, func(ctx registry.Ctx) error { return h.Run(ctx, "session.start", a) })
 		},
 		func(registry.Ctx, struct{}) error {

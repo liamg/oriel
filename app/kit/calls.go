@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -17,13 +18,38 @@ type SessionStart struct {
 	Prompt  string `json:"prompt,omitempty"`
 }
 
-// SpecFrom is a session spec from a command's args.
+// specText are session.start's text args, each with the spec's field: SpecFrom and SpecArgs both read them, so a key
+// is spelled once.
+var specText = []struct {
+	key   string
+	field func(*core.SessionSpec) *string
+}{
+	{"name", func(s *core.SessionSpec) *string { return &s.Name }},
+	{"prompt", func(s *core.SessionSpec) *string { return &s.Prompt }},
+	{"ticket", func(s *core.SessionSpec) *string { return &s.Ticket }},
+	{"context", func(s *core.SessionSpec) *string { return &s.Context }},
+	{"pr", func(s *core.SessionSpec) *string { return &s.PR }},
+	{"pr_remote", func(s *core.SessionSpec) *string { return &s.PRRemote }},
+	{"pr_ref", func(s *core.SessionSpec) *string { return &s.PRRef }},
+	{"dir", func(s *core.SessionSpec) *string { return &s.Dir }},
+	{"branch", func(s *core.SessionSpec) *string { return &s.Branch }},
+	{"base", func(s *core.SessionSpec) *string { return &s.Base }},
+	{"provider", func(s *core.SessionSpec) *string { return &s.Provider }},
+	{"model", func(s *core.SessionSpec) *string { return &s.Model }},
+	{"effort", func(s *core.SessionSpec) *string { return &s.Effort }},
+	{"template", func(s *core.SessionSpec) *string { return &s.Template }},
+	{"network", func(s *core.SessionSpec) *string { return &s.Sandbox.Network }},
+	{"gate", func(s *core.SessionSpec) *string { return &s.Sandbox.Gate }},
+	{"backend", func(s *core.SessionSpec) *string { return &s.Sandbox.Backend }},
+}
+
+// SpecFrom is a session spec from session.start's args.
 func SpecFrom(a registry.Args) core.SessionSpec {
-	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
-		PR: a.String("pr"), PRRemote: a.String("pr_remote"), PRRef: a.String("pr_ref"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
-		Model: a.String("model"), Effort: a.String("effort"), Template: a.String("template"),
-		Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
-			Backend: a.String("backend"), CustomImage: a.Bool("custom_image")}}
+	s := core.SessionSpec{Kind: core.Kind(a.String("kind")),
+		Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), CustomImage: a.Bool("custom_image")}}
+	for _, t := range specText {
+		*t.field(&s) = a.String(t.key)
+	}
 	if s.Kind == "" {
 		s.Kind = core.KindWork
 	}
@@ -31,6 +57,39 @@ func SpecFrom(a registry.Args) core.SessionSpec {
 		s.Repos = append(s.Repos, core.RepoID(r))
 	}
 	return s
+}
+
+// SpecArgs are session.start's args for s, SpecFrom's inverse: what's empty is left out, and a sandbox with no network
+// set asks for each new host.
+func SpecArgs(s core.SessionSpec) registry.Args {
+	a := registry.Args{"kind": string(cmp.Or(s.Kind, core.KindWork)), "sandbox": s.Sandbox.Container}
+	if s.Sandbox.Container && s.Sandbox.Network == "" {
+		s.Sandbox.Network = "ask"
+	}
+	for _, t := range specText {
+		if v := *t.field(&s); v != "" {
+			a[t.key] = v
+		}
+	}
+	if s.Sandbox.CustomImage {
+		a["custom_image"] = true
+	}
+	if len(s.Repos) > 0 {
+		repos := make([]string, len(s.Repos))
+		for i, r := range s.Repos {
+			repos[i] = string(r)
+		}
+		a["repos"] = repos
+	}
+	return a
+}
+
+// DefaultSandbox is what sandbox.default gives a new session: a sandbox asking for each new host, or none.
+func DefaultSandbox(o registry.Options) core.SandboxPolicy {
+	if v, _ := registry.Option[string](o, "sandbox.default", registry.At{}); v == "sandbox" {
+		return core.SandboxPolicy{Container: true, Network: "ask"}
+	}
+	return core.SandboxPolicy{}
 }
 
 // Call is a command to run, with its args: one step of a then, what a command runs once it's done.

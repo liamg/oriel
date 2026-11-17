@@ -139,8 +139,7 @@ func (x *Launcher) openWith(a registry.Args) {
 		x.template = hostapi.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
-		v, _ := registry.Option[string](x.h.Options(), "sandbox.default", registry.At{})
-		x.sandbox = v == "sandbox"
+		x.sandbox = kit.DefaultSandbox(x.h.Options()).Container
 	}
 	x.picked = x.provider != ""
 	x.load(core.Kind(a.String("kind")))
@@ -296,40 +295,31 @@ func (x *Launcher) home(p string) string {
 // args are session.start's for what the launcher holds.
 func (x *Launcher) args() registry.Args {
 	k, _ := x.current()
-	a := registry.Args{"kind": string(k.Kind), "prompt": strings.TrimSpace(x.prompt), "provider": x.provider, "model": x.model,
-		"effort": x.effort, "sandbox": x.sandbox, "branch": strings.TrimSpace(x.branch)}
+	s := core.SessionSpec{Kind: k.Kind, Prompt: strings.TrimSpace(x.prompt), Provider: x.provider, Model: x.model,
+		Effort: x.effort, Branch: strings.TrimSpace(x.branch)}
 	if x.sandbox {
-		a["network"] = "ask"
+		s.Sandbox = core.SandboxPolicy{Container: true, Backend: x.backend, CustomImage: x.customImage}
 		if x.openNet {
-			a["network"] = "open"
-		}
-		if x.backend != "" {
-			a["backend"] = x.backend
-		}
-		if x.customImage {
-			a["custom_image"] = true
+			s.Sandbox.Network = "open"
 		}
 	}
 	switch startsFrom(k) {
 	case core.FromPrompt:
-		a["ticket"] = strings.TrimSpace(x.ticket)
+		s.Ticket = strings.TrimSpace(x.ticket)
 		if t := x.ticketHere(); t != nil {
-			a["context"] = t.Context
+			s.Context = t.Context
 		}
 	case core.FromPR:
-		a["pr"] = strings.TrimSpace(x.pr)
+		s.PR = strings.TrimSpace(x.pr)
 	case core.FromName:
-		a["name"], a["template"], a["dir"] = strings.TrimSpace(x.name), x.template, x.home(x.parent)
+		s.Name, s.Template, s.Dir = strings.TrimSpace(x.name), x.template, x.home(x.parent)
 	case core.FromDir:
-		a["dir"] = x.home(x.dir)
+		s.Dir = x.home(x.dir)
 	}
 	if takesRepos(k) {
-		var repos []string
-		for _, r := range x.chosen {
-			repos = append(repos, string(r))
-		}
-		a["repos"] = repos
+		s.Repos = x.chosen
 	}
+	a := kit.SpecArgs(s)
 	if a.String("prompt") != "" || a.String("ticket") != "" {
 		a["then"] = kit.Then(kit.Call{Command: "request.open"}) // the first request, as the agent gets it
 	}
