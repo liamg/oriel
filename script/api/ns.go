@@ -269,7 +269,7 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	e := registry.Explainer{Name: str(spec, "name"), Source: where,
 		Explain: func(_ context.Context, r registry.ExplainRequest) (string, error) {
 			out, err := g.a.VM.Call(run, script.Table{"kind": r.Kind, "subject": r.Subject, "context": r.Context, "files": r.Files,
-				"depth": cmp.Or(r.Depth, registry.ExplainBrief), "format": r.Format})
+				"depth": string(cmp.Or(r.Depth, registry.ExplainBrief)), "format": r.Format})
 			if err != nil || len(out) == 0 {
 				return "", err
 			}

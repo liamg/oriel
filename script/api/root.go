@@ -56,7 +56,7 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		return fmt.Errorf("%s: no function", event)
 	}
 	prio, _ := o["priority"].(float64)
-	h := registry.Hook{Event: event, Pattern: str(o, "pattern"), Priority: int(prio), Kind: str(o, "kind"), Label: str(o, "desc"),
+	h := registry.Hook{Event: event, Pattern: str(o, "pattern"), Priority: int(prio), Kind: registry.HookKind(str(o, "kind")), Label: str(o, "desc"),
 		Source: where}
 	h.Fn = func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		t := toTable(ev)

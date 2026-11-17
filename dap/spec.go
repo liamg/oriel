@@ -21,7 +21,7 @@ type AdapterSpec struct {
 	// Cmd starts the adapter. ${addr} is replaced by the address Oriel listens on (TransportReverse), ${port} by a
 	// free port the adapter is to listen on (TransportTCP).
 	Cmd       []string
-	Transport string         // TransportStdio (the default), TransportTCP or TransportReverse
+	Transport Transport      // TransportStdio (the default), TransportTCP or TransportReverse
 	Probe     []string       // a command that succeeds when the adapter can run; by default, Cmd[0] being on PATH
 	Launch    map[string]any // launch arguments every launch config starts from
 	Attach    map[string]any // the same, for attach
@@ -33,11 +33,14 @@ type AdapterSpec struct {
 	Connect Launcher
 }
 
-// How the client talks to an adapter it starts.
+// Transport is how the client talks to an adapter it starts.
+type Transport string
+
+// Transports.
 const (
-	TransportStdio   = "stdio"
-	TransportTCP     = "tcp"     // the adapter listens on ${port}; Oriel connects
-	TransportReverse = "reverse" // Oriel listens on ${addr}; the adapter connects
+	TransportStdio   Transport = "stdio"
+	TransportTCP     Transport = "tcp"     // the adapter listens on ${port}; Oriel connects
+	TransportReverse Transport = "reverse" // Oriel listens on ${addr}; the adapter connects
 )
 
 // Debugs reports whether the spec debugs language or launch configs of that type.
@@ -49,8 +52,8 @@ func (s AdapterSpec) Debugs(languageOrType string) bool {
 // Env and PID are the arguments delve and debugpy share; anything an adapter has of its own goes in Extra.
 type LaunchConfig struct {
 	Name    string
-	Type    string // an adapter's Type, or its Name
-	Request string // launch (the default) or attach
+	Type    string  // an adapter's Type, or its Name
+	Request Request // RequestLaunch (the default) or RequestAttach
 	Program string
 	Args    []string
 	Cwd     string
@@ -59,10 +62,13 @@ type LaunchConfig struct {
 	Extra   map[string]any // adapter-specific arguments, over the rest: delve's mode, debugpy's justMyCode
 }
 
+// Request is whether a config launches a program or attaches to a process.
+type Request string
+
 // Requests.
 const (
-	RequestLaunch = "launch"
-	RequestAttach = "attach"
+	RequestLaunch Request = "launch"
+	RequestAttach Request = "attach"
 )
 
 // Arguments are the launch or attach request's arguments: the spec's defaults, the config's fields, then Extra.
@@ -95,7 +101,7 @@ func (c LaunchConfig) Arguments(spec AdapterSpec) map[string]any {
 	return out
 }
 
-func (c LaunchConfig) request() string {
+func (c LaunchConfig) request() Request {
 	if c.Request == "" {
 		return RequestLaunch
 	}
@@ -121,11 +127,16 @@ func ConfigFromMap(m map[string]any, dir string) (LaunchConfig, error) {
 	for _, f := range []struct {
 		key string
 		to  *string
-	}{{"name", &c.Name}, {"type", &c.Type}, {"request", &c.Request}, {"program", &c.Program}, {"cwd", &c.Cwd}} {
+	}{{"name", &c.Name}, {"type", &c.Type}, {"program", &c.Program}, {"cwd", &c.Cwd}} {
 		if *f.to, err = str(f.key); err != nil {
 			return c, err
 		}
 	}
+	req, err := str("request")
+	if err != nil {
+		return c, err
+	}
+	c.Request = Request(req)
 	if c.Type == "" {
 		return c, fmt.Errorf("no type: name an adapter (go, python…)")
 	}

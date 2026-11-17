@@ -707,7 +707,7 @@ func (x *Sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if err != nil {
 		return "", err
 	}
-	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles, in markdown",
+	how := map[registry.ExplainDepth]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles, in markdown",
 		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session, in markdown"}[r.Depth]
 	switch {
 	case r.Format != "":

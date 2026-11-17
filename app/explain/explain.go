@@ -44,7 +44,7 @@ var (
 )
 
 // explainDepths are the card's depths, in its strip's order.
-var explainDepths = []string{registry.ExplainBrief, registry.ExplainDetailed, registry.ExplainWhy}
+var explainDepths = []registry.ExplainDepth{registry.ExplainBrief, registry.ExplainDetailed, registry.ExplainWhy}
 
 // Plugin is explain by code unit: ? marks on the units the branch changed, the explain card between
 // the lines with its breadcrumb, [ and ] to widen and narrow, depths, a cache by the unit's content, Explain this on a
@@ -73,7 +73,10 @@ type Plugin struct {
 	card *explainCard // on the loop only
 }
 
-type answerKey struct{ hash, depth string }
+type answerKey struct {
+	hash  string
+	depth registry.ExplainDepth
+}
 
 type answer struct {
 	text    string
@@ -529,7 +532,7 @@ func (x *Plugin) step(d int) {
 }
 
 func (x *Plugin) setDepth(name string) error {
-	i := slices.Index(explainDepths, name)
+	i := slices.Index(explainDepths, registry.ExplainDepth(name))
 	if i < 0 {
 		return fmt.Errorf("no depth %q: brief, detailed or why", name)
 	}

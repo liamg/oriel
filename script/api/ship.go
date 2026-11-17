@@ -34,9 +34,9 @@ func (s Ship) Gate(spec script.Table, where string) error {
 		}
 		switch v := out[0].(type) {
 		case string:
-			return registry.Gate{State: v}
+			return registry.Gate{State: registry.GateState(v)}
 		case script.Table:
-			return registry.Gate{State: str(v, "state"), Note: str(v, "note")}
+			return registry.Gate{State: registry.GateState(str(v, "state")), Note: str(v, "note")}
 		}
 		return registry.Gate{}
 	}

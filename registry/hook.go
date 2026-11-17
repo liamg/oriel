@@ -10,13 +10,15 @@ import (
 	"time"
 )
 
-// Hook kinds. A hook's result says which it did; Kind is what it was
-// registered as, for :Hooks.
+// HookKind is what a hook was registered as, for :Hooks; its result says which it did.
+type HookKind string
+
+// Hook kinds.
 const (
-	Observe = "observe"
-	Veto    = "veto"
-	Rewrite = "rewrite"
-	Decide  = "decide"
+	Observe HookKind = "observe"
+	Veto    HookKind = "veto"
+	Rewrite HookKind = "rewrite"
+	Decide  HookKind = "decide"
 )
 
 // Verdict is what a hook says about an event: nothing (it goes on), a veto with a reason, or a decision. A rewrite
@@ -34,7 +36,7 @@ type Hook struct {
 	Event    string // "BufWritePre", "Commit"
 	Pattern  string // a glob over the subject, as "*.go"; "" for every one
 	Priority int    // lower runs first
-	Kind     string // Observe, Veto, Rewrite or Decide
+	Kind     HookKind
 	Label    string // what it does, for :Hooks: "allow go test"
 	Fn       func(ctx Ctx, ev any) (Verdict, error)
 	Source   string
@@ -47,7 +49,7 @@ type HookInfo struct {
 	Calls int
 	P99   time.Duration
 	Off   error
-	Did   string // what it last did: Observe, Veto, Rewrite or Decide, for a hook registered without a Kind
+	Did   HookKind // what it last did, for a hook registered without a Kind
 }
 
 // EventInfo is an event hooks can be on: its name, what fires it, and its payload's fields for the Lua types.
@@ -61,7 +63,7 @@ type EventInfo struct {
 type hookEntry struct {
 	h     Hook
 	id    string
-	did   string
+	did   HookKind
 	times []time.Duration // the last 256
 	calls int
 	over  bool // the last call went over the budget

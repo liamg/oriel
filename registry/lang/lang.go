@@ -49,8 +49,8 @@ type DebugAdapter struct {
 	Name      string // unique among adapters: "dlv"
 	Type      string // what a launch config's type names: "go"
 	Language  []string
-	Cmd       []string // ${addr} and ${port} as dap.AdapterSpec says
-	Transport string   // stdio, tcp or reverse
+	Cmd       []string      // ${addr} and ${port} as dap.AdapterSpec says
+	Transport dap.Transport // stdio, tcp or reverse
 	Probe     []string
 	Launch    map[string]any
 	Attach    map[string]any

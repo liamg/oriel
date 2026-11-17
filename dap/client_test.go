@@ -101,11 +101,11 @@ func TestTransports(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		transport string
+		transport dap.Transport
 		last      string
 	}{{dap.TransportStdio, "-"}, {dap.TransportTCP, "${port}"}, {dap.TransportReverse, "${addr}"}} {
-		t.Run(tc.transport, func(t *testing.T) {
-			t.Setenv("ORIEL_DAP_FAKE", map[string]string{dap.TransportStdio: "stdio", dap.TransportTCP: "tcp", dap.TransportReverse: "reverse"}[tc.transport])
+		t.Run(string(tc.transport), func(t *testing.T) {
+			t.Setenv("ORIEL_DAP_FAKE", map[dap.Transport]string{dap.TransportStdio: "stdio", dap.TransportTCP: "tcp", dap.TransportReverse: "reverse"}[tc.transport])
 			spec := dap.AdapterSpec{Name: "fake", Type: "fake", Cmd: []string{self, "-test.run=^$", tc.last}, Transport: tc.transport}
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()

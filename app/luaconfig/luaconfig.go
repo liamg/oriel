@@ -470,7 +470,7 @@ func (x *Lua) hooksView(c *ui.Ctx) {
 				c.Box("e", ui.Style{W: ui.Px(cols[0])}, func(c *ui.Ctx) { c.Text("t", h.Event, mono(11.5, theme.Fg)) })
 				c.Box("l", ui.Style{W: ui.Px(cols[1]), Clip: true}, func(c *ui.Ctx) { c.Text("t", label, mono(11.5, theme.FgMuted)) })
 				c.Box("k", ui.Style{W: ui.Px(cols[2])}, func(c *ui.Ctx) {
-					c.Text("t", strings.ToUpper(cmp.Or(kind, "—")), mono(9.5, tHookKind))
+					c.Text("t", strings.ToUpper(cmp.Or(string(kind), "—")), mono(9.5, tHookKind))
 				})
 				c.Box("s", ui.Style{W: ui.Px(cols[3]), Clip: true}, func(c *ui.Ctx) { c.Text("t", h.Source, mono(11, theme.Accent)) })
 				switch {

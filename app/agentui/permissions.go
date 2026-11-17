@@ -78,7 +78,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				return x.change(id, func(w hostapi.SandboxCalls) error {
-					return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action")))
+					return w.SetToolRule(id, a.String("tool"), hostapi.ToolAction(noneAsEmpty(a.String("action"))))
 				})
 			}},
 		{ID: "permissions.net", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
@@ -89,7 +89,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 					return err
 				}
 				return x.change(id, func(w hostapi.SandboxCalls) error {
-					return w.SetNetRule(id, h, port, noneAsEmpty(a.String("action")), a.Bool("private"))
+					return w.SetNetRule(id, h, port, hostapi.NetAction(noneAsEmpty(a.String("action"))), a.Bool("private"))
 				})
 			}},
 	} {

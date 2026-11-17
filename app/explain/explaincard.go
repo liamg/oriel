@@ -156,7 +156,7 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				depth := cd.depth
 				if widget.Segmented(c, "depth", []string{"BRIEF", "DETAILED", "WHY · HISTORY"}, &depth, widget.SegmentedOpts{Help: help, Label: "Depth"}) {
-					run("explain.depth", registry.Args{"depth": explainDepths[depth]})
+					run("explain.depth", registry.Args{"depth": string(explainDepths[depth])})
 				}
 				by := ""
 				if a := x.shown(cd); a != nil {

@@ -519,7 +519,7 @@ func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 	}
 	for _, g := range gs {
 		c.Column(g.Name, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-			c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + g.State},
+			c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + string(g.State)},
 				func(c *ui.Ctx) {
 					glyph, tone := "✓", th.C(theme.OK)
 					switch g.State {
