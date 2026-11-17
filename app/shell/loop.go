@@ -554,9 +554,10 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		var err error
 		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
-			// A panic is reported as the contribution's fault, and a hook's stop where the step was asked for.
-			var p *registry.Panic
-			if !errors.As(err, &p) && !errors.Is(err, kit.ErrStopped) {
+			// The command's own panic is reported as its fault, and a hook's stop where the step was asked for. Only
+			// its own: "turned off" wraps the panic that turned it off, and that's news.
+			_, panicked := err.(*registry.Panic)
+			if !panicked && !errors.Is(err, kit.ErrStopped) {
 				_ = l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
 			}
 		}
