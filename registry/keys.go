@@ -17,7 +17,7 @@ func ActiveKeyModes(r Contributions) []string {
 	var out []string
 	for _, l := range ContributionsOf[KeyLayer](r) {
 		on := false
-		Call(func() error { on = l.Active != nil && l.Active(); return nil })
+		Try(func() { on = l.Active != nil && l.Active() })
 		if on {
 			out = append(out, l.Mode)
 		}
@@ -41,7 +41,7 @@ func CmdlineHints(r Contributions, line string) []string {
 	var out []string
 	for _, h := range ContributionsOf[CmdlineHint](r) {
 		s := ""
-		Call(func() error { s = h.Hint(line); return nil })
+		Try(func() { s = h.Hint(line) })
 		if s != "" {
 			out = append(out, s)
 		}

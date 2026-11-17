@@ -34,6 +34,13 @@ func Call(fn func() error) (err error) {
 	return fn()
 }
 
+// Try runs fn, a contribution's answer to a question asked while drawing or choosing (is it shown, its badge, its
+// title), and takes a panic in it as no answer: what fn would have set keeps its zero value. A contribution that
+// panics answering is broken, but asking it is part of drawing, which has to go on.
+func Try(fn func()) {
+	_ = Call(func() error { fn(); return nil })
+}
+
 // Fault is a contribution that panicked or kept failing, and was turned off.
 type Fault struct {
 	Kind   string // KindCommand, KindView, KindHook

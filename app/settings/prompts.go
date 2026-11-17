@@ -84,7 +84,7 @@ func (x *Prompts) section(c *ui.Ctx) {
 	widget.Wrap(c, "about", "The coding style, and what each kind of session tells its agent.", 700, widget.UIFont(12.5, c.Theme().C(theme.FgFaint)))
 	c.Row("open", ui.Style{Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
 		if widget.Button(c, "open", "Open Prompts", widget.ButtonOpts{Primary: true, Help: "agent/prompts"}) {
-			x.openPage("")
+			_ = x.openPage("")
 		}
 	})
 }
@@ -386,7 +386,9 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 
 func (x *Prompts) run(id string, a registry.Args) {
 	x.err = ""
-	if err := kit.RunOrNotify(x.h, "prompts", id, a); err != nil {
+	err := x.h.Run(context.Background(), id, a)
+	kit.NotifyError(x.h, "prompts.error", err, true)
+	if err != nil {
 		x.err = err.Error()
 	}
 }

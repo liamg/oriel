@@ -13,11 +13,8 @@ import (
 var ErrStopped = errors.New("stopped by a hook")
 
 // RunOrNotify runs cmd from a click or a key, and says why it failed in a notice from source: one row per source.
-// It returns the error, for a page that also shows it inline.
-func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) error {
-	err := h.Run(context.Background(), cmd, a)
-	NotifyError(h, source+".error", err, true)
-	return err
+func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) {
+	NotifyError(h, source+".error", h.Run(context.Background(), cmd, a), true)
 }
 
 // NotifyError says why something failed in a notice with id, and logs it; nil, or a hook's stop (ErrStopped, shown

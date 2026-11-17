@@ -30,7 +30,7 @@ func ViewerFor(r Contributions, path string) (FileViewer, bool) {
 	for _, v := range all {
 		ok := false
 		if v.When != nil {
-			Call(func() error { ok = v.When(path); return nil })
+			Try(func() { ok = v.When(path) })
 		}
 		if ok && v.View != "" {
 			return v, true
