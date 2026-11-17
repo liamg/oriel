@@ -30,6 +30,15 @@ func (s *Scene) LuaErr(line string) string {
 	return err.Error()
 }
 
+// LuaGlobal is the value of the global name in vm, nil if it's unset.
+func LuaGlobal(vm *script.VM, name string) any {
+	out, _ := vm.Eval(script.Chunk{Name: "t", Source: []byte("return " + name)})
+	if len(out) == 0 {
+		return nil
+	}
+	return out[0]
+}
+
 // LuaScene is a scene whose init.lua is initLua.
 func LuaScene(t *testing.T, initLua string) *Scene {
 	t.Helper()

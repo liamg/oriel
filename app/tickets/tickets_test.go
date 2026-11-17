@@ -1,9 +1,10 @@
-package app_test
+package tickets_test
 
 import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -79,7 +80,7 @@ func loadJira(t *testing.T, s *apptest.Scene) *script.VM {
 
 func jiraCalls(vm *script.VM) []string {
 	var out []string
-	list, _ := global(vm, "calls").([]any)
+	list, _ := apptest.LuaGlobal(vm, "calls").([]any)
 	for _, c := range list {
 		out = append(out, c.(string))
 	}
@@ -226,7 +227,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 	se, _ := st.Session(st.Focus)
 	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat: alert on queue depth", Head: se.Snapshot().Branch, Base: "main"})
 	s.Run("ship.refresh", nil)
-	link := "link OPS-12 #" + itoa(pr.Number) + " feat: alert on queue depth"
+	link := "link OPS-12 #" + strconv.Itoa(pr.Number) + " feat: alert on queue depth"
 	s.Until("the PR linked and the issue in review", func() bool {
 		c := jiraCalls(jira)
 		return slices.Contains(c, link) && slices.Contains(c, "review OPS-12")

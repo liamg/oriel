@@ -1,4 +1,4 @@
-package app_test
+package watches_test
 
 import (
 	"context"
