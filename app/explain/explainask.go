@@ -245,7 +245,7 @@ func (x *Plugin) threadsOn(path string, a, z int) string {
 const explainAsking = "explain.asking"
 
 func (x *Plugin) ask(a registry.Args) error {
-	depth := cmp.Or(a.String("depth"), registry.ExplainBrief)
+	depth := cmp.Or(registry.ExplainDepth(a.String("depth")), registry.ExplainBrief)
 	if !slices.Contains(explainDepths, depth) {
 		return fmt.Errorf("no depth %q: brief, detailed or why", depth)
 	}

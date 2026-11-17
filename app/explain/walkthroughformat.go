@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/words"
 )
 
 // WalkFormat is the prompt for how a walkthrough's answer is written (ExplainRequest.Format): JSON steps in one fenced block.
@@ -327,7 +328,7 @@ func numberedDiff(base, file []byte) (out string, first, last int) {
 
 // subject is the change in a line: "6 files in 2 projects".
 func (ch *walkChange) subject() string {
-	s := fmt.Sprintf("%d %s", len(ch.files), kit.Plural(len(ch.files), "file", "files"))
+	s := fmt.Sprintf("%d %s", len(ch.files), words.Plural(len(ch.files), "file", "files"))
 	if n := ch.projectCount(); n > 1 {
 		s += fmt.Sprintf(" in %d projects", n)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -103,7 +104,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 				scope = strings.Join(parts, " · ")
 			}
 		}
-		meta2 := []string{scope, kit.Counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2") + " – " + q.To.AddDate(0, 0, -1).Format("Jan 2")}
+		meta2 := []string{scope, words.Counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2") + " – " + q.To.AddDate(0, 0, -1).Format("Jan 2")}
 		c.Text("m", strings.Join(meta2, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		var origins []string
@@ -333,7 +334,7 @@ func (x *Plugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 		})
 		statsTile(c, "requests", "REQUESTS", kit.Count(t.Requests), "", func(c *ui.Ctx) {
 			delta(c, "d", float64(t.Requests), float64(p.Requests))
-			dim(c, "s", kit.Counted(int(t.Turns), "turn"))
+			dim(c, "s", words.Counted(int(t.Turns), "turn"))
 		})
 		statsTile(c, "sessions", "SESSIONS", fmt.Sprint(t.Sessions), "", func(c *ui.Ctx) {
 			delta(c, "d", float64(t.Sessions), float64(p.Sessions))
@@ -522,7 +523,7 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 	if q.Group == stats.ByDay {
 		sorted = "by date"
 	}
-	widget.DataCard(c, "table", w, strings.ToUpper(what)+"S", fmt.Sprintf("%s · %s", kit.Counted(len(r.Groups), what), sorted), right, func(c *ui.Ctx) {
+	widget.DataCard(c, "table", w, strings.ToUpper(what)+"S", fmt.Sprintf("%s · %s", words.Counted(len(r.Groups), what), sorted), right, func(c *ui.Ctx) {
 		cols := []widget.DataCol{{Title: strings.ToUpper(what), W: 0}, {Title: "SESSIONS", W: 70}, {Title: "REQUESTS", W: 80}, {Title: "TOKENS", W: 70}, {Title: "COST", W: 80}, {Title: "SHARE", W: 150},
 			{Title: "LAST ACTIVE", W: 90}, {Title: "30 DAYS", W: 130}, {Title: "", W: 20}}
 		if q.Group == stats.BySession {

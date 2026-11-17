@@ -5,7 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Engine is a docker-compatible CLI and the daemon it drives: Docker itself,
@@ -79,9 +80,9 @@ func Socket(paths ...string) string {
 	return ""
 }
 
-// Within reports whether path, its links followed, lies under one of dirs
-// (relative ones under the home directory).
-func Within(path string, dirs ...string) bool {
+// InsideAny reports whether path, its links followed, is one of dirs or under it (relative ones under the home
+// directory).
+func InsideAny(path string, dirs ...string) bool {
 	if r, err := filepath.EvalSymlinks(path); err == nil {
 		path = r
 	}
@@ -96,7 +97,7 @@ func Within(path string, dirs ...string) bool {
 		if r, err := filepath.EvalSymlinks(d); err == nil {
 			d = r
 		}
-		if path == d || strings.HasPrefix(path, d+string(filepath.Separator)) {
+		if pathx.Inside(path, d) {
 			return true
 		}
 	}

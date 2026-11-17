@@ -311,7 +311,7 @@ func (x *Runner) Settle() {
 	for _, se := range x.st.Snapshot().Sessions {
 		if se.Agent.Running || se.Agent.Working || se.Agent.Starting != nil || len(se.Asks) > 0 {
 			a := se.Agent
-			a.Stopped(core.StoppedByCrash, x.env.Now())
+			a.MarkStopped(core.StoppedByCrash, x.env.Now())
 			_ = x.st.Emit(core.AgentChanged{ID: se.ID, Agent: a})
 			for _, ask := range se.Asks {
 				_ = x.st.Emit(core.AskClosed{Session: se.ID, ID: ask.ID, Decision: "gone"})

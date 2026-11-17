@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/pathx"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -139,9 +141,9 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.MenuItem{Name: "requests.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
-	x.Add(h.Decorations("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
-	x.Add(h.Decorations("threads.plus", uireg.KeyedDecorations{Key: x.threadsPlusKey, Make: x.threadsPlus}))
-	x.Add(h.Decorations("agent.edits", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
+	x.Add(h.Decoration("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
+	x.Add(h.Decoration("threads.plus", uireg.KeyedDecorations{Key: x.threadsPlusKey, Make: x.threadsPlus}))
+	x.Add(h.Decoration("agent.edits", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
 		se, ok := x.front()
 		if !ok {
 			return nil
@@ -643,7 +645,7 @@ func preview(r registry.Contributions, se core.SessionState, t core.Thread) stri
 	return core.Summary(c.Body)
 }
 
-func msgs(n int) string { return fmt.Sprintf("%d %s", n, kit.Plural(n, "msg", "msgs")) }
+func msgs(n int) string { return fmt.Sprintf("%d %s", n, words.Plural(n, "msg", "msgs")) }
 
 // avatar is a comment's author as a small square of initials.
 func avatar(c *ui.Ctx, key any, cm core.Comment) {
@@ -711,13 +713,13 @@ func anchorIn(st core.SessionState, file string, line, end int, text string) *co
 		return an
 	}
 	for _, p := range st.Projects {
-		if kit.Within(file, p.Dir) {
+		if pathx.InsideResolved(file, p.Dir) {
 			rel, _ := filepath.Rel(p.Dir, file)
 			an.Project, an.File = p.Name, filepath.ToSlash(rel)
 			return an
 		}
 	}
-	if kit.Within(file, st.Dir) {
+	if pathx.InsideResolved(file, st.Dir) {
 		rel, _ := filepath.Rel(st.Dir, file)
 		an.Project, an.File = core.DocsProject, filepath.ToSlash(rel)
 	}

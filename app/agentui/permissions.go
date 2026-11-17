@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -77,7 +78,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				return x.change(id, func(w hostapi.SandboxCalls) error {
-					return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action")))
+					return w.SetToolRule(id, a.String("tool"), hostapi.ToolAction(noneAsEmpty(a.String("action"))))
 				})
 			}},
 		{ID: "permissions.net", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
@@ -88,7 +89,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 					return err
 				}
 				return x.change(id, func(w hostapi.SandboxCalls) error {
-					return w.SetNetRule(id, h, port, noneAsEmpty(a.String("action")), a.Bool("private"))
+					return w.SetNetRule(id, h, port, hostapi.NetAction(noneAsEmpty(a.String("action"))), a.Bool("private"))
 				})
 			}},
 	} {
@@ -509,7 +510,7 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 				why = fmt.Sprintf("%d of %d blocked", g.blocked, g.n)
 			}
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
-			c.Text("n", kit.Counted(g.n, "connection"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("n", words.Counted(g.n, "connection"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			c.Text("bytes", "↑"+kit.Bytes(g.up)+" ↓"+kit.Bytes(g.down), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			widget.Ago(c, "last", g.last, widget.AgoOpts{Text: widget.MonoFont(10.5, th.C(theme.FgFaint))})
 			act(c, g.host, g.port, g.allowed)

@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -60,7 +61,7 @@ func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 }
 
 func inProjects(ps []core.Project, path string) bool {
-	return slices.ContainsFunc(ps, func(p core.Project) bool { return kit.Inside(path, p.Dir) })
+	return slices.ContainsFunc(ps, func(p core.Project) bool { return pathx.Inside(path, p.Dir) })
 }
 
 // mdFile is a file as markdown: an image for a picture, else a link named name.

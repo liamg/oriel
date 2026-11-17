@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -128,7 +129,7 @@ func subagentTone(c *ui.Ctx, s core.Subagent) render.Color {
 
 // subagentTook is how long a subagent ran, or has run so far, and the tools it used: "3:04 · 17 tools".
 func subagentTook(s core.Subagent, now time.Time) string {
-	n := fmt.Sprintf("%d %s", s.Tools, kit.Plural(s.Tools, "tool", "tools"))
+	n := fmt.Sprintf("%d %s", s.Tools, words.Plural(s.Tools, "tool", "tools"))
 	if s.Started.IsZero() {
 		return n
 	}

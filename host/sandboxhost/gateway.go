@@ -183,7 +183,7 @@ func (g gatewayHost) Fetch(ctx context.Context, project string) error {
 
 // keyed runs host git in a project for the gateway, asking for a security-key touch while it waits on one.
 func (g gatewayHost) keyed(ctx context.Context, p core.Project, what string, args ...string) error {
-	return g.b.d.Keyed(ctx, g.b.id, what, p.Name, func(ctx context.Context) error {
+	return g.b.d.RunAwaitingKey(ctx, g.b.id, what, p.Name, func(ctx context.Context) error {
 		_, err := sandbox.GitContext(ctx, p.Dir, args...)
 		return err
 	})

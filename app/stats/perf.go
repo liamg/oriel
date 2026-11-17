@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -91,7 +92,7 @@ func (x *Perf) commands() []registry.Command {
 func (x *Perf) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.shown = &kit.WhileShown{Want: x.want, Focus: h}
-	x.Add(h.Framed(x.shown.Framed))
+	x.Add(h.Framed(x.shown.EndFrame))
 	x.Add(registry.DisposeFunc(x.shown.Drop))
 	x.Add(&x.work)
 	for _, c := range x.commands() {
@@ -271,7 +272,7 @@ func (x *Perf) oriel(c *ui.Ctx, s perfSnap) {
 			dim(c, "s", fmt.Sprintf("Go heap %s · runtime %s", kit.Bytes(int64(s.heap)), kit.Bytes(int64(s.goMem))))
 		})
 		statsTile(c, "go", "GOROUTINES", fmt.Sprint(s.goroutines), "", func(c *ui.Ctx) {
-			dim(c, "s", kit.Counted(int(s.gcs), "GC cycle"))
+			dim(c, "s", words.Counted(int(s.gcs), "GC cycle"))
 		})
 		statsTile(c, "frames", "FRAMES", fmt.Sprintf("%.0f", f.PerSecond), "a second", func(c *ui.Ctx) {
 			if f.Frames > 0 {
@@ -304,7 +305,7 @@ func (x *Perf) machine(c *ui.Ctx, s perfSnap) {
 		}
 		statsTile(c, "cpu", "CPU", cpu, "all cores", func(c *ui.Ctx) {
 			if m.Cores > 0 {
-				dim(c, "s", kit.Counted(m.Cores, "core"))
+				dim(c, "s", words.Counted(m.Cores, "core"))
 			}
 		})
 		statsTile(c, "mem", "MEMORY", kit.Bytes(int64(m.Mem)), "of "+kit.Bytes(int64(m.MemTotal)), nil)

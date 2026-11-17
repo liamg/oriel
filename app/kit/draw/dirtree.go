@@ -78,8 +78,8 @@ func (d *DirTree) Items(root, prefix string) (items []widget.TreeItem, loading b
 	return b.items, d.wanted[root]
 }
 
-// Opened reads the folder of a row the tree's Toggled said opened.
-func (d *DirTree) Opened(id, prefix string) {
+// ReadOpened reads the folder of a row the tree's Toggled said opened.
+func (d *DirTree) ReadOpened(id, prefix string) {
 	if p, ok := strings.CutPrefix(id, prefix); ok && p != "" {
 		d.read(p)
 	}

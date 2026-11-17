@@ -68,8 +68,8 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Option(registry.OptionSpec{Name: RemoteImagesOption, Type: registry.Bool, Default: true,
 		Scopes: registry.ScopeUser, Help: "Load the images markdown links from the web (http and https). Off, each is a chip with its address."}))
 	remoteImages := func() {
-		on, _, _ := h.Options().Get(RemoteImagesOption, registry.At{})
-		x.Pictures.SetRemote(on == true)
+		on, _ := registry.Option[bool](h.Options(), RemoteImagesOption, registry.At{})
+		x.Pictures.SetRemote(on)
 	}
 	remoteImages()
 	x.Add(h.Options().Watch(RemoteImagesOption, remoteImages))

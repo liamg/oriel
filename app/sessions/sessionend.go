@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
@@ -411,7 +412,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 		}
 		if k := len(s.Files); k > 0 {
 			out = append(out, loss{key: s.Project + "/files", alarm: true, warn: true,
-				text: fmt.Sprintf("%s: %s uncommitted, lost: %s", s.Project, kit.Counted(k, "file"), previewed(s.Files))})
+				text: fmt.Sprintf("%s: %s uncommitted, lost: %s", s.Project, words.Counted(k, "file"), previewed(s.Files))})
 		}
 		if k := s.Unpushed; k > 0 {
 			fate := "they stay on its branch"
@@ -419,7 +420,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 				fate = "lost with its branch"
 			}
 			out = append(out, loss{key: s.Project + "/unpushed", alarm: true, warn: deleteBranch,
-				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate)})
+				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, words.Counted(k, "commit"), fate)})
 		}
 		if ownPRs && s.PR.Open() {
 			w := prui.WordsOf(s.Code)
@@ -445,7 +446,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 	} {
 		if k := len(w.names); k > 0 {
 			out = append(out, loss{key: w.key, alarm: true, warn: true,
-				text: fmt.Sprintf("%d %s still running, stopped with the agent: %s", k, kit.Plural(k, w.one, w.many), previewed(w.names))})
+				text: fmt.Sprintf("%d %s still running, stopped with the agent: %s", k, words.Plural(k, w.one, w.many), previewed(w.names))})
 		}
 	}
 	if se.Agent.Sandboxed && se.Agent.Running {

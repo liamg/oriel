@@ -113,16 +113,16 @@ func TestRailEntryKinds(t *testing.T) {
 	r := kindsReg(nil)
 	review := uireg.RailEntry{Name: "review", Kinds: []core.Kind{"review"}}
 	pr := uireg.RailEntry{Name: "pull-request", When: core.Ships}
-	if review.For(r, "work") || !review.For(r, "review") {
+	if review.ListedOnKind(r, "work") || !review.ListedOnKind(r, "review") {
 		t.Error("Kinds")
 	}
-	if !pr.For(r, "work") || pr.For(r, "plan") {
+	if !pr.ListedOnKind(r, "work") || pr.ListedOnKind(r, "plan") {
 		t.Error("When")
 	}
-	if !(uireg.RailEntry{Name: "explorer"}).For(r, "anything") {
+	if !(uireg.RailEntry{Name: "explorer"}).ListedOnKind(r, "anything") {
 		t.Error("an entry with neither is listed everywhere")
 	}
-	if review.For(r, "") || !pr.For(r, "") {
+	if review.ListedOnKind(r, "") || !pr.ListedOnKind(r, "") {
 		t.Error("with no session, only the entries with no Kinds are listed")
 	}
 }

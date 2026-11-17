@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -139,7 +140,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 		if se.Ticket != "" {
 			meta = append(meta, se.Ticket)
 		}
-		meta = append(meta, kit.Label(se), kit.Counted(len(se.Projects), "project"))
+		meta = append(meta, kit.Label(se), words.Counted(len(se.Projects), "project"))
 		if se.Branch != "" {
 			meta = append(meta, "branch "+se.Branch)
 		}
@@ -312,7 +313,7 @@ func (x *Ship) uncommitted(c *ui.Ctx, se core.SessionState, s shipRead, open boo
 	}
 	f := x.commitForm(se.ID, s.Project)
 	shipCard(c, open, func(c *ui.Ctx) {
-		stepTitle(c, "Uncommitted", fmt.Sprintf("%s · +%d -%d", kit.Counted(len(s.Files), "file"), add, del))
+		stepTitle(c, "Uncommitted", fmt.Sprintf("%s · +%d -%d", words.Counted(len(s.Files), "file"), add, del))
 	}, func(c *ui.Ctx) {
 		x.fileRows(c, se, s, f, false)
 		x.commitBox(c, se, s, f)
@@ -406,9 +407,9 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 		return
 	}
 	shipCard(c, false, func(c *ui.Ctx) {
-		note := kit.Counted(s.Behind, "commit") + " · no conflicts predicted"
+		note := words.Counted(s.Behind, "commit") + " · no conflicts predicted"
 		if len(s.Conflicts) > 0 {
-			note = kit.Counted(s.Behind, "commit")
+			note = words.Counted(s.Behind, "commit")
 		}
 		stepTitle(c, "Behind "+base, note)
 		if widget.Button(c, "rebase", "Rebase", x.stepOpts(se.ID, s.Project, "Rebasing", widget.ButtonOpts{Help: "git/ship#sync"})) {
@@ -484,15 +485,15 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 		note := "nothing committed yet"
 		title := "Unpushed"
 		if s.Pushed {
-			title, note = "Pushed", kit.Counted(s.Commits, "commit")
+			title, note = "Pushed", words.Counted(s.Commits, "commit")
 		}
 		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, title, note) }, nil)
 		return
 	}
 	shipCard(c, false, func(c *ui.Ctx) {
-		note := kit.Counted(len(s.Unpushed), "commit")
+		note := words.Counted(len(s.Unpushed), "commit")
 		if s.Replaced > 0 {
-			note += " · rebased: replaces " + kit.Counted(s.Replaced, "commit") + " on origin"
+			note += " · rebased: replaces " + words.Counted(s.Replaced, "commit") + " on origin"
 		}
 		stepTitle(c, "Unpushed", note)
 		if s.HasOrigin && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
@@ -518,7 +519,7 @@ func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 	}
 	for _, g := range gs {
 		c.Column(g.Name, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-			c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + g.State},
+			c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 10, Cross: ui.Center, Role: ui.RoleText, Label: g.Title + " " + string(g.State)},
 				func(c *ui.Ctx) {
 					glyph, tone := "✓", th.C(theme.OK)
 					switch g.State {

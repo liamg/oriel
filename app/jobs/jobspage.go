@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/render"
@@ -70,7 +71,7 @@ func (x *Jobs) header(c *ui.Ctx, rows []jobRow) {
 				}
 			}
 		}
-		meta := []string{kit.Counted(len(rows), "job"), fmt.Sprintf("%d running", running), kit.Counted(runs, "run")}
+		meta := []string{words.Counted(len(rows), "job"), fmt.Sprintf("%d running", running), words.Counted(runs, "run")}
 		c.Text("m", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
@@ -160,7 +161,7 @@ func (x *Jobs) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				n := "no runs"
 				if len(r.runs) > 0 {
-					n = kit.Counted(len(r.runs), "run")
+					n = words.Counted(len(r.runs), "run")
 				}
 				c.Text("n", n, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
@@ -312,7 +313,7 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 				parts = append(parts, fmt.Sprintf("%d %s", n, s))
 			}
 		}
-		c.Text("runs", kit.Counted(len(r.runs), "run")+": "+strings.Join(parts, ", "), widget.MonoFont(11, faint))
+		c.Text("runs", words.Counted(len(r.runs), "run")+": "+strings.Join(parts, ", "), widget.MonoFont(11, faint))
 		dot("d4")
 		c.Text("total", kit.Money(total)+" total", widget.MonoFont(11, th.C(theme.Fg)))
 		if ended > 0 {

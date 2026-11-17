@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -59,7 +60,7 @@ func (e *Explorer) readOnly(path string) string {
 		return ""
 	}
 	for _, p := range se.Snapshot().Projects {
-		if p.ReadOnly && kit.Within(path, p.Dir) {
+		if p.ReadOnly && pathx.InsideResolved(path, p.Dir) {
 			return "the session only reads it"
 		}
 	}
@@ -239,7 +240,7 @@ func within(dir, name string) (string, error) {
 		return "", fmt.Errorf("%q isn't a name", name)
 	}
 	p := filepath.Join(dir, name)
-	if !kit.Within(p, dir) || p == dir {
+	if !pathx.InsideResolved(p, dir) || p == dir {
 		return "", fmt.Errorf("%q isn't in %s", name, filepath.Base(dir))
 	}
 	return p, nil

@@ -22,23 +22,26 @@ type ShipGate struct {
 
 // Gate is a gate's state for a session.
 type Gate struct {
-	State string // GatePass, GateWarn, GateFail, GatePending, GateOptional or GateSkipped; "" leaves the gate out
-	Note  string // dim text at its right: "9", "38 / 59", "go test 2m ago", "optional"
+	State GateState // "" leaves the gate out
+	Note  string    // dim text at its right: "9", "38 / 59", "go test 2m ago", "optional"
 	// Action is a button on the gate's row that works towards it ("Verify…"), running Command with Args.
 	Action  string
 	Command string
 	Args    Args
 }
 
+// GateState is where a gate stands.
+type GateState string
+
 // Gate states: met; not met but not in the way (a "!"); failed; still to come; one that's up to you; and one that
 // doesn't apply to this session.
 const (
-	GatePass     = "pass"
-	GateWarn     = "warn"
-	GateFail     = "fail"
-	GatePending  = "pending"
-	GateOptional = "optional"
-	GateSkipped  = "skipped"
+	GatePass     GateState = "pass"
+	GateWarn     GateState = "warn"
+	GateFail     GateState = "fail"
+	GatePending  GateState = "pending"
+	GateOptional GateState = "optional"
+	GateSkipped  GateState = "skipped"
 )
 
 func (ShipGate) ContributionKind() string   { return "ship.gate" }

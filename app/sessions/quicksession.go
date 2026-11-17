@@ -35,7 +35,7 @@ func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
 // the loop, as the launcher asks them.
 func (x *Launcher) quick() {
 	h, life := x.h, x.life
-	v, _, _ := h.Options().Get("sandbox.default", registry.At{})
+	v, _ := registry.Option[string](h.Options(), "sandbox.default", registry.At{})
 	sandbox := v == "sandbox"
 	st := h.State()
 	plugin.Go(h, "launcher: quick session", func() {

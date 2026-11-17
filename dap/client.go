@@ -119,7 +119,7 @@ func (c *Client) start(ctx context.Context) error {
 	c.mu.Lock()
 	c.caps = caps
 	c.mu.Unlock()
-	launched := c.async(c.cfg.request(), c.cfg.Arguments(c.spec))
+	launched := c.async(string(c.cfg.request()), c.cfg.Arguments(c.spec))
 	ready := false
 	for !ready {
 		select {

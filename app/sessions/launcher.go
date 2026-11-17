@@ -139,7 +139,7 @@ func (x *Launcher) openWith(a registry.Args) {
 		x.template = hostapi.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
-		v, _, _ := x.h.Options().Get("sandbox.default", registry.At{})
+		v, _ := registry.Option[string](x.h.Options(), "sandbox.default", registry.At{})
 		x.sandbox = v == "sandbox"
 	}
 	x.picked = x.provider != ""

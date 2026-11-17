@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -43,7 +44,7 @@ var (
 )
 
 // explainDepths are the card's depths, in its strip's order.
-var explainDepths = []string{registry.ExplainBrief, registry.ExplainDetailed, registry.ExplainWhy}
+var explainDepths = []registry.ExplainDepth{registry.ExplainBrief, registry.ExplainDetailed, registry.ExplainWhy}
 
 // Plugin is explain by code unit: ? marks on the units the branch changed, the explain card between
 // the lines with its breadcrumb, [ and ] to widen and narrow, depths, a cache by the unit's content, Explain this on a
@@ -72,7 +73,10 @@ type Plugin struct {
 	card *explainCard // on the loop only
 }
 
-type answerKey struct{ hash, depth string }
+type answerKey struct {
+	hash  string
+	depth registry.ExplainDepth
+}
 
 type answer struct {
 	text    string
@@ -218,7 +222,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused}))
-	x.Add(h.Decorations("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
+	x.Add(h.Decoration("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	for _, it := range []registry.MenuItem{
 		{Name: "explain.this", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this"},
 		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this", Args: registry.Args{"what": "review"}},
@@ -234,7 +238,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		On: func(registry.EditorWindow) bool { return h.Layout().Find(layout.ViewRef{ID: ChangedUnitsView}) != nil },
 		Note: func(w registry.EditorWindow) string {
 			hunks, n := x.changedIn(w.Path)
-			return fmt.Sprintf("%d changed %s · %d %s", n, kit.Plural(n, "unit", "units"), hunks, kit.Plural(hunks, "hunk", "hunks"))
+			return fmt.Sprintf("%d changed %s · %d %s", n, words.Plural(n, "unit", "units"), hunks, words.Plural(hunks, "hunk", "hunks"))
 		}}))
 	return nil
 }
@@ -440,7 +444,7 @@ func (x *Plugin) explainRange(path string, buf *text.Buffer, r text.Range, kind,
 	a, z := spanLines(snap, r)
 	n := z - a + 1
 	if subject == "" {
-		subject = fmt.Sprintf("selection · %d %s", n, kit.Plural(n, "line", "lines"))
+		subject = fmt.Sprintf("selection · %d %s", n, words.Plural(n, "line", "lines"))
 	}
 	x.openCard(path, buf, units, around, &r, subject)
 	last := &x.card.crumbs[len(x.card.crumbs)-1]
@@ -528,7 +532,7 @@ func (x *Plugin) step(d int) {
 }
 
 func (x *Plugin) setDepth(name string) error {
-	i := slices.Index(explainDepths, name)
+	i := slices.Index(explainDepths, registry.ExplainDepth(name))
 	if i < 0 {
 		return fmt.Errorf("no depth %q: brief, detailed or why", name)
 	}

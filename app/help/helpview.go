@@ -53,10 +53,10 @@ func (v *View) Manifest() plugin.Manifest { return plugin.Manifest{ID: "help"} }
 
 func (v *View) Activate(_ context.Context, h plugin.Host) error {
 	v.h = h
-	v.Add(h.HelpPages(registry.HelpSource{FS: Builtin(), Source: "builtin"}))
+	v.Add(h.HelpPage(registry.HelpSource{FS: Builtin(), Source: "builtin"}))
 	v.Add(h.Contribute(registry.Service{Name: services.HelpPagesService, Impl: helpPages{v}}))
 	if dir := filepath.Join(v.ConfigDir, "help"); dirExists(dir) {
-		v.Add(h.HelpPages(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
+		v.Add(h.HelpPage(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
 	for _, c := range []registry.Command{
 		{ID: "help.open", Title: "Open a help page: {id}, page#anchor", Run: func(_ registry.Ctx, a registry.Args) error {

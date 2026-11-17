@@ -163,7 +163,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 			},
 		},
 	})
-	x.Add(h.Decorations("lsp", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
+	x.Add(h.Decoration("lsp", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.Add(registry.On(h, registry.Hook{Label: "tell the language server"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
 		x.mu.Lock()
 		d := x.docs[w.File]
@@ -221,7 +221,7 @@ func (x *LSP) Wait() { x.work.Wait() }
 // worktrees), when lsp.start says to: each server whose own root files are there, its generic ones (.git) aside.
 func (x *LSP) warm() {
 	dir := x.dir()
-	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || dir == "" {
+	if v, _ := registry.Option[string](x.h.Options(), "lsp.start", registry.At{}); v != "project" || dir == "" {
 		return
 	}
 	roots := []string{dir}

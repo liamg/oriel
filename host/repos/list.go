@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Registry is the checkouts the host knows (repos.json), and what the Repos page does to them.
@@ -174,8 +175,8 @@ func (r *repoList) find(ref string) (core.Repo, bool) {
 	return core.Repo{}, false
 }
 
-// Changed tells the store the list as it is now.
-func (x *Registry) Changed(added ...core.RepoID) {
+// EmitChanged tells the store the list as it is now.
+func (x *Registry) EmitChanged(added ...core.RepoID) {
 	_ = x.st.Emit(core.ReposChanged{Repos: x.list.all(), Added: added})
 }
 
@@ -183,7 +184,7 @@ func (x *Registry) Changed(added ...core.RepoID) {
 func (x *Registry) Add(ctx context.Context, path string, src core.RepoSource) (core.Repo, error) {
 	r, added, err := x.list.add(ctx, path, src)
 	if err == nil && added {
-		x.Changed(r.ID)
+		x.EmitChanged(r.ID)
 	}
 	return r, err
 }
@@ -203,7 +204,7 @@ func (x *Registry) Resolve(ctx context.Context, ref string) (core.Repo, error) {
 	if err := x.list.used(r.ID); err != nil {
 		x.env.Log.Warn("repos.json", "err", err)
 	}
-	x.Changed()
+	x.EmitChanged()
 	return r, nil
 }
 
@@ -241,7 +242,7 @@ func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
 	if _, err := x.list.remove(r.ID); err != nil {
 		return err
 	}
-	x.Changed()
+	x.EmitChanged()
 	return nil
 }
 
@@ -274,7 +275,7 @@ func (x *Registry) CloneParent() string {
 	best := ""
 	for _, r := range x.list.all() {
 		p := filepath.Dir(r.Path)
-		if hostcore.Within(p, x.env.Home) {
+		if pathx.StrictlyInside(p, x.env.Home) {
 			continue
 		}
 		n[p]++

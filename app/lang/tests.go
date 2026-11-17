@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/syntax"
 
 	"github.com/liamg/oriel/app/kit"
@@ -116,7 +117,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 		ws := x.workspace().Root
 		for _, p := range paths {
 			// One told late, of the tree the window has left, isn't this directory's.
-			if p := filepath.Join(root, filepath.FromSlash(p)); kit.Within(p, ws) {
+			if p := filepath.Join(root, filepath.FromSlash(p)); pathx.InsideResolved(p, ws) {
 				x.rescan(p)
 			}
 		}
@@ -146,7 +147,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 			h.Do(x.scan) // off the loop: the hook only notes the move
 		}
 	}))
-	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
+	x.Add(h.Decoration("tests", uireg.DecorationFunc(x.decorations)))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -375,7 +376,7 @@ func (x *Tests) discover(path string, buf *text.Buffer) *discovery {
 	x.mu.Lock()
 	x.found[buf] = d
 	x.mu.Unlock()
-	if kit.Within(path, editorDir(x.h)) && x.set.TestFile(path) {
+	if pathx.InsideResolved(path, editorDir(x.h)) && x.set.TestFile(path) {
 		x.setFound(path, items)
 	}
 	return d

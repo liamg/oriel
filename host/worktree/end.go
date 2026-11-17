@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -81,7 +82,7 @@ func (x *Worktrees) Delete(ctx context.Context, se core.SessionState) error {
 			}
 		}
 	}
-	if se.Dir != "" && hostcore.Within(se.Dir, x.env.WorkspacesDir()) {
+	if se.Dir != "" && pathx.StrictlyInside(se.Dir, x.env.WorkspacesDir()) {
 		if err := os.RemoveAll(se.Dir); err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -269,7 +270,7 @@ func (s *Plugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, 
 		return
 	case registry.Table:
 		m, _ := v.(map[string]any)
-		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), kit.Plural(len(m), "entry", "entries")), widget.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), words.Plural(len(m), "entry", "entries")), widget.MonoFont(11, th.C(theme.FgMuted)))
 		return
 	case registry.Bool:
 		on, _ := v.(bool)

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -155,7 +156,7 @@ func (x *Plugin) usageNote() string {
 	if len(us) == 0 {
 		return ""
 	}
-	return kit.Counted(len(us), "account") + " · read " + widget.AgoLong(x.now(), read)
+	return words.Counted(len(us), "account") + " · read " + widget.AgoLong(x.now(), read)
 }
 
 // todayPanel is today's totals: tokens, cost, the cache's share and the requests opened today; then the hud.today

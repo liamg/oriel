@@ -156,8 +156,8 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 			return g.jump(x, p, hs, -1)
 		})},
 		{ID: "git.blame.toggle", Title: "Show or hide the cursor line's blame", Run: func(registry.Ctx, registry.Args) error {
-			on, _, _ := h.Options().Get("git.blame.inline", h.Here())
-			return h.Options().Set("git.blame.inline", registry.LayerUser, registry.At{}, on != true)
+			on, _ := registry.Option[bool](h.Options(), "git.blame.inline", h.Here())
+			return h.Options().Set("git.blame.inline", registry.LayerUser, registry.At{}, !on)
 		}},
 	} {
 		g.Add(h.Command(c))
@@ -174,7 +174,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		k.Mode = "n"
 		g.Add(h.Keymap(k))
 	}
-	g.Add(h.Decorations("git.hunks", uireg.KeyedDecorations{Key: g.decorationKey, Make: g.decorations}))
+	g.Add(h.Decoration("git.hunks", uireg.KeyedDecorations{Key: g.decorationKey, Make: g.decorations}))
 	return nil
 }
 
@@ -416,7 +416,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	if x.e == nil {
 		return uireg.Decoration{}, false
 	}
-	if on, _, _ := g.h.Options().Get("git.blame.inline", g.h.Here()); on != true {
+	if on, _ := registry.Option[bool](g.h.Options(), "git.blame.inline", g.h.Here()); !on {
 		return uireg.Decoration{}, false
 	}
 	p := x.current()

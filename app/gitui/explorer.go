@@ -289,7 +289,7 @@ func (e *Explorer) commands() []registry.Command {
 		}},
 		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a["all"] == true})
+				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a.Bool("all")})
 			}},
 		{ID: "explorer.diff", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
@@ -469,7 +469,7 @@ func (e *Explorer) build(c *ui.Ctx) {
 			e.activate(res.Activated, sc)
 		}
 		if res.Toggled != "" {
-			e.scratch.Opened(res.Toggled, scratchID)
+			e.scratch.ReadOpened(res.Toggled, scratchID)
 		}
 		if s, ok := e.hunksLoading(sc); ok {
 			c.Row("hunks", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 6)}, func(c *ui.Ctx) {

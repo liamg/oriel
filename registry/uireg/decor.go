@@ -188,7 +188,7 @@ type decorState struct {
 	cache decorCache
 }
 
-func (r *reg) Decorations(id string, p DecorationProvider) registry.Disposable {
+func (r *reg) Decoration(id string, p DecorationProvider) registry.Disposable {
 	d := r.Contribute(NamedProvider{id, p})
 	r.DecorationsChanged(id)
 	return registry.DisposeFunc(func() {

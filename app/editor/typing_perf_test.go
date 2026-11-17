@@ -80,7 +80,7 @@ func TestEditorTypingFrameBudget(t *testing.T) {
 		total += d
 	}
 	mean := total / keys
-	t.Logf("a typing frame: mean %v, p99 %v", mean, perf.Pct(times, 99))
+	t.Logf("a typing frame: mean %v, p99 %v", mean, perf.Percentile(times, 99))
 	if mean > 2*time.Millisecond {
 		t.Errorf("a typing frame takes %v on average; the budget is 2ms", mean)
 	}

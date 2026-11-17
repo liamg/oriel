@@ -78,7 +78,7 @@ func (p Caller) Own(path string) bool {
 		return false
 	}
 	real, err := filepath.EvalSymlinks(path)
-	return err == nil && Within(dir, real)
+	return err == nil && absInside(real, dir)
 }
 
 // CodeNotDeclared is the JSON-RPC error code of a call the plugin's manifest doesn't allow.

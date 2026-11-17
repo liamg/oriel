@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // scanCap is the most repos one scan adds.
@@ -23,7 +23,7 @@ func (x *Registry) ScanRepos(ctx context.Context, all bool) (added []core.Repo, 
 	var parents []string
 	for _, r := range x.list.all() {
 		p := filepath.Dir(r.Path)
-		if p == r.Path || p == string(filepath.Separator) || p == home || hostcore.Within(p, x.env.Home) || slices.Contains(parents, p) {
+		if p == r.Path || p == string(filepath.Separator) || p == home || pathx.StrictlyInside(p, x.env.Home) || slices.Contains(parents, p) {
 			continue
 		}
 		parents = append(parents, p)
@@ -45,7 +45,7 @@ func (x *Registry) ScanRepos(ctx context.Context, all bool) (added []core.Repo, 
 				return added, ctx.Err()
 			}
 			dir := filepath.Join(p, e.Name())
-			if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || hostcore.Within(dir, x.env.Home) || x.list.isIgnored(dir) {
+			if !e.IsDir() || strings.HasPrefix(e.Name(), ".") || pathx.StrictlyInside(dir, x.env.Home) || x.list.isIgnored(dir) {
 				continue
 			}
 			if _, ok := x.list.find(dir); ok || !gitx.IsRepo(dir) || (gitx.Repo{Dir: dir}).MainClone(ctx) != dir {
@@ -65,7 +65,7 @@ func (x *Registry) ScanRepos(ctx context.Context, all bool) (added []core.Repo, 
 		for i, r := range added {
 			ids[i] = r.ID
 		}
-		x.Changed(ids...)
+		x.EmitChanged(ids...)
 	}
 	return added, nil
 }

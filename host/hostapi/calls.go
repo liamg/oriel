@@ -62,13 +62,32 @@ type SessionCalls interface {
 	HandOver()
 }
 
+// ToolAction is a session's own rule for a gateway tool; "" drops it.
+type ToolAction string
+
+// Tool rules: the gateway's own actions.
+const (
+	ToolAllow ToolAction = "allow"
+	ToolAsk   ToolAction = "ask"
+	ToolDeny  ToolAction = "deny"
+)
+
+// NetAction is a session's own rule for a host; "" drops it.
+type NetAction string
+
+// Network rules.
+const (
+	NetAllow NetAction = "allow"
+	NetBlock NetAction = "block"
+)
+
 // SandboxCalls are the sessions' sandboxes and what they may do: the registry's "host.sandboxes" service.
 type SandboxCalls interface {
 	AddRule(kind core.AskKind, rule string) error
 	RemoveRule(kind core.AskKind, rule string) error
 	Permissions(ctx context.Context, id core.SessionID) (Permissions, error)
-	SetToolRule(id core.SessionID, tool, action string) error
-	SetNetRule(id core.SessionID, host string, port int, action string, private bool) error
+	SetToolRule(id core.SessionID, tool string, action ToolAction) error
+	SetNetRule(id core.SessionID, host string, port int, action NetAction, private bool) error
 	RestartSandbox(id core.SessionID) error
 	RebuildSandbox(ctx context.Context, id core.SessionID) error
 	SandboxShell(ctx context.Context, id core.SessionID, cwd string) (sandbox.Command, error)

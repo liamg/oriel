@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -320,7 +321,7 @@ func (x *Ship) raiseReq(ctx registry.Ctx, se core.SessionState, p string, a regi
 	}
 	if !s.PR.Open() && s.BaseAhead > 0 {
 		return prReq{}, fmt.Errorf("%s: push %s first: it has %s origin hasn't, which the %s would show again", p, s.Base,
-			kit.Counted(s.BaseAhead, "commit"), s.words().Short)
+			words.Counted(s.BaseAhead, "commit"), s.words().Short)
 	}
 	if v, _ := x.h.Fire(ctx, "ShipRaise", p, ev); v.Veto {
 		f.veto = v.Reason

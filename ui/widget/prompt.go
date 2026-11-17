@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"strings"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -304,8 +305,8 @@ func promptDetailBox(c *ui.Ctx, o PromptCardOpts, inner, room float32) {
 		content, view := c.ScrollExtent(ui.Child(id, "detail"))
 		if below := content.Y - view.Y - c.Scroll(ui.Child(id, "detail")).Y; view.Y > 0 && below > 1 {
 			n := int((below + promptRowH - 1) / promptRowH)
-			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Role: ui.RoleStatus, Label: plural(n, "more line") + " below"}, func(c *ui.Ctx) {
-				c.Text("t", "↓ "+plural(n, "more line")+" · ⇧↓ PgDn", monoText(10, typeset.Medium, col(c, tPromptMuted), 0))
+			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Role: ui.RoleStatus, Label: words.Counted(n, "more line") + " below"}, func(c *ui.Ctx) {
+				c.Text("t", "↓ "+words.Counted(n, "more line")+" · ⇧↓ PgDn", monoText(10, typeset.Medium, col(c, tPromptMuted), 0))
 			})
 		}
 	})
@@ -399,11 +400,4 @@ func cmpColor(c, or color.NRGBA) color.NRGBA {
 		return or
 	}
 	return c
-}
-
-func plural(n int, what string) string {
-	if n == 1 {
-		return "1 " + what
-	}
-	return fmt.Sprintf("%d %ss", n, what)
 }

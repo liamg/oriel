@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -435,7 +436,7 @@ func (x *Jobs) count() string {
 	if len(jobs) == 0 {
 		return ""
 	}
-	return kit.Counted(len(jobs), "job")
+	return words.Counted(len(jobs), "job")
 }
 
 // days are the weekdays as schedules name them, Monday first.

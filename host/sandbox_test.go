@@ -752,10 +752,10 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 		t.Errorf("push = %+v", tp)
 	}
 
-	if err := s.w.SetToolRule(id, gateway.Prefix+"push", gateway.Deny); err != nil {
+	if err := s.w.SetToolRule(id, gateway.Prefix+"push", hostapi.ToolDeny); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.w.SetNetRule(id, "Example.COM", 443, "block", false); err != nil {
+	if err := s.w.SetNetRule(id, "Example.COM", 443, hostapi.NetBlock, false); err != nil {
 		t.Fatal(err)
 	}
 	p, _ = s.w.Permissions(ctx, id)
@@ -815,7 +815,7 @@ func TestGrantsTogetherAreAllKept(t *testing.T) {
 		wg.Go(func() { b.Grant([]gateway.Rule{{Tool: fmt.Sprintf("tool%d", i), Action: gateway.Allow}}) })
 	}
 	wg.Go(func() {
-		if err := s.w.SetToolRule(id, "set", gateway.Deny); err != nil {
+		if err := s.w.SetToolRule(id, "set", hostapi.ToolDeny); err != nil {
 			t.Error(err)
 		}
 	})

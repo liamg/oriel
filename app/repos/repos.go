@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -176,7 +177,7 @@ func (x *Repos) count() string {
 	if len(rs) == 0 {
 		return ""
 	}
-	return kit.Counted(len(rs), "repo")
+	return words.Counted(len(rs), "repo")
 }
 
 func (x *Repos) optBool(name string) bool {

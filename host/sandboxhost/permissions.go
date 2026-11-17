@@ -26,10 +26,10 @@ func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (_ hostapi.P
 }
 
 // SetToolRule sets session id's own rule for a gateway tool: allow, ask or deny, or "" to drop it.
-func (x *Boxes) SetToolRule(id core.SessionID, tool, action string) (err error) {
+func (x *Boxes) SetToolRule(id core.SessionID, tool string, action hostapi.ToolAction) (err error) {
 	defer x.deps.Env.Recover("SetToolRule", &err)
 	switch action {
-	case "", gateway.Allow, gateway.Ask, gateway.Deny:
+	case "", hostapi.ToolAllow, hostapi.ToolAsk, hostapi.ToolDeny:
 	default:
 		return fmt.Errorf("%q isn't a tool rule: allow, ask, deny, or none", action)
 	}
@@ -43,21 +43,15 @@ func (x *Boxes) SetToolRule(id core.SessionID, tool, action string) (err error) 
 	return b.updateGrants(func(rules []gateway.Rule) []gateway.Rule {
 		rules = slices.DeleteFunc(rules, func(r gateway.Rule) bool { return r.Tool == tool })
 		if action != "" {
-			rules = append(rules, gateway.Rule{Tool: tool, Action: action})
+			rules = append(rules, gateway.Rule{Tool: tool, Action: string(action)})
 		}
 		return rules
 	})
 }
 
-// A network rule's actions (SetNetRule).
-const (
-	NetAllow = "allow"
-	NetBlock = "block"
-)
-
-// SetNetRule allows or blocks host[:port] for the rest of session id (NetAllow, NetBlock), or drops the session's
+// SetNetRule allows or blocks host[:port] for the rest of session id (hostapi.NetAllow, NetBlock), or drops the session's
 // rule for it ("").
-func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action string, private bool) (err error) {
+func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action hostapi.NetAction, private bool) (err error) {
 	defer x.deps.Env.Recover("SetNetRule", &err)
 	b := x.of(id)
 	if b == nil {
@@ -68,8 +62,8 @@ func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action stri
 		return errors.New("a network rule needs a host")
 	}
 	switch action {
-	case NetAllow, NetBlock:
-		return b.egress.SetRule(host, port, action == NetAllow, private)
+	case hostapi.NetAllow, hostapi.NetBlock:
+		return b.egress.SetRule(host, port, action == hostapi.NetAllow, private)
 	case "":
 		return b.egress.UpdateGrants(func(rules []egress.Rule) []egress.Rule {
 			return slices.DeleteFunc(rules, func(r egress.Rule) bool { return r.Host == host && r.Port == port })

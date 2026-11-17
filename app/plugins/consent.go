@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -402,7 +403,7 @@ func consentSide(c *ui.Ctx, k plugin.Consent, width float32) {
 func (x *Consent) footer(c *ui.Ctx, k plugin.Consent) {
 	th := c.Theme()
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(56), Pad: ui.PadXY(20, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		parts := []string{"all or nothing", fmt.Sprintf("%d %s", len(k.Rows), kit.Plural(len(k.Rows), "capability", "capabilities"))}
+		parts := []string{"all or nothing", fmt.Sprintf("%d %s", len(k.Rows), words.Plural(len(k.Rows), "capability", "capabilities"))}
 		if k.Update() {
 			n := 0
 			for _, r := range k.Rows {

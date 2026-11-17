@@ -146,7 +146,7 @@ func (x *Ships) ShipCommit(ctx context.Context, r hostapi.ShipCommitReq) (_ stri
 		return "", fmt.Errorf("%s is read-only here", p.Name)
 	}
 	var hash string
-	err = x.deps.Keyed(ctx, r.Session, "git commit", p.Name, func(ctx context.Context) (err error) {
+	err = x.deps.RunAwaitingKey(ctx, r.Session, "git commit", p.Name, func(ctx context.Context) (err error) {
 		hash, err = repo.Commit(ctx, r.Message, gitx.CommitOpts{Paths: r.Files, All: len(r.Files) == 0, Trailers: r.Trailers})
 		return err
 	})
@@ -168,7 +168,7 @@ func (x *Ships) ShipPush(ctx context.Context, r hostapi.ShipRef) (err error) {
 	if err != nil {
 		return err
 	}
-	return x.deps.Keyed(ctx, r.Session, "git push", p.Name, func(ctx context.Context) error { return repo.Push(ctx, branch) })
+	return x.deps.RunAwaitingKey(ctx, r.Session, "git push", p.Name, func(ctx context.Context) error { return repo.Push(ctx, branch) })
 }
 
 // ShipSync fetches origin and rebases a project's branch onto its base, carrying uncommitted work over. One that
@@ -182,14 +182,14 @@ func (x *Ships) ShipSync(ctx context.Context, r hostapi.ShipRef) (err error) {
 	if _, err := hostcore.OwnBranch(p); err != nil {
 		return err
 	}
-	if err := x.deps.Keyed(ctx, r.Session, "git fetch origin", p.Name, repo.Fetch); err != nil {
+	if err := x.deps.RunAwaitingKey(ctx, r.Session, "git fetch origin", p.Name, repo.Fetch); err != nil {
 		return err
 	}
 	base := repo.FlightBase(ctx, p.Base)
 	if base == "" {
 		return fmt.Errorf("%s has no base branch to rebase onto", p.Name)
 	}
-	if err := x.deps.Keyed(ctx, r.Session, "git rebase "+base+" (signing commits)", p.Name, func(ctx context.Context) error { return repo.Rebase(ctx, base) }); err != nil {
+	if err := x.deps.RunAwaitingKey(ctx, r.Session, "git rebase "+base+" (signing commits)", p.Name, func(ctx context.Context) error { return repo.Rebase(ctx, base) }); err != nil {
 		return err
 	}
 	st := &x.ship
@@ -218,7 +218,7 @@ func (x *Ships) ShipMergeDefault(ctx context.Context, r hostapi.ShipRef) (m gitx
 	case branch:
 		return m, fmt.Errorf("%s is on its default branch %s already", p.Name, into)
 	}
-	err = x.deps.Keyed(ctx, r.Session, "git merge "+branch+" into "+into, p.Name, func(ctx context.Context) (err error) {
+	err = x.deps.RunAwaitingKey(ctx, r.Session, "git merge "+branch+" into "+into, p.Name, func(ctx context.Context) (err error) {
 		m, err = repo.MergeInto(ctx, into, branch, func(dir string) (gitx.Repo, error) {
 			env, err := sandbox.GitEnv(dir)
 			return gitx.Repo{Dir: dir, Env: env}, err
@@ -250,7 +250,7 @@ func (x *Ships) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error)
 	if name == old {
 		return nil
 	}
-	if err := x.deps.Keyed(ctx, r.Session, "git branch -m "+old+" "+name, p.Name, func(ctx context.Context) error {
+	if err := x.deps.RunAwaitingKey(ctx, r.Session, "git branch -m "+old+" "+name, p.Name, func(ctx context.Context) error {
 		return repo.RenameBranch(ctx, old, name)
 	}); err != nil {
 		return err

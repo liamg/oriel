@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -155,7 +156,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 				dim(c, "s", fmt.Sprintf("%.1f per turn", float64(t.Requests)/float64(t.Turns)))
 			}
 		})
-		statsTile(c, "turns", "TURNS", fmt.Sprint(t.Turns), "", func(c *ui.Ctx) { dim(c, "s", kit.Counted(d.Agents, "subagent")) })
+		statsTile(c, "turns", "TURNS", fmt.Sprint(t.Turns), "", func(c *ui.Ctx) { dim(c, "s", words.Counted(d.Agents, "subagent")) })
 		statsTile(c, "tools", "TOOL CALLS", kit.Count(t.ToolCalls), fmt.Sprintf("%d err", t.ToolErrors), func(c *ui.Ctx) {
 			c.Text("p", fmt.Sprintf("%.1f%%", errRate(t)*100), widget.MonoFont(10, th.C(tStatsBad)))
 			dim(c, "s", "errored")
@@ -177,7 +178,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 			if d.Window > 0 {
 				widget.Meter(c, "m", float64(d.Peak)/float64(d.Window), widget.MeterOpts{Tone: th.C(tStatsOutput), Label: "peak context"})
 			}
-			dim(c, "s", kit.Counted(len(d.Compactions), "compact"))
+			dim(c, "s", words.Counted(len(d.Compactions), "compact"))
 		})
 	})
 }
@@ -308,7 +309,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 
 // toolsCard is each tool's calls, errors, how long they took and the median.
 func toolsCard(c *ui.Ctx, tools []stats.ToolRow, t stats.Totals) {
-	widget.DataCard(c, "tools", ui.Flex(2.2), "TOOLS", fmt.Sprintf("%s · %s", kit.Counted(int(t.ToolCalls), "call"), kit.Counted(int(t.ToolErrors), "error")),
+	widget.DataCard(c, "tools", ui.Flex(2.2), "TOOLS", fmt.Sprintf("%s · %s", words.Counted(int(t.ToolCalls), "call"), words.Counted(int(t.ToolErrors), "error")),
 		func(c *ui.Ctx) { widget.Note(c, "n", "time per call") }, func(c *ui.Ctx) {
 			cols := []widget.DataCol{{Title: "TOOL", W: 0}, {Title: "CALLS", W: 70}, {Title: "ERRORS", W: 70}, {Title: "ERR %", W: 70}, {Title: ".1S 1S 10S 1M 1M+", W: 130}, {Title: "P50", W: 70}, {Title: "CALLS", W: 160}}
 			widget.DataHead(c, cols)

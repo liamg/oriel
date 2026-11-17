@@ -17,7 +17,7 @@ func TestStoppedSaysWho(t *testing.T) {
 		{"starting", AgentState{Starting: &AgentStart{Step: "Starting the agent"}}, StoppedByYou},
 		{"stopped", AgentState{StoppedBy: StoppedByAgent}, StoppedByAgent},
 	} {
-		c.a.Stopped(StoppedByYou, at)
+		c.a.MarkStopped(StoppedByYou, at)
 		if c.a.StoppedBy != c.want || c.a.Live() {
 			t.Errorf("%s: stopped by %q, live %v; want %q", c.name, c.a.StoppedBy, c.a.Live(), c.want)
 		}

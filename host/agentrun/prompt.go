@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 )
 
 // The agent reads a batch as tagged text, crit's format: tags mark where each thread and comment begins and
@@ -51,7 +52,7 @@ func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]b
 		}
 	}
 	if len(threads) > 0 {
-		fmt.Fprintf(&b, "\n%d open thread%s in all.\n", open, plural(open))
+		fmt.Fprintf(&b, "\n%s in all.\n", words.Counted(open, "open thread"))
 	}
 	return strings.TrimSpace(b.String())
 }
@@ -234,10 +235,3 @@ var closingTag = regexp.MustCompile(`</(thread|comment|anchor|image|note|notice)
 
 // escapeBody stops a body from closing one of the batch's own tags.
 func escapeBody(s string) string { return closingTag.ReplaceAllString(s, `<\/$1`) }
-
-func plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}

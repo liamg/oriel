@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -545,12 +546,12 @@ func (x *Sessions) readOnly(path string) string {
 	for _, p := range st.Projects {
 		roots = append(roots, root{p.Dir, p.ReadOnly})
 	}
-	if !slices.ContainsFunc(roots, func(r root) bool { return kit.Within(work, r.dir) }) {
+	if !slices.ContainsFunc(roots, func(r root) bool { return pathx.InsideResolved(work, r.dir) }) {
 		return "" // the window isn't on this session
 	}
 	best := -1
 	for i, r := range roots {
-		if kit.Within(path, r.dir) && (best < 0 || len(r.dir) > len(roots[best].dir)) {
+		if pathx.InsideResolved(path, r.dir) && (best < 0 || len(r.dir) > len(roots[best].dir)) {
 			best = i
 		}
 	}
@@ -706,7 +707,7 @@ func (x *Sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if err != nil {
 		return "", err
 	}
-	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles, in markdown",
+	how := map[registry.ExplainDepth]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles, in markdown",
 		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session, in markdown"}[r.Depth]
 	switch {
 	case r.Format != "":

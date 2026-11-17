@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -117,7 +118,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 		}}))
 	t.Add(h.Picker(sessionsSource(h)))
 	t.Add(h.Contribute(uireg.Indicator{Name: "sessions", Slot: uireg.SlotHUD, Order: 30, Title: "Sessions", Help: kit.HUDHelp + "#sessions",
-		Note: func() string { return kit.Counted(len(h.State().Sessions), "session") },
+		Note: func() string { return words.Counted(len(h.State().Sessions), "session") },
 		Build: func(registry.Ctx) (ui.Node, error) {
 			return &ui.Func{Key: "sessions", Fn: func(c *ui.Ctx) { t.sessionsPanel(c, h) }}, nil
 		}}))

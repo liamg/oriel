@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/diagrams"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit/work"
 
@@ -776,7 +777,7 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 					}
 				}
 			})
-			c.Text("n", fmt.Sprintf("%d %s · %d %s", w.repos, kit.Plural(w.repos, "repo", "repos"), w.files, kit.Plural(w.files, "file", "files")),
+			c.Text("n", fmt.Sprintf("%d %s · %d %s", w.repos, words.Plural(w.repos, "repo", "repos"), w.files, words.Plural(w.files, "file", "files")),
 				widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		c.Row("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 26}, func(c *ui.Ctx) {

@@ -70,7 +70,7 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			statsLink(c, x.h, se.ID, fmt.Sprintf("$%.2f ›", t.Cost), 11.5)
 		})
-		run := time.Duration(t.Running) * time.Second
+		run := time.Duration(t.TurnSeconds) * time.Second
 		if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 			run += c.Now().Sub(se.Agent.TurnStarted)
 		}

@@ -81,13 +81,6 @@ func FirstLine(s string) string {
 // ExpandTabs is s with each tab as four spaces: text runs have no tab stops.
 func ExpandTabs(s string) string { return strings.ReplaceAll(s, "\t", "    ") }
 
-func Plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
-}
-
 func Upper(ss []string) []string {
 	out := make([]string, len(ss))
 	for i, s := range ss {
@@ -132,9 +125,6 @@ func Count(n int64) string {
 	}
 	return s
 }
-
-// Counted is n of what: "1 session", "64 sessions".
-func Counted(n int, what string) string { return fmt.Sprintf("%d %s", n, Plural(n, what, what+"s")) }
 
 // SessionDir is where the window opens for a session: its primary project, or its own directory.
 func SessionDir(se core.SessionState) string {

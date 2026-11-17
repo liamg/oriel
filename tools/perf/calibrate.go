@@ -107,8 +107,8 @@ func Mean(times []time.Duration) time.Duration {
 	return sum / time.Duration(max(len(times), 1))
 }
 
-// Pct is the p-th percentile (0-100) of times.
-func Pct(times []time.Duration, p int) time.Duration {
+// Percentile is the p-th percentile (0-100) of times.
+func Percentile(times []time.Duration, p int) time.Duration {
 	s := slices.Clone(times)
 	slices.Sort(s)
 	return s[min(len(s)-1, len(s)*p/100)]

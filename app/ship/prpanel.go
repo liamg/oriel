@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -41,7 +42,7 @@ func (x *Ship) panelHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 	c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 		c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 	})
-	sub := kit.Counted(s.Commits, "commit")
+	sub := words.Counted(s.Commits, "commit")
 	if s.PR != nil {
 		sub = fmt.Sprintf("%s%d · %s", w.Sigil, s.PR.Number, sub)
 	}
@@ -145,7 +146,7 @@ type branchLine struct{ key, state, label, note string }
 func branchLines(s shipRead) []branchLine {
 	var out []branchLine
 	if len(s.Files) > 0 {
-		out = append(out, branchLine{"committed", "warn", "Committed", kit.Counted(len(s.Files), "file") + " left"})
+		out = append(out, branchLine{"committed", "warn", "Committed", words.Counted(len(s.Files), "file") + " left"})
 	} else {
 		out = append(out, branchLine{"committed", "ok", "Committed", "clean"})
 	}

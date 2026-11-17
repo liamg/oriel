@@ -35,7 +35,7 @@ func (a *anchoredBlock) Decorations(ctx uireg.DecorationCtx) []uireg.Decoration 
 // The layout engine places blocks at anchors and survives edits above them.
 func TestDecorationBlockFollowsItsAnchor(t *testing.T) {
 	s := editorScene(t)
-	s.Registry().Decorations("test.thread", &anchoredBlock{line: 45, text: "THREAD ON CASE 0"})
+	s.Registry().Decoration("test.thread", &anchoredBlock{line: 45, text: "THREAD ON CASE 0"})
 	s.Frame()
 	s.Frame()
 	after := func() string {
@@ -66,7 +66,7 @@ func TestDecorationBlockFollowsItsAnchor(t *testing.T) {
 // A provider that panics is turned off, and the editor keeps drawing.
 func TestPanickingDecorationProvider(t *testing.T) {
 	s := editorScene(t)
-	s.Registry().Decorations("test.bad", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration { panic("bad provider") }))
+	s.Registry().Decoration("test.bad", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration { panic("bad provider") }))
 	s.Frame()
 	s.Frame()
 	if !strings.Contains(s.Text(), "roundHalfEven") {
@@ -114,7 +114,7 @@ func threadCard() ui.Node {
 // just over the current 0.033 and 7.05%; the thread's real contents and the tabs' icons are most of the rest.
 func TestDecoratedEditorAgainstTheMockup(t *testing.T) {
 	s := editorScene(t)
-	s.Registry().Decorations("test.mockup", uireg.DecorationFunc(mockupDecorations))
+	s.Registry().Decoration("test.mockup", uireg.DecorationFunc(mockupDecorations))
 	s.SettleSigns() // the gutter's git signs and blame, which come off the loop
 	s.Golden("editor-decorated")
 	img := raster.Render(s.List(), s.Size(), 1, s.UI().Theme().C(theme.BgBase))
@@ -153,7 +153,7 @@ func TestRevealedBlockScrollsIntoView(t *testing.T) {
 	top := p.Top()
 	bottom := top + editorOf(s).Rows(p.ID()) - 2
 	b := &tallBlock{line: bottom}
-	s.Registry().Decorations("test.peek", b)
+	s.Registry().Decoration("test.peek", b)
 	s.Frame()
 	s.Frame()
 	if got := editorOf(s).Current().Top(); got != top {
@@ -189,13 +189,13 @@ func TestBlockPastTheBottomKeepsTheRowsSteady(t *testing.T) {
 	s := editorScene(t)
 	p := editorOf(s).Current()
 	top, rows := p.Top(), editorOf(s).Rows(p.ID())
-	one := s.Registry().Decorations("test.threads", &twoBlocks{a: top + 2, b: -1})
+	one := s.Registry().Decoration("test.threads", &twoBlocks{a: top + 2, b: -1})
 	for range 4 {
 		s.Frame()
 	}
 	// The second block goes on the last line the first leaves room for: in view, but taking its rows would push it out.
 	one.Dispose()
-	s.Registry().Decorations("test.threads", &twoBlocks{a: top + 2, b: top + editorOf(s).Rows(p.ID()) - 2})
+	s.Registry().Decoration("test.threads", &twoBlocks{a: top + 2, b: top + editorOf(s).Rows(p.ID()) - 2})
 	for range 4 {
 		s.Frame()
 	}
@@ -227,7 +227,7 @@ func TestTheWheelScrollsUpPastBlocks(t *testing.T) {
 	if end < 10 {
 		t.Fatalf("the file's end is at top %d: too short to scroll", end)
 	}
-	s.Registry().Decorations("test.threads", &twoBlocks{a: end - 6, b: end - 3})
+	s.Registry().Decoration("test.threads", &twoBlocks{a: end - 6, b: end - 3})
 	s.Frame()
 	at := render.Point{X: float32(editorColumn.Dx()) / 2, Y: float32(editorColumn.Dy()) / 2}
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})

@@ -145,7 +145,7 @@ func New(opts Options) (*Host, error) {
 	strip.Track(w.store)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
-	w.reposPart.Changed()
+	w.reposPart.EmitChanged()
 	w.runPart.RulesChanged()
 	w.resumeHandedOver()
 	return w, nil
@@ -215,7 +215,7 @@ func (w *Host) parts() error {
 	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}
-	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
+	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, RunAwaitingKey: w.runPart.RunAwaitingKey, Wake: w.runPart.Wake,
 		BranchRenamed: worktree.BranchRenamed})
 	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
 		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})
@@ -235,8 +235,8 @@ func (w *Host) parts() error {
 // sandboxDeps are what the host's sandboxes need of it.
 func (w *Host) sandboxDeps() sandboxhost.Deps {
 	return sandboxhost.Deps{Env: w.env, State: state{w},
-		Keyed: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
-			return w.runPart.Keyed(ctx, id, what, project, fn)
+		RunAwaitingKey: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
+			return w.runPart.RunAwaitingKey(ctx, id, what, project, fn)
 		},
 		Config:          func() sandbox.Config { return w.boxesPart.Config() },
 		Providers:       w.opts.Providers.List,

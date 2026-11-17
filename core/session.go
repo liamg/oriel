@@ -104,8 +104,8 @@ func (a *AgentState) RanOn(at time.Time, account, name string) {
 // Live says the agent is up or on its way: running, or starting.
 func (a AgentState) Live() bool { return a.Running || a.Starting != nil }
 
-// Stopped is the agent stopped at t by by; one that wasn't running or starting keeps who stopped it.
-func (a *AgentState) Stopped(by string, t time.Time) {
+// MarkStopped is the agent stopped at t by by; one that wasn't running or starting keeps who stopped it.
+func (a *AgentState) MarkStopped(by string, t time.Time) {
 	if a.Live() && by != "" {
 		a.StoppedBy, a.StoppedAt = by, t.UTC()
 	}
@@ -123,16 +123,16 @@ const (
 
 // Stats are what a session's agent has used so far.
 type Stats struct {
-	Context    int     `json:"context,omitempty"` // tokens in the window now
-	ContextMax int     `json:"contextMax,omitempty"`
-	Input      int64   `json:"input,omitempty"`
-	Output     int64   `json:"output,omitempty"`
-	CacheRead  int64   `json:"cacheRead,omitempty"`
-	CacheWrite int64   `json:"cacheWrite,omitempty"`
-	Turns      int     `json:"turns,omitempty"`
-	ToolCalls  int     `json:"toolCalls,omitempty"`
-	Cost       float64 `json:"cost,omitempty"`    // estimated, in dollars
-	Running    int64   `json:"running,omitempty"` // seconds of turns
+	Context     int     `json:"context,omitempty"` // tokens in the window now
+	ContextMax  int     `json:"contextMax,omitempty"`
+	Input       int64   `json:"input,omitempty"`
+	Output      int64   `json:"output,omitempty"`
+	CacheRead   int64   `json:"cacheRead,omitempty"`
+	CacheWrite  int64   `json:"cacheWrite,omitempty"`
+	Turns       int     `json:"turns,omitempty"`
+	ToolCalls   int     `json:"toolCalls,omitempty"`
+	Cost        float64 `json:"cost,omitempty"`    // estimated, in dollars
+	TurnSeconds int64   `json:"running,omitempty"` // seconds of turns
 }
 
 // CacheHit is the share of input read from the cache, 0–1.

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
@@ -43,7 +44,7 @@ func ProjectsIn(work string, se *core.SessionState) WindowProjects {
 		st := *se
 		on := work == "" && len(st.Projects) > 0
 		for _, d := range append([]string{st.Dir}, DirsOf(st.Projects)...) {
-			if d != "" && work != "" && Inside(work, d) {
+			if d != "" && work != "" && pathx.Inside(work, d) {
 				on = true
 			}
 		}
@@ -66,43 +67,24 @@ func DirsOf(ps []core.Project) []string {
 	return out
 }
 
-// Inside reports whether path is dir or under it, as written.
-func Inside(path, dir string) bool {
-	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
-	return err == nil && filepath.IsLocal(rel) || rel == "."
-}
-
-// Within is Inside, as written or with symbolic links resolved; never for an empty path or dir.
-func Within(path, dir string) bool {
-	if dir == "" || path == "" {
-		return false
-	}
-	if Inside(path, dir) {
-		return true
-	}
-	rp, err1 := filepath.EvalSymlinks(path)
-	rd, err2 := filepath.EvalSymlinks(dir)
-	return err1 == nil && err2 == nil && Inside(rp, rd)
-}
-
-// Links is Within with each path's symbolic links read once and kept, for code that asks again and again. It's safe
+// Links is pathx.InsideResolved with each path's symbolic links read once and kept, for code that asks again and again. It's safe
 // to use from any goroutine. The zero Links is ready.
 type Links struct {
 	mu sync.Mutex
 	m  map[string]string
 }
 
-// Within is kit.Within, its paths resolved once.
-func (l *Links) Within(path, dir string) bool {
+// InsideResolved is pathx.InsideResolved, its paths resolved once.
+func (l *Links) InsideResolved(path, dir string) bool {
 	if dir == "" || path == "" {
 		return false
 	}
-	if Inside(path, dir) {
+	if pathx.Inside(path, dir) {
 		return true
 	}
 	rp, ok1 := l.real(path)
 	rd, ok2 := l.real(dir)
-	return ok1 && ok2 && Inside(rp, rd)
+	return ok1 && ok2 && pathx.Inside(rp, rd)
 }
 
 func (l *Links) real(p string) (string, bool) {
@@ -124,7 +106,7 @@ func (l *Links) real(p string) (string, bool) {
 
 // Holds says whether session se has dir: its own directory, or one of its projects'.
 func Holds(se core.SessionState, dir string) bool {
-	return slices.ContainsFunc(append([]string{se.Dir}, DirsOf(se.Projects)...), func(d string) bool { return d != "" && Inside(dir, d) })
+	return slices.ContainsFunc(append([]string{se.Dir}, DirsOf(se.Projects)...), func(d string) bool { return d != "" && pathx.Inside(dir, d) })
 }
 
 // Many says the window has projects to choose between: views then carry the project they're for.
@@ -155,7 +137,7 @@ func (w WindowProjects) Dir(name string) string {
 func (w WindowProjects) ProjectOf(path string) (core.Project, bool) {
 	best := -1
 	for i, p := range w.Projects {
-		if p.Dir != "" && filepath.IsAbs(path) && Inside(path, p.Dir) && (best < 0 || len(p.Dir) > len(w.Projects[best].Dir)) {
+		if p.Dir != "" && filepath.IsAbs(path) && pathx.Inside(path, p.Dir) && (best < 0 || len(p.Dir) > len(w.Projects[best].Dir)) {
 			best = i
 		}
 	}

@@ -500,7 +500,7 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 	}
 	res := widget.Tree(c, "tree", items, widget.TreeOpts{Height: ui.Flex(1), Label: root.Name, Help: workspaceHelp})
 	if res.Toggled != "" {
-		x.dirs.Opened(res.Toggled, "")
+		x.dirs.ReadOpened(res.Toggled, "")
 	}
 	if p := x.dirs.Path(res.Activated, ""); p != "" {
 		x.open = false

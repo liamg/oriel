@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -253,7 +254,7 @@ func (g *Git) commands() []registry.Command {
 		})},
 		{ID: "git.discard", Title: "Throw away files' unstaged changes, after asking: {path}", Available: inRepo,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if a["confirm"] != true {
+				if !a.Bool("confirm") {
 					ps := paths(a)
 					for i, p := range ps {
 						ps[i] = g.holding(p).Rel(p)
@@ -314,7 +315,7 @@ func (g *Git) tree(dir string) *gitTree {
 	if dir == "" || filepath.Clean(dir) == filepath.Clean(g.work) {
 		return &g.gitTree
 	}
-	under := g.root() != "" && g.links.Within(dir, g.root())
+	under := g.root() != "" && g.links.InsideResolved(dir, g.root())
 	if under {
 		if n, known := g.nested(dir); known && !n {
 			return &g.gitTree
@@ -380,7 +381,7 @@ func (g *Git) setNested(dir string, n bool) {
 func (g *Git) holding(p string) *gitTree {
 	if filepath.IsAbs(p) {
 		for _, t := range g.trees() {
-			if t.Root() != "" && kit.Within(p, t.Root()) {
+			if t.Root() != "" && pathx.InsideResolved(p, t.Root()) {
 				return t
 			}
 		}
@@ -497,7 +498,7 @@ func (t *gitTree) sessionFor(root string) core.SessionID {
 	st := t.g.h.State()
 	holds := func(se core.SessionState) bool {
 		for _, p := range se.Projects {
-			if p.Dir != "" && (filepath.Clean(p.Dir) == root || kit.Within(root, p.Dir) || kit.Within(p.Dir, root)) {
+			if p.Dir != "" && (filepath.Clean(p.Dir) == root || pathx.InsideResolved(root, p.Dir) || pathx.InsideResolved(p.Dir, root)) {
 				return true
 			}
 		}

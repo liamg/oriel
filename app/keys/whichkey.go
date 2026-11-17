@@ -117,7 +117,7 @@ func entries(h plugin.Host, p plugin.Pending) (title string, out []entry) {
 }
 
 func (w *WhichKey) build(c *ui.Ctx) {
-	if on, _, err := w.h.Options().Get("whichkey.enabled", registry.At{}); err == nil && on == false {
+	if on, ok := registry.Option[bool](w.h.Options(), "whichkey.enabled", registry.At{}); ok && !on {
 		return
 	}
 	p := w.h.Pending()

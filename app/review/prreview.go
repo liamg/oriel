@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -607,7 +608,7 @@ func (x *PRReview) watch(id core.SessionID) {
 	if !seen || !was || asking {
 		return
 	}
-	text := fmt.Sprintf("The agent has reviewed %s: %s to triage.", kit.Label(se), kit.Counted(len(x.items(se)), "comment"))
+	text := fmt.Sprintf("The agent has reviewed %s: %s to triage.", kit.Label(se), words.Counted(len(x.items(se)), "comment"))
 	x.h.Notify(core.Notice{ID: "review.pr.done." + string(id), Severity: core.SevInfo, Session: id, Title: "Review done", Text: text,
 		Actions: []core.Action{openReview(id)}})
 }

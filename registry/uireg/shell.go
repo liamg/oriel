@@ -62,9 +62,9 @@ func (e RailEntry) ArgsFor(project string) registry.Args {
 	return a
 }
 
-// For says whether the entry is listed on a session of kind k (Kinds, When); k is "" for a window on a directory with
-// no session, which lists the entries with no Kinds.
-func (e RailEntry) For(r registry.Contributions, k core.Kind) bool {
+// ListedOnKind says whether the entry is listed on a session of kind k (Kinds, When); k is "" for a window on a
+// directory with no session, which lists the entries with no Kinds.
+func (e RailEntry) ListedOnKind(r registry.Contributions, k core.Kind) bool {
 	if k == "" {
 		return len(e.Kinds) == 0
 	}

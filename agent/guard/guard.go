@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Gateway is the prefix of the sandbox gateway's tools.
@@ -100,23 +101,14 @@ func Protected(spec agent.StartSpec, file string) Decision {
 		file = filepath.Join(spec.Cwd, file)
 	}
 	file = filepath.Clean(file)
-	if Under(file, spec.Cwd) {
+	if pathx.Inside(file, spec.Cwd) {
 		return Decision{}
 	}
 	for _, root := range spec.Protect {
-		if Under(file, root) {
+		if pathx.Inside(file, root) {
 			return Decision{Deny: true, Reason: "Oriel: " + root + " is the original checkout, which this session " +
 				"must not edit. Edit the copy under " + spec.Cwd + " instead."}
 		}
 	}
 	return Decision{}
-}
-
-// Under says p is root or inside it.
-func Under(p, root string) bool {
-	if root == "" {
-		return false
-	}
-	root = filepath.Clean(root)
-	return p == root || strings.HasPrefix(p, strings.TrimSuffix(root, string(filepath.Separator))+string(filepath.Separator))
 }

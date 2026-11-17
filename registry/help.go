@@ -11,7 +11,7 @@ type HelpSource struct {
 	Source string
 }
 
-func (r *reg) HelpPages(s HelpSource) Disposable {
+func (r *reg) HelpPage(s HelpSource) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.tokens.Add(1)

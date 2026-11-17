@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -52,7 +53,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	if reviewPR(se) == "" || !ok || head == "" || p.Commit == "" || head == p.Commit || se.Archived || x.ended(reviewPR(se)) {
 		return
 	}
-	if on, _, _ := x.h.Options().Get(optAutoRereview, registry.At{}); on != true {
+	if on, _ := registry.Option[bool](x.h.Options(), optAutoRereview, registry.At{}); !on {
 		x.forget(reviewPR(se)) // the tab's bar offers Fetch latest
 		return
 	}
@@ -82,7 +83,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 			x.forget(reviewPR(se))
 			for _, m := range moved {
 				x.form(id).moved = m
-				text := fmt.Sprintf("%s has %s.", kit.Label(se), kit.Counted(m.Commits, "new commit"))
+				text := fmt.Sprintf("%s has %s.", kit.Label(se), words.Counted(m.Commits, "new commit"))
 				if t, ok := reviewRequest(se); ok && !reviewing(se, t) {
 					x.run("review.pr.recheck", registry.Args{"id": string(id)})
 					text += " The agent is reviewing them."
@@ -108,7 +109,7 @@ func (x *PRReview) recheck(ctx registry.Ctx, a registry.Args) error {
 	x.form(se.ID).moved = hostapi.PRMove{}
 	var b strings.Builder
 	fmt.Fprintf(&b, "The PR was reviewed before: the author has pushed %s since you reviewed %s. Review what changed (`git diff %s %s`) as a later round.",
-		kit.Counted(m.Commits, "commit"), kit.Label(se), kit.ShortSHA(m.From), kit.ShortSHA(m.To))
+		words.Counted(m.Commits, "commit"), kit.Label(se), kit.ShortSHA(m.From), kit.ShortSHA(m.To))
 	if sent := sentItems(se); len(sent) > 0 {
 		b.WriteString("\n\nYour earlier comments, as posted:\n")
 		for _, s := range sent {

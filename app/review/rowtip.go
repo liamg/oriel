@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
@@ -81,7 +82,7 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 	}
 	files := ""
 	if q.Files > 0 {
-		files = kit.Counted(q.Files, "file")
+		files = words.Counted(q.Files, "file")
 	}
 	add(size, files)
 	var asked, reviewed []string

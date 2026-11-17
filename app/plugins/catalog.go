@@ -78,10 +78,8 @@ func (x *Catalog) github() catalog.GitHub {
 // sources are [registry] sources with their keys: the default registry's built in unless keys pins another.
 func (x *Catalog) sources() []catalog.Source {
 	o := x.h.Options()
-	v, _, _ := o.Get("registry.sources", registry.At{})
-	repos, _ := v.([]string)
-	kv, _, _ := o.Get("registry.keys", registry.At{})
-	keys, _ := kv.(map[string]string)
+	repos, _ := registry.Option[[]string](o, "registry.sources", registry.At{})
+	keys, _ := registry.Option[map[string]string](o, "registry.keys", registry.At{})
 	var out []catalog.Source
 	for _, r := range repos {
 		s := catalog.Source{Repo: r}
@@ -139,9 +137,9 @@ func (x *Catalog) newResolver() catalog.Resolver {
 	x.updates = map[string]bool{}
 	x.mu.Unlock()
 	o := x.h.Options()
-	u, _, _ := o.Get("registry.updates", registry.At{})
-	hold, _, _ := o.Get("registry.trusted_hold", registry.At{})
-	r := &catalog.RegistryResolver{Client: c, GitHub: x.github(), Updates: u.(string), Hold: hold.(time.Duration),
+	u, _ := registry.Option[string](o, "registry.updates", registry.At{})
+	hold, _ := registry.Option[time.Duration](o, "registry.trusted_hold", registry.At{})
+	r := &catalog.RegistryResolver{Client: c, GitHub: x.github(), Updates: u, Hold: hold,
 		Platform: runtime.GOOS + "/" + runtime.GOARCH, Clock: x.h.UI().Clock()}
 	for id := range updates {
 		r.Update(id)
@@ -438,7 +436,7 @@ func (x *Catalog) apply(sts []catalog.Status) {
 	revoked := map[string]catalog.Status{}
 	offers := map[string]catalog.Status{}
 	ask := false
-	if v, _, _ := x.h.Options().Get("registry.updates", registry.At{}); v == "ask" {
+	if v, _ := registry.Option[string](x.h.Options(), "registry.updates", registry.At{}); v == "ask" {
 		ask = true
 	}
 	for _, st := range sts {

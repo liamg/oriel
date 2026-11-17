@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
@@ -237,7 +238,7 @@ func (x *Prompts) header(c *ui.Ctx, o prompts.Overrides) {
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(kit.TStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "PROMPTS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 			Color: th.C(theme.Fg)})
-		c.Text("m", fmt.Sprintf("%s · %d yours", kit.Counted(len(prompts.Defs(kit.Prompts(x.h)...)), "prompt"), len(o)), widget.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", fmt.Sprintf("%s · %d yours", words.Counted(len(prompts.Defs(kit.Prompts(x.h)...)), "prompt"), len(o)), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
 			c.Text("err", x.err, widget.MonoFont(11, th.C(theme.Error)))

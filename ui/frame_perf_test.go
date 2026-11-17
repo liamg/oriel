@@ -76,7 +76,7 @@ func TestListScrollBudget(t *testing.T) {
 		u.Frame(l.Record(1), size, build)
 		u.ScrollBy(id, 0, 21)
 	})
-	p50, p99 := perf.Pct(times, 50), perf.Pct(times, 99)
+	p50, p99 := perf.Percentile(times, 50), perf.Percentile(times, 99)
 	t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
 	if p99 > 4*time.Millisecond {
 		t.Errorf("p99 %v per frame, budget 4ms", p99)

@@ -108,7 +108,7 @@ type Contributions interface {
 
 // Help are the help pages.
 type Help interface {
-	HelpPages(s HelpSource) Disposable
+	HelpPage(s HelpSource) Disposable
 	HelpSources() ([]HelpSource, int)
 }
 

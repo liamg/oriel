@@ -299,7 +299,7 @@ func (h *session) stop(why, by string) {
 	if cancel != nil {
 		cancel()
 	}
-	h.setAgent(func(a *core.AgentState) { a.Stopped(by, h.r.env.Now()) })
+	h.setAgent(func(a *core.AgentState) { a.MarkStopped(by, h.r.env.Now()) })
 	h.r.env.Log.Info("agent stopped", "session", h.id, "why", why)
 }
 

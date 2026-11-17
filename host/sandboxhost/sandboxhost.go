@@ -19,9 +19,9 @@ import (
 
 // Deps are what the sandboxes need of the session host they serve.
 type Deps struct {
-	Env   hostcore.Env
-	State hostcore.State
-	Keyed hostcore.Keyed
+	Env            hostcore.Env
+	State          hostcore.State
+	RunAwaitingKey hostcore.RunAwaitingKey
 	// Config is the sandbox settings the app last sent.
 	Config func() sandbox.Config
 	// Providers are the agent providers the host knows, whose installed MCP servers every sandbox's gateway carries.

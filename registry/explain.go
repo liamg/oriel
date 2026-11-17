@@ -17,18 +17,21 @@ type ExplainRequest struct {
 	Subject string // "TestRoundHalfEven/-3.5 failed"
 	Context string // the failure, the test's code, the code under test…
 	Files   []string
-	Depth   string // ExplainBrief (""), ExplainDetailed or ExplainWhy
+	Depth   ExplainDepth // ExplainBrief (or ""), ExplainDetailed or ExplainWhy
 	// Format, when set, is the shape the answer must take instead of markdown prose, for a caller that parses it
 	// (the walkthrough's JSON steps); it replaces the explainer's own instructions on length and form.
 	Format string
 }
 
-// How deep an explanation goes: brief by default, detailed on demand, and why · history, whose Context
-// carries the blame, the commits, the PR and the threads that touched it.
+// ExplainDepth is how deep an explanation goes: brief by default, detailed on demand, and why · history, whose
+// Context carries the blame, the commits, the PR and the threads that touched it.
+type ExplainDepth string
+
+// Explanation depths.
 const (
-	ExplainBrief    = "brief"
-	ExplainDetailed = "detailed"
-	ExplainWhy      = "why"
+	ExplainBrief    ExplainDepth = "brief"
+	ExplainDetailed ExplainDepth = "detailed"
+	ExplainWhy      ExplainDepth = "why"
 )
 
 // Explainer explains things without changing anything: it only answers, in markdown. The agent's (a tool-less fork

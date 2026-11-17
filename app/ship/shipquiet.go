@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -65,7 +65,7 @@ func (x *Ship) quietStrip(c *ui.Ctx, se core.SessionState, ships []shipRead) []s
 	th := c.Theme()
 	c.Row("quiet", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Row("names", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", fmt.Sprintf("%s with nothing to ship: %s", kit.Counted(len(still), "project"), strings.Join(still, ", ")),
+			c.Text("t", fmt.Sprintf("%s with nothing to ship: %s", words.Counted(len(still), "project"), strings.Join(still, ", ")),
 				widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		label := "Show"

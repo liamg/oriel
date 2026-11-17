@@ -64,8 +64,8 @@ func (x *Debug) inlineValues(ctx uireg.DecorationCtx) []uireg.Decoration {
 }
 
 func (x *Debug) inlineOn() bool {
-	v, _, err := x.h.Options().Get(InlineValuesOption, registry.At{})
-	return err != nil || v != false
+	on, ok := registry.Option[bool](x.h.Options(), InlineValuesOption, registry.At{})
+	return !ok || on
 }
 
 // frameValues are the selected frame's arguments and locals by name, the first scope's winning.

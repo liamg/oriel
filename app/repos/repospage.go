@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -267,7 +268,7 @@ func (x *Repos) rowView(c *ui.Ctx, r core.Repo, on bool) {
 			case r.Used.IsZero():
 				line = append(line, "never used")
 			case tidy:
-				line = append(line, kit.Counted(len(d.plan.Branches)+len(d.plan.Stale), "to tidy"))
+				line = append(line, words.Counted(len(d.plan.Branches)+len(d.plan.Stale), "to tidy"))
 			}
 			c.Text("l2", strings.Join(line, " · "), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
@@ -590,13 +591,10 @@ func (x *Repos) housekeepFoot(c *ui.Ctx, r core.Repo, d *repoDetail, ticked int)
 }
 
 func plural0(n int, one, many string) string {
-	switch n {
-	case 0:
+	if n == 0 {
 		return ""
-	case 1:
-		return "1 " + one
 	}
-	return fmt.Sprintf("%d %s", n, many)
+	return fmt.Sprintf("%d %s", n, words.Plural(n, one, many))
 }
 
 func (d *repoDetail) tickedCount() int {

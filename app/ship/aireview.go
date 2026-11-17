@@ -394,8 +394,8 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 				c.Text("k", "REVIEWER", widget.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				what := "the session's agent"
-				if v, _, _ := x.h.Options().Get("review.ai.provider", registry.At{}); v != "auto" && v != nil {
-					what = services.ProviderTitle(x.h, fmt.Sprint(v))
+				if v, ok := registry.Option[string](x.h.Options(), "review.ai.provider", registry.At{}); ok && v != "auto" {
+					what = services.ProviderTitle(x.h, v)
 				}
 				c.Text("what", what, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})

@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/registry/services"
@@ -267,7 +268,7 @@ func hunkArg(st *diffState, a registry.Args) diffSel {
 }
 
 func (x *Diff) layout() string {
-	if v, _, _ := x.h.Options().Get("diff.layout", registry.At{}); v == "unified" {
+	if v, _ := registry.Option[string](x.h.Options(), "diff.layout", registry.At{}); v == "unified" {
 		return "unified"
 	}
 	return "split"
@@ -328,7 +329,7 @@ func knownTarget(h plugin.Host, path string) (clean, dir, root string, err error
 		}
 		dir = filepath.Dir(dir)
 	}
-	if t := kit.Git(h).Holding(path); t.Root() != "" && kit.Within(path, t.Root()) {
+	if t := kit.Git(h).Holding(path); t.Root() != "" && pathx.InsideResolved(path, t.Root()) {
 		root = t.Root()
 	}
 	return path, dir, root, nil

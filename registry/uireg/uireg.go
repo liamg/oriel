@@ -29,7 +29,7 @@ type Views interface {
 
 // Decorations are what's drawn on, beside and between a buffer's lines.
 type Decorations interface {
-	Decorations(id string, p DecorationProvider) registry.Disposable
+	Decoration(id string, p DecorationProvider) registry.Disposable
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
 	// DecorationsChanged says provider id's decorations have changed, so Decorate asks it again everywhere.
 	DecorationsChanged(id string)
@@ -88,7 +88,7 @@ func (s sourced) Command(c registry.Command) registry.Disposable         { retur
 func (s sourced) Keymap(k registry.Keymap) registry.Disposable           { return s.pure.Keymap(k) }
 func (s sourced) Hook(h registry.Hook) registry.Disposable               { return s.pure.Hook(h) }
 func (s sourced) Option(o registry.OptionSpec) registry.Disposable       { return s.pure.Option(o) }
-func (s sourced) HelpPages(h registry.HelpSource) registry.Disposable    { return s.pure.HelpPages(h) }
+func (s sourced) HelpPages(h registry.HelpSource) registry.Disposable    { return s.pure.HelpPage(h) }
 func (s sourced) Contribute(c registry.Contribution) registry.Disposable { return s.pure.Contribute(c) }
 
 func (s sourced) Picker(p PickerSource) registry.Disposable {

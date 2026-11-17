@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/ui/widget"
 )
 
@@ -48,7 +49,7 @@ func Why(s core.SessionState, now time.Time) string {
 			}
 		}
 		if n > 0 {
-			return Counted(n, "subagent")
+			return words.Counted(n, "subagent")
 		}
 		for _, it := range slices.Backward(s.Transcript) {
 			if it.Kind == core.ItemTool && !it.Done {

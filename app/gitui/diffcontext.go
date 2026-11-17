@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -123,7 +124,7 @@ func (x *Diff) moreContext(st *diffState, a registry.Args) error {
 		n = contextStep
 	}
 	switch _, gap := a["gap"]; {
-	case a["all"] == true:
+	case a.Bool("all"):
 		for _, g := range gaps {
 			fc.show(g, "all", 0)
 		}
@@ -209,7 +210,7 @@ func (x *Diff) expander(c *ui.Ctx, fc *fileContext, g hiddenGap, lo, hi int) {
 					fc.show(g, s.dir, contextStep)
 				}
 			}
-			c.Text("n", fmt.Sprintf("%d unchanged %s", left, kit.Plural(left, "line", "lines")), widget.MonoFont(10.5, th.C(theme.FgGhost)))
+			c.Text("n", fmt.Sprintf("%d unchanged %s", left, words.Plural(left, "line", "lines")), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 		})
 }
 

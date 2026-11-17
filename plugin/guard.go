@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Grant is one declared capability: all of a plugin's are accepted together at install.
@@ -162,7 +164,7 @@ func (g *Grants) covers(gr Grant, target string) bool {
 			}
 		case "paths":
 			for _, dir := range g.places(s) {
-				if Within(dir, target) {
+				if absInside(target, dir) {
 					return true
 				}
 			}
@@ -207,13 +209,9 @@ func Expand(p string) string {
 	return p
 }
 
-// Within says whether path is dir or under it; both absolute.
-func Within(dir, path string) bool {
-	if dir == "" || !filepath.IsAbs(dir) || !filepath.IsAbs(path) {
-		return false
-	}
-	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, "../")
+// absInside says whether path is dir or under it, both absolute: a relative one is never inside.
+func absInside(path, dir string) bool {
+	return filepath.IsAbs(dir) && filepath.IsAbs(path) && pathx.Inside(path, dir)
 }
 
 // matchHost is a host pattern ("api.linear.app", "*.atlassian.net", "host:8080") against a host, with or

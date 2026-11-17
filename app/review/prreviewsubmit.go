@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -30,7 +31,7 @@ func severityBadge(sev string) string {
 // posted is the text a kept item is posted with: its words, headed by its severity's badge when badges are on.
 func (x *PRReview) posted(it reviewItem) string {
 	body := strings.TrimSpace(it.words())
-	if on, _, _ := x.h.Options().Get(optSeverityBadges, registry.At{}); on != true {
+	if on, _ := registry.Option[bool](x.h.Options(), optSeverityBadges, registry.At{}); !on {
 		return body
 	}
 	if b := severityBadge(it.severity()); b != "" && !strings.HasPrefix(body, b) {
@@ -135,7 +136,7 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 				})
 			})
 			x.h.Notify(core.Notice{ID: "review.pr.submit", Severity: core.SevInfo,
-				Text: fmt.Sprintf("%s on %s, with %s.", sentWord(verdict), src.Label(), kit.Counted(len(sent), "comment"))})
+				Text: fmt.Sprintf("%s on %s, with %s.", sentWord(verdict), src.Label(), words.Counted(len(sent), "comment"))})
 			return errors.Join(errs...)
 		})
 }

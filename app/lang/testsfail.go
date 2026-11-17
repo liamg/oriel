@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render/typeset"
@@ -180,7 +181,7 @@ func (x *Tests) failingSince(key string) string {
 	case n <= 1:
 		return "first failed this run"
 	default:
-		return fmt.Sprintf("first failed %d %s ago", n-1, kit.Plural(n-1, "run", "runs"))
+		return fmt.Sprintf("first failed %d %s ago", n-1, words.Plural(n-1, "run", "runs"))
 	}
 }
 
