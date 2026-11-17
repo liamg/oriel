@@ -17,7 +17,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -338,7 +337,7 @@ func (w *Host) emit(ev core.Event) error {
 func (w *Host) session(id core.SessionID) (core.SessionState, error) {
 	se, ok := w.store.State().Session(id)
 	if !ok {
-		return core.SessionState{}, fmt.Errorf("no session %s", id)
+		return core.SessionState{}, core.NoSession(id)
 	}
 	return se.Snapshot(), nil
 }

@@ -529,6 +529,7 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 		return fmt.Errorf("command %q is turned off: %w", id, err)
 	}
 	err := Call(func() error { return c.Run(ctx, args) })
+	// Only this command's own panic is its fault: one wrapped from a command it ran was the inner one's.
 	if p, ok := err.(*Panic); ok {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
 	}

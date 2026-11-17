@@ -106,7 +106,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 			id := core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus)))
 			s, ok := h.Session(id)
 			if !ok {
-				return fmt.Errorf("no session %q", id)
+				return core.NoSession(id)
 			}
 			t.renaming = id
 			t.rename.Start(s.Name())

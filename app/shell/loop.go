@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"log/slog"
@@ -553,7 +554,9 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		var err error
 		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
-			if _, ok := err.(*registry.Panic); !ok {
+			// A panic is reported as the contribution's fault, and a hook's stop where the step was asked for.
+			var p *registry.Panic
+			if !errors.As(err, &p) && !errors.Is(err, kit.ErrStopped) {
 				_ = l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
 			}
 		}

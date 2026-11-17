@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -533,25 +534,7 @@ func (b *Box) updateGrants(fn func([]gateway.Rule) []gateway.Rule) error {
 	if err != nil {
 		return err
 	}
-	path := sandbox.GrantsPath(b.root)
-	f, err := os.CreateTemp(filepath.Dir(path), ".grants-*")
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(data); err != nil {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-		return err
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(f.Name())
-		return err
-	}
-	if err := os.Rename(f.Name(), path); err != nil {
-		_ = os.Remove(f.Name())
-		return err
-	}
-	return nil
+	return atomicfile.Write(sandbox.GrantsPath(b.root), data, 0o600)
 }
 
 func (b *Box) logCall(e gateway.Entry) {

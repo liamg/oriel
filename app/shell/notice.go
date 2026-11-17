@@ -3,6 +3,7 @@ package shell
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -38,7 +39,8 @@ func faultNotice(f registry.Fault, l *diag.Logs, dir string, now time.Time) core
 		n.Text = fmt.Sprintf("%v · %s turned off after %d errors", f.Err, contribName(f.Kind, f.ID), f.Errors)
 	}
 	n.Actions = []core.Action{{Title: "Turn back on", Command: "contribution.enable", Args: map[string]any{"kind": f.Kind, "id": f.ID}}}
-	if p, ok := f.Err.(*registry.Panic); ok {
+	var p *registry.Panic
+	if errors.As(f.Err, &p) {
 		n.Detail = string(p.Stack)
 		if fr, ok := failingFrame(script.ParseTrace(n.Detail)); ok {
 			n.Location = fr.Loc()

@@ -40,7 +40,7 @@ func (e SessionStatusChanged) Scope() SessionID { return e.ID }
 func (e SessionStatusChanged) Apply(s *State) error {
 	se := s.session(e.ID)
 	if se == nil {
-		return fmt.Errorf("no session %s", e.ID)
+		return NoSession(e.ID)
 	}
 	se.Status = e.Status
 	return nil
@@ -55,7 +55,7 @@ func (e SessionClosed) Scope() SessionID { return e.ID }
 
 func (e SessionClosed) Apply(s *State) error {
 	if s.session(e.ID) == nil {
-		return fmt.Errorf("no session %s", e.ID)
+		return NoSession(e.ID)
 	}
 	s.Sessions = slices.DeleteFunc(s.Sessions, func(se SessionState) bool { return se.ID == e.ID })
 	s.Tabs = slices.DeleteFunc(slices.Clone(s.Tabs), func(id SessionID) bool { return id == e.ID })

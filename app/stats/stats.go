@@ -767,7 +767,7 @@ func (x *Stats) openSession(ctx registry.Ctx, id core.SessionID) error {
 	} else {
 		g, found := x.found(id)
 		if !found {
-			return fmt.Errorf("no session %q", id)
+			return core.NoSession(id)
 		}
 		title = cmp.Or(g.Label, string(id))
 	}

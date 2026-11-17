@@ -464,7 +464,7 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 					for i, a := range actions {
 						if widget.Button(c, i, a.Title, widget.ButtonOpts{Primary: i == 0, Help: "errors#log"}) {
 							if err := p.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {
-								p.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+								kit.NotifyFailure(p.h, core.Notice{ID: "action.failed", AutoClear: true, Source: "core"}, fmt.Errorf("%s: %w", a.Title, err))
 							}
 						}
 					}

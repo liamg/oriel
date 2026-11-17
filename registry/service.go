@@ -2,7 +2,6 @@ package registry
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -70,7 +69,7 @@ func SessionFromArgs(a Args, front core.SessionID, get func(core.SessionID) (cor
 	}
 	se, ok := get(id)
 	if !ok {
-		return core.SessionState{}, fmt.Errorf("no session %q", id)
+		return core.SessionState{}, core.NoSession(id)
 	}
 	return se, nil
 }

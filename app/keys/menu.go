@@ -2,6 +2,7 @@ package keys
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
@@ -160,6 +161,6 @@ func (m *Menus) run(it registry.MenuItem) {
 		return m.h.Run(ctx, it.Command, args)
 	})
 	if err != nil {
-		m.h.Notify(core.Notice{ID: "menu." + it.Name, Severity: core.SevError, Source: it.Source, AutoClear: true, Text: it.Label + ": " + err.Error()})
+		kit.NotifyFailure(m.h, core.Notice{ID: "menu." + it.Name, Source: it.Source, AutoClear: true}, fmt.Errorf("%s: %w", it.Label, err))
 	}
 }
