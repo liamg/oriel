@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -305,23 +304,13 @@ func (w *Host) waitGoing() {
 	}
 }
 
-// lastingJobs are the host's jobs that run as long as what they serve, so never end on their own.
-var lastingJobs = []string{"an agent's events", "a utility agent", "a permission", "a question", "Terminal", "a terminal dialog",
-	"a sign-in", "usage", "a stuck fetch"}
-
 // notesFiles are the files the providers' agents read a workspace's notes from (agent.NotesFiles).
 func (w *Host) notesFiles() []string { return agent.NotesFiles(w.opts.Providers.List()) }
 
 // Busy names the host's work under way off its callers that will end on its own: agents starting, resumes,
 // notices. A test waits for none before it counts what that work does.
 func (w *Host) Busy() []string {
-	out := w.Starting()
-	for _, j := range w.going.Running() {
-		if name, _, _ := strings.Cut(j, " ×"); !slices.Contains(lastingJobs, name) {
-			out = append(out, j)
-		}
-	}
-	return out
+	return append(w.Starting(), w.going.Transient()...)
 }
 
 // emit applies an event to the host's state.

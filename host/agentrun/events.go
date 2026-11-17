@@ -54,9 +54,9 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		x.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
 		h.toolResult(ev, now)
 	case agent.Permission:
-		x.env.Go("a permission", func() { h.permission(sess, ev) })
+		x.env.GoLasting("a permission", func() { h.permission(sess, ev) })
 	case agent.Question:
-		x.env.Go("a question", func() { h.question(sess, ev) })
+		x.env.GoLasting("a question", func() { h.question(sess, ev) })
 	case agent.Subagent:
 		h.subagent(ev, now)
 	case agent.TurnEnd:

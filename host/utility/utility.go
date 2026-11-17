@@ -248,7 +248,7 @@ func (x *Utilities) StartUtility(ctx context.Context, spec hostapi.UtilitySpec) 
 	run, cancel := context.WithCancel(context.Background())
 	events := make(chan hostapi.UtilityEvent, 64)
 	started := make(chan error, 1)
-	x.env.Go("a utility agent", func() {
+	x.env.GoLasting("a utility agent", func() {
 		defer close(events)
 		first := true
 		err := errors.New("the utility agent failed as it started")
