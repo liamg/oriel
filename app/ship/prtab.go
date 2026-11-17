@@ -242,7 +242,7 @@ func prThreads(se core.SessionState, s shipRead) []core.Thread {
 	}
 	var out []core.Thread
 	for _, t := range se.Threads {
-		if g := t.Hosted; g != nil && g.Project == s.Project && g.PR == s.PR.Number && cmp.Or(g.Host, "github") == s.CodeHost.Name {
+		if g := t.Hosted; g != nil && g.Project == s.Project && g.PR == s.PR.Number && g.Host == s.CodeHost.Name {
 			out = append(out, t)
 		}
 	}

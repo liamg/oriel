@@ -272,7 +272,7 @@ function oriel.hud.set(name, nodes) end
 ---@class oriel.inbox
 oriel.inbox = {}
 
---- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } }, open = { command, args } or fn() }. An action runs its command or its function and answers the card: it goes to the inbox's history. open takes you to where the card is answered: choosing its row in the Inbox panel runs it rather than opening the card there.
+--- Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, codehost (a pull request's activity; github is taken as it) or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } }, open = { command, args } or fn() }. An action runs its command or its function and answers the card: it goes to the inbox's history. open takes you to where the card is answered: choosing its row in the Inbox panel runs it rather than opening the card there.
 ---@param card table
 function oriel.inbox.add(card) end
 
@@ -451,7 +451,7 @@ function oriel.status.rule(name, fn) end
 ---@class oriel.thread
 oriel.thread = {}
 
---- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.
+--- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.
 ---@return table
 function oriel.thread.list() end
 

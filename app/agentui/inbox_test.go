@@ -407,8 +407,8 @@ func TestInboxSnapshot(t *testing.T) {
 	s.Store().Apply(core.SessionFocused{ID: "pricing-rounding"})
 	s.Registry().Contribute(uireg.InboxSource{Name: "github", Cards: func() []uireg.InboxCard {
 		return []uireg.InboxCard{
-			{ID: "ci", Group: uireg.GroupGitHub, Icon: "tests", Title: "CI passed · #4417 dash-filters", Sub: "github · 12 checks", Done: true, Created: ago(11 * time.Minute)},
-			{ID: "c1", Group: uireg.GroupGitHub, Icon: "comment", Title: "sam commented on #4417", Sub: "github · review · mirrored", Done: true, Created: ago(24 * time.Minute)},
+			{ID: "ci", Group: uireg.GroupCodeHost, Icon: "tests", Title: "CI passed · #4417 dash-filters", Sub: "github · 12 checks", Done: true, Created: ago(11 * time.Minute)},
+			{ID: "c1", Group: uireg.GroupCodeHost, Icon: "comment", Title: "sam commented on #4417", Sub: "github · review · mirrored", Done: true, Created: ago(24 * time.Minute)},
 		}
 	}})
 	_ = b

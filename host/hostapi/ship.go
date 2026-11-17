@@ -51,11 +51,11 @@ type Ship struct {
 	Replaced  int          `json:"replaced,omitempty"` // commits on origin's branch a rebase rewrote: the next push replaces them
 	Synced    time.Time    `json:"synced,omitzero"`    // when it was last rebased onto its base from here
 	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
-	CommitDraft  Draft    `json:"commitDraft,omitzero"`
-	PRDraft      Draft    `json:"prDraft,omitzero"`
-	Dir          string   `json:"dir,omitempty"`     // the project's checkout
-	Changed      []string `json:"changed,omitempty"` // the files the branch changes since its base
-	GitError     string   `json:"gitError,omitempty"`
+	CommitDraft Draft    `json:"commitDraft,omitzero"`
+	PRDraft     Draft    `json:"prDraft,omitzero"`
+	Dir         string   `json:"dir,omitempty"`     // the project's checkout
+	Changed     []string `json:"changed,omitempty"` // the files the branch changes since its base
+	GitError    string   `json:"gitError,omitempty"`
 	// Off is set while the worktree is on a branch other than the session's for it, which Oriel won't push.
 	Off *OffBranch `json:"off,omitempty"`
 }
@@ -117,14 +117,14 @@ type RenameReq struct {
 	Name    string         `json:"name"`
 }
 
-// ResolveReq resolves a thread mirrored from GitHub there too, or reopens it, as the user did in Oriel.
+// ResolveReq resolves a thread mirrored from a code host there too, or reopens it, as the user did in Oriel.
 type ResolveReq struct {
 	Session  core.SessionID `json:"session"`
 	Thread   core.ThreadID  `json:"thread"`
 	Resolved bool           `json:"resolved"`
 }
 
-// MirrorReviewReq brings one PR's review from a code host other than GitHub into a session: Threads as the app read
+// MirrorReviewReq brings one PR's review from its code host into a session: Threads as the app read
 // them through the host's plugin. A thread with no Key is the PR's conversation.
 type MirrorReviewReq struct {
 	Session core.SessionID `json:"session"`

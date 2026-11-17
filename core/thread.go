@@ -25,7 +25,7 @@ type Author string
 const (
 	AuthorYou   Author = "you"
 	AuthorAgent Author = "agent"
-	AuthorHost  Author = "github" // a reviewer's, mirrored from the PR's code host
+	AuthorHost  Author = "codehost" // a reviewer's, mirrored from the PR's code host
 )
 
 // Anchor is the place a thread is about. A thread with no anchor is about the whole change.
@@ -121,7 +121,8 @@ func (g *HostThread) UnmarshalJSON(b []byte) error {
 // githubVerdicts are GitHub's review states, as older logs kept them, in a code host's words.
 var githubVerdicts = map[string]string{"APPROVED": "approved", "CHANGES_REQUESTED": "changes", "COMMENTED": "commented"}
 
-// UnmarshalJSON reads a comment, taking the GitHub id older logs kept apart (githubId) as its HostID.
+// UnmarshalJSON reads a comment, taking the GitHub id older logs kept apart (githubId) as its HostID, and the author
+// they named github as the code host's.
 func (c *Comment) UnmarshalJSON(b []byte) error {
 	type plain Comment
 	var v struct {
@@ -135,19 +136,39 @@ func (c *Comment) UnmarshalJSON(b []byte) error {
 	if c.HostID == "" && v.GitHubID != 0 {
 		c.HostID = strconv.FormatInt(v.GitHubID, 10)
 	}
+	if c.Author == "github" {
+		c.Author = AuthorHost
+	}
 	return nil
 }
 
-// UnmarshalJSON reads a thread, taking one older logs said came from GitHub (origin "github") as a code host's.
+// UnmarshalJSON reads a thread, taking one older logs said came from GitHub (origin "github", where it lives under
+// "github") as a code host's.
 func (t *Thread) UnmarshalJSON(b []byte) error {
 	type plain Thread
-	if err := json.Unmarshal(b, (*plain)(t)); err != nil {
+	var v struct {
+		*plain
+		GitHub *HostThread `json:"github"`
+	}
+	v.plain = (*plain)(t)
+	if err := json.Unmarshal(b, &v); err != nil {
 		return err
+	}
+	if t.Hosted == nil {
+		t.Hosted = v.GitHub
 	}
 	if t.Origin == "github" {
 		t.Origin = OriginCodeHost
 	}
 	return nil
+}
+
+// From is where the thread came from: its code host's name for a mirrored one, else its Origin.
+func (t Thread) From() string {
+	if t.Hosted != nil && t.Hosted.Host != "" {
+		return t.Hosted.Host
+	}
+	return t.Origin
 }
 
 // Touched is a file the agent changed while working on a thread.
@@ -171,7 +192,7 @@ type Thread struct {
 	// or the only one it was handed. Several can be, as subagents work.
 	Active bool        `json:"active,omitempty"`
 	Origin string      `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginCodeHost
-	Hosted *HostThread `json:"github,omitempty"` // a review thread mirrored from the PR's code host
+	Hosted *HostThread `json:"hosted,omitempty"` // a review thread mirrored from the PR's code host
 	// Outgoing is the user's comment for a pull request's author, in the review they'll submit: not the agent's to
 	// answer.
 	Outgoing bool      `json:"outgoing,omitempty"`

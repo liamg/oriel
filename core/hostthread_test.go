@@ -6,20 +6,20 @@ import (
 )
 
 // A thread older logs kept as GitHub's alone (origin "github", no host, its first comment's id as root, its
-// comments' ids as githubId, its verdict in GitHub's words) reads as GitHub's code host thread, keyed by those ids;
+// comments' ids as githubId, a reviewer's comment by github, its verdict in GitHub's words) reads as GitHub's code host thread, keyed by those ids;
 // another host's reads as it was.
 func TestOldGitHubThreadsReadAsACodeHosts(t *testing.T) {
 	var old Thread
 	if err := json.Unmarshal([]byte(`{"id":"t1","status":"open","origin":"github",
 		"github":{"project":"api","repo":"acme/api","pr":7,"root":41,"reviewer":"priya","state":"CHANGES_REQUESTED"},
-		"comments":[{"id":"c1","author":"host","body":"Name it.","githubId":41},{"id":"c2","author":"you","body":"Done.","draft":false,"githubId":42}]}`), &old); err != nil {
+		"comments":[{"id":"c1","author":"github","body":"Name it.","githubId":41},{"id":"c2","author":"you","body":"Done.","draft":false,"githubId":42}]}`), &old); err != nil {
 		t.Fatal(err)
 	}
 	if old.Origin != OriginCodeHost || old.Hosted == nil || old.Hosted.Host != "github" || old.Hosted.Key != "41" || old.Hosted.Repo != "acme/api" ||
 		old.Hosted.State != "changes" {
 		t.Errorf("the thread: %+v %+v", old, old.Hosted)
 	}
-	if old.Comments[0].HostID != "41" || old.Comments[1].HostID != "42" {
+	if old.Comments[0].HostID != "41" || old.Comments[1].HostID != "42" || old.Comments[0].Author != AuthorHost {
 		t.Errorf("the comments: %+v", old.Comments)
 	}
 	convo := Thread{}

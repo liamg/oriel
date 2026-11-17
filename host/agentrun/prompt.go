@@ -86,11 +86,7 @@ func renderThreadList(se core.SessionState) string {
 		}
 		attrs := [][2]string{{"id", string(t.ID)}, {"where", where(se, t)}, {"status", string(cmp.Or(t.Status, core.ThreadOpen))}, {"by", by},
 			{"comments", strconv.Itoa(len(t.Comments))}}
-		origin := t.Origin
-		if t.Hosted != nil && t.Hosted.Host != "" {
-			origin = t.Hosted.Host
-		}
-		if origin != "" {
+		if origin := t.From(); origin != "" {
 			attrs = append(attrs, [2]string{"origin", origin})
 		}
 		line, _, _ := strings.Cut(strings.TrimSpace(first.Body), "\n")
@@ -126,10 +122,7 @@ func renderThread(b *strings.Builder, se core.SessionState, t core.Thread, fresh
 	if t.Urgent {
 		attrs = append(attrs, [2]string{"urgent", "true"})
 	}
-	origin := t.Origin
-	if t.Hosted != nil && t.Hosted.Host != "" {
-		origin = t.Hosted.Host
-	}
+	origin := t.From()
 	if origin != "" {
 		attrs = append(attrs, [2]string{"origin", origin})
 	}
