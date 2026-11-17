@@ -341,7 +341,7 @@ func (x *Ship) raise(ctx registry.Ctx, se core.SessionState, p string, a registr
 	if first, err := x.setupFirst(ctx, s); first {
 		return err
 	}
-	label := "Raising"
+	label := "Creating"
 	if s.PR.Open() {
 		label = "Updating"
 	}
@@ -382,7 +382,7 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		for _, req := range reqs {
 			done := make(chan struct{})
 			s, _ := x.ship(se.ID, req.Project)
-			err := x.step(se.ID, req.Project, "Raising", func(cx context.Context, c hostapi.ShipCalls) error {
+			err := x.step(se.ID, req.Project, "Creating", func(cx context.Context, c hostapi.ShipCalls) error {
 				defer close(done)
 				if err := c.ShipPush(cx, hostapi.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err

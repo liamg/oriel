@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -271,12 +272,31 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	}
 	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.now()}
 	x.cache.mu.Unlock()
+	x.showRaised(se.ID, s.Project, *pr)
 	if len(r.Reviewers) > 0 && h.RequestReviewers != nil {
 		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// showRaised puts a PR just raised or edited on its project's reading at once, so its tab shows it as soon as the code
+// host answers rather than after the read that follows.
+func (x *Ship) showRaised(id core.SessionID, project string, pr registry.PR) {
+	x.mu.Lock()
+	r := x.reports[id]
+	if r == nil || r.fixed {
+		x.mu.Unlock()
+		return
+	}
+	if i := slices.IndexFunc(r.ships, func(s shipRead) bool { return s.Project == project }); i >= 0 {
+		r.ships = slices.Clone(r.ships)
+		r.ships[i].PR = &pr
+	}
+	x.mu.Unlock()
+	x.h.Do(func() { x.editPR(id, project, false) })
+	x.h.Redraw()
 }
 
 // ownBranch refuses a PR from any branch but the one the session host raises the project's from: the worktree may

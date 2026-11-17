@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/render"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -210,7 +211,7 @@ func TestARaisedPRShowsWhileTheCodeHostCatchesUp(t *testing.T) {
 	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
 	hub.Lag()
 	s.ClickOn("Push + raise PR")
-	shipSettle(s, t, "the raise done", func() bool { return !strings.Contains(s.Text(), "Raising") && len(hub.PRs("acme/search-api")) == 1 })
+	shipSettle(s, t, "the raise done", func() bool { return !strings.Contains(s.Text(), "Creating") && len(hub.PRs("acme/search-api")) == 1 })
 	shipQuiet(s)
 	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil {
 		t.Fatal("raised, the project has no PR while the code host's search catches up")
@@ -242,4 +243,33 @@ func TestPROverviewMergedSnapshot(t *testing.T) {
 	s.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})
 	s.Until("the merged badge", func() bool { return s.Find("Pull request: Merged") != nil })
 	s.Golden("ship-pr-merged")
+}
+
+// While the PR is being created, the form is what's being sent: locked, with what's under way said beside a spinner,
+// and the raise button busy. Once the code host answers, the tab is the PR's.
+func TestTheFormIsLockedWhileThePRIsCreated(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
+	release := hub.HoldCreates(t)
+	s.ClickOn("Push + raise PR")
+	s.Midway(func() {
+		s.Until("the form locked", func() bool { return strings.Contains(s.Text(), "Creating the PR on GitHub…") })
+		for _, field := range []string{"Title", "Body", "Add a reviewer"} {
+			if n := s.FindRole(render.RoleTextBox, field); n == nil || !n.Disabled {
+				t.Errorf("%s can be edited while the PR is created", field)
+			}
+		}
+	})
+	release()
+	shipSettle(s, t, "the PR's overview", func() bool { return len(hub.PRs("acme/search-api")) == 1 && !strings.Contains(s.Text(), "RAISE PR") })
+	if strings.Contains(s.Text(), "Creating the PR") {
+		t.Errorf("raised, the tab still says it's creating:\n%s", s.Text())
+	}
 }

@@ -111,8 +111,9 @@ someone else pushed to the branch since, the push is refused and nothing of thei
 **Raise PR…** opens a main tab: the title, the body (the agent's draft, else the first commit's message and the repo's template) with a preview,
 reviewers (CODEOWNERS of the change first; add or take off any), and the session's other PRs it ships with, in merge
 order. **Push +
-raise PR** pushes and raises it, **Raise as draft** raises it as a draft, **Save draft** keeps what's written. Once
-it's raised the tab shows the PR itself (below), headed with a badge of where it stands: **Merged** (purple) or
+raise PR** pushes and raises it, **Raise as draft** raises it as a draft, **Save draft** keeps what's written. While
+it's being created (or updated) the form is locked and says so beside a spinner. As soon as the code host answers,
+the tab shows the PR itself (below), headed with a badge of where it stands: **Merged** (purple) or
 **Closed** (red) over anything a reviewer said, then **Changes requested** (amber), **Approved** (green), **Draft** or
 **Open**, and from Approved on its boxes are bordered in that colour; **Edit PR** there brings the form back, **Update PR** saves it and
 **Cancel** leaves it as it was. **Push + raise all** raises every project's in merge order. A description is sent as

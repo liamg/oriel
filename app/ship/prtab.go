@@ -145,10 +145,10 @@ func (x *Ship) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		if widget.Button(c, "save", "Save draft", step("Saving", widget.ButtonOpts{Help: "git/ship#raise"})) {
 			x.run("ship.draft.save", registry.Args{"project": s.Project})
 		}
-		if widget.Button(c, "draft", "Raise as draft", step("Raising", widget.ButtonOpts{Help: "git/ship#raise"})) {
+		if widget.Button(c, "draft", "Raise as draft", step("Creating", widget.ButtonOpts{Help: "git/ship#raise"})) {
 			x.run("ship.raise", registry.Args{"project": s.Project, "draft": true})
 		}
-		if widget.Button(c, "raise", "Push + raise "+w.Short, step("Raising", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
+		if widget.Button(c, "raise", "Push + raise "+w.Short, step("Creating", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
 			x.run("ship.raise", registry.Args{"project": s.Project})
 		}
 	})
@@ -317,10 +317,22 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 	if e := x.failed(se.ID, s.Project); e != "" {
 		widget.Wrap(c, "failed", e, 600, widget.MonoFont(11, th.C(theme.Error)))
 	}
+	// While it's being raised or updated, what's sent is what's shown: the form is locked.
+	locked := x.doing(se.ID, s.Project) == "Creating" || x.doing(se.ID, s.Project) == "Updating"
+	if locked {
+		c.Row("sending", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleStatus, Label: "Sending the " + s.words().Short}, func(c *ui.Ctx) {
+			widget.Spinner(c, "spin", widget.SpinnerOpts{Name: "sending", Help: "git/ship#raise"})
+			what := fmt.Sprintf("Creating the %s on %s…", s.words().Short, s.CodeHost.Label())
+			if x.doing(se.ID, s.Project) == "Updating" {
+				what = fmt.Sprintf("Updating the %s on %s…", s.words().Short, s.CodeHost.Label())
+			}
+			c.Text("t", what, widget.UIFont(12.5, th.C(theme.FgMuted)))
+		})
+	}
 	prui.SectionCap(c, "TITLE")
 	first := !f.edited
 	typed := false
-	if r := widget.Input(c, "title", &f.title, widget.InputOpts{Label: "Title", Placeholder: "feat(api): what it does", Help: "git/ship#raise"}); r.Changed {
+	if r := widget.Input(c, "title", &f.title, widget.InputOpts{Label: "Title", Placeholder: "feat(api): what it does", Disabled: locked, Help: "git/ship#raise"}); r.Changed {
 		f.edited, typed = true, true
 	}
 	c.Box("sp", ui.Style{H: ui.Px(4)}, nil)
@@ -341,7 +353,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 			if s.Template.File != "" {
 				c.Text("file", s.Template.File, widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
-			if widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Ghost: true, Help: "git/ship#drafts", Disabled: !x.h.Available("ship.redraft", nil)}) {
+			if widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Ghost: true, Help: "git/ship#drafts", Disabled: locked || !x.h.Available("ship.redraft", nil)}) {
 				x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "pr"})
 			}
 		})
@@ -352,7 +364,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 				return
 			}
 			if r := widget.Prose(c, "body", &f.body, widget.ProseOpts{Label: "Body", Placeholder: "What and why", Lines: 18, MinLines: 10,
-				Help: "git/ship#raise"}); r.Changed {
+				Disabled: locked, Help: "git/ship#raise"}); r.Changed {
 				f.edited, typed = true, true
 			}
 		})
@@ -364,7 +376,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 	c.Row("boxes", ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {
 		c.Column("reviewers", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
 			prui.SectionCap(c, "REVIEWERS")
-			x.reviewerRows(c, s, f)
+			x.reviewerRows(c, s, f, locked)
 		})
 		c.Column("linked", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
 			prui.SectionCap(c, "SHIPS WITH")
@@ -379,7 +391,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 }
 
 // reviewerRows are the PR's reviewers, each removable, and a field to add one: CODEOWNERS' first.
-func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
+func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm, locked bool) {
 	th := c.Theme()
 	rs := f.reviewersOf(s)
 	if s.PR != nil {
@@ -401,13 +413,14 @@ func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 				note = "asked"
 			}
 			c.Text("w", note, widget.MonoFont(10, th.C(theme.FgFaint)))
-			if widget.IconButton(c, "rm", "✕", widget.IconButtonOpts{Label: "Remove " + r, Help: "git/ship#raise", Size: 18}) {
+			if widget.IconButton(c, "rm", "✕", widget.IconButtonOpts{Label: "Remove " + r, Help: "git/ship#raise", Size: 18, Disabled: locked}) {
 				f.removed = append(f.removed, r)
 				f.reviewers = remove(f.reviewers, r)
 			}
 		})
 	}
-	if r := widget.Input(c, "add", &f.adding, widget.InputOpts{Label: "Add a reviewer", Placeholder: "+ a login or org/team, ⏎", Help: "git/ship#raise"}); r.Submitted {
+	if r := widget.Input(c, "add", &f.adding, widget.InputOpts{Label: "Add a reviewer", Placeholder: "+ a login or org/team, ⏎", Disabled: locked,
+		Help: "git/ship#raise"}); r.Submitted {
 		if who := strings.TrimPrefix(strings.TrimSpace(f.adding), "@"); who != "" {
 			f.reviewers = append(f.reviewers, who)
 			f.removed = remove(f.removed, who)

@@ -32,6 +32,7 @@ type Server struct {
 	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
 	calls  []string              // "POST /repos/acme/api/pulls"
 	lag    bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
+	hold   chan struct{}         // while set, creating a PR waits for it to close
 	unseen map[string]bool       // owner/name#number: made while lagging
 
 	login        string                         // who the fake's client is: what it posts is by them
@@ -251,6 +252,17 @@ func (s *Server) Lag() {
 	s.lag = true
 }
 
+// HoldCreates makes creating a PR wait until release is called, which a test's cleanup calls too.
+func (s *Server) HoldCreates(t interface{ Cleanup(func()) }) (release func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hold := make(chan struct{})
+	s.hold = hold
+	release = sync.OnceFunc(func() { close(hold) })
+	t.Cleanup(release)
+	return release
+}
+
 // CatchUp lists every PR again.
 func (s *Server) CatchUp() {
 	s.mu.Lock()
@@ -276,6 +288,12 @@ func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createPR(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	hold := s.hold
+	s.mu.Unlock()
+	if hold != nil {
+		<-hold
+	}
 	var in struct {
 		Title, Body, Head, Base string
 		Draft                   bool
