@@ -47,10 +47,10 @@ func cmakeString(s, dir string) string {
 func args(s string) []string {
 	var out []string
 	for i := 0; i < len(s); {
-		switch {
-		case s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r':
+		switch s[i] {
+		case ' ', '\t', '\n', '\r':
 			i++
-		case s[i] == '"':
+		case '"':
 			j := i + 1
 			for j < len(s) && s[j] != '"' {
 				if s[j] == '\\' {

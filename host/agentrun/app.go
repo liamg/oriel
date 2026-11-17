@@ -52,7 +52,7 @@ func (x *Runner) appTool(call hostapi.ToolCall) func(context.Context, json.RawMe
 		defer x.env.Recover("the app's tool "+call.Tool, &err)
 		a := x.appFuncs()
 		if a.CallTool == nil {
-			return "", errors.New("Oriel's window isn't open, and this tool runs there")
+			return "", errors.New("Oriel's window isn't open, and this tool runs there") //nolint:staticcheck // ST1005: it starts with a name
 		}
 		call.Args = args
 		return a.CallTool(ctx, call)

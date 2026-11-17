@@ -235,20 +235,3 @@ func ArchiveName(id, version, platform string) string {
 	}
 	return name + "-" + version + "-" + strings.ReplaceAll(platform, "/", "-") + ".tar.gz"
 }
-
-// sortVersions orders versions newest first.
-func sortVersions(vs []string) {
-	slices.SortStableFunc(vs, func(x, y string) int {
-		a, aerr := plugin.ParseVersion(x)
-		b, berr := plugin.ParseVersion(y)
-		switch { // a version that parses first
-		case aerr != nil && berr != nil:
-			return 0
-		case aerr != nil:
-			return 1
-		case berr != nil:
-			return -1
-		}
-		return b.Compare(a)
-	})
-}

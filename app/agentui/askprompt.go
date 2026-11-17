@@ -364,10 +364,10 @@ func diffSpan(d *core.FileDiff) string {
 		}
 		hi = max(hi, n)
 	}
-	switch {
-	case lo == 0:
+	switch lo {
+	case 0:
 		return fmt.Sprintf("+%d −%d", d.Added, d.Removed)
-	case lo == hi:
+	case hi:
 		return fmt.Sprintf("line %d", lo)
 	}
 	return fmt.Sprintf("lines %d–%d", lo, hi)

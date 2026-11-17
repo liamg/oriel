@@ -119,8 +119,8 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 	var summary []string
 	if it.Diff == nil && it.Done {
 		if n := lineCount(it.Output); n > 0 {
-			switch {
-			case verb == "Search" || verb == "Find":
+			switch verb {
+			case "Search", "Find":
 				summary = append(summary, fmt.Sprintf("%d %s", n, words.Plural(n, "hit", "hits")))
 			default:
 				summary = append(summary, fmt.Sprintf("%d %s", n, words.Plural(n, "line", "lines")))

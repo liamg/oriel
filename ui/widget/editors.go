@@ -231,7 +231,6 @@ type mapEditorState struct {
 	shown      bool
 	entries    []entry
 	addK, addV string
-	focusAdd   bool
 }
 
 // MapField is a map's summary ("3 servers", counted in ValueLabels) and an Edit… button that opens MapEditor on it.

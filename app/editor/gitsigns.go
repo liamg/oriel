@@ -294,7 +294,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 			g.h.Do(func() {
 				g.mu.Lock()
 				bh.diffing = false
-				if g.hunks[key] == bh && !(bh.diffed && bh.version > version) {
+				if g.hunks[key] == bh && (!bh.diffed || bh.version <= version) {
 					bh.version, bh.gen, bh.hunks, bh.diffed = version, gen, hs, true
 				}
 				g.mu.Unlock()
@@ -471,13 +471,13 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	var s, style string
 	switch bl.Kind {
 	case gitx.NotCommitted:
-		s, style = "Not committed yet", "git.blame.you"
+		s, style = "Not committed yet", tBlameYou.Name()
 	case gitx.ByYou:
-		s, style = "You", "git.blame.you"
+		s, style = "You", tBlameYou.Name()
 	case gitx.ByAgent:
-		s, style = bl.Author+" (agent)", "git.blame.agent"
+		s, style = bl.Author+" (agent)", tBlameAgent.Name()
 	default:
-		s, style = bl.Author, "git.blame.other"
+		s, style = bl.Author, tBlameOther.Name()
 	}
 	if bl.Kind != gitx.NotCommitted {
 		s += " · " + widget.AgoLabel(clock.Or(g.Clock).Now(), bl.When) + " ago · " + bl.Summary

@@ -823,10 +823,8 @@ func findSent(v *view, pos Pos, dir, count int) (Pos, bool) {
 	for ; count > 0; count-- {
 		found := false
 		if v.gchar(pos) == 0 {
-			for {
-				if step(&pos) == -1 {
-					break
-				}
+			for step(&pos) != -1 {
+
 				if v.gchar(pos) != 0 {
 					break
 				}
@@ -847,7 +845,7 @@ func findSent(v *view, pos Pos, dir, count int) (Pos, bool) {
 			foundDot := false
 			for {
 				c := v.gchar(pos)
-				if !(isWhite(c) || strings.ContainsRune(".!?)]\"'", c) && c != 0) {
+				if !isWhite(c) && (!strings.ContainsRune(".!?)]\"'", c) || c == 0) {
 					break
 				}
 				tpos := pos

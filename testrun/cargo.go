@@ -311,10 +311,10 @@ func (c *Cargo) Parse(r io.Reader, emit func(Event)) error {
 		if m := cargoResult.FindStringSubmatch(line); m != nil {
 			name := m[1]
 			emit(Event{Kind: Started, Package: pkg, Test: name})
-			switch {
-			case m[2] == "ok":
+			switch m[2] {
+			case "ok":
 				emit(Event{Kind: Passed, Package: pkg, Test: name})
-			case m[2] == "FAILED":
+			case "FAILED":
 				if _, ok := failed[name]; !ok {
 					order = append(order, name)
 				}

@@ -100,8 +100,8 @@ func (s *foldState) closedAt(line int) (int, int, bool) {
 	}
 }
 
-func (e *Engine) foldStart(line int) int { s, _, _ := e.window.fold.closedAt(line); return s }
-func (e *Engine) foldEndOf(line int) int { _, l, _ := e.window.fold.closedAt(line); return l }
+func (e *Engine) foldStart(line int) int { s, _, _ := e.fold.closedAt(line); return s }
+func (e *Engine) foldEndOf(line int) int { _, l, _ := e.fold.closedAt(line); return l }
 
 // deepest is how deep folds nest.
 func deepest(fs []*fold) int {
@@ -172,7 +172,7 @@ func openNested(f *fold) {
 
 // repeatFold opens or closes count levels of folds at line.
 func (e *Engine) repeatFold(line, count int, opening bool) {
-	s := &e.window.fold
+	s := &e.fold
 	for i := range count {
 		found, acted := s.setManual(line, opening, false)
 		if !found && i == 0 {
@@ -186,14 +186,14 @@ func (e *Engine) repeatFold(line, count int, opening bool) {
 }
 
 func (e *Engine) recurseFold(line int, opening bool) {
-	if found, _ := e.window.fold.setManual(line, opening, true); !found {
+	if found, _ := e.fold.setManual(line, opening, true); !found {
 		e.notify(errNoFold.with())
 	}
 }
 
 // openCursorFold is vim's foldOpenCursor(): open folds until the cursor line shows.
 func (e *Engine) openCursorFold() {
-	s := &e.window.fold
+	s := &e.fold
 	if !s.any() {
 		return
 	}
@@ -217,7 +217,7 @@ func (s *foldState) applyLevel() {
 // createFold is vim's foldCreate() for lines [start, end]: the new fold is closed, and folds inside it
 // nest in it.
 func (e *Engine) createFold(start, end int) {
-	s := &e.window.fold
+	s := &e.fold
 	if s.method == "marker" {
 		e.addMarkers(start, end)
 		return
@@ -258,7 +258,7 @@ func (e *Engine) createFold(start, end int) {
 // deleteFolds is vim's deleteFold() over lines [start, end]: the deepest fold at each line, stopping at a
 // closed one, goes; its nested folds move up a level unless recursive.
 func (e *Engine) deleteFolds(start, end int, recursive bool) {
-	s := &e.window.fold
+	s := &e.fold
 	did := false
 	for line := start; line <= end; {
 		var holder *[]*fold
@@ -307,7 +307,7 @@ func (e *Engine) deleteFolds(start, end int, recursive bool) {
 // moveFold is vim's foldMoveTo(): zj and zk (updown) move to the start of the next fold or the end of the
 // previous one; [z and ]z to the start or end of the open fold holding the cursor.
 func (e *Engine) moveFold(updown, forward bool, count int) (int, bool) {
-	s := &e.window.fold
+	s := &e.fold
 	cur := e.cur.Line
 	moved := false
 	for range count {
@@ -375,7 +375,7 @@ func (e *Engine) moveFold(updown, forward bool, count int) (int, bool) {
 
 // foldCmd runs the z commands that work on folds. It reports whether k was one.
 func (e *Engine) foldCmd(v *view, k string, count int) bool {
-	s := &e.window.fold
+	s := &e.fold
 	n := max(count, 1)
 	line := e.cur.Line
 	switch k {
@@ -464,7 +464,7 @@ func (e *Engine) foldCmd(v *view, k string, count int) bool {
 
 // foldManualAllowed is whether folds can be made or deleted by hand: with 'foldmethod' manual or marker.
 func (e *Engine) foldManualAllowed(create bool) bool {
-	switch e.window.fold.method {
+	switch e.fold.method {
 	case "manual", "marker":
 		return true
 	}
@@ -492,7 +492,7 @@ func (e *Engine) exFold(name string, r exRange, bang bool) error {
 
 // foldRange is vim's opFoldRange(): open or close folds on lines [first, last].
 func (e *Engine) foldRange(first, last int, opening, recurse bool) {
-	s := &e.window.fold
+	s := &e.fold
 	any := false
 	for l := first; l <= last; {
 		next := l

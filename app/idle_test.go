@@ -3,10 +3,6 @@ package app_test
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -20,28 +16,6 @@ import (
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/sysload"
 )
-
-// spawns puts shims for the commands Oriel runs on PATH, each noting its run in a log, and counts the runs logged.
-func spawns(t *testing.T) func() []string {
-	t.Helper()
-	dir, log := t.TempDir(), filepath.Join(t.TempDir(), "spawned")
-	for _, name := range []string{"git", "gh", "rg", "claude", "codex", "docker", "ps", "sysctl", "vm_stat", "defaults", "gdbus", "gsettings"} {
-		real, err := exec.LookPath(name)
-		run := "exit 127"
-		if err == nil {
-			run = `exec "` + real + `" "$@"`
-		}
-		shim := "#!/bin/sh\necho \"" + name + " $*\" | tr ' ' , >> \"" + log + "\"\n" + run + "\n"
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(shim), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	return func() []string {
-		b, _ := os.ReadFile(log)
-		return strings.Fields(string(b))
-	}
-}
 
 // idleWindow is the app with three quiet sessions, one agent working, behind another app.
 func idleWindow(t *testing.T) *apptest.Window {

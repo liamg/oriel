@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -86,8 +85,8 @@ func TestBuild(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds a binary")
 	}
-	goCmd := filepath.Join(runtime.GOROOT(), "bin", "go")
-	if _, err := exec.LookPath(goCmd); err != nil {
+	goCmd, err := exec.LookPath("go")
+	if err != nil {
 		t.Skip(err)
 	}
 	base, plug := t.TempDir(), t.TempDir()
@@ -111,7 +110,7 @@ func init() { cli.Register("emacs") }
 `)
 	out := filepath.Join(t.TempDir(), "oriel")
 	var log strings.Builder
-	err := Build(context.Background(), Spec{Main: "example.com/base/cli", Base: Module{Dir: base},
+	err = Build(context.Background(), Spec{Main: "example.com/base/cli", Base: Module{Dir: base},
 		With: []Module{{Path: "example.com/emacs", Dir: plug}}, Output: out, Go: goCmd, Env: []string{"GOPROXY=off"}}, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())

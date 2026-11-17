@@ -138,7 +138,7 @@ func (e *Engine) SetSettings(s Settings) {
 	e.loadOptions()
 }
 
-func (e *Engine) windowKey() string { return strconv.Itoa(e.window.id) }
+func (e *Engine) windowKey() string { return strconv.Itoa(e.id) }
 
 // loadOptions reads the options for the current buffer and window from the settings.
 func (e *Engine) loadOptions() {
@@ -147,7 +147,7 @@ func (e *Engine) loadOptions() {
 	}
 	o := DefaultOptions()
 	for _, d := range OptionDefs() {
-		if v, ok := e.settings.Get(d.Name, e.buffer.name, e.windowKey()); ok && d.Check(v) == nil {
+		if v, ok := e.settings.Get(d.Name, e.name, e.windowKey()); ok && d.Check(v) == nil {
 			d.set(&o, v)
 		}
 	}
@@ -157,7 +157,7 @@ func (e *Engine) loadOptions() {
 // setOption is :set name to v: into the settings when there are some, at the option's scope.
 func (e *Engine) setOption(d OptionDef, v any) error {
 	if e.settings != nil {
-		if err := e.settings.Set(d.Name, d.Scope, e.buffer.name, e.windowKey(), v); err != nil {
+		if err := e.settings.Set(d.Name, d.Scope, e.name, e.windowKey(), v); err != nil {
 			return err
 		}
 	}

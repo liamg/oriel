@@ -575,3 +575,10 @@ func cArray(hs []uintptr) *C.uintptr_t {
 
 // viewTakesFirstClick says Oriel's view takes a click that brings its window forward, as well as doing what it's on.
 func viewTakesFirstClick() bool { return C.orielProbeAcceptsFirstMouse() != 0 }
+
+// focused is the id of the node with focus: what VoiceOver asks for.
+func (t *accessTree) focused() uint64 {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.focus
+}

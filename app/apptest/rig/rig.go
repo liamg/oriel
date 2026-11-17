@@ -434,9 +434,9 @@ func (r *Stats) Readings(t *testing.T) {
 		dayAgo := StatsNow.Add(-24 * time.Hour)
 		weekly := h * .0036
 		switch {
-		case reset == weekReset && at.After(dayAgo):
+		case reset.Equal(weekReset) && at.After(dayAgo):
 			weekly = .446 + at.Sub(dayAgo).Hours()*.011
-		case reset == weekReset:
+		case reset.Equal(weekReset):
 			weekly = .446 * h / dayAgo.Sub(opened).Hours()
 		}
 		fiveReset := opened.Add(time.Duration(int(at.Sub(opened).Hours()/5)+1) * 5 * time.Hour)

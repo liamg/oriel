@@ -140,10 +140,10 @@ func (p *pcreParser) skipExtended() {
 		return
 	}
 	for p.more() {
-		switch c := p.peek(); {
-		case c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v':
+		switch c := p.peek(); c {
+		case ' ', '\t', '\n', '\r', '\f', '\v':
 			p.i++
-		case c == '#':
+		case '#':
 			for p.more() && p.peek() != '\n' {
 				p.i++
 			}
@@ -649,7 +649,7 @@ func pcreClass(c byte) (*charSet, bool, bool) {
 		}
 		s.nl = true
 	case 'h', 'H':
-		for _, r := range "\t   ᠎  　" {
+		for _, r := range "\t \u00a0\u1680\u180e\u202f\u205f\u3000" {
 			s.add(r)
 		}
 		s.addRange(0x2000, 0x200a)
@@ -797,10 +797,10 @@ func (p *pcreParser) gref() (*node, error) {
 	}
 	n := &node{op: opBackref, fold: p.flags.Caseless}
 	if num, err := strconv.Atoi(ref); err == nil {
-		switch {
-		case ref[0] == '-':
+		switch ref[0] {
+		case '-':
 			num = p.npar + num
-		case ref[0] == '+':
+		case '+':
 			num = p.npar + num - 1
 		}
 		if num <= 0 {
@@ -951,10 +951,10 @@ func (p *pcreParser) property(neg bool) (*charSet, bool, error) {
 	}
 	name = strings.ReplaceAll(strings.ReplaceAll(name, " ", ""), "_", "")
 	var tab *unicode.RangeTable
-	switch {
-	case name == "Any":
+	switch name {
+	case "Any":
 		tab = &unicode.RangeTable{R32: []unicode.Range32{{Lo: 0, Hi: unicode.MaxRune, Stride: 1}}}
-	case name == "L&" || name == "LC":
+	case "L&", "LC":
 		tab = mergeTables(unicode.Lu, unicode.Ll, unicode.Lt)
 	default:
 		for k, t := range unicode.Categories {
@@ -1290,7 +1290,7 @@ func ExpandPCRE(repl string, group func(i int) (string, bool), name func(string)
 			}
 			j++
 		}
-		num := -1
+		var num int
 		if isDigit(ref[0]) {
 			n, err := strconv.Atoi(ref)
 			if err != nil {

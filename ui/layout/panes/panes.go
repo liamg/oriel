@@ -26,7 +26,6 @@ var (
 	tDrop       = theme.DeclareOn("drop.target.bg", "alpha(accent, 12%)", "bg.base")
 	tDropEdge   = theme.Declare("drop.target.edge", "accent")
 	tFloatEdge  = theme.Declare("float.border", "line.strong")
-	tFocusEdge  = theme.Declare("pane.focus.edge", "accent")
 	tDropDownBg = theme.Declare("dropdown.bg", "bg.surface")
 )
 
@@ -590,7 +589,7 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 			// The ✕ has its own room, so it never covers the title and the tab doesn't change width when it shows:
 			// always on the tab in front, under the pointer on the rest.
 			closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide,
-				Hidden: !(on || in.Inside) || st.drag != nil})
+				Hidden: (!on && !in.Inside) || st.drag != nil})
 		})
 	})
 	if closed {

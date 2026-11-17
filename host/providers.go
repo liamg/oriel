@@ -16,7 +16,7 @@ import (
 func (w *Host) ProviderInfo(ctx context.Context) []hostapi.ProviderInfo {
 	defer w.env.Recover("ProviderInfo", nil)
 	st := w.store.State()
-	lost := w.runPart.LostLogins()
+	lost := w.LostLogins()
 	ps := w.opts.Providers.List()
 	out := make([]hostapi.ProviderInfo, len(ps))
 	var wg sync.WaitGroup

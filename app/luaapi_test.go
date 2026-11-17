@@ -15,28 +15,7 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/script"
 )
-
-// eval is what a line of Lua returns in the config's VM, with L as oriel.
-func eval(s *apptest.Scene, t *testing.T, line string) []any {
-	t.Helper()
-	out, err := lua(s).VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; return " + line)})
-	if err != nil {
-		t.Fatalf("%s: %v", line, err)
-	}
-	return out
-}
-
-// evalErr is the error a line of Lua raises.
-func evalErr(s *apptest.Scene, t *testing.T, line string) string {
-	t.Helper()
-	_, err := lua(s).VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; " + line)})
-	if err == nil {
-		t.Fatalf("%s: no error", line)
-	}
-	return err.Error()
-}
 
 // L.regex is PCRE2 with string.find's conventions (docs/api.md), so for patterns both dialects read the same, Lua's
 // own string functions are the oracle.

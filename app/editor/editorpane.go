@@ -706,7 +706,7 @@ func (x *Editor) overlay(c *ui.Ctx, r paneRow) {
 	}
 	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.LineH * float32(len(segs))), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
 		for i, r := range others {
-			if r.head >= 0 && !(showCursor && r.head == cur.Col) {
+			if r.head >= 0 && (!showCursor || r.head != cur.Col) {
 				cx, cy, ok := at(p.VCol(line, r.head) + inlayShift(ds, r.head, true))
 				if !ok {
 					continue

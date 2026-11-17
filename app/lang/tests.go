@@ -437,7 +437,7 @@ func (x *Tests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		if it.Line < ctx.Top || it.Line >= ctx.Bottom {
 			continue
 		}
-		style, note := "tests.gutter", ""
+		style, note := tTestIdle.Name(), ""
 		res, run := x.result(it.Key())
 		if res != nil {
 			took := ""
@@ -460,7 +460,7 @@ func (x *Tests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 					note = "✕ got " + res.Failure.Got
 				}
 			case res.Status == testrun.StatusSkipped:
-				style, note = "tests.skipped", "skipped"
+				style, note = tTestSkipped.Name(), "skipped"
 			}
 		}
 		out = append(out, testSign(it, ctx.Path, style, debug))
@@ -474,9 +474,9 @@ func (x *Tests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 			if l < ctx.Top || l >= ctx.Bottom {
 				continue
 			}
-			edge := "tests.coverage.covered"
+			edge := tTestCovered.Name()
 			if hits == 0 {
-				edge = "tests.coverage.uncovered"
+				edge = tTestUncovered.Name()
 			}
 			out = append(out, uireg.Decoration{Kind: uireg.LineBg, Line: l, Edge: edge, Priority: -5})
 		}

@@ -77,22 +77,22 @@ func parseSequence(lines []line) (*Sequence, error) {
 			}
 			word, rest, _ := strings.Cut(st, " ")
 			rest = strings.TrimSpace(rest)
-			switch {
-			case word == "autonumber":
+			switch word {
+			case "autonumber":
 				s.Autonumber = true
-			case word == "title" || word == "accTitle:" || word == "accDescr:" || word == "destroy":
-			case word == "box":
+			case "title", "accTitle:", "accDescr:", "destroy":
+			case "box":
 				// a box of participants is drawn as its participants
 				depth++
 				s.Items = append(s.Items, SeqItem{Kind: BlockStart, Block: "box"})
-			case word == "activate" || word == "deactivate":
+			case "activate", "deactivate":
 				use(rest)
 				k := Activate
 				if word == "deactivate" {
 					k = Deactivate
 				}
 				s.Items = append(s.Items, SeqItem{Kind: k, From: rest})
-			case word == "end":
+			case "end":
 				if depth == 0 {
 					return nil, &SyntaxError{l.n, "end without a block"}
 				}

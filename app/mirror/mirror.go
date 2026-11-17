@@ -395,7 +395,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 		if review {
 			hs, ok = sites.URL(reviewed)
 		}
-		if !ok || hs.CodeHost.Threads == nil || !sites.Keyed(hs) && !hs.CodeHost.Tokens.Optional {
+		if !ok || hs.Threads == nil || !sites.Keyed(hs) && !hs.Tokens.Optional {
 			continue
 		}
 		h := hs.CodeHost

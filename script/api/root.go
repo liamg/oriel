@@ -279,7 +279,7 @@ func (r Root) JSONDecode(s string) (any, error) {
 
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."
 func (r Root) Statusline(fn *script.Fn, where string) error {
-	return View{r.a}.Override("app.statusline", fn, where)
+	return View(r).Override("app.statusline", fn, where)
 }
 
 // mustGetwd is the process's directory, where a program named by a relative path runs without a cwd.

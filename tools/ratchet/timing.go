@@ -39,7 +39,7 @@ func buildTag(f File, tag string) bool {
 		for _, c := range g.List {
 			if expr, ok := strings.CutPrefix(c.Text, "//go:build "); ok {
 				words := strings.FieldsFunc(expr, func(r rune) bool {
-					return !(r == '_' || r == '.' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z')
+					return r != '_' && r != '.' && (r < '0' || r > '9') && (r < 'a' || r > 'z') && (r < 'A' || r > 'Z')
 				})
 				return slices.Contains(words, tag) && !strings.Contains(expr, "!"+tag)
 			}

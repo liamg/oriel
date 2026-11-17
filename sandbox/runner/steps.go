@@ -1,12 +1,9 @@
 package runner
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strings"
-	"testing"
 	"time"
 )
 
@@ -40,13 +37,4 @@ func round(d time.Duration) string {
 		return d.Round(time.Millisecond).String()
 	}
 	return d.Round(100 * time.Millisecond).String()
-}
-
-// executable is os.Executable, refused under go test: a test binary handed
-// a subcommand runs the whole suite again.
-func executable() (string, error) {
-	if testing.Testing() {
-		return "", errors.New("refusing to use a test binary as oriel")
-	}
-	return os.Executable()
 }

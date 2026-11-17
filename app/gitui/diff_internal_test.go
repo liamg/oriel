@@ -50,8 +50,10 @@ func TestDiffRemakesArePaced(t *testing.T) {
 	}
 	x.started[k] = clk.Now()
 	clk.Advance(diffRemakeGap / 2)
-	if x.mayRemake(k) || x.mayRemake(k) {
-		t.Fatal("remade within the gap")
+	for range 2 { // asked again, still within it
+		if x.mayRemake(k) {
+			t.Fatal("remade within the gap")
+		}
 	}
 	clk.Advance(diffRemakeGap / 2)
 	if h.redraws != 1 {

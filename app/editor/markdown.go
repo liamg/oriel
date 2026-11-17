@@ -261,12 +261,6 @@ func mdImagesOut(bs []mdBlock) []mdBlock {
 	return out
 }
 
-// markdownText draws markdown in body's style: headings, paragraphs and list items with inline code and bold,
-// fenced code in mono, rules, and images (relative ones only as chips: markdownTextIn knows their folder).
-func markdownText(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle) {
-	markdownTextIn(c, key, src, width, body, mdOpts{})
-}
-
 type mdOpts = kit.MarkdownOpts
 
 // markdownTextIn is markdownText with its images found from o.Dir.
@@ -359,7 +353,7 @@ func markdownTable(c *ui.Ctx, key any, b mdBlock, width float32, body ui.TextSty
 
 // mdAligned builds a block's text, aligned as its HTML says: centred or to the right, or as it falls.
 func mdAligned(c *ui.Ctx, key any, align string, width float32, text func(c *ui.Ctx, key any)) {
-	cross := ui.Start
+	var cross ui.Align
 	switch align {
 	case "center":
 		cross = ui.Center

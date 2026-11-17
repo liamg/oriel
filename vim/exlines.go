@@ -102,7 +102,7 @@ func (e *Engine) deleteLines(v *view, from, to int) {
 	}
 	e.do(e.group, text.Replace{Range: text.Range{Start: a, End: b}})
 	if from == 0 && to+1 >= v.lines() {
-		e.buffer.noLines = true
+		e.noLines = true
 	}
 }
 

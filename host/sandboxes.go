@@ -12,19 +12,19 @@ import (
 // opened after it use them.
 func (w *Host) SetSandboxConfig(cfg sandbox.Config) (err error) {
 	defer w.env.Recover("SetSandboxConfig", &err)
-	return w.boxesPart.SetConfig(cfg)
+	return w.SetConfig(cfg)
 }
 
 // SandboxConfig is the sandbox settings the app last sent; the defaults if it never has.
 func (w *Host) SandboxConfig() sandbox.Config {
 	defer w.env.Recover("SandboxConfig", nil)
-	return w.boxesPart.Config()
+	return w.Config()
 }
 
 // SweepSandboxes removes what sandboxes no session uses left behind, now and then every interval, until ctx ends.
 func (w *Host) SweepSandboxes(ctx context.Context, every time.Duration) {
 	defer w.env.Recover("SweepSandboxes", nil)
-	w.boxesPart.Sweep(ctx, every)
+	w.Sweep(ctx, every)
 }
 
 // Sandboxes is the SandboxFactory backed by the real sandbox: a sandbox.Backend that confines each agent run, the

@@ -198,10 +198,10 @@ func (x *Diff) expander(c *ui.Ctx, fc *fileContext, g hiddenGap, lo, hi int) {
 		func(c *ui.Ctx) {
 			for _, s := range steps {
 				from, to := lo, hi
-				switch {
-				case s.dir == "down":
+				switch s.dir {
+				case "down":
 					to = min(hi, lo+contextStep-1)
-				case s.dir == "up":
+				case "up":
 					from = max(lo, hi-contextStep+1)
 				}
 				label := fmt.Sprintf("Show lines %d to %d", from, to)

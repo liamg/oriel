@@ -26,7 +26,7 @@ type Layout interface {
 func (e *Engine) SetLayout(l Layout) { e.layout = l }
 
 // WindowID is the current window's.
-func (e *Engine) WindowID() WindowID { return WindowID(e.window.id) }
+func (e *Engine) WindowID() WindowID { return WindowID(e.id) }
 
 func (e *Engine) windowByID(id WindowID) *window {
 	for _, w := range e.windows {

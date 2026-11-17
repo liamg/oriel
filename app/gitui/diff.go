@@ -18,7 +18,6 @@ import (
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/pathx"
-	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -117,9 +116,8 @@ type diffState struct {
 	making  bool // reveal's file was waiting for its diff last frame
 	centre  bool // reveal puts its target in the middle of the view: a jump, not a step
 	focus   bool
-	goLine  int  // a line of the selected file to select once it's drawn
-	goOld   bool // goLine is the old side's
-	scroll  widget.Scroll
+	goLine  int                        // a line of the selected file to select once it's drawn
+	goOld   bool                       // goLine is the old side's
 	order   []diffSel                  // every hunk drawn, in order
 	lines   map[diffSel]int            // lines each hunk has, as drawn
 	bufs    map[string]diffBuf         // the new side of files not open in the editor

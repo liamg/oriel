@@ -288,7 +288,7 @@ func (s *Server) blockers(ctx context.Context, r Repo, n int) ([]registry.MergeB
 func (s *Server) merge(ctx context.Context, r Repo, pr registry.PR, o registry.MergeOpts) error {
 	strategy := strategies[o.Method]
 	if strategy == "" {
-		return fmt.Errorf("Azure DevOps doesn't merge by %q", o.Method)
+		return fmt.Errorf("Azure DevOps doesn't merge by %q", o.Method) //nolint:staticcheck // ST1005: it starts with a name
 	}
 	opts := map[string]any{"mergeStrategy": strategy, "deleteSourceBranch": o.DeleteBranch}
 	if msg := strings.TrimSpace(o.Title + "\n\n" + o.Body); msg != "" {

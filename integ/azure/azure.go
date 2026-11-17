@@ -330,7 +330,7 @@ func (c Client) Lookup(ctx context.Context, r Repo, name string) (Identity, erro
 		return Identity{}, err
 	}
 	if len(out.Value) == 0 {
-		return Identity{}, fmt.Errorf("Azure DevOps has no one called %q", name)
+		return Identity{}, fmt.Errorf("Azure DevOps has no one called %q", name) //nolint:staticcheck // ST1005: it starts with a name
 	}
 	return Identity{ID: out.Value[0].ID, DisplayName: out.Value[0].DisplayName, UniqueName: name}, nil
 }

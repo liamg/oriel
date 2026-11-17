@@ -79,7 +79,7 @@ func TestStartViewStaysOnHome(t *testing.T) {
 	s.Run("view.open", registry.Args{"id": "problems"})
 	s.Frame()
 	s.Frame()
-	if !(s.Find("Start") != nil) || (s.Find("Views") != nil) {
+	if s.Find("Start") == nil || s.Find("Views") != nil {
 		t.Errorf("a docked view opened on Home changed it:\n%s", s.Text())
 	}
 }

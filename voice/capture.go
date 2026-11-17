@@ -9,7 +9,7 @@ import (
 )
 
 // ErrMicDenied is the OS refusing Oriel the microphone; PrivacySettings is where the user can allow it on macOS.
-var ErrMicDenied = errors.New("Oriel isn't allowed to use the microphone: allow it in System Settings › Privacy & Security › Microphone")
+var ErrMicDenied = errors.New("Oriel isn't allowed to use the microphone: allow it in System Settings › Privacy & Security › Microphone") //nolint:staticcheck // ST1005: it starts with a name
 
 // PrivacySettings opens macOS's microphone privacy settings.
 const PrivacySettings = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"

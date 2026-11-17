@@ -65,17 +65,17 @@ func (b *buffer) changed() {
 }
 
 // Modified reports whether the current buffer has changes not written.
-func (e *Engine) Modified() bool { return e.buffer.modified }
+func (e *Engine) Modified() bool { return e.modified }
 
 // Name is the current buffer's name: its file, as given.
-func (e *Engine) Name() string { return e.buffer.name }
+func (e *Engine) Name() string { return e.name }
 
 // ReadOnly says why the current buffer can't be written, or "".
 func (e *Engine) ReadOnly() string {
-	if e.buffer.file == nil {
+	if e.file == nil {
 		return ""
 	}
-	return e.buffer.file.ReadOnly
+	return e.file.ReadOnly
 }
 
 // Edit is :e name, as opening a file from the IDE does.
@@ -89,7 +89,7 @@ func (e *Engine) Edit(name string) {
 // JumpTo goes to p in the file name, as a tag jump does: a jump in the current window, which edits name when it
 // isn't the current buffer's. CTRL-O comes back.
 func (e *Engine) JumpTo(name string, p Pos) error {
-	if name != e.buffer.name {
+	if name != e.name {
 		b, err := e.openFile(name, true)
 		if err == nil {
 			err = e.editBuffer(b, false)
@@ -251,14 +251,14 @@ func (e *Engine) write(b *buffer, name string, force bool, then func()) error {
 // quit closes the current window: the last one ends the editing, unless a buffer has unsaved changes.
 func (e *Engine) quit(force bool) error {
 	if len(e.order()) > 1 {
-		if !force && !e.opts.Hidden && e.buffer.modified && !e.shownElsewhere(e.buffer) {
+		if !force && !e.opts.Hidden && e.modified && !e.shownElsewhere(e.buffer) {
 			return errUnsaved.with()
 		}
 		e.closeWindow(e.window)
 		return nil
 	}
 	if !force {
-		if e.buffer.modified {
+		if e.modified {
 			return errUnsaved.with()
 		}
 		for _, b := range e.buffers {
@@ -307,7 +307,7 @@ func (e *Engine) fileCmd(name, args string, bang bool) (bool, error) {
 	case "write":
 		return true, e.write(e.buffer, args, bang, nil)
 	case "update":
-		if !e.buffer.modified {
+		if !e.modified {
 			return true, nil
 		}
 		return true, e.write(e.buffer, args, bang, nil)
@@ -328,7 +328,7 @@ func (e *Engine) fileCmd(name, args string, bang bool) (bool, error) {
 		if old != "" {
 			alt := e.emptyBuffer()
 			alt.name, alt.unlisted = old, true
-			e.window.alt = alt
+			e.alt = alt
 		}
 		return true, nil
 	case "wall":
@@ -336,7 +336,7 @@ func (e *Engine) fileCmd(name, args string, bang bool) (bool, error) {
 	case "wq":
 		return true, e.write(e.buffer, args, bang, func() { e.fail(e.quit(bang)) })
 	case "xit", "exit":
-		if e.buffer.modified {
+		if e.modified {
 			return true, e.write(e.buffer, args, bang, func() { e.fail(e.quit(bang)) })
 		}
 		return true, e.quit(bang)
@@ -352,7 +352,7 @@ func (e *Engine) fileCmd(name, args string, bang bool) (bool, error) {
 }
 
 // File is the current buffer's file, or nil when it has none yet.
-func (e *Engine) File() *edit.File { return e.buffer.file }
+func (e *Engine) File() *edit.File { return e.file }
 
 // FileState is a buffer that has a file, for the IDE to watch.
 type FileState struct {

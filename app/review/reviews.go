@@ -96,7 +96,7 @@ func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	shown := func(string) bool { return x.any() }
 	x.Add(h.Contribute(kit.PagePlace("reviews", "Reviews", "reviews.open", &x.page.open)))
 	x.Add(h.Contribute(uireg.RailEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Command: "reviews.open", Scope: uireg.ScopeGlobalEntry,
-		Order: 6, Badge: x.count, BadgeTone: "rail.badge.review", Active: func(string) bool { return x.page.open }, Shown: shown}))
+		Order: 6, Badge: x.count, BadgeTone: tRailBadgeReview.Name(), Active: func(string) bool { return x.page.open }, Shown: shown}))
 	x.Add(h.Contribute(uireg.StartEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Desc: "Pull requests that ask for your review",
 		Command: "reviews.open", Order: 26, Shown: x.any, Note: func() string {
 			if n := x.count(); n > 0 {

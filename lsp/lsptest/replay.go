@@ -68,7 +68,7 @@ type fakeProcess struct {
 }
 
 func (p *fakeProcess) Wait() error { <-p.done; return nil }
-func (p *fakeProcess) Kill() error { return p.Conn.Close() }
+func (p *fakeProcess) Kill() error { return p.Close() }
 
 type received struct {
 	msg  jsonrpc.Message

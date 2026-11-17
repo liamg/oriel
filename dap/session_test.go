@@ -84,33 +84,32 @@ func project(t *testing.T, name string) string {
 
 // result is what the script saw.
 type result struct {
-	caps        dap.Capabilities
-	first       []dap.BreakpointState
-	firstStop   dap.Stopped
-	firstStack  []dap.Frame
-	threads     []dap.Thread
-	stepIn      stop
-	next        stop
-	stepOut     stop
-	reset       []dap.BreakpointState
-	hitStop     stop
-	hitV        dap.Variable
-	condStop    stop
-	condOutput  string
-	scopes      []dap.Scope
-	locals      []dap.Variable
-	children    []dap.Variable
-	watch       dap.Variable
-	repl        dap.Variable
-	callerI     dap.Variable
-	bad         error
-	afterNext   stop
-	out         dap.Variable
-	output      string
-	exited      *dap.Exited
-	terminated  bool
-	stopErr     error
-	unsupported []string
+	caps       dap.Capabilities
+	first      []dap.BreakpointState
+	firstStop  dap.Stopped
+	firstStack []dap.Frame
+	threads    []dap.Thread
+	stepIn     stop
+	next       stop
+	stepOut    stop
+	reset      []dap.BreakpointState
+	hitStop    stop
+	hitV       dap.Variable
+	condStop   stop
+	condOutput string
+	scopes     []dap.Scope
+	locals     []dap.Variable
+	children   []dap.Variable
+	watch      dap.Variable
+	repl       dap.Variable
+	callerI    dap.Variable
+	bad        error
+	afterNext  stop
+	out        dap.Variable
+	output     string
+	exited     *dap.Exited
+	terminated bool
+	stopErr    error
 }
 
 type stop struct {

@@ -17,7 +17,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"slices"
 	"strings"
 )
@@ -105,9 +104,9 @@ func (t *Transcript[H]) Write(w io.Writer) error {
 type Vars map[string]string
 
 // MachineVars are the paths a recording on this machine names by variable: the project root, GOROOT (as the go
-// command reports it, else the test binary's) and the home directory.
+// command reports it) and the home directory.
 func MachineVars(root string) Vars {
-	v := Vars{RootVar: root, "${goroot}": runtime.GOROOT()}
+	v := Vars{RootVar: root}
 	if out, err := exec.Command("go", "env", "GOROOT").Output(); err == nil {
 		v["${goroot}"] = strings.TrimSpace(string(out))
 	}

@@ -70,12 +70,11 @@ type transform struct {
 }
 
 type formatPart struct {
-	text      string
-	group     int // -1 for text
-	op        string
-	ifText    string
-	elseText  string
-	hasIfElse bool
+	text     string
+	group    int // -1 for text
+	op       string
+	ifText   string
+	elseText string
 }
 
 type parser struct {

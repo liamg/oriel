@@ -54,7 +54,7 @@ type themePreview struct {
 	err error
 }
 
-func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, error, kit.HighlightedExcerpt) {
+func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, kit.HighlightedExcerpt, error) {
 	srcs, themes := h.Themes()
 	_, langs := h.Languages()
 	if p.by == nil || p.themes != themes || p.langs != langs {
@@ -70,7 +70,7 @@ func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.
 		sample := strings.TrimRight(themeSample, "\n")
 		p.sample = kit.HighlightAround(h, "sample.go", []byte(sample), 1, 0, strings.Count(sample, "\n"))
 	}
-	return t.r, t.err, *p.sample
+	return t.r, *p.sample, t.err
 }
 
 // themeSwatches are a theme's main colours, in the variant in use (or its own, if it has one), for the picker's preview.
@@ -79,7 +79,7 @@ func themeSwatches(h plugin.Host, p *themePreviews, name string) ui.Node {
 	if cur := h.CurrentTheme(); cur != nil {
 		variant = cur.Variant
 	}
-	r, err, code := p.of(h, name, variant)
+	r, code, err := p.of(h, name, variant)
 	return &ui.Func{Key: "swatches", Fn: func(c *ui.Ctx) {
 		th := c.Theme()
 		mono := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgMuted)}

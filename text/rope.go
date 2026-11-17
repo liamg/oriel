@@ -213,7 +213,7 @@ func rebalance(kids []*node, lo, hi int) []*node {
 // from and to fall between runes, and so does each end of p once it is in place.
 func (n *node) replace(from, to int, p piece) []*node {
 	if n.height == 0 {
-		return chunk(cat(n.piece.slice(0, from), p, n.piece.slice(to, len(n.text))))
+		return chunk(cat(n.slice(0, from), p, n.slice(to, len(n.text))))
 	}
 	kids := make([]*node, 0, len(n.kids)+2)
 	off, k := 0, 0

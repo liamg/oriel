@@ -11,8 +11,6 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 )
 
-const navHelp = "shell/navigate"
-
 // navStop is somewhere the window's been: the session in front ("" for none) and the place showing ("" for none).
 type navStop struct {
 	session core.SessionID
@@ -121,10 +119,10 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 			registry.Call(func() error { p.Close(); return nil })
 		}
 	}
-	switch {
-	case to.session == from.session:
+	switch to.session {
+	case from.session:
 		kit.RunCalls(x.h, then)
-	case to.session == "":
+	case "":
 		if err := x.h.Apply(core.SessionFocused{}); err != nil {
 			return err
 		}

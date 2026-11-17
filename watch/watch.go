@@ -456,11 +456,10 @@ type node struct {
 	reads int
 	times []time.Time // when the last minute's reads began
 
-	active    bool // some subscription wants it read
-	held      bool // watched and holding its deps: active, or within grace
-	paused    bool // subscribed, but no one wants reads now
-	need      Need // the tightest active need
-	every     time.Duration
+	active    bool      // some subscription wants it read
+	held      bool      // watched and holding its deps: active, or within grace
+	paused    bool      // subscribed, but no one wants reads now
+	need      Need      // the tightest active need
 	deps      []*sub    // its holds on the sources it reads from
 	watching  []string  // its paths registered with the file watcher
 	fallback  bool      // its files couldn't be watched: polled at Timing.Fallback

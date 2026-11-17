@@ -46,7 +46,6 @@ var (
 	tLaunchCardLine = theme.Declare("launcher.card.line", "line")
 	tLaunchCardOn   = theme.DeclareOn("launcher.card.selected", "alpha(accent, 6%)", "bg.surface")
 	tLaunchLineOn   = theme.Declare("launcher.card.selected.line", "alpha(accent, 55%)")
-	tLaunchRepo     = theme.Declare("launcher.repo", "status.quiet")
 )
 
 // launcher is the new-session launcher: prompt, mode, provider, repos and sandbox. Its modes are the

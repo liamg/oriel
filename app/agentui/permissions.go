@@ -130,15 +130,6 @@ func hostPort(s string, port int) (string, int, error) {
 	return s, port, nil
 }
 
-func (x *Permissions) shown() bool {
-	for _, v := range x.h.Layout().Visible() {
-		if v.ID == kit.PermissionsView {
-			return true
-		}
-	}
-	return false
-}
-
 // state is session id's view, its read made on first use.
 func (x *Permissions) state(id core.SessionID) *permsState {
 	st := x.by[id]

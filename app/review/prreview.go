@@ -228,8 +228,6 @@ func (x *PRReview) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
-func (x *PRReview) wait() { x.busy.Wait() }
-
 func (x *PRReview) session(a registry.Args) (core.SessionState, error) {
 	return sessionkit.SessionFrom(x.h, a)
 }
@@ -616,7 +614,7 @@ func (x *PRReview) watch(id core.SessionID) {
 
 // reviewing says the agent is still on its review: its request open, and it hasn't answered it and stopped.
 func reviewing(se core.SessionState, t core.Thread) bool {
-	return t.Open() && !(t.AgentAnswered() && !se.Agent.Working)
+	return t.Open() && (!t.AgentAnswered() || se.Agent.Working)
 }
 
 // hear tells the user when someone other than them answers on the review's threads on its code host: the author, as a

@@ -105,9 +105,6 @@ func framesUntil(s *apptest.Scene, t *testing.T, what string, check func(frame i
 
 func signsScene(t *testing.T) (*apptest.Scene, *gittest.Repo) { return apptest.SignsScene(t) }
 
-// waitGit waits for the window's git work off the loop.
-func waitGit(s *apptest.Scene) { s.WaitGit() }
-
 func settle(s *apptest.Scene) { s.SettleSigns() }
 
 func cursorTo(s *apptest.Scene, line int) { s.CursorTo(line) }

@@ -4,6 +4,7 @@ package syntax
 
 import (
 	"context"
+	"github.com/liamg/oriel/internal/wasmrt"
 	"math"
 	"os"
 	"slices"
@@ -105,7 +106,11 @@ func TestCompiledFromCacheBudget(t *testing.T) {
 			if rt != nil {
 				rt.Close(context.Background())
 			}
-			if rt, err = newRuntime(dir); err != nil {
+			r := &wasmrt.Runtime{Name: "grammar", Init: grammars.Init}
+			if err := r.SetCacheDir(dir); err != nil {
+				t.Fatal(err)
+			}
+			if rt, err = r.Get(); err != nil {
 				t.Fatal(err)
 			}
 		}

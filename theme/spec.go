@@ -103,7 +103,7 @@ func ParseSpec(src []byte) (*Spec, error) {
 			}
 			err = l.decode(k+".", m)
 		default:
-			err = s.Layer.decodeSection("", k, v)
+			err = s.decodeSection("", k, v)
 		}
 		if err != nil {
 			return nil, err

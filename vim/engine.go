@@ -221,7 +221,7 @@ func (e *Engine) LastNotice() edit.Notice { return e.notice }
 
 func (e *Engine) view() *view {
 	v := newView(e.ed.Buf())
-	v.folds = &e.window.fold
+	v.folds = &e.fold
 	v.ts = e.opts.TabStop
 	return v
 }
@@ -298,7 +298,7 @@ func (e *Engine) dispatch(k string) {
 }
 
 func (e *Engine) normalKey(k string) {
-	if k == "<CR>" && len(e.pend) == 0 && e.window.buf.qf != nil && e.visual == nil {
+	if k == "<CR>" && len(e.pend) == 0 && e.buf.qf != nil && e.visual == nil {
 		e.qfEnter()
 		return
 	}
@@ -515,11 +515,11 @@ func parse(keys []string, visual bool) (c cmd, st status) {
 			return c, st
 		}
 		c.body = append(c.body, m)
-		switch {
-		case m == second || m == k:
+		switch m {
+		case second, k:
 			c.line = true
 			return c, complete
-		case m == "i" || m == "a":
+		case "i", "a":
 			if i >= len(keys) {
 				return c, incomplete
 			}

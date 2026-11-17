@@ -10,7 +10,7 @@ import (
 
 // startRecording is q{reg}: record typed keys into a register.
 func (e *Engine) startRecording(reg rune) {
-	if !(reg >= 'a' && reg <= 'z' || reg >= 'A' && reg <= 'Z' || reg >= '0' && reg <= '9' || reg == '"') {
+	if (reg < 'a' || reg > 'z') && (reg < 'A' || reg > 'Z') && (reg < '0' || reg > '9') && reg != '"' {
 		return
 	}
 	e.recReg = reg

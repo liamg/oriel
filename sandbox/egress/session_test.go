@@ -165,7 +165,7 @@ func TestSharedCard(t *testing.T) {
 		runtime.Gosched() // the second joins the card the first opened
 	}
 	c.answer(t, Answer{Key: Once})
-	if !<-out || !<-out {
+	if first, second := <-out, <-out; !first || !second {
 		t.Fatal("both connections to one destination allowed by one card")
 	}
 	if n := c.open(); n != 0 {

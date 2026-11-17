@@ -23,7 +23,7 @@ func facesOf(s *apptest.Scene, role string) []string {
 		if op.Kind != render.OpGlyphs {
 			continue
 		}
-		if fam := op.Run.Font.Family; fam != role && !(role == typeset.UI && fam == "") {
+		if fam := op.Run.Font.Family; fam != role && (role != typeset.UI || fam != "") {
 			continue
 		}
 		runes := []rune(op.Run.Text)

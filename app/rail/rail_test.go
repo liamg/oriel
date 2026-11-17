@@ -12,16 +12,12 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/layout"
 )
-
-// railAt is the middle of the narrow sidebar's nth entry from the top, under its » (one project or a directory).
-func railAt(n int) render.Point { return render.Point{X: 22, Y: kit.TitleH + 30 + 17 + float32(n)*34} }
 
 // The rail against 01-ide's strip: the mockup's entries, those not registered yet dimmed.
 func TestRailSnapshot(t *testing.T) {

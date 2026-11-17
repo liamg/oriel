@@ -71,7 +71,7 @@ func TestWithTabsOpenItNeverOpensOnTheStartView(t *testing.T) {
 		t.Fatalf("%s in front before the window opens", f)
 	}
 	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
-	w.WaitFrame("the first tab in front", func(string) bool { return w.Store.State().Focus == lw.W.Store().State().Tabs[0] })
+	w.WaitFrame("the first tab in front", func(string) bool { return w.Store.State().Focus == ids[0] })
 	w.Idle()
 	for i, f := range w.Win.Frames() {
 		if text := f.Text(); strings.Contains(text, "Open Directory") {

@@ -5,7 +5,7 @@ package vim
 
 // SetHeight sets how many rows the current window shows; 0 goes back to its share of the default screen.
 func (e *Engine) SetHeight(rows int) {
-	e.window.height = rows
+	e.height = rows
 	e.updateTop(e.view())
 }
 
@@ -32,8 +32,8 @@ func (e *Engine) heightOf(w *window) int {
 
 // scrollAmount is 'scroll': the lines CTRL-D and CTRL-U move, half the window unless a count set it.
 func (e *Engine) scrollAmount() int {
-	if e.window.scroll > 0 {
-		return e.window.scroll
+	if e.scroll > 0 {
+		return e.scroll
 	}
 	return max(e.Height()/2, 1)
 }
@@ -294,7 +294,7 @@ func (e *Engine) scrollCmd(v *view, key string, count int) bool {
 func (e *Engine) halfPage(v *view, fwd bool, count int) {
 	h := e.Height()
 	if count > 0 {
-		e.window.scroll = min(h, count)
+		e.scroll = min(h, count)
 	}
 	n := min(h, e.scrollAmount())
 	moveBy := n

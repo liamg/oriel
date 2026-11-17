@@ -43,7 +43,6 @@ var (
 	tRowFg          = theme.Declare("list.row.fg", "fg.muted")
 	tRowSelectedFg  = theme.Declare("list.row.selected.fg", "fg")
 	tTabBg          = theme.Declare("tab.bg", "bg.surface")
-	tTabActiveBg    = theme.Declare("tab.active.bg", "bg.raised")
 	tTabEdge        = theme.Declare("tab.active.edge", "accent")
 	tTabFg          = theme.Declare("tab.fg", "fg.faint")
 	tTabActiveFg    = theme.Declare("tab.active.fg", "fg")

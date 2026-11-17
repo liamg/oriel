@@ -31,7 +31,7 @@ type ConsentRow struct {
 }
 
 // New is a row an update asks for that the installed version had none of.
-func (r ConsentRow) New() bool { return len(r.Added) > 0 && len(r.Added) == len(r.Grant.Lock()) }
+func (r ConsentRow) New() bool { return len(r.Added) > 0 && len(r.Added) == len(r.Lock()) }
 
 // Groups are the install screen's headings, in order.
 var Groups = []string{"Network & secrets", "Your code & agents", "Your machine", "Critical"}

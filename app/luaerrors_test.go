@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,18 +13,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
-
-// writeConfig writes files under the scene's config directory.
-func writeConfig(s *apptest.Scene, t *testing.T, files map[string]string) {
-	t.Helper()
-	for name, src := range files {
-		p := filepath.Join(s.ConfigDir, name)
-		os.MkdirAll(filepath.Dir(p), 0o755)
-		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
 
 func luaFrames(detail string) []string {
 	var out []string

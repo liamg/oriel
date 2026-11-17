@@ -2,7 +2,6 @@ package host
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -213,10 +212,6 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 		t.Error("pushed a detached HEAD")
 	}
 }
-
-type roundTrip func(*http.Request) (*http.Response, error)
-
-func (f roundTrip) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 // A directory opened as it is, just git init'ed with files in it and no commit yet, reads as its branch with those
 // files to commit, not a git error.

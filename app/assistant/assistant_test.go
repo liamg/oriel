@@ -84,21 +84,6 @@ func settleCall(t *testing.T, s *apptest.Scene, done chan [2]any) (string, error
 	return r[0].(string), err
 }
 
-// started is the next agent the fake starts, framing while it waits: what starts it may wait on the loop.
-func started(t *testing.T, s *apptest.Scene, lw *rig.Host) *agenttest.FakeSession {
-	t.Helper()
-	var a *agenttest.FakeSession
-	s.Until("an agent to start", func() bool {
-		select {
-		case a = <-lw.Fake.Started:
-			return true
-		default:
-			return false
-		}
-	})
-	return a
-}
-
 func toolNames(a *agenttest.FakeSession) []string {
 	var out []string
 	for _, t := range a.Spec.Tools {

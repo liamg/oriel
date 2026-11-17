@@ -491,7 +491,7 @@ func (m *matcher) one(n *node, p pos) (pos, bool) {
 			return p, false
 		}
 	case opChar:
-		if r != n.r && !((m.ic || n.fold) && foldEq(r, n.r)) {
+		if !charEq(r, n.r, m.ic || n.fold) {
 			return p, false
 		}
 		if m.re.icombine || n.anyComb || m.re.pcre {
@@ -568,7 +568,7 @@ func (m *matcher) backref(i int, p pos, fold bool) (pos, bool) {
 		}
 		a, al := decode(sl, s.Col)
 		b, bl := decode(ql, q.Col)
-		if a != b && !((m.ic || fold) && foldEq(a, b)) {
+		if !charEq(a, b, m.ic || fold) {
 			return p, false
 		}
 		s.Col += al
@@ -631,7 +631,8 @@ func (m *matcher) assert(n *node, p pos) bool {
 	case opBOF:
 		return p.Line == 0 && p.Col == 0
 	case opPBOL:
-		return p.Col == 0 && !(p.Line > 0 && p.Line == m.n-1 && len(line) == 0)
+		emptyLast := p.Line > 0 && p.Line == m.n-1 && len(line) == 0
+		return p.Col == 0 && !emptyLast
 	case opSubjEndAbs:
 		return p.Line == m.n-1 && p.Col >= len(line)
 	case opSubjEnd:
@@ -722,7 +723,9 @@ func (m *matcher) inVisual(p pos) bool {
 	}
 	switch a.Mode {
 	case 'v':
-		return !(p.Line == top.Line && p.Col < top.Col || p.Line == bot.Line && p.Col >= bot.Col+1)
+		before := p.Line == top.Line && p.Col < top.Col
+		after := p.Line == bot.Line && p.Col >= bot.Col+1
+		return !before && !after
 	case 0x16:
 		start, end := m.vcol(top.Line, top.Col), m.vcolEnd(top.Line, top.Col)
 		start = min(start, m.vcol(bot.Line, bot.Col))
@@ -732,3 +735,6 @@ func (m *matcher) inVisual(p pos) bool {
 	}
 	return true
 }
+
+// charEq says a and b are the same character, or with fold the same ignoring case.
+func charEq(a, b rune, fold bool) bool { return a == b || fold && foldEq(a, b) }

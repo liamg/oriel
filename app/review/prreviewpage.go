@@ -462,8 +462,8 @@ func (x *PRReview) itemMenu(c *ui.Ctx, se core.SessionState, it reviewItem) {
 func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it reviewItem, width float32) {
 	th := c.Theme()
 	c.Column("detail", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{L: 30, R: 6, B: 6}}, func(c *ui.Ctx) {
-		switch {
-		case f.editing == it.id:
+		switch f.editing {
+		case it.id:
 			widget.Prose(c, "edit", &f.edit, widget.ProseOpts{Label: "What the author gets", Lines: 8, MinLines: 3, Help: prReviewHelp})
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "reset", "The reviewer's words", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {

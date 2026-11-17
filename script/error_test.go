@@ -107,9 +107,9 @@ func TestErrorThroughAPI(t *testing.T) {
 // A Go function that panics is an error at its Lua call, its Go stack in the trace.
 func TestAPIPanic(t *testing.T) {
 	vm, _ := config(t, nil)
-	vm.Bind("api", map[string]GoFunc{"boom": func(a *Args) ([]any, error) { var m map[string]int; m["x"]++; return nil, nil }})
+	vm.Bind("api", map[string]GoFunc{"boom": func(a *Args) ([]any, error) { panic("boom") }})
 	e := loadErr(t, vm, "\noriel.api.boom()\n")
-	if !strings.HasPrefix(e.Message, "init.lua:2: oriel.api.boom: panic: assignment to entry in nil map") || e.Where() != "init.lua:2" {
+	if !strings.HasPrefix(e.Message, "init.lua:2: oriel.api.boom: panic: boom") || e.Where() != "init.lua:2" {
 		t.Errorf("message %q at %q", e.Message, e.Where())
 	}
 	if !strings.Contains(e.Trace(), "error_test.go") {
