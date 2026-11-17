@@ -63,7 +63,7 @@ func realDir(dir string) string {
 	return dir
 }
 
-// graph is the workspace's packages, listed again when go.mod or go.work changed or when force is set.
+// packageGraph is the workspace's packages, listed again when go.mod or go.work changed or when force is set.
 func (g *Go) packageGraph(ws Workspace, force bool) (*goGraph, error) {
 	g.graph.mu.Lock()
 	defer g.graph.mu.Unlock()

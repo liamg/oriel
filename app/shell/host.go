@@ -185,10 +185,10 @@ func (h *pluginHost) Framed(fn func()) registry.Disposable {
 }
 
 func (h *pluginHost) KeyModes() []string {
-	if h.sh.modes == nil {
+	if h.sh.ui.Load() == nil || h.sh.layout == nil { // before the window opens
 		return nil
 	}
-	return h.sh.modes()
+	return h.sh.keyModes()
 }
 
 func (h *pluginHost) Kept(session core.SessionID, key string) (json.RawMessage, bool) {

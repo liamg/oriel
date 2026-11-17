@@ -144,7 +144,7 @@ func (x *Console) commands() []registry.Command {
 		}},
 		{ID: "agent.queue.remove", Grant: string(plugin.CapAgentPrompt), Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				c, err := x.client(session(a))
+				c, err := x.client()
 				if err != nil {
 					return err
 				}
@@ -179,7 +179,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.send", Grant: string(plugin.CapAgentPrompt), Title: "Send the agent of {id}, or the session in front, a message: {text}; {urgent} interrupts the turn, else it waits for it",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := session(a)
-				c, err := x.client(id)
+				c, err := x.client()
 				if err != nil {
 					return err
 				}
@@ -346,7 +346,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 func (x *Console) provider(session core.SessionID, id string) (hostapi.ProviderInfo, bool) {
 	l := x.providers
 	if l == nil {
-		w, err := x.client(session)
+		w, err := x.client()
 		if err != nil {
 			return hostapi.ProviderInfo{}, false
 		}
@@ -365,7 +365,8 @@ func (x *Console) provider(session core.SessionID, id string) (hostapi.ProviderI
 	return hostapi.ProviderInfo{}, false
 }
 
-func (x *Console) client(id core.SessionID) (hostapi.SessionCalls, error) {
+// client is the session host's session calls.
+func (x *Console) client() (hostapi.SessionCalls, error) {
 	return sessionkit.SessionCalls(x.h)
 }
 
@@ -413,7 +414,7 @@ func (x *Console) ask(id core.SessionID, ask string) (core.Ask, bool) {
 
 // answer sends the user's answer to an ask to the session host.
 func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a registry.Args) error {
-	c, err := x.client(id)
+	c, err := x.client()
 	if err != nil {
 		return err
 	}
@@ -451,7 +452,7 @@ func (x *Console) startNote(id core.SessionID, ask string, stacked bool) {
 
 // fork asks a side question, and shows the answer in the console when it comes.
 func (x *Console) fork(id core.SessionID, prompt string) error {
-	c, err := x.client(id)
+	c, err := x.client()
 	if err != nil {
 		return err
 	}
@@ -490,7 +491,7 @@ func (x *Console) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string)
 			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", services.ProviderTitle(x.h, a.Provider), a.Starting.Step)
 		}
 	}
-	c, err := x.client(id)
+	c, err := x.client()
 	if err != nil {
 		return err
 	}

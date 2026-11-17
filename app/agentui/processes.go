@@ -58,7 +58,7 @@ func (x *Console) stopProcess(ctx registry.Ctx, a registry.Args) error {
 		se, _ := x.h.Session(id)
 		return fmt.Errorf("%s can't stop the processes it leaves running", services.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
 	}
-	c, err := x.client(id)
+	c, err := x.client()
 	if err != nil {
 		return err
 	}

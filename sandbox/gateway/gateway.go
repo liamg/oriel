@@ -204,7 +204,6 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 				}
 			}()
 		}
-		ctx = context.WithValue(ctx, answerKey{}, ans)
 	default:
 		entry.Decision = Allow
 	}
@@ -219,15 +218,6 @@ func notSaved(res mcp.CallResult, name string, err error) mcp.CallResult {
 	note := mcp.TextResult("oriel: the user allowed "+name+" always, but the rule was not saved: "+err.Error(), false)
 	res.Content = append(res.Content, note.Content...)
 	return res
-}
-
-type answerKey struct{}
-
-// AnswerFrom is the user's answer to the card that let this call through, for
-// a builtin whose result is that answer.
-func AnswerFrom(ctx context.Context) (Answer, bool) {
-	a, ok := ctx.Value(answerKey{}).(Answer)
-	return a, ok
 }
 
 func (g *Gateway) ask(ctx context.Context, req Request) (Answer, error) {

@@ -194,7 +194,7 @@ func Parse(src string) (Meta, string, error) {
 
 // FromText is a pack from its markdown, read as LoadDir reads a file: include lines expanded, its tools from the
 // frontmatter or the Oriel tools the text names.
-func FromText(src, name string) (agent.Pack, error) { return build(src, name) }
+func FromText(src, name string) (agent.Pack, error) { return buildWith(src, name, nil) }
 
 // FromTextWith is FromText with the parts it includes looked up in part first: the user's own versions of them.
 func FromTextWith(src, name string, part func(name string) (string, bool)) (agent.Pack, error) {
@@ -237,8 +237,6 @@ func Part(name string) (string, bool) {
 }
 
 var include = regexp.MustCompile(`(?m)^<!-- include: ([a-z0-9_-]+) -->$`)
-
-func build(src, name string) (agent.Pack, error) { return buildWith(src, name, nil) }
 
 func buildWith(src, name string, override func(string) (string, bool)) (agent.Pack, error) {
 	var missing error
@@ -300,7 +298,7 @@ func loadBuiltin() (map[string]agent.Pack, map[string]string) {
 		if err != nil {
 			panic(err)
 		}
-		p, err := build(string(b), strings.TrimSuffix(ent.Name(), ".md"))
+		p, err := FromText(string(b), strings.TrimSuffix(ent.Name(), ".md"))
 		if err != nil {
 			panic(fmt.Sprintf("packs: %s: %v", ent.Name(), err))
 		}

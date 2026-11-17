@@ -366,7 +366,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 	})
 }
 
-// card is a section of the detail: a caption and its note, then the body.
+// repoCard is a section of the detail: a caption and its note, then the body.
 func repoCard(c *ui.Ctx, key, title, note string, right func(c *ui.Ctx), body func(c *ui.Ctx)) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Fill: th.C(theme.BgSurface), Stroke: th.C(theme.Line), Border: 1, Radius: 8, Clip: true,

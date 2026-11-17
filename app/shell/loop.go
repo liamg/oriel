@@ -63,7 +63,7 @@ func (l *loop) open(poke func()) []func() {
 	l.ui.SetClipboard(sh.desktop)
 	sh.provide(l.ui)
 	l.ui.Title = "Oriel"
-	sh.keys, sh.modes = l.keys, l.modes
+	sh.keys = l.keys
 	sh.ui.Store(l.ui)
 	l.keys.Raw = func() bool {
 		ed, ok := services.EditorsOf(reg)
@@ -501,12 +501,10 @@ func acceptKey(r registry.Registry, modes, pending []string) bool {
 	return exact == nil && !more
 }
 
-// modes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
-// focused widget's own mode (an input's
-// "input", a list's "list"); or, with none, ViewKeyMode while a view in the layout has focus, or EmptyKeyMode while the
-// main area is empty, then the editor's "n"; then "global", for app chords that work everywhere.
-func (l *loop) modes() []string { return l.sh.keyModes() }
-
+// keyModes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
+// focused widget's own mode (an input's "input", a list's "list"); or, with none, ViewKeyMode while a view in the
+// layout has focus, or EmptyKeyMode while the main area is empty, then the editor's "n"; then "global", for app
+// chords that work everywhere.
 func (sh *shell) keyModes() []string {
 	return append(registry.ActiveKeyModes(sh.cfg.Registry), sh.baseKeyModes()...)
 }

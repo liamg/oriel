@@ -204,7 +204,7 @@ func (x *Ship) draftCommands() []registry.Command {
 					id = "drafts.pr.again"
 				}
 				text := kit.RenderPrompt(x.ConfigDir, id, map[string]string{"project": p})
-				c, err := x.client(se.ID)
+				c, err := x.client()
 				if err != nil {
 					return err
 				}
@@ -376,7 +376,7 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 	if len(reqs) == 0 {
 		return errors.New("no project has commits to raise")
 	}
-	if _, err := x.client(se.ID); err != nil {
+	if _, err := x.client(); err != nil {
 		return err
 	}
 	x.busy.Go(func() {

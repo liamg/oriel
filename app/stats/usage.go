@@ -140,7 +140,7 @@ func readWindow(now time.Time, w core.UsageWindow, hist []core.ProviderUsage) wi
 }
 
 // verdict is where a window's burn takes it, in words: "≈ 71% at the reset · won't run out", or when it runs out.
-func (r windowRead) verdict(now time.Time, loc *time.Location) (string, theme.TokenID) {
+func (r windowRead) verdict(loc *time.Location) (string, theme.TokenID) {
 	switch {
 	case !r.runsOut.IsZero():
 		return fmt.Sprintf("at this rate the %s window runs out %s · %s before the reset", strings.ToLower(windowKind(r.w)),
@@ -309,7 +309,7 @@ func (x *Stats) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 				c.Text("b", fmt.Sprintf("%.1f%%/h", r.burn*100), widget.MonoFont(10, th.C(theme.FgFaint)))
 			})
 			if !r.runsOut.IsZero() {
-				v, tone := r.verdict(now, x.Loc)
+				v, tone := r.verdict(x.Loc)
 				c.Row(fmt.Sprint("x", i, j), ui.Style{Pad: ui.Insets{L: 42}}, func(c *ui.Ctx) { c.Text("t", v, widget.MonoFont(10, th.C(tone))) })
 			}
 		}
@@ -521,7 +521,7 @@ func (x *Stats) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 				c.Text("o", fmt.Sprintf("· %.1f%%/h over the week", r.overall*100), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			}
 		})
-		v, vt := r.verdict(now, x.Loc)
+		v, vt := r.verdict(x.Loc)
 		box := c.Next("verdict")
 		width := float32(280)
 		if rect, ok := c.Rect(box); ok {

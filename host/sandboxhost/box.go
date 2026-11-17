@@ -102,7 +102,7 @@ func (s *Factory) BackendFor(cfg sandbox.Config) (sandbox.Backend, error) {
 }
 
 func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) bool) []string {
-	cfg := s.config(core.SessionState{})
+	cfg := s.config()
 	var out []string
 	for _, name := range s.Available() {
 		named := cfg
@@ -128,7 +128,7 @@ func (s *Factory) host() (Deps, bool) {
 	return s.deps, s.attached
 }
 
-func (s *Factory) config(se core.SessionState) sandbox.Config {
+func (s *Factory) config() sandbox.Config {
 	if s.Config != nil {
 		return s.Config()
 	}
@@ -186,7 +186,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostap
 	if err := sandbox.SaveManifest(root, ManifestOf(root, se)); err != nil {
 		return nil, err
 	}
-	cfg := s.config(se)
+	cfg := s.config()
 	if se.Agent.Network == "open" {
 		cfg.NoEgressProxy = true
 	}

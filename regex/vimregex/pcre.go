@@ -667,7 +667,7 @@ func pcreClass(c byte) (*charSet, bool, bool) {
 	return s, neg, true
 }
 
-// negate makes a set its complement, newline included.
+// negated makes a set its complement, newline included.
 func negated(s *charSet, fold bool) *node {
 	return &node{op: opSet, set: &charSet{ranges: s.ranges, classes: s.classes, nl: false}, neg: true, fold: fold,
 		nl: !s.nl}

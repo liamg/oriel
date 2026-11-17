@@ -42,7 +42,7 @@ func newConventions(h plugin.Host, dir string, buffers func() []string) *convent
 	return &conventions{h: h, dir: dir, buffers: buffers, repos: map[string]*attr.Repo{}, applied: map[string]map[string]any{}, warned: map[string]bool{}}
 }
 
-// options are the conventions' own options, besides the engine's.
+// conventionOptions are the conventions' own options, besides the engine's.
 func conventionOptions() []registry.OptionSpec {
 	file := registry.ScopeUser | registry.ScopeProject | registry.ScopeSession | registry.ScopeBuffer
 	return []registry.OptionSpec{

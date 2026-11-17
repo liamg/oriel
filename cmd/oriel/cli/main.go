@@ -86,7 +86,7 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	startHost(ctx, w, log, load)
+	startHost(ctx, w, load)
 	cfg.Host, cfg.Load = w, load
 	cfg.Agents = builtinAgents(home)
 	cfg.Logs.Router.Sessions = w.Logs()

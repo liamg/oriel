@@ -342,7 +342,7 @@ func reversed(p *render.Path) *render.Path {
 
 const arrowLen, arrowHalf = 8, 4
 
-// marker adds an end's marker at tip, arriving in direction d, and says how far back the line should stop.
+// markerPrims adds an end's marker at tip, arriving in direction d, and says how far back the line should stop.
 func markerPrims(m Marker, tip, d render.Point, w float32) ([]prim, float32) {
 	n := pt(-d.Y, d.X)
 	switch m {
@@ -365,7 +365,7 @@ func markerPrims(m Marker, tip, d render.Point, w float32) ([]prim, float32) {
 	return nil, 0
 }
 
-// line adds an edge's line along path with its markers, solid, dotted or thick.
+// linePrims adds an edge's line along path with its markers, solid, dotted or thick.
 func linePrims(path *render.Path, style LineStyle, start, end Marker) []prim {
 	w := float32(1.3)
 	if style == Thick {

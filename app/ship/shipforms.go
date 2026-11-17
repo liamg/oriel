@@ -59,7 +59,7 @@ func (x *Ship) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req hostap
 		return
 	}
 	a.pending = false
-	cl, err := x.client(req.Session)
+	cl, err := x.client()
 	if err != nil {
 		return
 	}
@@ -87,7 +87,7 @@ func (x *Ship) commitForm(id core.SessionID, project string) *commitForm {
 	return f
 }
 
-// message is what a project's commit uses: what's typed, else the draft.
+// messageFor is what a project's commit uses: what's typed, else the draft.
 func (f *commitForm) messageFor(s shipRead) string {
 	if f.edited {
 		return f.message

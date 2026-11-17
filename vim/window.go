@@ -34,9 +34,6 @@ func (e *Engine) enter(w *window) {
 	e.layout.Focus(WindowID(w.id))
 }
 
-// split opens a new window on the current buffer, above (or left of, for vertical) the current one, with a copy
-// of its cursor, jumplist and folds, and makes it current, as :split and :vsplit do with 'splitbelow' and
-// 'splitright' off. With b, the new window then shows b, as CTRL-W ^ does: not a jump.
 // splitFile is :split and :vsplit: with a file, the new window edits it, and the original window's alternate file
 // is that file.
 func (e *Engine) splitFile(vertical bool, name string) error {
@@ -54,6 +51,9 @@ func (e *Engine) splitFile(vertical bool, name string) error {
 	return nil
 }
 
+// split opens a new window on the current buffer, above (or left of, for vertical) the current one, with a copy
+// of its cursor, jumplist and folds, and makes it current, as :split and :vsplit do with 'splitbelow' and
+// 'splitright' off. With b, the new window then shows b, as CTRL-W ^ does: not a jump.
 func (e *Engine) split(vertical bool, b *buffer) {
 	old := e.window
 	w := e.newWindow(e.ed.Open(old.buf.text), old.buf)

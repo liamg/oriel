@@ -44,7 +44,6 @@ type shell struct {
 	ui           atomic.Pointer[ui.UI]  // set as the window opens; read by plugins' goroutines too
 	dir          atomic.Pointer[string] // cfg.WorkDir, for plugins' goroutines: the window moves under them
 	widgets      widgetServices         // plugins' services for the UI's widgets (Host.ProvideUI)
-	modes        func() []string
 	theme        func() *theme.Resolved
 	todoMu       sync.Mutex
 	inflight     inflight // plugins' work off the loop (plugin.Begin)

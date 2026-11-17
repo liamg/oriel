@@ -6,7 +6,6 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// SetApp is agentrun.Runner.SetApp.
 // Connect sets the app's tools and answers and its kinds before its providers, whose setting resumes the agents
 // handed over: they come back with all of it in place.
 func (w *Host) Connect(c hostapi.Connection) {
@@ -15,6 +14,7 @@ func (w *Host) Connect(c hostapi.Connection) {
 	w.SetProviders(c.Providers)
 }
 
+// SetApp is agentrun.Runner.SetApp.
 func (w *Host) SetApp(a hostapi.App) {
 	defer w.env.Recover("SetApp", nil)
 	w.runPart.SetApp(a)
