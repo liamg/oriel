@@ -13,7 +13,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/agent/mcptools/mcpstdio"
 	"github.com/liamg/oriel/agent/packs"
@@ -21,6 +20,7 @@ import (
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 	"github.com/liamg/oriel/sandbox/helper"
+	"github.com/liamg/oriel/sandbox/hookcall"
 	"github.com/liamg/oriel/sysload"
 )
 
@@ -82,7 +82,7 @@ func runHook(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 1 && args[0] == "mcp" {
 		return mcpstdio.Main(stdin, stdout, stderr, os.Environ())
 	}
-	return claude.HookMain(args, stdin, stdout, stderr)
+	return hookcall.Main(args, stdin, stdout, stderr)
 }
 
 // runSandboxed runs what a sandbox's container asks of the oriel binary inside it.

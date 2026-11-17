@@ -58,7 +58,6 @@ type (
 	Headless     = shell.Headless
 	HeadlessOpts = shell.HeadlessOpts
 	PluginOpts   = shell.PluginOpts
-	Crash        = shell.Crash
 	// Updates is Oriel updating itself.
 	Updates = updates.Updates
 	// VoiceConfig swaps dictation's parts; nil ones are the real ones, from the voice.* options.
@@ -99,4 +98,4 @@ func Icon(f render.Frame, r render.Rect, th *theme.Resolved) { shell.Icon(f, r, 
 func DirPlugin(dir string, o PluginOpts) plugin.Plugin { return shell.DirPlugin(dir, o) }
 
 // PendingCrashes are the crash reports in dir not yet deleted, newest first.
-func PendingCrashes(dir string) []Crash { return shell.PendingCrashes(dir) }
+func PendingCrashes(dir string) []shell.Crash { return shell.PendingCrashes(dir) }

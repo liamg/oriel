@@ -75,9 +75,9 @@ func UpdateAlways(edit func(*Always)) error {
 func AddAlwaysRules(rules []PolicyRule, everywhere bool) error {
 	return UpdateAlways(func(a *Always) {
 		for _, r := range rules {
-			a.Rules = putRule(a.Rules, r)
+			a.Rules = PutRule(a.Rules, r)
 			if everywhere {
-				a.Shared = putRule(a.Shared, r)
+				a.Shared = PutRule(a.Shared, r)
 			}
 		}
 	})
@@ -115,11 +115,6 @@ func SetNoSignIn(server string, ignore bool) error {
 	})
 }
 
-func putRule(rules []PolicyRule, r PolicyRule) []PolicyRule {
-	rules = slices.DeleteFunc(rules, func(x PolicyRule) bool { return x.Tool == r.Tool })
-	return append(rules, r)
-}
-
 // PutEgress adds r, replacing any rule for the same host and port.
 func PutEgress(rules []EgressRule, r EgressRule) []EgressRule {
 	rules = slices.DeleteFunc(rules, func(x EgressRule) bool { return x.Host == r.Host && x.Port == r.Port })
@@ -128,7 +123,8 @@ func PutEgress(rules []EgressRule, r EgressRule) []EgressRule {
 
 // PutRule adds r, replacing any rule for the same tool.
 func PutRule(rules []PolicyRule, r PolicyRule) []PolicyRule {
-	return putRule(rules, r)
+	rules = slices.DeleteFunc(rules, func(x PolicyRule) bool { return x.Tool == r.Tool })
+	return append(rules, r)
 }
 
 // RemoveAlways drops a tool rule (tool set) or a network rule (host set).

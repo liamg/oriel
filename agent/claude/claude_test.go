@@ -363,24 +363,24 @@ func TestHookMain(t *testing.T) {
 	}()
 	t.Setenv("ORIEL_HOOK_SOCK", sockPath(dir))
 	var out, errs bytes.Buffer
-	if code := HookMain([]string{"check"}, strings.NewReader(`{"tool":"Bash"}`), &out, &errs); code != 0 {
+	if code := hookcall.Main([]string{"check"}, strings.NewReader(`{"tool":"Bash"}`), &out, &errs); code != 0 {
 		t.Fatalf("exit %d: %s", code, errs.String())
 	}
 	if got := strings.TrimSpace(out.String()); got != `{"op":"check","got":{"tool":"Bash"}}` {
 		t.Errorf("printed %s", got)
 	}
 	errs.Reset()
-	if code := HookMain([]string{"bad"}, strings.NewReader(`{}`), &out, &errs); code != 1 || !strings.Contains(errs.String(), "no such op") {
+	if code := hookcall.Main([]string{"bad"}, strings.NewReader(`{}`), &out, &errs); code != 1 || !strings.Contains(errs.String(), "no such op") {
 		t.Errorf("a refused op: exit %d, %q", code, errs.String())
 	}
-	if code := HookMain([]string{"check"}, strings.NewReader(`not json`), &out, &errs); code != 1 {
+	if code := hookcall.Main([]string{"check"}, strings.NewReader(`not json`), &out, &errs); code != 1 {
 		t.Errorf("bad stdin: exit %d", code)
 	}
-	if code := HookMain(nil, strings.NewReader(""), &out, &errs); code != 2 {
+	if code := hookcall.Main(nil, strings.NewReader(""), &out, &errs); code != 2 {
 		t.Errorf("no op: exit %d", code)
 	}
 	t.Setenv("ORIEL_HOOK_SOCK", "")
-	if code := HookMain([]string{"wait"}, strings.NewReader("{}"), &out, &errs); code != 1 {
+	if code := hookcall.Main([]string{"wait"}, strings.NewReader("{}"), &out, &errs); code != 1 {
 		t.Errorf("outside a session: exit %d", code)
 	}
 }

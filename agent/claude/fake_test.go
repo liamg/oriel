@@ -19,13 +19,14 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/sandbox/hookcall"
 )
 
 // The test binary is also `oriel hook` (for the real claude's mod and the fake's) and, with ORIEL_FAKE_CLAUDE=1,
 // a fake claude: the mod's side of the hook protocol in Go, writing a log in Claude Code's format.
 func TestMain(m *testing.M) {
 	if len(os.Args) > 1 && os.Args[1] == "hook" {
-		os.Exit(HookMain(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
+		os.Exit(hookcall.Main(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
 	}
 	if os.Getenv("ORIEL_FAKE_CLAUDE") == "1" {
 		os.Exit(fakeClaude(os.Args[1:]))

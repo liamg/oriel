@@ -8,7 +8,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/registry/uireg"
 
 	"github.com/liamg/oriel/agent"
@@ -120,8 +119,8 @@ func TestFrameContribution(t *testing.T) {
 func TestHomeShowsGlobalStatus(t *testing.T) {
 	r := rig.NewReleases(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Releasing(r)})
-	s.Registry().View(shell.StatusLeft+"98-bound", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("SESSION ONLY") }))
-	s.Registry().View(shell.StatusLeft+"99-global", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("EVERYWHERE") })})
+	s.Registry().View(kit.StatusLeft+"98-bound", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("SESSION ONLY") }))
+	s.Registry().View(kit.StatusLeft+"99-global", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("EVERYWHERE") })})
 	s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, "automatic")
 	r.Publish("1.1.0", "")
 	s.CheckUpdates()

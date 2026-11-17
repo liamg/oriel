@@ -2,7 +2,6 @@ package claude
 
 import (
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -10,7 +9,7 @@ import (
 )
 
 // The mod hands every decision to the session host by running `oriel hook <op>` with JSON on stdin, and so do
-// Oriel's settings hooks (op classic). HookMain is that command: it carries one request over the unix socket in
+// Oriel's settings hooks (op classic). hookcall.Main is that command: it carries one request over the unix socket in
 // ORIEL_HOOK_SOCK and prints the answer.
 
 // Hook ops.
@@ -183,11 +182,6 @@ type forkAnswerIn struct {
 	Answered bool   `json:"answered"`
 	Text     string `json:"text,omitempty"`
 	Reason   string `json:"reason,omitempty"`
-}
-
-// HookMain is `oriel hook <op>` (hookcall.Main).
-func HookMain(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	return hookcall.Main(args, stdin, stdout, stderr)
 }
 
 // sockDir makes a private directory for a session's socket, short enough for sun_path (104 bytes on macOS).
