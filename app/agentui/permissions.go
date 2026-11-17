@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -144,7 +145,7 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 	if st == nil {
 		st = &permsState{}
 		st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.Permissions, error) {
-			w, err := kit.SandboxCalls(x.h)
+			w, err := sessionkit.SandboxCalls(x.h)
 			if err != nil {
 				return hostapi.Permissions{}, err
 			}
@@ -157,7 +158,7 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 
 // change runs a change on the host and reads the session again.
 func (x *Permissions) change(id core.SessionID, fn func(hostapi.SandboxCalls) error) error {
-	w, err := kit.SandboxCalls(x.h)
+	w, err := sessionkit.SandboxCalls(x.h)
 	if err != nil {
 		return err
 	}

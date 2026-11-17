@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
@@ -135,11 +136,11 @@ func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 		x.loc = time.Local
 	}
 	x.loads = plugin.NewLoad(h, func(context.Context, func(string, float64)) (jobsData, error) {
-		jobs, err := kit.JobCalls(x.h)
+		jobs, err := sessionkit.JobCalls(x.h)
 		if err != nil {
 			return jobsData{}, err
 		}
-		repos, err := kit.RepoCalls(x.h)
+		repos, err := sessionkit.RepoCalls(x.h)
 		if err != nil {
 			return jobsData{}, err
 		}
@@ -174,7 +175,7 @@ func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 
 func (x *Jobs) commands() []registry.Command {
 	h := x.h
-	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
+	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	formOpen := func(registry.Args) bool { return x.form != nil }
 	return []registry.Command{
 		{ID: "Jobs", Title: "The Jobs page; :Jobs {job}", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -201,7 +202,7 @@ func (x *Jobs) commands() []registry.Command {
 				if id == "" {
 					id = h.State().Focus
 				}
-				c, err := kit.SessionCalls(x.h)
+				c, err := sessionkit.SessionCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -237,7 +238,7 @@ func (x *Jobs) refresh() {
 
 // load is the jobs and repos as last read, reading them again when they're old or missing. Call it on the loop.
 func (x *Jobs) load() ([]hostapi.Job, []core.Repo) {
-	if !kit.HasSessions(x.h) {
+	if !sessionkit.HasSessions(x.h) {
 		return nil, nil
 	}
 	x.mu.Lock()
@@ -330,7 +331,7 @@ func (x *Jobs) target(a registry.Args) (hostapi.Job, error) {
 }
 
 func (x *Jobs) client() (hostapi.JobCalls, error) {
-	return kit.JobCalls(x.h)
+	return sessionkit.JobCalls(x.h)
 }
 
 // save is jobs.save: the job named, with what the args give changed, or a new one; it returns the job as saved.

@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/words"
@@ -176,7 +177,7 @@ func (x *Reviews) commands() []registry.Command {
 		{ID: "reviews.start", Title: "Start a review of the pull request selected on the Reviews page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("start") }},
 		{ID: "reviews.start-background", Title: "Start a review of pull request {url} behind the session in front, on the default agent",
-			Available: func(registry.Args) bool { return kit.HasSessions(x.h) },
+			Available: func(registry.Args) bool { return sessionkit.HasSessions(x.h) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.startBehind(ctx, a.String("url")) }},
 		{ID: "reviews.browse", Title: "Open the pull request selected on the Reviews page in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
@@ -656,15 +657,15 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 		return nil
 	}
 	h, st := x.h, x.h.State()
-	w, err := kit.SessionCalls(h)
+	w, err := sessionkit.SessionCalls(h)
 	if err != nil {
 		return err
 	}
-	sandbox := kit.DefaultSandbox(h.Options())
+	sandbox := sessionkit.DefaultSandbox(h.Options())
 	return plugin.RunSlow(ctx, h, plugin.Slow{ID: "reviews.start:" + url, Doing: "Starting a review of " + name},
 		func(ctx context.Context) (struct{}, error) {
 			provider, model := kit.DefaultAgent(st, w.ProviderInfo(ctx))
-			a := kit.SpecArgs(core.SessionSpec{Kind: core.KindReview, PR: url, Provider: provider, Model: model, Sandbox: sandbox})
+			a := sessionkit.SpecArgs(core.SessionSpec{Kind: core.KindReview, PR: url, Provider: provider, Model: model, Sandbox: sandbox})
 			a["background"] = true
 			return struct{}{}, plugin.Await(ctx, func(ctx registry.Ctx) error { return h.Run(ctx, "session.start", a) })
 		},

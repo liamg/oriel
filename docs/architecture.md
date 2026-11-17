@@ -33,7 +33,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `ui` | the immediate-mode toolkit: layout, input routing, focus, accessibility; `ui/widget` (every control), `ui/layout` (the window's tree of views as data) |
 | `theme`, `toml` | theme files and token resolution; a round-tripping TOML 1.0 editor for settings and themes |
 | `zstd` | a Zstandard (RFC 8878) decoder: whole buffers or streamed within a frame's window; Codex's compressed rollouts |
-| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/draw` for what they draw alike with the app's types, `app/kit/edits` for a buffer's text, `app/kit/desktop` for the desktop's folder chooser, and `app/kit/work`, `app/kit/prui` and `app/kit/agentkit` for what only some share); what draws nothing of the app's is `ui/widget`'s |
+| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/draw` for what they draw alike with the app's types, `app/kit/edits` for a buffer's text, `app/kit/desktop` for the desktop's folder chooser, `app/kit/work` for work off the loop and periodic work, `app/kit/sessionkit` for the session host's parts and session args, and `app/kit/prui` and `app/kit/agentkit` for what only some share); what draws nothing of the app's is `ui/widget`'s |
 | `conversation`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
@@ -84,7 +84,8 @@ contracts, so what they carry are plain values from leaf packages (`syntax/tree`
 tool's decision), never the packages that make them: `registry/services` and `host/hostapi` never reach a wasm runtime,
 `sandbox/gateway` or `sandbox/mcp` (`tools/layout`). A lookup's name says how it answers a missing service:
 `XxxOf` answers `(T, bool)`; one that always answers something (`kit.Git`, `kit.Sites`) has no `Of`; and one that
-refuses with an error is named for its part (`kit.SessionCalls`, `kit.ShipCalls`).
+refuses with an error is named for its part (`sessionkit.SessionCalls`, `sessionkit.ShipCalls`, in `app/kit/sessionkit`
+with the other session helpers: which session a command means, and `session.start`'s args to and from a spec).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
 underneath them: the layout it leaves is saved and kept as it is, its views open, the pages over it close, the

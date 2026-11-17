@@ -19,6 +19,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
@@ -265,7 +266,7 @@ func (x *Mirror) resolveHost(id core.SessionID, t core.Thread) {
 		fail(fmt.Errorf("%s can't resolve threads from Oriel", p.host.Label()))
 		return
 	}
-	c, err := kit.CodeHostCalls(x.h)
+	c, err := sessionkit.CodeHostCalls(x.h)
 	if err != nil {
 		return
 	}
@@ -307,7 +308,7 @@ func hostThread(t core.Thread) registry.ReviewThread {
 func (x *Mirror) wait() { x.busy.Wait() }
 
 func (x *Mirror) session(a registry.Args) (core.SessionState, bool) {
-	se, err := kit.SessionFrom(x.h, a)
+	se, err := sessionkit.SessionFrom(x.h, a)
 	return se, err == nil
 }
 
@@ -374,7 +375,7 @@ func (x *Mirror) sync(id core.SessionID, fresh bool) {
 // mirrorSession brings each of the session's projects' PR review threads, from its code host, into the session: the
 // PR its branch has, or the one a review session reads. A project whose host gives no threads is passed over.
 func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, reviewed string, fresh bool) ([]prRead, error) {
-	c, err := kit.CodeHostCalls(x.h)
+	c, err := sessionkit.CodeHostCalls(x.h)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +564,7 @@ func (x *Mirror) forward(a registry.Args) error {
 	if p.host.Reply == nil {
 		return fmt.Errorf("%s can't post replies from Oriel", p.host.Label())
 	}
-	c, err := kit.CodeHostCalls(x.h)
+	c, err := sessionkit.CodeHostCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -621,7 +622,7 @@ func (x *Mirror) save(a registry.Args) error {
 	if strings.TrimSpace(body) == "" {
 		return errors.New("the draft is empty")
 	}
-	c, err := kit.CodeHostCalls(x.h)
+	c, err := sessionkit.CodeHostCalls(x.h)
 	if err != nil {
 		return err
 	}

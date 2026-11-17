@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
@@ -82,7 +83,7 @@ func (sh *shell) quit(ask bool) {
 		r.hidden = false
 		return
 	}
-	if !sh.holdsClose && !kit.HasSessions(sh.cfg.Registry) {
+	if !sh.holdsClose && !sessionkit.HasSessions(sh.cfg.Registry) {
 		sh.closeWindow()
 		return
 	}
@@ -135,7 +136,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 	tick := work.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
 	// A quit as the window opens waits for the host plugin to bring the host's calls.
-	jobs, err := kit.JobCalls(sh.cfg.Registry)
+	jobs, err := sessionkit.JobCalls(sh.cfg.Registry)
 	for err != nil && sh.holdsClose {
 		select {
 		case <-r.now:
@@ -146,7 +147,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 			return nil
 		case <-tick.C:
 		}
-		jobs, err = kit.JobCalls(sh.cfg.Registry)
+		jobs, err = sessionkit.JobCalls(sh.cfg.Registry)
 	}
 	if err != nil {
 		return nil

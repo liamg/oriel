@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -113,7 +114,7 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	if kit.HasSessions(x.h) {
+	if sessionkit.HasSessions(x.h) {
 		// The rail offers the console where there are agents.
 		x.Add(h.Contribute(uireg.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console", Order: 70,
 			Active: func(string) bool { return x.shown() }, Badge: func() int {
@@ -365,7 +366,7 @@ func (x *Console) provider(session core.SessionID, id string) (hostapi.ProviderI
 }
 
 func (x *Console) client(id core.SessionID) (hostapi.SessionCalls, error) {
-	return kit.SessionCalls(x.h)
+	return sessionkit.SessionCalls(x.h)
 }
 
 // move selects the next or previous block.

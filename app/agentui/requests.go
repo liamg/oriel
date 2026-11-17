@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -190,7 +191,7 @@ func (x *Requests) commands() []registry.Command {
 					return errors.New("no request is selected")
 				}
 				if name := strings.TrimSpace(a.String("name")); name != "" {
-					se, w, err := kit.SessionArgs(x.h, a)
+					se, w, err := sessionkit.SessionArgs(x.h, a)
 					if err != nil {
 						return err
 					}
@@ -669,7 +670,7 @@ func requestsArgs() registry.Args {
 
 // setThread sets a thread's status: resolved by default.
 func (x *Requests) setThread(a registry.Args) error {
-	se, w, err := kit.SessionArgs(x.h, a)
+	se, w, err := sessionkit.SessionArgs(x.h, a)
 	if err != nil {
 		return err
 	}
@@ -680,7 +681,7 @@ func (x *Requests) setThread(a registry.Args) error {
 // commentOn sends a comment through the CommentSend hooks to the session host, which hands it to the agent:
 // on {thread}, or opening one about {file}:{line}, or the whole change.
 func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
-	se, w, err := kit.SessionArgs(x.h, a)
+	se, w, err := sessionkit.SessionArgs(x.h, a)
 	if err != nil {
 		return err
 	}
@@ -728,7 +729,7 @@ func anchorIn(st core.SessionState, file string, line, end int, text string) *co
 
 // editQueued deletes a queued comment, changes it to {body}, or with no body puts it in the composer to edit.
 func (x *Requests) editQueued(_ registry.Ctx, a registry.Args, del bool) error {
-	se, w, err := kit.SessionArgs(x.h, a)
+	se, w, err := sessionkit.SessionArgs(x.h, a)
 	if err != nil {
 		return err
 	}

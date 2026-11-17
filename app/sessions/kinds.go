@@ -6,7 +6,7 @@ import (
 	"context"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -62,11 +62,11 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 
 // connect gives the session host the app's side: its tools and answers, the registry's kinds and providers.
 func (x *Sessions) connect(h plugin.Host) {
-	wire, err := kit.HostWiring(h)
+	wire, err := sessionkit.HostWiring(h)
 	if err != nil {
 		return
 	}
-	calls, _ := kit.SessionCalls(h)
+	calls, _ := sessionkit.SessionCalls(h)
 	wire.Connect(hostapi.Connection{
 		App: hostapi.App{
 			Tools: func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },

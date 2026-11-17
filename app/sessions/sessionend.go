@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -105,7 +106,7 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 func (x *End) commands() []registry.Command {
 	h := x.h
 	has := func(a registry.Args) bool {
-		return kit.HasSessions(x.h) && (a.String("id") != "" || h.State().Focus != "")
+		return sessionkit.HasSessions(x.h) && (a.String("id") != "" || h.State().Focus != "")
 	}
 	open := func(registry.Args) bool { return x.ask != nil }
 	return []registry.Command{
@@ -249,7 +250,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
 func (x *End) end(ctx registry.Ctx, r hostapi.EndReq) error {
-	w, _ := kit.SessionCalls(x.h)
+	w, _ := sessionkit.SessionCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -101,7 +102,7 @@ func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 }
 
 func (x *Repos) commands() []registry.Command {
-	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
+	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	dialogOpen := func(registry.Args) bool { return x.dialog != nil }
 	return []registry.Command{
 		{ID: "repos.open", Title: "The Repos page, at a {repo}", Available: has,
@@ -122,7 +123,7 @@ func (x *Repos) commands() []registry.Command {
 				if err != nil {
 					return err
 				}
-				w, _ := kit.RepoCalls(x.h)
+				w, _ := sessionkit.RepoCalls(x.h)
 				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.add." + path, Doing: "Adding " + kit.TildePath(path)},
 					func(ctx context.Context) (core.Repo, error) { return w.AddRepoPath(ctx, path) },
 					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
@@ -133,7 +134,7 @@ func (x *Repos) commands() []registry.Command {
 				if err != nil {
 					return err
 				}
-				w, _ := kit.RepoCalls(x.h)
+				w, _ := sessionkit.RepoCalls(x.h)
 				req := hostapi.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")}
 				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.clone." + req.URL, Doing: "Cloning " + req.URL},
 					func(ctx context.Context) (core.Repo, error) { return w.CloneRepo(ctx, req) },
@@ -141,7 +142,7 @@ func (x *Repos) commands() []registry.Command {
 			}},
 		{ID: "repos.remove", Title: "Unregister {repo} and stop discovery adding it back; its files stay", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				w, err := kit.RepoCalls(x.h)
+				w, err := sessionkit.RepoCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -151,7 +152,7 @@ func (x *Repos) commands() []registry.Command {
 			Run: func(registry.Ctx, registry.Args) error { x.discover(true); return nil }},
 		{ID: "repos.fetch", Title: "Fetch {repo}'s remote, pruning branches it deleted", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				w, _ := kit.RepoCalls(x.h)
+				w, _ := sessionkit.RepoCalls(x.h)
 				id := x.repoArg(a)
 				if id == "" {
 					return errors.New("fetch which repo? Give its {repo}")
@@ -191,7 +192,7 @@ func (x *Repos) optString(name string) string {
 }
 
 func (x *Repos) sendDir() {
-	if w, _ := kit.RepoCalls(x.h); w != nil {
+	if w, _ := sessionkit.RepoCalls(x.h); w != nil {
 		w.SetReposDir(x.optString("repos.dir"))
 	}
 }
@@ -208,7 +209,7 @@ func (x *Repos) byHand(ev core.ReposChanged) bool {
 
 // discover registers the siblings of the known repos off the loop, when repos.discover is on or all is asked for.
 func (x *Repos) discover(all bool) {
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if w == nil || !all && !x.optBool("repos.discover") {
 		return
 	}
@@ -291,7 +292,7 @@ func (x *Repos) housekeepCommand(ctx registry.Ctx, a registry.Args) error {
 		x.readPlan(id, true)
 		return nil
 	}
-	w, err := kit.RepoCalls(x.h)
+	w, err := sessionkit.RepoCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -333,7 +334,7 @@ func (x *Repos) signTags(configured bool) bool {
 
 func (x *Repos) tagCommand(ctx registry.Ctx, a registry.Args) error {
 	id := x.repoArg(a)
-	w, err := kit.RepoCalls(x.h)
+	w, err := sessionkit.RepoCalls(x.h)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/pathx"
@@ -21,7 +22,7 @@ import (
 // session's projects is a link to it; any other file is copied where the agent can read it (hostapi.Attach) first.
 func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 	return func(p widget.Pasted) string {
-		w, err := kit.SessionCalls(h)
+		w, err := sessionkit.SessionCalls(h)
 		if err != nil {
 			return ""
 		}

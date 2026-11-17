@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -115,7 +116,7 @@ func (x *Jobs) show(f *jobForm) {
 	x.closeForm()
 	f.picked = f.agent != ""
 	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]hostapi.ProviderInfo, error) {
-		c, err := kit.SessionCalls(x.h)
+		c, err := sessionkit.SessionCalls(x.h)
 		if err != nil {
 			return nil, err
 		}

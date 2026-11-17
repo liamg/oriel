@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -79,7 +80,7 @@ func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	if kit.HasSessions(x.h) {
+	if sessionkit.HasSessions(x.h) {
 		x.Add(h.Contribute(uireg.RailEntry{Name: "workspace", Icon: "workspace", Title: "Workspace", Command: "workspace.open", Order: 75,
 			Active: func(string) bool { return x.open }}))
 	}
@@ -96,7 +97,7 @@ func (x *Workspace) commands() []registry.Command {
 		}
 		return h.State().Focus
 	}
-	inFront := func(registry.Args) bool { return kit.HasSessions(x.h) && h.State().Focus != "" }
+	inFront := func(registry.Args) bool { return sessionkit.HasSessions(x.h) && h.State().Focus != "" }
 	return []registry.Command{
 		{ID: "workspace.open", Title: "Show where the session in front's agent works, its sandbox and image, and what it may do: {tab} overview, files, image, build log or permissions",
 			Available: inFront,
@@ -116,7 +117,7 @@ func (x *Workspace) commands() []registry.Command {
 		{ID: "workspace.restart", Title: "Restart the agent of {id}, the session in front by default, in a new sandbox once its turn ends",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				w, err := kit.SandboxCalls(x.h)
+				w, err := sessionkit.SandboxCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -137,7 +138,7 @@ func (x *Workspace) state(id core.SessionID) *wsState {
 	}
 	st = &wsState{}
 	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.Workspace, error) {
-		w, _ := kit.SessionCalls(x.h)
+		w, _ := sessionkit.SessionCalls(x.h)
 		if w == nil {
 			return hostapi.Workspace{}, errors.New("there are no sessions in this window")
 		}
@@ -189,7 +190,7 @@ func readTail(path string, n int64) (string, error) {
 
 // rebuild builds session id's image again in the background, the build log following it.
 func (x *Workspace) rebuild(id core.SessionID) error {
-	w, _ := kit.SandboxCalls(x.h)
+	w, _ := sessionkit.SandboxCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}

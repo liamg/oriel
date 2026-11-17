@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
@@ -175,7 +176,7 @@ func (p *Page) Activate(_ context.Context, h plugin.Host) error {
 
 // readUsage is Refresh's read of every provider's plan windows, off the loop.
 func (x *Stats) readUsage(ctx context.Context, _ func(string, float64)) (struct{}, error) {
-	w, _ := kit.StatsCalls(x.h)
+	w, _ := sessionkit.StatsCalls(x.h)
 	if w == nil {
 		return struct{}{}, errors.New("there are no sessions in this window")
 	}
@@ -200,7 +201,7 @@ func (x *Stats) seen(ev core.Event) {
 }
 
 func (x *Stats) commands() []registry.Command {
-	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
+	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	return []registry.Command{
 		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default, or one outside Oriel",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -507,7 +508,7 @@ type reportMeta struct {
 
 // report is q's answer as last read, read through the app's manager while frames ask for it.
 func (x *Stats) report(q stats.Query) (stats.Report, reportMeta) {
-	w, _ := kit.StatsCalls(x.h)
+	w, _ := sessionkit.StatsCalls(x.h)
 	if w == nil {
 		return stats.Report{Points: q.Points()}, reportMeta{}
 	}
@@ -626,7 +627,7 @@ func (x *Stats) detail(id core.SessionID) (stats.Detail, bool) {
 
 // detailLoad is a session's stats (an Oriel session's, or one outside Oriel), read while frames ask, and its load.
 func (x *Stats) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
-	w, _ := kit.StatsCalls(x.h)
+	w, _ := sessionkit.StatsCalls(x.h)
 	if w == nil {
 		return stats.Detail{}, widget.LoadState{}
 	}
@@ -649,7 +650,7 @@ const historyKey = "usage.history"
 // usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *Stats) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	var hist []core.ProviderUsage
-	if w, _ := kit.StatsCalls(x.h); w != nil {
+	if w, _ := sessionkit.StatsCalls(x.h); w != nil {
 		a, _ := keep(x, historyKey, "usage history", func() ([]core.ProviderUsage, error) {
 			x.mu.Lock()
 			since := x.frameNow.Add(-8 * 24 * time.Hour)

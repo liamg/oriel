@@ -15,6 +15,7 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -177,7 +178,7 @@ func (x *Prompts) set(id, text string) error {
 // changed reads the prompts again and sends them to the session host.
 func (x *Prompts) changed() {
 	x.o = x.store().Load()
-	w, err := kit.SessionCalls(x.h)
+	w, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return
 	}

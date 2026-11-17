@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
@@ -416,7 +417,7 @@ func (x *Diff) record(root string, ev core.Event, send func(c hostapi.ShipCalls,
 		x.h.Redraw()
 		return err
 	}
-	c, err := kit.ShipCalls(x.h)
+	c, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
