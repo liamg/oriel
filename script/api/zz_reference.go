@@ -39,7 +39,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"coverage": {
 		{Call: "oriel.coverage.lines(file, first, last)", Doc: "A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.", Cap: "ui"},
-		{Call: "oriel.coverage.set(owner, file, hits)", Doc: "Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.", Cap: "ui"},
+		{Call: "oriel.coverage.set(owner, file, hits)", Doc: "Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config. owner is your plugin's own, as for diagnostics.", Cap: "ui"},
 	},
 	"decorations": {
 		{Call: "oriel.decorations.changed(name)", Doc: "Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.", Cap: "ui"},
@@ -47,7 +47,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"diagnostics": {
 		{Call: "oriel.diagnostics.list()", Doc: "Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.", Cap: "ui"},
-		{Call: "oriel.diagnostics.set(owner, file, list)", Doc: "Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.", Cap: "ui"},
+		{Call: "oriel.diagnostics.set(owner, file, list)", Doc: "Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config. owner is your plugin's own, shown as '<plugin>:<owner>' ('init.lua:lint' for your config's), so it never touches a built-in's.", Cap: "ui"},
 	},
 	"editor": {
 		{Call: "oriel.editor.action(spec)", Doc: "Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.", Cap: "ui"},

@@ -52,7 +52,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 ## oriel.coverage
 
 - `oriel.coverage.lines(file, first, last)` (`ui`): A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
-- `oriel.coverage.set(owner, file, hits)` (`ui`): Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+- `oriel.coverage.set(owner, file, hits)` (`ui`): Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config. owner is your plugin's own, as for diagnostics.
 
 ## oriel.decorations
 
@@ -62,7 +62,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 ## oriel.diagnostics
 
 - `oriel.diagnostics.list()` (`ui`): Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
-- `oriel.diagnostics.set(owner, file, list)` (`ui`): Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
+- `oriel.diagnostics.set(owner, file, list)` (`ui`): Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config. owner is your plugin's own, shown as '<plugin>:<owner>' ('init.lua:lint' for your config's), so it never touches a built-in's.
 
 ## oriel.editor
 

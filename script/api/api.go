@@ -44,6 +44,7 @@ type APIs struct {
 
 	mu      sync.Mutex
 	owned   []registry.Disposable
+	keyed   map[string]bool // what's owned once however often it's set: diagnostics and coverage, by owner and file
 	n       int
 	pending map[string]pendingOption     // options set before anything registered them
 	touched map[optKey]optPrev           // options the config set, and what they held before
@@ -77,7 +78,7 @@ func InstallPlugin(vm *script.VM, h plugin.Host, p plugin.Caller) *APIs {
 func (a *APIs) Dispose() {
 	a.mu.Lock()
 	owned := a.owned
-	a.owned, a.inbox = nil, nil
+	a.owned, a.inbox, a.keyed = nil, nil, nil
 	procs, wasm := a.procs, a.wasm
 	a.procs, a.wasm = nil, nil
 	a.mu.Unlock()
@@ -167,6 +168,24 @@ func (a *APIs) own(d registry.Disposable) {
 	a.owned = append(a.owned, d)
 	a.mu.Unlock()
 }
+
+// ownOnce owns d unless something under key already is: what's set again and again needs one undoing.
+func (a *APIs) ownOnce(key string, d registry.Disposable) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.keyed[key] {
+		return
+	}
+	if a.keyed == nil {
+		a.keyed = map[string]bool{}
+	}
+	a.keyed[key] = true
+	a.owned = append(a.owned, d)
+}
+
+// scoped is a diagnostics or coverage owner a plugin names, under the plugin's id: it can't reach a built-in's owner
+// of the same name (lua, tests, an LSP server's).
+func (a *APIs) scoped(owner string) string { return a.Plugin.ID + ":" + owner }
 
 // anon names a Lua function a command so keymaps can run it: "lua.init.lua:10".
 func (a *APIs) anon(fn *script.Fn) string {

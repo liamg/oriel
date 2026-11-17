@@ -186,7 +186,7 @@ oriel.coverage = {}
 ---@return table
 function oriel.coverage.lines(file, first, last) end
 
---- Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+--- Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config. owner is your plugin's own, as for diagnostics.
 ---@param owner string
 ---@param file string
 ---@param hits any
@@ -211,7 +211,7 @@ oriel.diagnostics = {}
 ---@return table
 function oriel.diagnostics.list() end
 
---- Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
+--- Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config. owner is your plugin's own, shown as '<plugin>:<owner>' ('init.lua:lint' for your config's), so it never touches a built-in's.
 ---@param owner string
 ---@param file string
 ---@param list any

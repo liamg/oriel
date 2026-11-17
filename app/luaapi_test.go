@@ -135,13 +135,13 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 	}
 }
 
-// L.diagnostics publishes into the registry's diagnostics, gone when the config reloads.
+// L.diagnostics publishes into the registry's diagnostics under an owner the config scopes, gone when the config reloads.
 func TestLuaDiagnostics(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severity = "warning", message = "unused" } })
 `)
 	ds, _ := s.Registry().Diagnostics()
-	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "lint"}) {
+	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "init.lua:lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
 	if got := luaconfig.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {

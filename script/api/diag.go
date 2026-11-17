@@ -14,7 +14,7 @@ import (
 //oriel:api name=diagnostics cap=ui
 type Diagnostics struct{ a *APIs }
 
-//oriel:api doc="Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config."
+//oriel:api doc="Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config. owner is your plugin's own, shown as '<plugin>:<owner>' ('init.lua:lint' for your config's), so it never touches a built-in's."
 func (d Diagnostics) Set(owner, file string, list any) error {
 	file = expand(file)
 	items, ok := list.([]any)
@@ -36,8 +36,9 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 		ds = append(ds, registry.Diagnostic{Line: int(line) - 1, From: max(0, int(col)-1), To: max(0, int(end)-1),
 			Severity: cmp.Or(str(t, "severity"), registry.SevError), Message: str(t, "message")})
 	}
+	owner = d.a.scoped(owner)
 	d.a.Host.SetDiagnostics(owner, file, ds)
-	d.a.own(registry.DisposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
+	d.a.ownOnce("diagnostics\x00"+owner+"\x00"+file, registry.DisposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
 	return nil
 }
 
@@ -55,11 +56,15 @@ func (d Diagnostics) List() []any {
 //oriel:api name=coverage cap=ui
 type Coverage struct{ a *APIs }
 
-//oriel:api doc="Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config."
+//oriel:api doc="Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config. owner is your plugin's own, as for diagnostics."
 func (c Coverage) Set(owner, file string, hits any) error {
 	file = expand(file)
-	t, _ := hits.(script.Table)
-	if list, ok := hits.([]any); ok {
+	t, ok := hits.(script.Table)
+	list, isList := hits.([]any)
+	if !ok && !isList && hits != nil {
+		return fmt.Errorf("coverage is { [line] = hits }, not %T", hits)
+	}
+	if isList {
 		t = script.Table{}
 		for i, v := range list {
 			if v != nil {
@@ -76,8 +81,9 @@ func (c Coverage) Set(owner, file string, hits any) error {
 		}
 		m[line-1] = int(n)
 	}
+	owner = c.a.scoped(owner)
 	c.a.Host.SetCoverage(owner, file, m)
-	c.a.own(registry.DisposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
+	c.a.ownOnce("coverage\x00"+owner+"\x00"+file, registry.DisposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
 	return nil
 }
 
