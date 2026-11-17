@@ -101,7 +101,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	if err := lw.W.AddRepo(ctx, se.ID, core.RepoID(lw.Repo)); err != nil {
 		t.Fatal(err)
 	}
-	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Bumped 3 deps in pricing; its tests pass.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Bumped 3 deps in pricing; its tests pass."})
 	s.Until("the done row", func() bool { return runShown(s, hostapi.RunDone, "Delete") })
 	row := s.Within("Runs", "done run").Name
 	for _, want := range []string{"Bumped 3 deps in pricing; its tests pass."} {

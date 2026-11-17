@@ -119,6 +119,12 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 					errs = append(errs, x.h.Run(ctx, "review.ai.dismiss", registry.Args{"id": string(se.ID), "finding": it.finding}))
 				}
 			}
+			// Posting the review is you done with it: its request, and the summaries asked for it, resolve.
+			for _, t := range se.Threads {
+				if t.Anchor == nil && t.Hosted == nil && !t.Btw && t.Open() {
+					errs = append(errs, x.h.Run(ctx, "request.resolve", registry.Args{"id": string(se.ID), "thread": string(t.ID)}))
+				}
+			}
 			// The sync links the posted comments to their threads by the sent bodies the draft keeps, so it waits for them.
 			x.busy.Go(func() {
 				<-saved

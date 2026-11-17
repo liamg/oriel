@@ -94,7 +94,7 @@ func TestAResumedAgentCarriesOnWithWorkOwed(t *testing.T) {
 	}
 
 	b.Emit(agent.TurnStart{})
-	b.Call(t, "reply", map[string]any{"thread": string(r.session(id).Threads[0].ID), "body": "Fixed.", "resolve": true})
+	b.Call(t, "reply", map[string]any{"thread": string(r.session(id).Threads[0].ID), "body": "Fixed."})
 	b.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn's end", func(se core.SessionState) bool { return !se.Agent.Working })
 	r.restart()
@@ -120,13 +120,13 @@ func delivered(r *rig, id core.SessionID) core.SessionState {
 	})
 }
 
-// answered has the agent reply on and resolve every thread that waits on it, as one that finished its batch does, so
+// answered has the agent reply on every thread that waits on it, as one that finished its batch does, so
 // it owes nothing.
 func answered(r *rig, id core.SessionID, a *agenttest.FakeSession) {
 	r.t.Helper()
 	for _, t := range delivered(r, id).Threads {
 		if t.WaitsOnAgent() {
-			a.Call(r.t, "reply", map[string]any{"thread": string(t.ID), "body": "Done.", "resolve": true})
+			a.Call(r.t, "reply", map[string]any{"thread": string(t.ID), "body": "Done."})
 		}
 	}
 }

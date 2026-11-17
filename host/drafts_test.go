@@ -24,10 +24,10 @@ func draftsRig(t *testing.T) (*rig, core.SessionID, *agenttest.FakeSession, stri
 	return r, id, a, p.Dir
 }
 
-// handBack resolves the session's request, so the agent owes nothing.
+// handBack answers the session's request, so the agent owes nothing.
 func handBack(r *rig, id core.SessionID, a *agenttest.FakeSession) {
 	r.t.Helper()
-	a.Call(r.t, "reply", map[string]any{"thread": string(delivered(r, id).Threads[0].ID), "body": "Done.", "resolve": true})
+	a.Call(r.t, "reply", map[string]any{"thread": string(delivered(r, id).Threads[0].ID), "body": "Done."})
 }
 
 // turn is one turn of the agent's, ending idle, with the host done looking at the worktree for it.

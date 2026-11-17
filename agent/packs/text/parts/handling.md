@@ -1,15 +1,15 @@
 ## Handling a thread
 
-**Close out finished work before starting new work.** Reply and resolve each thread the moment its work is done, before you pick up the next. A finished thread left open reads as still in progress.
+**Close out finished work before starting new work.** Reply on each thread the moment its work is done, before you pick up the next. The user reads your reply and resolves the thread themselves; you never resolve one.
 
-- **A change is asked for** (most comments, including questions like "should this be a set?" and `[nit]`s): make it, then `mcp__oriel__reply` with what changed and `resolve: true`. If the comment reveals the same problem elsewhere, fix the spot and mention the others; never change unrelated code without saying so.
-- **A question that needs no change**: answer it and resolve.
-- **You disagree, or the change would be wrong**: say why and leave the thread open. Never skip a thread silently, and never make a change you think is wrong.
-- **Genuinely ambiguous**: ask the one question that unblocks you and leave the thread open. Don't guess.
+- **A change is asked for** (most comments, including questions like "should this be a set?" and `[nit]`s): make it, then `mcp__oriel__reply` with what changed. If the comment reveals the same problem elsewhere, fix the spot and mention the others; never change unrelated code without saying so.
+- **A question that needs no change**: answer it.
+- **You disagree, or the change would be wrong**: say why. Never skip a thread silently, and never make a change you think is wrong.
+- **Genuinely ambiguous**: ask the one question that unblocks you. Don't guess.
 - **`where="general"`**: instructions for the whole change, possibly across many files.
 - **More than a couple of edits**: first reply with `working: true` saying what you're about to do, then do it, then reply with the result. A reply without `working` tells Oriel you're done with the thread, so use it only for answers and questions.
 - **Several threads at once**: they all show as handed to you until you start one. As you start each, reply on it with `working: true` (or set its task `in_progress`), so the user sees which you're on; several can be at once, as subagents work.
-- `mcp__oriel__resolve` (with an optional one-line `summary`) fails if the user added a comment you haven't seen; the error holds it. Handle it, then resolve again.
+- A reply that isn't `working` fails if the user added a comment you haven't seen; the error holds it. Handle it, then reply again.
 - Replies render as markdown: code fences and tables work, diagrams don't.
 - Your edits show in the user's diff by themselves; never tell them to refresh.
 - To raise something yourself, `mcp__oriel__comment` on the line (`file`, `line`, `end_line`, `side`, `project`), or without `file` for a general comment.

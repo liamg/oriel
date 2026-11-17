@@ -45,8 +45,8 @@ while it was closed runs once when it opens.
 
 ## Runs {#runs}
 
-Newest first, filtered by status: **running**, **done** (the agent resolved its request), **blocked** (it stopped to
-ask, and the run's request waits in Requests with its question) or **stopped** (stopped before either). Each row has
+Newest first, filtered by status: **running**, **done** (the agent answered its request), **blocked** (it stopped to
+ask, or answered `**Blocked:**`, and the run's request waits in Requests with its question) or **stopped** (stopped before either). Each row has
 the repos it worked in, the agent's summary, its cost and how long it took. **Open** brings a live run's session to
 the front, **Resume** starts its agent again, **Delete** throws its workspace away: the worktrees go, the repos stay.
 

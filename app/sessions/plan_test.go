@@ -72,7 +72,7 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	}
 	a.Emit(agent.ToolCall{ID: "w1", Tool: "Write", Input: rig.ToolInput(map[string]string{"file_path": doc})})
 	a.Emit(agent.ToolResult{ID: "w1", Diff: &core.FileDiff{Path: doc, Added: 11}})
-	a.Call(t, "reply", map[string]any{"thread": string(se.PlanThread()), "body": "The plan rounds each line half-to-even: ready to annotate.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(se.PlanThread()), "body": "The plan rounds each line half-to-even: ready to annotate."})
 	a.Emit(agent.TurnEnd{})
 	w.WaitFrame("PLAN.md rendered", func(s string) bool {
 		return apptest.HasAll(s, "PLAN.md", "Round invoice lines half-to-even", "Approach", "Round each line in minor units, ties to even.", "•") &&
@@ -239,7 +239,8 @@ func TestStartWorkModelsOptional(t *testing.T) {
 	w.WaitGone("START WORK")
 }
 
-// A line whose thread the agent resolved takes a new thread: clicking it again opens the composer.
+// A line whose thread you resolved, once the agent answered it, takes a new thread: clicking it again opens the
+// composer.
 func TestAResolvedLineTakesANewThreadInTheWindow(t *testing.T) {
 	w, a, _ := planSession(t)
 	w.WaitFrame("the plan view, waiting for its docs", func(s string) bool { return apptest.HasAll(s, "PLAN DOCS", "READINESS") })
@@ -251,7 +252,7 @@ func TestAResolvedLineTakesANewThreadInTheWindow(t *testing.T) {
 	}
 	a.Emit(agent.ToolCall{ID: "w1", Tool: "Write", Input: rig.ToolInput(map[string]string{"file_path": doc})})
 	a.Emit(agent.ToolResult{ID: "w1", Diff: &core.FileDiff{Path: doc, Added: 11}})
-	a.Call(t, "reply", map[string]any{"thread": string(se.PlanThread()), "body": "Ready to annotate.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(se.PlanThread()), "body": "Ready to annotate."})
 	a.Emit(agent.TurnEnd{})
 	w.WaitText("Round each line in minor units, ties to even.")
 
@@ -269,8 +270,10 @@ func TestAResolvedLineTakesANewThreadInTheWindow(t *testing.T) {
 		}
 	}
 	a.Emit(agent.TurnStart{})
-	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Yes: Stripe reconciles half-even.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Yes: Stripe reconciles half-even."})
 	a.Emit(agent.TurnEnd{})
+	w.WaitText("Yes: Stripe reconciles half-even.")
+	w.ClickText("resolve")
 	w.Latest("the thread resolved", func(f headless.Frame) bool {
 		return strings.Contains(f.Text(), "RESOLVED") && !strings.Contains(f.Text(), "New thread")
 	})

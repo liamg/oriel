@@ -97,6 +97,8 @@ func TestDeriveStatus(t *testing.T) {
 		{"turn running", core.SessionState{Agent: core.AgentState{Provider: "claude", Running: true, Working: true}, Threads: open(answer)}, core.StatusWorking},
 		{"subagent running", core.SessionState{Agent: agent, Subagents: []core.Subagent{{Running: true}}}, core.StatusWorking},
 		{"agent answered", core.SessionState{Agent: agent, Threads: open(you, answer)}, core.StatusNeedsYou},
+		{"a thread in hand beats an earlier answer", core.SessionState{Agent: agent, Threads: []core.Thread{{ID: "a", Comments: []core.Comment{you, answer}},
+			{ID: "b", Busy: true, Comments: []core.Comment{you}}}}, core.StatusWorking},
 		{"progress note is not an answer", core.SessionState{Agent: agent, Threads: open(you, note)}, core.StatusWorking},
 		{"queued for a running agent", core.SessionState{Agent: agent, Threads: open(you)}, core.StatusWorking},
 		{"queued, nobody to do it", core.SessionState{Agent: core.AgentState{Provider: "claude"}, Threads: open(you)}, core.StatusNeedsYou},

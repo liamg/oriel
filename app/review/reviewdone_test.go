@@ -97,7 +97,7 @@ func TestApprovedReviewIsQuiet(t *testing.T) {
 	}
 	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "body": "Takes one whatever the cost."})
 	sess, _ := s.Store().State().Session(id)
-	a.Call(t, "reply", map[string]any{"thread": string(sess.Snapshot().Threads[0].ID), "body": "Looks fine bar the cost.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(sess.Snapshot().Threads[0].ID), "body": "Looks fine bar the cost."})
 	s.Run("ship.pr.open", nil)
 	s.Until("the review tab", func() bool { return s.Has("YOUR REVIEW") })
 	s.Run("review.pr.preview", registry.Args{"id": string(id), "verdict": "approve"})

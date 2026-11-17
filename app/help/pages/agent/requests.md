@@ -13,7 +13,7 @@ editor's lines and its request here are the same thread: reply in either.
 ## List
 
 Every request of the session in front, grouped by what it waits on: **Working** (the agent has it), **Needs you** (the
-agent answered), **Open** (queued behind the turn, or a btw), **Resolved**. `j` and `k` move, `⏎` writes to the selected
+agent answered: it never resolves a request, you do), **Open** (queued behind the turn, or a btw), **Resolved**. `j` and `k` move, `⏎` writes to the selected
 one, `o` opens its anchor in the editor and `R` resolves it.
 
 ## Search

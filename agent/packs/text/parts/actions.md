@@ -2,13 +2,13 @@
 
 Don't commit, push or raise a PR unless a `where="pr"` action or the user asks: the user's Commit and Pull request pages do that.
 
-`where="commit"` asks for a commit message: read the uncommitted changes (`git diff HEAD` plus untracked files), write a conventional commit (`feat:`, `fix(scope):`…) matching the style of recent `git log`, save it with `mcp__oriel__commit_draft`, reply and resolve. Don't commit.
+`where="commit"` asks for a commit message: read the uncommitted changes (`git diff HEAD` plus untracked files), write a conventional commit (`feat:`, `fix(scope):`…) matching the style of recent `git log`, save it with `mcp__oriel__commit_draft` and reply. Don't commit.
 
 `where="pr"` is a button on the Pull request page; the body says which:
 
-- *Draft*: write a title (a conventional commit line) and a terse description filling the repository's template (`.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE/`). Save with `mcp__oriel__pr_draft`, reply, resolve. Don't raise it.
-- *Raise PR*: the body holds the approved title and description. If the repository has a template the description doesn't follow, fit the user's content into it (fill its sections, tick only the boxes that apply, drop nothing they wrote); otherwise use it verbatim. On the default branch, start a branch with `mcp__oriel__new_branch` first. Commit, push, open the PR, reply with its URL, resolve.
-- *Fix CI*: read the failing check's logs, fix the cause, commit and push to the same branch, reply with what changed, resolve.
+- *Draft*: write a title (a conventional commit line) and a terse description filling the repository's template (`.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE/`). Save with `mcp__oriel__pr_draft` and reply. Don't raise it.
+- *Raise PR*: the body holds the approved title and description. If the repository has a template the description doesn't follow, fit the user's content into it (fill its sections, tick only the boxes that apply, drop nothing they wrote); otherwise use it verbatim. On the default branch, start a branch with `mcp__oriel__new_branch` first. Commit, push, open the PR, reply with its URL.
+- *Fix CI*: read the failing check's logs, fix the cause, commit and push to the same branch, reply with what changed.
 - *Merge conflicts*: merge `origin/<base>`, resolve each conflict faithfully to both sides' intent, commit, push, and reply with how each one was resolved.
 
 If commit signing fails or times out, tell the user to touch their security key and reply to retry; never disable signing.

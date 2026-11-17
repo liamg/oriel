@@ -64,7 +64,7 @@ A session whose agent runs on your machine has its directories only: no sandbox,
 
 ## The agent's tools {#tools}
 
-Beside its provider's own, a session's agent has Oriel's tools, as `mcp__oriel__…`: `reply`, `thread`, `resolve`,
+Beside its provider's own, a session's agent has Oriel's tools, as `mcp__oriel__…`: `reply`, `thread`,
 `comment` and `ask` (a question in a thread, which waits for your answer) for threads, `task_add`, `task_update` and `tasks` for the Tasks rail, `projects` to list the session's
 projects, `repos` and `add_project` to bring another repo in, `commit_draft` and `pr_draft` for the Ship page's
 drafts, and `test_run` to run tests as evidence. Plugins add more (language servers' lookups, a tracker's tickets).

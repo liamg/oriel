@@ -92,8 +92,8 @@ func carryOnNotice(se core.SessionState, threads []core.Thread, tasks []core.Tas
 		parts = append(parts, fmt.Sprintf("task %q", k.Subject))
 	}
 	return "Your turn ended with work still owed and nothing running to wake you: " + strings.Join(parts, "; ") + ". " +
-		"Don't describe the next step: carry on and do it now. End your turn only when each thread is resolved, handed " +
-		"back to the user with a reply that isn't `working` (a question, or why you disagree), or waiting on background " +
+		"Don't describe the next step: carry on and do it now. End your turn only when each thread is handed " +
+		"back to the user with a reply that isn't `working` (what you did, a question, or why you disagree), or waiting on background " +
 		"work you started."
 }
 

@@ -93,9 +93,9 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 	}
 }
 
-// A run's row is its status, the repos it worked in, the agent's summary and how long it took. Done is the request
-// resolved; blocked is the agent's answer left open (job.md: "reply starting **Blocked:**"); stopped is stopped by
-// you before either.
+// A run's row is its status, the repos it worked in, the agent's summary and how long it took. Done is the agent's
+// answer on the request; blocked is an answer starting **Blocked:** (job.md: "reply starting **Blocked:**"); stopped is
+// stopped by you before either.
 func TestRunStatuses(t *testing.T) {
 	r := newRig(t)
 	j, _ := r.w.SaveJob(Job{Prompt: "Sweep stale deps"})
@@ -114,13 +114,13 @@ func TestRunStatuses(t *testing.T) {
 		t.Fatal(err)
 	}
 	r.setNow(r.now().Add(22 * time.Minute))
-	reply := func(a *agenttest.FakeSession, body string, resolve bool) {
+	reply := func(a *agenttest.FakeSession, body string) {
 		t.Helper()
-		if _, err := a.CallErr("reply", map[string]any{"thread": tid, "body": body, "resolve": resolve}); err != nil {
+		if _, err := a.CallErr("reply", map[string]any{"thread": tid, "body": body}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	reply(a, "3 PRs: api#812, web#4431.\n\nAll green.", true)
+	reply(a, "3 PRs: api#812, web#4431.\n\nAll green.")
 	got := RunOf(r.session(id))
 	if got.Status != RunDone || got.Summary != "3 PRs: api#812, web#4431. All green." || got.Took() != 22*time.Minute ||
 		len(got.Repos) != 1 || got.Repos[0] != filepath.Base(r.repo.Dir) {
@@ -128,7 +128,7 @@ func TestRunStatuses(t *testing.T) {
 	}
 
 	id, tid, a = run()
-	reply(a, "**Blocked:** react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?", false)
+	reply(a, "**Blocked:** react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?")
 	if got := RunOf(r.session(id)); got.Status != RunBlocked || got.Summary != "react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?" {
 		t.Errorf("blocked run = %+v", got)
 	}
@@ -308,7 +308,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 		t.Errorf("skips = %v", got)
 	}
 	tid := string(runs()[0].Threads[0].ID)
-	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Nothing failing.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Nothing failing."})
 	r.setNow(time.Date(2026, 10, 16, 7, 1, 0, 0, time.UTC))
 	r.w.RunDue(context.Background())
 	if n := len(runs()); n != 2 {

@@ -160,8 +160,9 @@ func JobOf(se core.SessionState) string {
 	return d.Job
 }
 
-// RunOf reads a job session's run from its request thread: done once it's resolved, blocked while the agent's answer
-// waits on you, running while the agent has it, and stopped when it was stopped before either.
+// RunOf reads a job session's run from its request thread: done once the agent answers it, or it's resolved; blocked
+// while the agent asks, or its answer starts with RunBlockedMark; running while the agent has it, and stopped when it
+// was stopped before either.
 func RunOf(se core.SessionState) Run {
 	r := Run{Started: se.Created}
 	for _, p := range se.Projects {
@@ -172,16 +173,19 @@ func RunOf(se core.SessionState) Run {
 	if i >= 0 {
 		t = se.Threads[i]
 	}
+	blocked := false
 	for _, c := range slices.Backward(t.Comments) {
 		if c.Author == core.AuthorAgent {
-			r.Summary = strings.Join(strings.Fields(strings.TrimPrefix(strings.TrimSpace(c.Body), RunBlockedMark)), " ")
+			body := strings.TrimSpace(c.Body)
+			blocked = strings.HasPrefix(body, RunBlockedMark)
+			r.Summary = strings.Join(strings.Fields(strings.TrimPrefix(body, RunBlockedMark)), " ")
 			r.Ended = c.Time
 			break
 		}
 	}
 	asking := slices.ContainsFunc(se.Asks, func(a core.Ask) bool { return a.Kind == core.AskQuestion })
 	switch {
-	case i >= 0 && !t.Open():
+	case i >= 0 && (!t.Open() || t.AgentAnswered() && !blocked && !asking):
 		r.Status = RunDone
 	case asking || i >= 0 && t.AgentAnswered():
 		r.Status = RunBlocked

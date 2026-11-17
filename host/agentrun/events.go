@@ -426,15 +426,10 @@ func orielToolTitle(name string, str func(string) string, in map[string]any) str
 	switch name {
 	case "reply":
 		verb := "Reply"
-		switch {
-		case in["working"] == true:
+		if in["working"] == true {
 			verb = "Progress note"
-		case in["resolve"] == true:
-			verb = "Reply and resolve"
 		}
 		return verb + " on" + thread() + said()
-	case "resolve":
-		return "Resolve" + thread()
 	case "thread":
 		return "Read" + thread()
 	case "comment":
