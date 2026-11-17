@@ -239,7 +239,7 @@ func (g goCaptures) rangeLoop(run node, name string, byField bool) (node, bool) 
 }
 
 // tableLiteral is the literal a loop ranges over: the last one named as its source before it, or the source itself.
-func (g goCaptures) tableLiteral(source syntax.Capture, loop node) (node, bool) {
+func (g goCaptures) tableLiteral(source tree.Capture, loop node) (node, bool) {
 	var lit node
 	ok := false
 	for _, t := range g.tables {
