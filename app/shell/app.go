@@ -86,6 +86,9 @@ type Config struct {
 	// Clock is what the window times its work by (registry.Registry.Clock) and paces the redraws of the sessions behind
 	// the one in front by; the system's if nil.
 	Clock clock.Clock
+	// WatchdogClock times the loop's turns for the watchdog: the system's if nil. It's not Clock, since a test moving
+	// that one mid-turn would read as the loop held up.
+	WatchdogClock clock.Clock
 }
 
 // Builtins are the window's built-in plugins in the order they start, made each time it starts its plugins.

@@ -19,7 +19,7 @@ func holdTheLoop(held chan<- struct{}, release <-chan struct{}) {
 func TestLoopWatchdogNamesTheCulprit(t *testing.T) {
 	logs := diag.NewLogs(diag.LogOpts{})
 	c := clocktest.New(time.Date(2026, 11, 9, 9, 0, 0, 0, time.UTC))
-	r := apptest.NewWindow(t, apptest.WindowOpts{Config: func(cfg *apptest.Config) { cfg.Logs, cfg.Clock = logs, c }})
+	r := apptest.NewWindow(t, apptest.WindowOpts{Config: func(cfg *apptest.Config) { cfg.Logs, cfg.WatchdogClock = logs, c }})
 	held, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	r.Host.Do(func() { holdTheLoop(held, release); close(done) })
 	<-held

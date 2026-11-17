@@ -108,7 +108,7 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 	timer := time.NewTimer(0)
 	<-timer.C
 	if v := sh.cfg.Version; v == "" || v == "dev" || l.debug {
-		l.dog = diag.StartWatchdog(l.log, slowLoop, sh.cfg.Clock)
+		l.dog = diag.StartWatchdog(l.log, slowLoop, sh.cfg.WatchdogClock)
 		defer l.dog.Stop()
 	}
 	var t turn
