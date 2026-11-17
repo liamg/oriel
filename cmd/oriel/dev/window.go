@@ -218,7 +218,7 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 			var ends bool
 			if auto {
 				p := script[pi]
-				ends = p.frames > 0 && pframes+1 > p.frames || p.frames == 0 && pframes > 0 && t0.Sub(pstart) >= p.dur
+				ends = (p.frames > 0 && pframes >= p.frames) || (p.frames == 0 && pframes > 0 && t0.Sub(pstart) >= p.dur)
 				next := t0
 				switch {
 				case ends || p.frames > 0:

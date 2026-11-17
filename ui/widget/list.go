@@ -70,9 +70,6 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 		}
 	}
 	*sel = clampInt(*sel, 0, max(n-1, 0))
-	if n == 0 {
-		*sel = 0
-	}
 	// Bring the selection into view when it moves, by key or by the caller; the wheel scrolls away from it freely.
 	last := ui.State[listLast](c, ui.Child(id, "last"))
 	moved := !last.seen || last.sel != *sel || last.n != n

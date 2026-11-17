@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"time"
@@ -167,7 +168,7 @@ func DatePicker(c *ui.Ctx, key any, r *DateRange, o DatePickerOpts) DatePickerRe
 				st.cursor = st.cursor.AddDate(0, 1, 0)
 			}
 		})
-		c.Column("grid", ui.Style{Focusable: true, KeyMode: "datepicker", Help: o.Help, Role: ui.RoleGroup, Label: cmpStr(o.Label, "Range") + ", calendar"}, func(c *ui.Ctx) {
+		c.Column("grid", ui.Style{Focusable: true, KeyMode: "datepicker", Help: o.Help, Role: ui.RoleGroup, Label: cmp.Or(o.Label, "Range") + ", calendar"}, func(c *ui.Ctx) {
 			c.Row("wd", ui.Style{H: ui.Px(20), Cross: ui.Center}, func(c *ui.Ctx) {
 				for i, d := range []string{"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"} {
 					c.Row(i, ui.Style{W: ui.Px(dayW), Main: ui.Center}, func(c *ui.Ctx) {
@@ -188,7 +189,7 @@ func DatePicker(c *ui.Ctx, key any, r *DateRange, o DatePickerOpts) DatePickerRe
 			}
 		})
 		text := st.text
-		ir := Input(c, "typed", &text, InputOpts{Label: cmpStr(o.Label, "Range") + ", typed", Placeholder: "2026-09-01..2026-09-30",
+		ir := Input(c, "typed", &text, InputOpts{Label: cmp.Or(o.Label, "Range") + ", typed", Placeholder: "2026-09-01..2026-09-30",
 			Width: ui.Px(7 * dayW), Invalid: st.bad, Help: o.Help, TabMoves: true})
 		st.text = text
 		if ir.Changed {
@@ -250,13 +251,6 @@ func dayCell(c *ui.Ctx, key any, d time.Time, inMonth, cursor, today bool, r Dat
 		Stroke: stroke, Border: 1, Help: help, Label: d.Format(time.DateOnly), Selected: in}, func(c *ui.Ctx) {
 		c.Text("t", fmt.Sprint(d.Day()), monoText(11, weight, fg, 0))
 	}).Clicked
-}
-
-func cmpStr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 // DatePopover shows a DatePicker in a popover under anchor while *open: a pick or Escape closes it, as does a click
