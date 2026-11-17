@@ -3,8 +3,6 @@ package voice
 import (
 	"context"
 	"errors"
-	"github.com/liamg/oriel/internal/clock/clocktest"
-	"github.com/liamg/oriel/internal/testhook"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +12,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/clock/clocktest"
+	"github.com/liamg/oriel/internal/testhook"
 )
 
 type fakeEngine struct {
@@ -185,10 +187,10 @@ func TestPrefetchIsBackgroundAndSkipsMeteredNetworks(t *testing.T) {
 	src, _ := slowServer(t, model)
 	testhook.Set(t, &ModelBase, src.URL)
 	testhook.Set(t, &ModelSHA256, map[string]string{"base.en": sum(model)})
-	testhook.Set(t, &backgroundRate, 1024)
 	metered := true
+	c := &tellingClock{Fake: clocktest.New(time.Unix(0, 0)), asked: make(chan struct{}, 64)}
 	w := &Whisper{Dir: t.TempDir(), Settings: func() Settings { return Settings{} }, Metered: func() bool { return metered },
-		load: func(string) (engine, error) { return &fakeEngine{}, nil }}
+		Clock: c, BackgroundRate: 1000, load: func(string) (engine, error) { return &fakeEngine{}, nil }}
 	if w.Prefetch() {
 		t.Fatal("prefetched on a metered network")
 	}
@@ -196,9 +198,13 @@ func TestPrefetchIsBackgroundAndSkipsMeteredNetworks(t *testing.T) {
 	if !w.Prefetch() {
 		t.Fatal("no prefetch")
 	}
-	time.Sleep(100 * time.Millisecond)
-	if st, _ := w.DownloadState("base.en"); st.Done || st.Got > int64(len(model))/2 {
-		t.Fatalf("the background download isn't held back: %+v", st)
+	// At 1000 bytes a second it reads at most 20 a tick of 20ms, and waits out what it read on the clock.
+	for tick := int64(1); tick <= 3; tick++ {
+		<-c.asked
+		if st, _ := w.DownloadState("base.en"); st.Done || st.Got == 0 || st.Got > 20*tick {
+			t.Fatalf("after %d ticks the background download has %+v, want at most %d bytes", tick-1, st, 20*tick)
+		}
+		c.Advance(20 * time.Millisecond)
 	}
 	// Dictating asks for it: the same download goes full speed.
 	w.Prepare()
@@ -265,4 +271,19 @@ func ioPipe() (*os.File, *os.File) {
 		panic(err)
 	}
 	return r, w
+}
+
+// tellingClock is a test clock that says when something waits on it.
+type tellingClock struct {
+	*clocktest.Fake
+	asked chan struct{}
+}
+
+func (c *tellingClock) AfterFunc(d time.Duration, f func()) clock.Timer {
+	t := c.Fake.AfterFunc(d, f)
+	select {
+	case c.asked <- struct{}{}:
+	default:
+	}
+	return t
 }

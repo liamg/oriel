@@ -24,7 +24,7 @@ func TestTicketsPageLoading(t *testing.T) {
 	vm := lua(s).VM()
 	s.Run("tickets.open", registry.Args{"tracker": "slow"})
 	s.Frame()
-	s.Until("the ask", func() bool { return global(vm, "asked") == float64(1) })
+	s.Until("the ask", func() bool { return apptest.LuaGlobal(vm, "asked") == float64(1) })
 	if strings.Contains(s.Text(), "Nothing assigned") {
 		t.Error("the empty message showed before the tracker answered")
 	}
@@ -44,7 +44,7 @@ func TestTicketsPageLoading(t *testing.T) {
 	s.Until("the answer", func() bool { return strings.Contains(s.Text(), "Nothing assigned to you in Slow") })
 
 	s.Press("r")
-	s.Until("the second ask", func() bool { return global(vm, "asked") == float64(2) })
+	s.Until("the second ask", func() bool { return apptest.LuaGlobal(vm, "asked") == float64(2) })
 	s.Frame()
 	s.Midway(func() { s.WantFrame("Refreshing…", "Nothing assigned to you in Slow") })
 	answer()

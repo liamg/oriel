@@ -3,13 +3,15 @@ package diag
 import (
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // A hold-up is the machine's when the loop sat runnable while Oriel used little CPU: logged quietly, not warned of.
 // Busy itself, or running, it's Oriel's.
 func TestWatchdogTellsABusyMachineFromOriel(t *testing.T) {
 	var used time.Duration
-	w := &Watchdog{cpu: func() time.Duration { return used }}
+	w := &Watchdog{cpu: func() time.Duration { return used }, clock: clock.Real()}
 	began := time.Now().Add(-200 * time.Millisecond)
 	for _, tc := range []struct {
 		stack string

@@ -28,14 +28,6 @@ func luaErr(t *testing.T, vm *script.VM, src string) string {
 	return err.Error()
 }
 
-func global(vm *script.VM, name string) any {
-	out, _ := vm.Eval(script.Chunk{Name: "t", Source: []byte("return " + name)})
-	if len(out) == 0 {
-		return nil
-	}
-	return out[0]
-}
-
 // The capability guard rejects undeclared calls. A plugin's Lua with no grants gets ui (always allowed) and nothing
 // else: each other door fails with an error naming the capability.
 func TestPluginLuaGuard(t *testing.T) {
@@ -48,7 +40,7 @@ func TestPluginLuaGuard(t *testing.T) {
 own = oriel.read("notes.txt")`); err != "" {
 		t.Fatalf("ui and its own files: %s", err)
 	}
-	if got := global(vm, "own"); got != "own" {
+	if got := apptest.LuaGlobal(vm, "own"); got != "own" {
 		t.Errorf("reading its own file: %v", got)
 	}
 	for src, capability := range map[string]string{
@@ -190,7 +182,7 @@ func TestPluginGateHooks(t *testing.T) {
 	if v.Veto || len(errs) == 0 || !strings.Contains(errs[0].Error(), `"gate"`) {
 		t.Errorf("a veto without gate: %+v, %v", v, errs)
 	}
-	if global(vm, "seen") != true {
+	if apptest.LuaGlobal(vm, "seen") != true {
 		t.Error("the hook didn't run")
 	}
 	g.Grant("acme/gate", []plugin.Grant{{Cap: plugin.CapGate}})
@@ -213,7 +205,7 @@ n = #m:exports()`); err != "" {
 		t.Fatal(err)
 	}
 	for name, want := range map[string]any{"sum": 5.0, "echoed": 1.0, "asked": "lua read /x", "n": 5.0} {
-		if got := global(vm, name); got != want {
+		if got := apptest.LuaGlobal(vm, name); got != want {
 			t.Errorf("%s = %v, want %v", name, got, want)
 		}
 	}
@@ -259,15 +251,15 @@ proc:request("echo", { x = 1 }, function(res, err) answer = res; failed = err en
 		t.Fatal(err)
 	}
 	s.Until("the answer", func() bool {
-		return global(vm, "answer") != nil && global(vm, "hello") != nil && global(vm, "greeted") != nil
+		return apptest.LuaGlobal(vm, "answer") != nil && apptest.LuaGlobal(vm, "hello") != nil && apptest.LuaGlobal(vm, "greeted") != nil
 	})
-	if a, h, g := global(vm, "answer"), global(vm, "hello"), global(vm, "greeted"); a != "pong" || h != "there" || g != 1.0 {
+	if a, h, g := apptest.LuaGlobal(vm, "answer"), apptest.LuaGlobal(vm, "hello"), apptest.LuaGlobal(vm, "greeted"); a != "pong" || h != "there" || g != 1.0 {
 		t.Errorf("answer %v, hello %v, greeted %v", a, h, g)
 	}
 	if err := luaErr(t, vm, `assert(proc:running()); assert(proc:pid() > 0); proc:stop()`); err != "" {
 		t.Fatal(err)
 	}
-	s.Until("the exit", func() bool { return global(vm, "exited") == true })
+	s.Until("the exit", func() bool { return apptest.LuaGlobal(vm, "exited") == true })
 	found := false
 	for _, r := range s.Logs.Ring.Records() {
 		if r.Source == "plugin:acme/p" && r.Msg == "script up" {
@@ -299,7 +291,7 @@ oriel.option{ name = "plugin.jira.mode", type = "enum", values = { "mine", "team
 		t.Fatal(err)
 	}
 	for name, want := range map[string]any{"site": "acme.atlassian.net", "mode": "mine", "boards": 0.0} {
-		if got := global(vm, name); got != want {
+		if got := apptest.LuaGlobal(vm, name); got != want {
 			t.Errorf("%s = %v, want %v", name, got, want)
 		}
 	}
@@ -340,19 +332,19 @@ func TestLuaExecInBackground(t *testing.T) {
 	if got := s.Lua(`L.exec_async({ "sh", "-c", "sleep 0.1; echo hi" }, {}, function(out, err) said, failed = out, err end)`); len(got) != 0 {
 		t.Errorf("returned %v, want nothing", got)
 	}
-	if global(lua(s).VM(), "said") != nil {
+	if apptest.LuaGlobal(lua(s).VM(), "said") != nil {
 		t.Fatal("on_done ran before the program finished")
 	}
-	s.Until("the output", func() bool { return global(lua(s).VM(), "said") != nil })
-	if said, failed := global(lua(s).VM(), "said"), global(lua(s).VM(), "failed"); said != "hi\n" || failed != nil {
+	s.Until("the output", func() bool { return apptest.LuaGlobal(lua(s).VM(), "said") != nil })
+	if said, failed := apptest.LuaGlobal(lua(s).VM(), "said"), apptest.LuaGlobal(lua(s).VM(), "failed"); said != "hi\n" || failed != nil {
 		t.Errorf("said %q, failed %v", said, failed)
 	}
 	// opts is optional: fn may come straight after argv.
 	s.Lua(`L.exec_async({ "/no/such/program" }, function(out, err) missing = err end)`)
-	s.Until("the missing program", func() bool { return global(lua(s).VM(), "missing") != nil })
+	s.Until("the missing program", func() bool { return apptest.LuaGlobal(lua(s).VM(), "missing") != nil })
 	s.Lua(`L.exec_async({ "sh", "-c", "echo nope >&2; exit 3" }, {}, function(out, err) failed = err end)`)
-	s.Until("the failure", func() bool { return global(lua(s).VM(), "failed") != nil })
-	if f, _ := global(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
+	s.Until("the failure", func() bool { return apptest.LuaGlobal(lua(s).VM(), "failed") != nil })
+	if f, _ := apptest.LuaGlobal(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
 		t.Errorf("failed = %q", f)
 	}
 }
@@ -375,7 +367,7 @@ func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
 	if err := luaErr(t, vm, `said = oriel.exec({ "./tool" }, { cwd = "`+dir+`" })`); err != "" {
 		t.Fatalf("the granted program: %s", err)
 	}
-	if got := global(vm, "said"); got != "mine\n" {
+	if got := apptest.LuaGlobal(vm, "said"); got != "mine\n" {
 		t.Errorf("it printed %q", got)
 	}
 	if err := luaErr(t, vm, `oriel.exec({ "./tool" }, { cwd = "`+other+`" })`); !strings.Contains(err, "capability isn't declared") {
@@ -425,7 +417,7 @@ oriel.statusline(function(w)
     body = function(v) return oriel.ui.text(v .. " pages") end }
 end)`)
 	s.Frame()
-	s.Until("the load to start", func() bool { return global(lua(s).VM(), "runs") == float64(1) })
+	s.Until("the load to start", func() bool { return apptest.LuaGlobal(lua(s).VM(), "runs") == float64(1) })
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
 	s.Midway(func() { s.WantFrame("Reading the wiki…") })
@@ -436,7 +428,7 @@ end)`)
 	s.Now = s.Now.Add(time.Second) // past the loading line's minimum show
 	s.Until("the failure", func() bool { return strings.Contains(s.Text(), "the wiki is down") })
 	s.ClickNode("Retry")
-	s.Until("the retry", func() bool { return global(lua(s).VM(), "runs") == float64(2) })
+	s.Until("the retry", func() bool { return apptest.LuaGlobal(lua(s).VM(), "runs") == float64(2) })
 	s.Lua(`finish("12")`)
 	s.Until("the value", func() bool { return strings.Contains(s.Text(), "12 pages") })
 	st := s.Lua(`wiki:state().phase`)
@@ -467,7 +459,7 @@ end)`)
 	s.WantFrame("Syncing…")
 	s.Click(apptest.Centre(s.Node("Syncing…").Bounds), 0) // disabled, so not ClickOn
 	s.Frame()
-	if global(lua(s).VM(), "pressed") != float64(0) {
+	if apptest.LuaGlobal(lua(s).VM(), "pressed") != float64(0) {
 		t.Error("a busy button was pressed")
 	}
 }
