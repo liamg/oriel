@@ -1,0 +1,28 @@
+name: race
+
+# The race detector over the packages that do work off the loop (make test-race). It's slow, so it runs nightly and
+# on demand rather than on every push; ci.yml's race job keeps the quick leaf packages on every push.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  race:
+    strategy:
+      fail-fast: false
+      matrix:
+        half: [app, rest]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Install Gio's Linux deps, Mesa and Xvfb
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
+      - name: make test-race
+        run: xvfb-run -a make test-race RACE=${{ matrix.half }}
