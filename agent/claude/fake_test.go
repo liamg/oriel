@@ -301,14 +301,14 @@ func (f *fake) poll(turns chan<- string) {
 func (f *fake) terminal() {
 	note("run")
 	if os.Getenv("ORIEL_FAKE_SIGNED_OUT") == "1" {
-		os.Stdout.Write(recordedSignedOut)
+		_, _ = os.Stdout.Write(recordedSignedOut)
 	}
 	if os.Getenv("ORIEL_FAKE_IMPORTS") == "1" {
-		os.Stdout.Write(recordedImports)
+		_, _ = os.Stdout.Write(recordedImports)
 	}
 	dialog := os.Getenv("ORIEL_FAKE_DIALOG")
 	if dialog != "" {
-		os.Stdout.WriteString("\x1b[1mNew MCP server found in .mcp.json\x1b[0m\r\n")
+		_, _ = os.Stdout.WriteString("\x1b[1mNew MCP server found in .mcp.json\x1b[0m\r\n")
 	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
@@ -320,7 +320,7 @@ func (f *fake) terminal() {
 		}
 		switch strings.Trim(sc.Text(), " \x1b") {
 		case "/login":
-			os.Stdout.WriteString("\x1b[38;2;78;186;101mLogin successful. Press \x1b[1mEnter\x1b[22m to continue…\x1b[39m\r\n")
+			_, _ = os.Stdout.WriteString("\x1b[38;2;78;186;101mLogin successful. Press \x1b[1mEnter\x1b[22m to continue…\x1b[39m\r\n")
 		case "/usage":
 			f.mu.Lock()
 			f.usage = true
@@ -338,8 +338,8 @@ var fakeRateLimits = []any{map[string]any{"kind": "five_hour", "percentUsed": 12
 func note(what string) {
 	if path := os.Getenv("ORIEL_FAKE_RUNS"); path != "" {
 		if f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
-			fmt.Fprintln(f, what)
-			f.Close()
+			_, _ = fmt.Fprintln(f, what)
+			_ = f.Close()
 		}
 	}
 }
@@ -364,7 +364,7 @@ func (f *fake) write(rec map[string]any) {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	_, _ = file.Write(append(b, '\n'))
 }
 
@@ -466,7 +466,7 @@ func (f *fake) turn(text string) {
 		_ = json.Unmarshal(recordedRevoked, &rec)
 		f.write(rec)
 	case "show the login prompt":
-		os.Stdout.Write(recordedSignedOut)
+		_, _ = os.Stdout.Write(recordedSignedOut)
 		answer = f.say("shown")
 	case "fail at the api": // the API ended the turn once Claude Code's retries ran out
 		_ = f.classic("StopFailure", map[string]any{"error": "overloaded", "error_details": "Overloaded"}, nil)

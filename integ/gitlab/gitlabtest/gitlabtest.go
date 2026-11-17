@@ -361,7 +361,7 @@ func (g *GitLab) json(p *project, m *mr) map[string]any {
 func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func (g *GitLab) serve(w http.ResponseWriter, r *http.Request) {
@@ -380,7 +380,7 @@ func (g *GitLab) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	var in map[string]any
 	if b, _ := io.ReadAll(r.Body); len(b) > 0 {
-		json.Unmarshal(b, &in)
+		_ = json.Unmarshal(b, &in)
 	}
 	seg := strings.Split(rest, "/")
 	for i := range seg {
@@ -491,7 +491,7 @@ func (g *GitLab) projectRoute(w http.ResponseWriter, method, path string, seg []
 			for i, j := range m.jobs {
 				if m.id*100+i == num(1) {
 					w.Header().Set("Content-Type", "text/plain")
-					w.Write([]byte(j.Trace))
+					_, _ = w.Write([]byte(j.Trace))
 					return
 				}
 			}

@@ -260,7 +260,7 @@ func (s *Server) find(id int) *pr {
 func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func fail(w http.ResponseWriter, status int, msg string) {
@@ -365,7 +365,7 @@ func (s *Server) pullRequests(w http.ResponseWriter, r *http.Request, parts []st
 			reply(w, 200, list(out))
 		case "POST":
 			var in azure.PullRequest
-			json.NewDecoder(r.Body).Decode(&in)
+			_ = json.NewDecoder(r.Body).Decode(&in)
 			if in.Title == "" || in.Source == "" || in.Target == "" {
 				fail(w, 400, "A title, source and target are required.")
 				return
@@ -401,7 +401,7 @@ func (s *Server) pullRequests(w http.ResponseWriter, r *http.Request, parts []st
 		reply(w, 200, list(p.threads))
 	case len(parts) == 9 && parts[8] == "threads" && r.Method == "POST":
 		var in azure.Thread
-		json.NewDecoder(r.Body).Decode(&in)
+		_ = json.NewDecoder(r.Body).Decode(&in)
 		if len(in.Comments) == 0 || in.Comments[0].Content == "" {
 			fail(w, 400, "A thread needs a comment.")
 			return
@@ -418,7 +418,7 @@ func (s *Server) pullRequests(w http.ResponseWriter, r *http.Request, parts []st
 			return
 		}
 		var in azure.Comment
-		json.NewDecoder(r.Body).Decode(&in)
+		_ = json.NewDecoder(r.Body).Decode(&in)
 		if in.Content == "" {
 			fail(w, 400, "A comment needs content.")
 			return
@@ -444,7 +444,7 @@ func (s *Server) pullRequests(w http.ResponseWriter, r *http.Request, parts []st
 // conflict, an unknown strategy or a source that has moved on.
 func (s *Server) update(w http.ResponseWriter, r *http.Request, p *pr) {
 	var in map[string]json.RawMessage
-	json.NewDecoder(r.Body).Decode(&in)
+	_ = json.NewDecoder(r.Body).Decode(&in)
 	str := func(k string) (string, bool) {
 		var v string
 		raw, ok := in[k]
@@ -457,7 +457,7 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request, p *pr) {
 		p.Description = v
 	}
 	if raw, ok := in["isDraft"]; ok {
-		json.Unmarshal(raw, &p.IsDraft)
+		_ = json.Unmarshal(raw, &p.IsDraft)
 	}
 	if v, _ := str("status"); v == "completed" {
 		var last struct {
@@ -467,8 +467,8 @@ func (s *Server) update(w http.ResponseWriter, r *http.Request, p *pr) {
 			Strategy string `json:"mergeStrategy"`
 			Delete   bool   `json:"deleteSourceBranch"`
 		}
-		json.Unmarshal(in["lastMergeSourceCommit"], &last)
-		json.Unmarshal(in["completionOptions"], &opts)
+		_ = json.Unmarshal(in["lastMergeSourceCommit"], &last)
+		_ = json.Unmarshal(in["completionOptions"], &opts)
 		switch {
 		case p.Status != "active":
 			fail(w, 409, "The pull request isn't active.")

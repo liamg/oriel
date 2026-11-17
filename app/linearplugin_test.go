@@ -41,7 +41,9 @@ func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*apptest
 func TestLuaHTTPWithASecret(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
-	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{Config: change})
 	m, err := plugin.LoadManifest(filepath.Join("..", "integ", "linear", "plugin"))
 	if err != nil {

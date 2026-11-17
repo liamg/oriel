@@ -131,14 +131,16 @@ func TestFailureBlock(t *testing.T) {
 
 func snapshotDir(t *testing.T, dir string) string {
 	var b strings.Builder
-	filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			body, _ := os.ReadFile(p)
 			st, _ := d.Info()
 			b.WriteString(p + string(body) + st.ModTime().String())
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	return b.String()
 }
 
@@ -146,10 +148,14 @@ func snapshotDir(t *testing.T, dir string) string {
 // output; and a test that failed then passed with nothing changed is flaky.
 func TestTestsPanel(t *testing.T) {
 	s, dir := testsScene(t)
-	os.WriteFile(rig.FlipFile(dir), nil, 0o644)
+	if err := os.WriteFile(rig.FlipFile(dir), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("test.run.file", nil)
 	runDone(t, s)
-	os.Remove(rig.FlipFile(dir))
+	if err := os.Remove(rig.FlipFile(dir)); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("test.run.last", nil)
 	runDone(t, s)
 	s.Run("view.open", registry.Args{"id": lang.TestsView, "place": "dock", "edge": "bottom", "size": 320})
@@ -174,8 +180,12 @@ func TestTestsPanel(t *testing.T) {
 func TestTestsPanelFindsTests(t *testing.T) {
 	s, dir := testsScene(t)
 	other := filepath.Join(dir, "other", "other_test.go")
-	os.MkdirAll(filepath.Dir(other), 0o755)
-	os.WriteFile(other, []byte("package other\n\nimport \"testing\"\n\nfunc TestOther(t *testing.T) { t.Fatal(\"no\") }\n"), 0o644)
+	if err := os.MkdirAll(filepath.Dir(other), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(other, []byte("package other\n\nimport \"testing\"\n\nfunc TestOther(t *testing.T) { t.Fatal(\"no\") }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	testsOf(s).Rescan(other)
 	rows := func() string { return treeRows(testsOf(s).TreeAll(), true) }
 	s.Until("the scan", func() bool { return strings.Contains(rows(), "TestRoundMinor") })
@@ -187,7 +197,9 @@ func TestTestsPanelFindsTests(t *testing.T) {
 	if got := rows(); !strings.Contains(got, "TestOther✕") {
 		t.Fatalf("rows after the run: %q", got)
 	}
-	os.Remove(other)
+	if err := os.Remove(other); err != nil {
+		t.Fatal(err)
+	}
 	testsOf(s).Rescan(other)
 	if got := rows(); strings.Contains(got, "other") {
 		t.Errorf("a deleted file's test is still listed: %q", got)
@@ -311,10 +323,16 @@ func TestTestSignMenu(t *testing.T) {
 // The menu has no "Debug test" when the adapter can't debug.
 func TestTestSignMenuWithoutDebug(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"adder\"\nversion = \"0.1.0\"\n"), 0o644)
-	os.MkdirAll(filepath.Join(dir, "src"), 0o755)
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]\nname = \"adder\"\nversion = \"0.1.0\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	lib := filepath.Join(dir, "src", "lib.rs")
-	os.WriteFile(lib, []byte("#[cfg(test)]\nmod tests {\n    #[test]\n    fn adds() {\n        assert_eq!(1 + 1, 2);\n    }\n}\n"), 0o644)
+	if err := os.WriteFile(lib, []byte("#[cfg(test)]\nmod tests {\n    #[test]\n    fn adds() {\n        assert_eq!(1 + 1, 2);\n    }\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": lib})
 	s.WaitSyntax()

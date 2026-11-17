@@ -23,7 +23,9 @@ func TestStartStdio(t *testing.T) {
 	if err != nil || string(line) != `{"a":1}` {
 		t.Fatalf("read back %q, %v", line, err)
 	}
-	p.Close()
+	if err := p.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-p.Exited():
 	case <-time.After(5 * time.Second):
@@ -40,7 +42,9 @@ func TestKilledProcessIsReaped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.Kill()
+	if err := p.Kill(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-p.Exited():
 	case <-time.After(5 * time.Second):

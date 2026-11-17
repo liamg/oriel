@@ -23,20 +23,26 @@ func TestUIFontSizeZoomsTheWindow(t *testing.T) {
 		want := render.Point{X: before.X / z, Y: before.Y / z}
 		apptest.Poll(t, fmt.Sprintf("%s: scale %v, size %v", what, z, want), func() bool { return r.Win.Scale() == z && r.Win.Size() == want })
 	}
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		return r.Host.Options().Set("ui.font_size", registry.LayerUser, registry.At{}, 19.5)
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	waitZoom("ui.font_size 19.5", 1.5)
 	font := func() float64 {
 		var v any
-		r.Do(func() error { v, _, _ = r.Host.Options().Get("ui.font_size", registry.At{}); return nil })
+		if err := r.Do(func() error { v, _, _ = r.Host.Options().Get("ui.font_size", registry.At{}); return nil }); err != nil {
+			t.Error(err)
+		}
 		return v.(float64)
 	}
 	for _, step := range []struct {
 		cmd  string
 		want float64
 	}{{"ui.zoom.in", 20.5}, {"ui.zoom.out", 19.5}, {"ui.zoom.out", 18.5}, {"ui.zoom.reset", 13}} {
-		r.Do(func() error { return r.Host.Run(context.Background(), step.cmd, nil) })
+		if err := r.Do(func() error { return r.Host.Run(context.Background(), step.cmd, nil) }); err != nil {
+			t.Fatal(err)
+		}
 		if got := font(); math.Abs(got-step.want) > 1e-9 {
 			t.Errorf("after %s: ui.font_size %v, want %v", step.cmd, got, step.want)
 		}
@@ -62,7 +68,9 @@ func TestZoomedIDESnapshot(t *testing.T) {
 func TestPartFontSizes(t *testing.T) {
 	s := apptest.EditorScene(t)
 	o := s.Registry().Options()
-	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
+	if err := o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0); err != nil {
+		t.Fatal(err)
+	}
 	if v, _, _ := o.Get("ui.statusline.font_size", registry.At{}); v != 16.0 || draw.PartScale(o, "ui.statusline.font_size") != 0 {
 		t.Errorf("unset under ui.font_size 16: reads %v, scale %v; want 16, following", v, draw.PartScale(o, "ui.statusline.font_size"))
 	}
@@ -85,7 +93,9 @@ func TestPartFontSizes(t *testing.T) {
 	if size0 == 0 {
 		t.Fatal("no NORMAL in the status line")
 	}
-	s.Registry().Options().Set("ui.statusline.font_size", registry.LayerUser, registry.At{}, 19.5)
+	if err := s.Registry().Options().Set("ui.statusline.font_size", registry.LayerUser, registry.At{}, 19.5); err != nil {
+		t.Fatal(err)
+	}
 	size1, bar1 := normal()
 	if size1 != size0*1.5 || bar1.Dy() != bar0.Dy()*1.5 {
 		t.Errorf("at 19.5 over the UI's 13: NORMAL %v px on a %v px bar, want %v on %v", size1, bar1.Dy(), size0*1.5, bar0.Dy()*1.5)

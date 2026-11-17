@@ -81,7 +81,7 @@ func (x *Catalog) syncBundled(installed func(id string) bool) {
 			bp.stop = x.h.Placeholder(bp.m.Lazy.Placeholder(x.h, id, id, func() error { return x.startBundled(bp) }))
 			bp.state = waitsState
 		default:
-			x.startBundled(bp)
+			_ = x.startBundled(bp)
 		}
 	}
 	x.h.Redraw()

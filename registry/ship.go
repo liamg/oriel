@@ -58,7 +58,7 @@ type ShipGateState struct {
 func ShipGates(r Contributions, session, kind string) []ShipGateState {
 	var only []string
 	if k, ok := KindOf(r, core.Kind(kind)); ok {
-		Call(func() error { only = k.Gates(); return nil })
+		Try(func() { only = k.Gates() })
 	}
 	var gs []ShipGate
 	for _, g := range ContributionsOf[ShipGate](r) {
@@ -70,7 +70,7 @@ func ShipGates(r Contributions, session, kind string) []ShipGateState {
 	var out []ShipGateState
 	for _, g := range gs {
 		var st Gate
-		Call(func() error { st = g.Check(session); return nil })
+		Try(func() { st = g.Check(session) })
 		if st.State != "" {
 			out = append(out, ShipGateState{ShipGate: g, Gate: st})
 		}
@@ -141,7 +141,7 @@ func PRActions(r Contributions, pr PullRequest) []PRActionState {
 	var out []PRActionState
 	for _, a := range as {
 		label := ""
-		Call(func() error { label = a.Label(pr); return nil })
+		Try(func() { label = a.Label(pr) })
 		if label != "" {
 			out = append(out, PRActionState{PRAction: a, PR: pr, Label: label})
 		}

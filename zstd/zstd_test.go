@@ -35,7 +35,7 @@ func stream(src []byte, wrap func(io.Reader) io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer z.Close()
+	defer func() { _ = z.Close() }()
 	return io.ReadAll(z)
 }
 
@@ -367,7 +367,9 @@ func TestReaderWindow(t *testing.T) {
 	if most > 1<<20 {
 		t.Errorf("history grew to %d bytes for a 1KB window", most)
 	}
-	z.Close()
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := z.Read(buf); !errors.Is(err, ErrClosed) {
 		t.Errorf("read after close: %v", err)
 	}

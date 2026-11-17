@@ -56,6 +56,6 @@ func ForkLabel(reg Contributions, session string) string {
 		return ""
 	}
 	var out string
-	Call(func() error { out = fs[0].Label(session); return nil })
+	Try(func() { out = fs[0].Label(session) })
 	return out
 }

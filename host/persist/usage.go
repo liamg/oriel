@@ -69,7 +69,7 @@ func readUsage(path, provider string, since time.Time) []core.ProviderUsage {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var out []core.ProviderUsage
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64<<10), 1<<20)

@@ -56,7 +56,7 @@ func (a *APIs) Revert() {
 	defer a.mu.Unlock()
 	for k, p := range a.touched {
 		if p.had {
-			o.SetFrom(k.name, k.layer, k.at, p.v, p.source)
+			_ = o.SetFrom(k.name, k.layer, k.at, p.v, p.source)
 		} else {
 			o.Unset(k.name, k.layer, k.at)
 		}
@@ -224,7 +224,7 @@ func (a *APIs) ApplyPending() int {
 		delete(a.pending, key)
 		if cv, err := optionValue(sp, p.value); err == nil {
 			a.touch(o, sp.Name, p.layer, p.at)
-			o.SetFrom(sp.Name, p.layer, p.at, cv, p.where)
+			_ = o.SetFrom(sp.Name, p.layer, p.at, cv, p.where)
 		}
 	}
 	return len(a.pending)

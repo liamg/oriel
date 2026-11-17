@@ -127,7 +127,9 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 	id, a := r.workSession("Work")
 	ans := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "ls"})
 	r.eventually(id, "the card, as no hook answered", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "allow"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "allow"}); err != nil {
+		t.Fatal(err)
+	}
 	if d := <-ans; !d.Allow {
 		t.Errorf("answer = %+v", d)
 	}

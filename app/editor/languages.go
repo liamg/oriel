@@ -43,7 +43,7 @@ func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	entries, _ := os.ReadDir(x.Dir)
 	for _, e := range entries {
 		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
-			x.load(e.Name())
+			_ = x.load(e.Name())
 		}
 	}
 	return nil
@@ -79,7 +79,7 @@ func (x *Languages) install(path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	name, err := sums.Install(f, x.Dir)
 	if err != nil {
 		return err

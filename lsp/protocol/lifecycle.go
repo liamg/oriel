@@ -289,7 +289,7 @@ func Option(raw json.RawMessage, field string) bool {
 		return false
 	}
 	var b bool
-	json.Unmarshal(m[field], &b)
+	_ = json.Unmarshal(m[field], &b)
 	return b
 }
 
@@ -322,7 +322,7 @@ func DecodeSync(raw json.RawMessage) TextDocumentSync {
 		Change    int             `json:"change"`
 		Save      json.RawMessage `json:"save"`
 	}
-	json.Unmarshal(raw, &o)
+	_ = json.Unmarshal(raw, &o)
 	s := TextDocumentSync{OpenClose: o.OpenClose, Change: o.Change, Save: Enabled(o.Save)}
 	s.IncludeText = Option(o.Save, "includeText")
 	return s

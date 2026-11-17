@@ -58,7 +58,7 @@ func Serve(tools func() []agent.Tool) (*Server, error) {
 	path := filepath.Join(dir, "tools.sock")
 	ln, err := net.Listen("unix", path)
 	if err != nil {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return nil, err
 	}
 	ctx, stop := context.WithCancel(context.Background())
@@ -110,8 +110,8 @@ func (s *Server) accept() {
 		s.servers = append(s.servers, srv)
 		s.mu.Unlock()
 		s.wg.Go(func() {
-			defer nc.Close()
-			srv.Serve(s.ctx, nc, nc)
+			defer func() { _ = nc.Close() }()
+			_ = srv.Serve(s.ctx, nc, nc)
 			s.mu.Lock()
 			s.servers = slices.DeleteFunc(s.servers, func(o *mcp.Server) bool { return o == srv })
 			s.mu.Unlock()
@@ -161,7 +161,7 @@ func (s *Server) Close() error {
 	err := s.ln.Close()
 	s.stop()
 	s.wg.Wait()
-	os.RemoveAll(s.dir)
+	_ = os.RemoveAll(s.dir)
 	if errors.Is(err, net.ErrClosed) {
 		err = nil
 	}

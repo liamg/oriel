@@ -23,7 +23,9 @@ func TestUncommittedsDiffIsAgainstTheLastCommit(t *testing.T) {
 	r.Write(map[string]string{"f.txt": "one\ntwo, committed\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"})
 	r.Commit("Ada", "on the branch")
 	path := filepath.Join(r.Dir, "f.txt")
-	os.WriteFile(path, []byte("one\ntwo, committed\nthree\nfour\nfive\nsix\nseven\neight\nnine, not yet\nten\n"), 0o644)
+	if err := os.WriteFile(path, []byte("one\ntwo, committed\nthree\nfour\nfive\nsix\nseven\neight\nnine, not yet\nten\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Run("diff.open", registry.Args{"path": path, "against": "head"})

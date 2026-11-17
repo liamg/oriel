@@ -33,7 +33,7 @@ func startDesktop(t *testing.T, addr string) *a11yDesktop {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { conn.Close() })
+	t.Cleanup(func() { _ = conn.Close() })
 	d := &a11yDesktop{conn: conn, asked: make(chan struct{}, 8)}
 	for _, name := range []string{"org.a11y.Bus", "org.a11y.atspi.Registry"} {
 		if _, err := conn.RequestName(name, dbus.NameFlagDoNotQueue); err != nil {
@@ -111,7 +111,7 @@ func testATSPI(t *testing.T, addr string) {
 	done := make(chan struct{})
 	go func() { app.watch(addr); close(done) }()
 	t.Cleanup(func() {
-		desk.conn.Close()
+		_ = desk.conn.Close()
 		app.leave()
 	})
 
@@ -142,7 +142,7 @@ func testATSPI(t *testing.T, addr string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer at.Close()
+	defer func() { _ = at.Close() }()
 	call := func(ref atspiRef, method string, args ...any) *dbus.Call {
 		t.Helper()
 		c := at.Object(ref.Name, ref.Path).Call(method, 0, args...)
@@ -160,7 +160,9 @@ func testATSPI(t *testing.T, addr string) {
 		return v.Value()
 	}
 	var role string
-	call(appRef, "org.a11y.atspi.Accessible.GetRoleName").Store(&role)
+	if err := call(appRef, "org.a11y.atspi.Accessible.GetRoleName").Store(&role); err != nil {
+		t.Fatal(err)
+	}
 	if role != "application" || prop(appRef, "org.a11y.atspi.Accessible.Name") != "oriel-test" {
 		t.Errorf("app: %q %v", role, prop(appRef, "org.a11y.atspi.Accessible.Name"))
 	}
@@ -171,10 +173,16 @@ func testATSPI(t *testing.T, addr string) {
 		var role, name string
 		var kids []atspiRef
 		var states []uint32
-		call(ref, "org.a11y.atspi.Accessible.GetRoleName").Store(&role)
+		if err := call(ref, "org.a11y.atspi.Accessible.GetRoleName").Store(&role); err != nil {
+			t.Error(err)
+		}
 		name = prop(ref, "org.a11y.atspi.Accessible.Name").(string)
-		call(ref, "org.a11y.atspi.Accessible.GetState").Store(&states)
-		call(ref, "org.a11y.atspi.Accessible.GetChildren").Store(&kids)
+		if err := call(ref, "org.a11y.atspi.Accessible.GetState").Store(&states); err != nil {
+			t.Error(err)
+		}
+		if err := call(ref, "org.a11y.atspi.Accessible.GetChildren").Store(&kids); err != nil {
+			t.Error(err)
+		}
 		if n := prop(ref, "org.a11y.atspi.Accessible.ChildCount").(int32); int(n) != len(kids) {
 			t.Errorf("%s: ChildCount %d, %d children", ref.Path, n, len(kids))
 		}
@@ -190,7 +198,9 @@ func testATSPI(t *testing.T, addr string) {
 				t.Fatal(err)
 			}
 			var idx int32
-			call(k, "org.a11y.atspi.Accessible.GetIndexInParent").Store(&idx)
+			if err := call(k, "org.a11y.atspi.Accessible.GetIndexInParent").Store(&idx); err != nil {
+				t.Error(err)
+			}
 			if parent != ref || int(idx) != i {
 				t.Errorf("%s: parent %v index %d, want %v %d", k.Path, parent, idx, ref, i)
 			}
@@ -198,7 +208,9 @@ func testATSPI(t *testing.T, addr string) {
 		}
 	}
 	var frames []atspiRef
-	call(appRef, "org.a11y.atspi.Accessible.GetChildren").Store(&frames)
+	if err := call(appRef, "org.a11y.atspi.Accessible.GetChildren").Store(&frames); err != nil {
+		t.Fatal(err)
+	}
 	if len(frames) != 1 {
 		t.Fatalf("frames: %v", frames)
 	}
@@ -234,12 +246,16 @@ func testATSPI(t *testing.T, addr string) {
 
 	// Geometry: the window is at (100, 50) on screen, two pixels to a unit.
 	var box atspiRect
-	call(refs["Open Directory…"], "org.a11y.atspi.Component.GetExtents", uint32(0)).Store(&box)
+	if err := call(refs["Open Directory…"], "org.a11y.atspi.Component.GetExtents", uint32(0)).Store(&box); err != nil {
+		t.Fatal(err)
+	}
 	if box != (atspiRect{120, 140, 240, 40}) {
 		t.Errorf("button's screen extents: %v", box)
 	}
 	var hit atspiRef
-	call(frames[0], "org.a11y.atspi.Component.GetAccessibleAtPoint", int32(130), int32(150), uint32(0)).Store(&hit)
+	if err := call(frames[0], "org.a11y.atspi.Component.GetAccessibleAtPoint", int32(130), int32(150), uint32(0)).Store(&hit); err != nil {
+		t.Fatal(err)
+	}
 	if hit != refs["Open Directory…"] {
 		t.Errorf("hit %v", hit)
 	}
@@ -247,7 +263,9 @@ func testATSPI(t *testing.T, addr string) {
 	// The text field's text and caret.
 	search := refs["Search"]
 	var s string
-	call(search, "org.a11y.atspi.Text.GetText", int32(0), int32(-1)).Store(&s)
+	if err := call(search, "org.a11y.atspi.Text.GetText", int32(0), int32(-1)).Store(&s); err != nil {
+		t.Fatal(err)
+	}
 	if s != "héllo 😀 wörld" || prop(search, "org.a11y.atspi.Text.CaretOffset") != int32(7) ||
 		prop(search, "org.a11y.atspi.Text.CharacterCount") != int32(13) {
 		t.Errorf("text %q caret %v count %v", s, prop(search, "org.a11y.atspi.Text.CaretOffset"),
@@ -257,9 +275,13 @@ func testATSPI(t *testing.T, addr string) {
 	// DoAction presses the button, on the app's loop.
 	button := refs["Open Directory…"]
 	var name string
-	call(button, "org.a11y.atspi.Action.GetName", int32(0)).Store(&name)
+	if err := call(button, "org.a11y.atspi.Action.GetName", int32(0)).Store(&name); err != nil {
+		t.Fatal(err)
+	}
 	var pressed bool
-	call(button, "org.a11y.atspi.Action.DoAction", int32(0)).Store(&pressed)
+	if err := call(button, "org.a11y.atspi.Action.DoAction", int32(0)).Store(&pressed); err != nil {
+		t.Fatal(err)
+	}
 	if name != "click" || !pressed {
 		t.Errorf("action %q, pressed %v", name, pressed)
 	}
@@ -271,7 +293,9 @@ func testATSPI(t *testing.T, addr string) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("no action from DoAction")
 	}
-	call(refs["Run"], "org.a11y.atspi.Action.DoAction", int32(0)).Store(&pressed)
+	if err := call(refs["Run"], "org.a11y.atspi.Action.DoAction", int32(0)).Store(&pressed); err != nil {
+		t.Fatal(err)
+	}
 	if pressed {
 		t.Error("a disabled button pressed")
 	}

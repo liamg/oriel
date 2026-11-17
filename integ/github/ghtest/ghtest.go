@@ -100,7 +100,9 @@ func New(t testing.TB) *Server {
 			if strings.HasPrefix(r.Method+" "+r.URL.Path, k) {
 				s.mu.Unlock()
 				w.WriteHeader(e.Status)
-				json.NewEncoder(w).Encode(map[string]string{"message": e.Message})
+				if err := json.NewEncoder(w).Encode(map[string]string{"message": e.Message}); err != nil {
+					t.Error(err)
+				}
 				return
 			}
 		}
@@ -210,7 +212,7 @@ func repoOf(r *http.Request) string { return r.PathValue("owner") + "/" + r.Path
 func reply(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func notFound(w http.ResponseWriter) { reply(w, 404, map[string]string{"message": "Not Found"}) }
@@ -343,7 +345,7 @@ func (s *Server) editPR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in map[string]any
-	json.NewDecoder(r.Body).Decode(&in)
+	_ = json.NewDecoder(r.Body).Decode(&in)
 	if t, ok := in["title"].(string); ok {
 		p.Title = t
 	}
@@ -365,7 +367,7 @@ func (s *Server) reviewers(w http.ResponseWriter, r *http.Request) {
 		Reviewers     []string `json:"reviewers"`
 		TeamReviewers []string `json:"team_reviewers"`
 	}
-	json.NewDecoder(r.Body).Decode(&in)
+	_ = json.NewDecoder(r.Body).Decode(&in)
 	owner, _, _ := strings.Cut(repo, "/")
 	for _, t := range in.TeamReviewers {
 		in.Reviewers = append(in.Reviewers, owner+"/"+t)
@@ -452,7 +454,7 @@ func (s *Server) log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(l))
+	_, _ = w.Write([]byte(l))
 }
 
 func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
@@ -460,7 +462,7 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		Query     string         `json:"query"`
 		Variables map[string]any `json:"variables"`
 	}
-	json.NewDecoder(r.Body).Decode(&in)
+	_ = json.NewDecoder(r.Body).Decode(&in)
 	if strings.Contains(in.Query, "mergeStateStatus") {
 		s.mergeState(w, in.Variables)
 		return

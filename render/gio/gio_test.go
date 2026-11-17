@@ -26,7 +26,7 @@ func shot(t *testing.T, name string, img image.Image) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := png.Encode(f, img); err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func readPNG(t *testing.T, path string) image.Image {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	img, err := png.Decode(f)
 	if err != nil {
 		t.Fatal(err)

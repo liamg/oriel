@@ -79,7 +79,9 @@ func TestMirrorReviewFromACodeHost(t *testing.T) {
 		return len(th.Comments) > 0 && th.Comments[0].Delivered
 	})
 	req.Threads[0].Comments[0].Body = "Name the export for what it charts: weeklyUsage."
-	r.w.MirrorReview(ctx, req)
+	if err := r.w.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
 	th, _ := r.session(id).Thread(review.ID)
 	if c := th.Comments[0]; !c.Edited || c.Delivered || !strings.HasSuffix(c.Body, "weeklyUsage.") {
 		t.Errorf("after an edit there: %+v", c)
@@ -116,7 +118,9 @@ func TestMirrorReviewFromACodeHost(t *testing.T) {
 	yes := true
 	req.Threads[0].Resolved = &yes
 	req.Threads[0].Comments = append(req.Threads[0].Comments, hostapi.ReviewComment{Key: "n9", User: "you", Body: "Renamed to weeklyUsage.", At: at, Trusted: true})
-	r.w.MirrorReview(ctx, req)
+	if err := r.w.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
 	th, _ = r.session(id).Thread(review.ID)
 	if th.Status != core.ThreadResolved || len(th.Comments) != 2 {
 		t.Errorf("after resolving there: %s, %d comments", th.Status, len(th.Comments))
@@ -124,7 +128,9 @@ func TestMirrorReviewFromACodeHost(t *testing.T) {
 
 	// Gone there: dismissed.
 	req.Threads = req.Threads[1:]
-	r.w.MirrorReview(ctx, req)
+	if err := r.w.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
 	if th, _ := r.session(id).Thread(review.ID); th.Status != core.ThreadDismissed {
 		t.Errorf("a thread gone from the host is %s", th.Status)
 	}

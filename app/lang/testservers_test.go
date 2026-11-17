@@ -15,8 +15,12 @@ import (
 // The app itself, with no such setting, starts every one installed.
 func TestTestsStartNoBuiltInServers(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module x\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": filepath.Join(dir, "main.go")})
 	s.LSPSettle()

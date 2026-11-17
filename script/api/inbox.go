@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"slices"
 	"sync"
@@ -46,7 +45,7 @@ func (i Inbox) Add(card script.Table, where string) error {
 		if a, ok := o["args"].(script.Table); ok {
 			args = registry.Args(a)
 		}
-		c.Open = func() { i.a.Host.Run(context.Background(), cmd, args) }
+		c.Open = func() { i.a.run(cmd, args) }
 	}
 	acts, _ := card["actions"].([]any)
 	for _, v := range acts {
@@ -65,9 +64,9 @@ func (i Inbox) Add(card script.Table, where string) error {
 			if run != nil {
 				i.a.callback(t, "run")
 			} else if cmd != "" {
-				i.a.Host.Run(context.Background(), cmd, args)
+				i.a.run(cmd, args)
 			}
-			i.Remove(id)
+			_ = i.Remove(id)
 		}
 		c.Actions = append(c.Actions, a)
 	}

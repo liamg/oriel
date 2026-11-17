@@ -44,7 +44,7 @@ func (s *Settings) build(c *ui.Ctx) {
 		own[sec.Name] = sec
 		n := 0
 		if sec.Count != nil {
-			registry.Call(func() error { n = sec.Count(); return nil })
+			registry.Try(func() { n = sec.Count() })
 		}
 		sections[sec.Name] += n
 	}

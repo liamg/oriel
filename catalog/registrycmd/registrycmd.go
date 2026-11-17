@@ -36,7 +36,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 	}
 	fs := flag.NewFlagSet("oriel plugin registry "+args[0], flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintln(stderr, Usage) }
+	fs.Usage = func() { _, _ = fmt.Fprintln(stderr, Usage) }
 	base := fs.String("base", "", "the registry checkout at the PR's base")
 	head := fs.String("head", ".", "the registry checkout at the PR's head")
 	author := fs.String("author", "", "the PR's author's GitHub login")
@@ -62,7 +62,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 				return err
 			}
 			c.Allow, err = gomod.ParseAllowlist(f)
-			f.Close()
+			_ = f.Close()
 			if err != nil {
 				return err
 			}
@@ -71,7 +71,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(stdout, rep.Comment)
+		_, _ = fmt.Fprint(stdout, rep.Comment)
 		if *comment != "" {
 			if err := os.WriteFile(*comment, []byte(rep.Comment), 0o644); err != nil {
 				return err
@@ -108,7 +108,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		if err := os.WriteFile(filepath.Join(to, catalog.IndexSig), sig, 0o644); err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "%d plugins, signed by %s\n", len(ix.Plugins), catalog.FormatKey(key.Public().(ed25519.PublicKey)))
+		_, _ = fmt.Fprintf(stdout, "%d plugins, signed by %s\n", len(ix.Plugins), catalog.FormatKey(key.Public().(ed25519.PublicKey)))
 		return nil
 	case "keygen":
 		if *out == "" {
@@ -122,11 +122,14 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(f, hex.EncodeToString(priv.Seed()))
-		if err := f.Close(); err != nil {
-			return err
+		_, err = fmt.Fprintln(f, hex.EncodeToString(priv.Seed()))
+		if cerr := f.Close(); err == nil {
+			err = cerr
 		}
-		fmt.Fprintln(stdout, catalog.FormatKey(pub))
+		if err != nil {
+			return fmt.Errorf("writing the private key to %s: %w", *out, err)
+		}
+		_, _ = fmt.Fprintln(stdout, catalog.FormatKey(pub))
 		return nil
 	}
 	return fmt.Errorf("unknown command %q\nusage:\n%s", args[0], Usage)

@@ -125,7 +125,7 @@ func Presenters(r registry.Contributions, path string) []BufferPresenter {
 	for _, p := range registry.ContributionsOf[BufferPresenter](r) {
 		ok := p.When == nil
 		if !ok {
-			registry.Call(func() error { ok = p.When(path); return nil })
+			registry.Try(func() { ok = p.When(path) })
 		}
 		if ok {
 			out = append(out, p)

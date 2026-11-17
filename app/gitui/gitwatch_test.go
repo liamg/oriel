@@ -78,7 +78,9 @@ func TestGitStatusIgnoresGitsHousekeeping(t *testing.T) {
 	other := filepath.Join(t.TempDir(), "other")
 	repo.Git("worktree", "add", "-q", "-b", "other", other)
 	git := filepath.Join(repo.Dir, ".git")
-	os.MkdirAll(filepath.Join(git, "fsmonitor--daemon", "cookies"), 0o755)
+	if err := os.MkdirAll(filepath.Join(git, "fsmonitor--daemon", "cookies"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: repo.Dir, ScriptedFiles: true})
 	s.Idle()
 	read := runs("status")
@@ -86,12 +88,24 @@ func TestGitStatusIgnoresGitsHousekeeping(t *testing.T) {
 		cookie := filepath.Join(git, "fsmonitor--daemon", "cookies", fmt.Sprint(i))
 		paths := []string{filepath.Join(other, "main.go"), filepath.Join(git, "worktrees", "other", "index"), cookie,
 			filepath.Join(git, "FETCH_HEAD"), filepath.Join(git, "logs", "HEAD")}
-		os.WriteFile(paths[0], []byte(fmt.Sprintf("package main // %d\n", i)), 0o644)
-		os.WriteFile(paths[1], []byte("x"), 0o644)
-		os.WriteFile(cookie, nil, 0o644)
-		os.Remove(cookie)
-		os.WriteFile(paths[3], []byte(fmt.Sprint(i)), 0o644)
-		os.WriteFile(paths[4], []byte(fmt.Sprint(i)), 0o644)
+		if err := os.WriteFile(paths[0], []byte(fmt.Sprintf("package main // %d\n", i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(paths[1], []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(cookie, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(cookie); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(paths[3], []byte(fmt.Sprint(i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(paths[4], []byte(fmt.Sprint(i)), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		s.FilesChanged(paths...)
 		s.Idle()
 	}
@@ -105,7 +119,9 @@ func TestGitStatusPollsWithoutAWatch(t *testing.T) {
 	s, repo := gitScene(t, func(cfg *apptest.Config) {
 		cfg.FSWatch = func() (*fswatch.Watcher, error) { return nil, fswatch.ErrLimit }
 	})
-	os.WriteFile(filepath.Join(repo.Dir, "new.go"), []byte("package main\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(repo.Dir, "new.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	waitGit(t, s, "new.go", func() bool { _, ok := gitOf(s).State().File("new.go"); return ok })
 }
 

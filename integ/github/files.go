@@ -76,7 +76,7 @@ func Owners(dir string, files []string) []string {
 			}
 			rules = append(rules, ownerRule{re: ownerPattern(fs[0]), owners: fs[1:]})
 		}
-		f.Close()
+		_ = f.Close()
 		break
 	}
 	var out []string

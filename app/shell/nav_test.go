@@ -43,9 +43,13 @@ func windowDir(s *apptest.Scene) string {
 // The side buttons go back and forward through the sessions and pages the window has shown, like a browser's.
 func TestSideButtonsGoBackThroughSessionsAndPages(t *testing.T) {
 	s := navScene(t, "")
-	s.Store().Apply(core.SessionFocused{ID: "pricing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "pricing"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
-	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "billing"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Run("settings.open", nil)
 	at(s, t, "settings opened", "billing", "settings")
@@ -67,11 +71,15 @@ func TestSideButtonsGoBackThroughSessionsAndPages(t *testing.T) {
 	at(s, t, "stats opened", "pricing", "stats")
 	s.Press("<X2Mouse>")
 	at(s, t, "nothing forward", "pricing", "stats")
-	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "billing"}); err != nil {
+		t.Fatal(err)
+	}
 	at(s, t, "billing over stats", "billing", "stats")
 	s.Press("<Esc>")
 	at(s, t, "stats closed", "billing", "")
-	s.Store().Apply(core.SessionArchived{ID: "billing", Archived: true})
+	if err := s.Store().Apply(core.SessionArchived{ID: "billing", Archived: true}); err != nil {
+		t.Fatal(err)
+	}
 	s.Press("<X1Mouse>")
 	at(s, t, "past the archived session", "pricing", "stats")
 }
@@ -79,11 +87,17 @@ func TestSideButtonsGoBackThroughSessionsAndPages(t *testing.T) {
 // In the editor, back goes through the jumplist first, as CTRL-O does, then through the window's history.
 func TestSideButtonsInTheEditorJumpFirst(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\ntwo\nthree\nfour\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\ntwo\nthree\nfour\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := navScene(t, dir)
-	s.Store().Apply(core.SessionFocused{ID: "pricing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "pricing"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
-	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "billing"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": "a.txt"})
 	s.Frame()
 	s.Run("editor.keys", registry.Args{"keys": "G", "noremap": true})
@@ -102,14 +116,20 @@ func TestSideButtonsBackToAnotherDirectory(t *testing.T) {
 	a, b := t.TempDir(), t.TempDir()
 	s := apptest.New(t, apptest.Options{WorkDir: a, Size: render.Point{X: 1200, Y: 800}})
 	for id, dir := range map[core.SessionID]string{"pricing": a, "billing": b} {
-		s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: id, Name: string(id), Kind: core.KindWork, Status: core.StatusQuiet, Dir: dir}})
+		if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: id, Name: string(id), Kind: core.KindWork, Status: core.StatusQuiet, Dir: dir}}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	settle := func() { s.Moves() }
-	s.Store().Apply(core.SessionFocused{ID: "pricing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "pricing"}); err != nil {
+		t.Fatal(err)
+	}
 	settle()
 	s.Run("stats.open", nil)
 	at(s, t, "stats in pricing", "pricing", "stats")
-	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "billing"}); err != nil {
+		t.Fatal(err)
+	}
 	settle()
 	if windowDir(s) != b {
 		t.Fatalf("the window didn't open again on billing's directory: %s", windowDir(s))
@@ -143,7 +163,9 @@ oriel.place.add{ name = "board", title = "Board", command = "Board", shown = fun
 // page over the layout. A view already open under the page is revealed, not toggled away.
 func TestPagesGiveWayToViews(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := navScene(t, dir)
 	shown := func() string { p, _ := uireg.ShownPlace(s.Registry()); return p }
 	explorer := registry.Args{"id": kit.ExplorerView, "place": "dock", "edge": "left", "title": "Explorer"}

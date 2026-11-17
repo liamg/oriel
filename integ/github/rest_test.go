@@ -20,12 +20,18 @@ func TestREST(t *testing.T) {
 		case r.Header.Get("Authorization") != "":
 			w.WriteHeader(http.StatusUnauthorized)
 		case r.URL.Path == "/repos/acme/x/releases":
-			w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"` + "http://" + r.Host + `/asset/1"}]}]`))
+			if _, err := w.Write([]byte(`[{"tag_name":"v1","assets":[{"name":"index.json","url":"` + "http://" + r.Host + `/asset/1"}]}]`)); err != nil {
+				t.Error(err)
+			}
 		case r.URL.Path == "/asset/1":
-			w.Write([]byte("0123456789"))
+			if _, err := w.Write([]byte("0123456789")); err != nil {
+				t.Error(err)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"message":"Not Found"}`))
+			if _, err := w.Write([]byte(`{"message":"Not Found"}`)); err != nil {
+				t.Error(err)
+			}
 		}
 	}))
 	defer srv.Close()

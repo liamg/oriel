@@ -39,14 +39,14 @@ func (r Repo) Snapshot(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tmp.Close()
-	defer os.Remove(tmp.Name())
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if b, err := os.ReadFile(filepath.Clean(strings.TrimSpace(string(out)))); err == nil {
 		if err := os.WriteFile(tmp.Name(), b, 0o600); err != nil {
 			return "", err
 		}
 	} else {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 	}
 	env := []string{"GIT_INDEX_FILE=" + tmp.Name()}
 	if _, err := r.gitEnv(ctx, env, "add", "-A", "--", "."); err != nil {

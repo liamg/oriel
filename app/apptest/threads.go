@@ -19,7 +19,9 @@ func ThreadsScene(t *testing.T, o Options, threads ...[4]string) *Scene {
 		Projects: []core.Project{{Name: "notes", Dir: dir, Branch: "main", Primary: true}}}
 	for i, th := range threads {
 		var line int
-		fmt.Sscan(th[1], &line)
+		if _, err := fmt.Sscan(th[1], &line); err != nil {
+			t.Fatal(err)
+		}
 		se.Threads = append(se.Threads, core.Thread{ID: core.ThreadID(fmt.Sprintf("t%d00000", i)), Status: core.ThreadOpen, Created: s.Now.Add(-time.Minute),
 			Updated: s.Now.Add(-time.Minute), Anchor: &core.Anchor{Project: "notes", File: th[0], Line: line, Text: th[2]},
 			Comments: []core.Comment{{ID: fmt.Sprint("c", i), Author: core.AuthorYou, Name: "Liam", Body: th[3], Time: s.Now.Add(-time.Minute), Delivered: true}}})

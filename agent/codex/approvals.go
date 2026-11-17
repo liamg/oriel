@@ -42,45 +42,45 @@ func (s *session) ours(thread string) bool {
 
 func (s *session) onRequest(r *jsonrpc.Request) {
 	var p request
-	json.Unmarshal(r.Params, &p)
+	_ = json.Unmarshal(r.Params, &p)
 	main := s.ours(p.ThreadID)
 	switch r.Method {
 	case "item/commandExecution/requestApproval":
 		if !main {
-			r.Reply(map[string]any{"decision": "decline"}, nil)
+			_ = r.Reply(map[string]any{"decision": "decline"}, nil)
 			return
 		}
 		s.commandApproval(r, p)
 	case "item/fileChange/requestApproval":
 		if !main {
-			r.Reply(map[string]any{"decision": "decline"}, nil)
+			_ = r.Reply(map[string]any{"decision": "decline"}, nil)
 			return
 		}
 		s.fileApproval(r, p)
 	case "item/tool/requestUserInput":
 		if !main {
-			r.Reply(map[string]any{"answers": map[string]any{}}, nil)
+			_ = r.Reply(map[string]any{"answers": map[string]any{}}, nil)
 			return
 		}
 		s.userInput(r, p)
 	case "mcpServer/elicitation/request":
 		if p.ServerName == "oriel" {
-			r.Reply(map[string]any{"action": "accept", "content": map[string]any{}}, nil)
+			_ = r.Reply(map[string]any{"action": "accept", "content": map[string]any{}}, nil)
 			return
 		}
 		if !main {
-			r.Reply(map[string]any{"action": "decline"}, nil)
+			_ = r.Reply(map[string]any{"action": "decline"}, nil)
 			return
 		}
 		s.elicitation(r, p)
 	default:
-		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "oriel doesn't answer " + r.Method})
+		_ = r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "oriel doesn't answer " + r.Method})
 	}
 }
 
 // refuse declines a request for the guard rails, and tells the turn why.
 func (s *session) refuse(r *jsonrpc.Request, p request, decline map[string]any, reason string) {
-	r.Reply(decline, nil)
+	_ = r.Reply(decline, nil)
 	go s.tell(p.ThreadID, p.TurnID, "Denied by Oriel: "+reason)
 }
 
@@ -142,7 +142,7 @@ func (s *session) fileApproval(r *jsonrpc.Request, p request) {
 		}
 	}
 	if (s.spec.Policy == agent.PolicyLight || s.spec.Policy == agent.PolicyAuto) && p.GrantRoot == "" {
-		r.Reply(map[string]any{"decision": "accept"}, nil)
+		_ = r.Reply(map[string]any{"decision": "accept"}, nil)
 		return
 	}
 	perm := agent.Permission{Tool: "Edit", Summary: strings.Join(paths, ", ")}

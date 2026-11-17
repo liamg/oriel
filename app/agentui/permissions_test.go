@@ -34,7 +34,7 @@ func sandboxedSessionOn(t *testing.T, backend sandbox.Backend) (*apptest.Window,
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(home) })
+	t.Cleanup(func() { _ = os.RemoveAll(home) })
 	t.Setenv("HOME", home)
 	f := host.NewSandboxFactory(func() sandbox.Config { return sandbox.Config{} })
 	f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return backend, nil }

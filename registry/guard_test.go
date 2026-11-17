@@ -42,7 +42,7 @@ func TestCommandErrorsDontTurnItOff(t *testing.T) {
 	r := New()
 	r.Command(Command{ID: "fail", Run: func(Ctx, Args) error { return errors.New("no") }})
 	for range 5 {
-		r.Run(context.Background(), "fail", nil)
+		_ = r.Run(context.Background(), "fail", nil) // it fails, as it's made to
 	}
 	if off := r.TurnedOff(); len(off) != 0 {
 		t.Errorf("turned off = %+v", off)

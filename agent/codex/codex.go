@@ -274,11 +274,11 @@ func (p *Provider) serve(ctx context.Context, h jsonrpc.Handlers) (*shortServer,
 }
 
 func (s *shortServer) close() {
-	s.rpc.Close()
+	_ = s.rpc.Close()
 	if s.cmd.Process != nil {
-		s.cmd.Process.Kill()
+		_ = s.cmd.Process.Kill()
 	}
-	s.cmd.Wait()
+	_ = s.cmd.Wait()
 }
 
 func initialize(ctx context.Context, rpc *jsonrpc.Conn) error {

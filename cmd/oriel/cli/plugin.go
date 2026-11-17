@@ -36,7 +36,7 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 	}
 	fs := flag.NewFlagSet("oriel plugin "+args[0], flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintln(stderr, pluginUsage) }
+	fs.Usage = func() { _, _ = fmt.Fprintln(stderr, pluginUsage) }
 	process := fs.Bool("process", false, "with a process binary, in Go")
 	id := fs.String("id", "", "the plugin's id, <owner>/<name>")
 	out := fs.String("o", "", "where pack writes the archives (DIR/dist by default)")
@@ -54,13 +54,13 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(stdout, "%s %s\n", p.Manifest.ID, p.Manifest.Version)
+		_, _ = fmt.Fprintf(stdout, "%s %s\n", p.Manifest.ID, p.Manifest.Version)
 		for _, a := range p.Archives {
 			rel, err := filepath.Rel(dir, a.Path)
 			if err != nil || strings.HasPrefix(rel, "..") {
 				rel = a.Path
 			}
-			fmt.Fprintf(stdout, "sha256:%s  %s  %s\n", a.SHA256, a.Platform, rel)
+			_, _ = fmt.Fprintf(stdout, "sha256:%s  %s  %s\n", a.SHA256, a.Platform, rel)
 		}
 		return nil
 	case "publish":
@@ -69,10 +69,10 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		if p.PR == "" {
-			fmt.Fprintln(stdout, p.Note)
+			_, _ = fmt.Fprintln(stdout, p.Note)
 			return nil
 		}
-		fmt.Fprintf(stdout, "%s %s: %s\n", p.ID, p.Version, p.PR)
+		_, _ = fmt.Fprintf(stdout, "%s %s: %s\n", p.ID, p.Version, p.PR)
 		return nil
 	case "init":
 		if *id == "" {
@@ -86,7 +86,7 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 			return err
 		}
 		for _, f := range files {
-			fmt.Fprintln(stdout, "wrote", filepath.Join(dir, f))
+			_, _ = fmt.Fprintln(stdout, "wrote", filepath.Join(dir, f))
 		}
 		return nil
 	}

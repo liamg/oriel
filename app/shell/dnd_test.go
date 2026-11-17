@@ -103,8 +103,12 @@ func TestFilesDroppedOnTheWindow(t *testing.T) {
 	s := dndScene(t)
 	dir := t.TempDir()
 	a, b := filepath.Join(dir, "a.go"), filepath.Join(dir, "b.go")
-	os.WriteFile(a, []byte("package a\n"), 0o644)
-	os.WriteFile(b, []byte("package b\n"), 0o644)
+	if err := os.WriteFile(a, []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(b, []byte("package b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	dropFiles(s, s.TextPoint("Doing ← drop here"), a, b)
 	if !strings.Contains(s.FullText(), "got file:"+a+","+b) {
 		t.Errorf("the plugin didn't get the files:\n%s", s.FullText())

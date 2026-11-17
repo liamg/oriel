@@ -57,7 +57,7 @@ func Serve(r io.Reader, w io.Writer, f Factory) error {
 		pr.exited(exit{Error: "Oriel went away"})
 	}
 	for _, x := range ss {
-		x.s.Close()
+		_ = x.s.Close()
 		x.stop()
 		x.cleanup()
 	}
@@ -132,11 +132,11 @@ func (s *server) request(ctx context.Context, method string, raw json.RawMessage
 		}
 		at := w.place()
 		at.Report = func(step, note string) {
-			s.peer.Notify("sandbox/report", placeCall{Call: w.Call, Step: step, Note: note})
+			_ = s.peer.Notify("sandbox/report", placeCall{Call: w.Call, Step: step, Note: note})
 		}
 		at.Env = func(name string) string {
 			var r placeCall
-			callOn(ctx, s.peer, "sandbox/env", placeCall{Call: w.Call, Name: name}, &r)
+			_ = callOn(ctx, s.peer, "sandbox/env", placeCall{Call: w.Call, Name: name}, &r)
 			return r.Value
 		}
 		n, err := sb.SandboxNeeds(ctx, at)
@@ -249,7 +249,7 @@ func (s *server) login(p agent.Provider, id string) (any, error) {
 		if err != nil {
 			d.Error = err.Error()
 		}
-		s.peer.Notify("login/done", d)
+		_ = s.peer.Notify("login/done", d)
 	}()
 	return loginParams{Login: id, URL: l.URL}, nil
 }
@@ -258,7 +258,7 @@ func (s *server) notify(method string, raw json.RawMessage) {
 	switch method {
 	case "exec/output", "exec/exit":
 		var o output
-		json.Unmarshal(raw, &o)
+		_ = json.Unmarshal(raw, &o)
 		s.mu.Lock()
 		pr := s.procs[o.Process]
 		if method == "exec/exit" {
@@ -270,14 +270,14 @@ func (s *server) notify(method string, raw json.RawMessage) {
 		}
 		if method == "exec/exit" {
 			var x exit
-			json.Unmarshal(raw, &x)
+			_ = json.Unmarshal(raw, &x)
 			pr.exited(x)
 			return
 		}
 		pr.output(o.Stream, unb64(o.Data))
 	case "login/cancel":
 		var l loginParams
-		json.Unmarshal(raw, &l)
+		_ = json.Unmarshal(raw, &l)
 		s.mu.Lock()
 		cancel := s.logins[l.Login]
 		s.mu.Unlock()
@@ -286,7 +286,7 @@ func (s *server) notify(method string, raw json.RawMessage) {
 		}
 	case "session/stop":
 		var sp sessionParams
-		json.Unmarshal(raw, &sp)
+		_ = json.Unmarshal(raw, &sp)
 		s.mu.Lock()
 		x := s.sessions[sp.Session]
 		s.mu.Unlock()
@@ -315,7 +315,7 @@ func (s *server) start(_ context.Context, p agent.Provider, sp startParams) (any
 	x.stop = stop
 	x.cleanup = func() {
 		if x.tmp != "" {
-			os.RemoveAll(x.tmp)
+			_ = os.RemoveAll(x.tmp)
 		}
 	}
 	s.mu.Lock()
@@ -379,13 +379,13 @@ func (x *served) forward() {
 		if err != nil {
 			continue
 		}
-		x.srv.peer.Notify("session/event", eventParams{Session: x.handle, Event: w})
+		_ = x.srv.peer.Notify("session/event", eventParams{Session: x.handle, Event: w})
 	}
 	x.srv.mu.Lock()
 	_, open := x.srv.sessions[x.handle]
 	x.srv.mu.Unlock()
 	if open {
-		x.srv.peer.Notify("session/closed", sessionParams{Session: x.handle})
+		_ = x.srv.peer.Notify("session/closed", sessionParams{Session: x.handle})
 	}
 }
 
@@ -393,7 +393,7 @@ func (x *served) watchTerminal(t agent.Terminal) {
 	backlog, live, detach := t.Attach()
 	defer detach()
 	if len(backlog) > 0 {
-		x.srv.peer.Notify("terminal/output", sessionParams{Session: x.handle, Data: b64(backlog)})
+		_ = x.srv.peer.Notify("terminal/output", sessionParams{Session: x.handle, Data: b64(backlog)})
 	}
 	for {
 		select {
@@ -401,7 +401,7 @@ func (x *served) watchTerminal(t agent.Terminal) {
 			if !ok {
 				return
 			}
-			x.srv.peer.Notify("terminal/output", sessionParams{Session: x.handle, Data: b64(b)})
+			_ = x.srv.peer.Notify("terminal/output", sessionParams{Session: x.handle, Data: b64(b)})
 		case <-x.sent:
 			return
 		}
@@ -514,7 +514,7 @@ func (e remoteExec) start(ctx context.Context, cmd *exec.Cmd, pty *size) (*remot
 	go func() {
 		select {
 		case <-ctx.Done():
-			pr.Kill()
+			_ = pr.Kill()
 		case <-pr.done:
 		}
 	}()
@@ -535,11 +535,11 @@ type remote struct {
 func (r *remote) output(stream string, b []byte) {
 	if stream == "stderr" {
 		if r.stderr != nil {
-			r.stderr.Write(b)
+			_, _ = r.stderr.Write(b)
 		}
 		return
 	}
-	r.out.Write(b)
+	_, _ = r.out.Write(b)
 }
 
 func (r *remote) exited(x exit) {
@@ -619,6 +619,6 @@ func (p remotePTY) Resize(cols, rows int) error {
 }
 
 func (p remotePTY) Close() error {
-	p.Kill()
+	_ = p.Kill()
 	return p.out.Close()
 }

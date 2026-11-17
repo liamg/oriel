@@ -55,7 +55,7 @@ func Command(p Profile, name string, args ...string) (*exec.Cmd, error) {
 // through /usr/bin/env, the program it names).
 func interpreters(path string) []string {
 	if f, err := elf.Open(path); err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		for _, p := range f.Progs {
 			if p.Type == elf.PT_INTERP {
 				b := make([]byte, p.Filesz)
@@ -72,7 +72,7 @@ func interpreters(path string) []string {
 		return nil
 	}
 	n, _ := f.Read(b)
-	f.Close()
+	_ = f.Close()
 	line, ok := strings.CutPrefix(string(b[:n]), "#!")
 	if !ok {
 		return nil

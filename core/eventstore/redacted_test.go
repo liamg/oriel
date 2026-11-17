@@ -87,16 +87,26 @@ func TestAVaultThatCantWriteStopsTheLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Chmod(dir, 0o500)
-	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chmod(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	})
 	var log bytes.Buffer
 	rec := core.NewRecorder(&log).Keep(vault)
 	a := New()
 	a.Subscribe(core.Filter{}, rec.Record)
 	thread := core.Thread{ID: "t1", Status: core.ThreadOpen, Comments: []core.Comment{
 		{ID: "c1", Author: core.AuthorHost, Name: "mallory", Body: "secret", Redacted: true}}}
-	a.Apply(core.SessionSynced{Session: core.SessionState{ID: "pr", Kind: core.KindWork}})
-	a.Apply(core.ThreadUpdated{Session: "pr", Thread: thread})
+	if err := a.Apply(core.SessionSynced{Session: core.SessionState{ID: "pr", Kind: core.KindWork}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Apply(core.ThreadUpdated{Session: "pr", Thread: thread}); err != nil {
+		t.Fatal(err)
+	}
 	if rec.Err() == nil {
 		t.Error("the recorder reports no error")
 	}

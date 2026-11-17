@@ -575,7 +575,7 @@ func localError(err error) error {
 		}
 	case CodeUsageProbe:
 		var d probeData
-		json.Unmarshal(je.Data, &d)
+		_ = json.Unmarshal(je.Data, &d)
 		return probeFailed{msg: je.Message, provider: d.Provider, started: d.Started}
 	}
 	return errors.New(je.Message)

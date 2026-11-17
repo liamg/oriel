@@ -31,7 +31,7 @@ func init() {
 		dir = "/tmp"
 	}
 	if real, err := filepath.EvalSymlinks(dir); err == nil {
-		os.Setenv("TMPDIR", real)
+		_ = os.Setenv("TMPDIR", real)
 	}
 }
 
@@ -118,7 +118,7 @@ func shortDir(t testing.TB) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
 }
 

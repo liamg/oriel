@@ -240,7 +240,7 @@ func getPicture(ctx context.Context, client *http.Client, src string) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("the server answered %s", resp.Status)
 	}

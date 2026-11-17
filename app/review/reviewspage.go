@@ -311,7 +311,7 @@ func (x *Reviews) pageHeader(c *ui.Ctx, rows []reviewRow) {
 
 func atoiOr(s string) int {
 	n := 0
-	fmt.Sscan(s, &n)
+	_, _ = fmt.Sscan(s, &n)
 	return n
 }
 

@@ -18,7 +18,7 @@ const maxFingerprint = 50000
 func Fingerprint(root string) string {
 	h := sha256.New()
 	n := 0
-	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -37,7 +37,7 @@ func Fingerprint(root string) string {
 			return nil
 		}
 		rel, _ := filepath.Rel(root, p)
-		fmt.Fprintf(h, "%s\x00%d\x00%d\n", filepath.ToSlash(rel), info.Size(), info.ModTime().UnixNano())
+		_, _ = fmt.Fprintf(h, "%s\x00%d\x00%d\n", filepath.ToSlash(rel), info.Size(), info.ModTime().UnixNano())
 		return nil
 	})
 	if n > maxFingerprint {

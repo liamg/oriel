@@ -19,8 +19,12 @@ import (
 // files.
 func menuScene(t *testing.T) (*apptest.Scene, map[string]render.Rect) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# readme\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# readme\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.WriteConfig(map[string]string{"init.lua": `oriel.menu.add{ label = "Run go vet", group = "go", when = { file = "*.go" },
   run = function(at) oriel.notify("vet " .. at.file) end }
@@ -138,7 +142,9 @@ func TestTabMenuCloses(t *testing.T) {
 			dir := t.TempDir()
 			s := apptest.New(t, apptest.Options{WorkDir: dir})
 			for _, f := range []string{"a.go", "b.go", "c.go", "d.go"} {
-				os.WriteFile(filepath.Join(dir, f), []byte("package main\n"), 0o644)
+				if err := os.WriteFile(filepath.Join(dir, f), []byte("package main\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
 				s.Run("editor.open", registry.Args{"path": f})
 			}
 			s.Frame()

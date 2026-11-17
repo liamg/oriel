@@ -110,9 +110,13 @@ func TestOptionWatchAndDispose(t *testing.T) {
 		v, _, _ := o.Get("ui.blink", registry.At{})
 		seen = append(seen, v)
 	})
-	o.Set("ui.blink", registry.LayerUser, registry.At{}, time.Second)
+	if err := o.Set("ui.blink", registry.LayerUser, registry.At{}, time.Second); err != nil {
+		t.Fatal(err)
+	}
 	cancel.Dispose()
-	o.Set("ui.blink", registry.LayerUser, registry.At{}, 2*time.Second)
+	if err := o.Set("ui.blink", registry.LayerUser, registry.At{}, 2*time.Second); err != nil {
+		t.Fatal(err)
+	}
 	if len(seen) != 1 || seen[0] != time.Second {
 		t.Errorf("watch saw %v", seen)
 	}
@@ -133,7 +137,9 @@ func TestOptionSources(t *testing.T) {
 	if err := o.SetFrom("number", registry.LayerUser, registry.At{}, "relative", "~/.config/oriel/settings.toml"); err != nil {
 		t.Fatal(err)
 	}
-	o.SetFrom("editor.line_numbers", registry.LayerLua, registry.At{}, "off", "init.lua:12")
+	if err := o.SetFrom("editor.line_numbers", registry.LayerLua, registry.At{}, "off", "init.lua:12"); err != nil {
+		t.Fatal(err)
+	}
 	if src := o.Source("editor.line_numbers", registry.At{}); src != "init.lua:12" {
 		t.Errorf("source %q", src)
 	}
@@ -233,15 +239,21 @@ func TestOptionFollows(t *testing.T) {
 	o := r.Options()
 	heard := 0
 	defer o.Watch("ui.tooltip.font_size", func() { heard++ }).Dispose()
-	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
+	if err := o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0); err != nil {
+		t.Fatal(err)
+	}
 	if v, l, _ := o.Get("ui.tooltip.font_size", registry.At{}); v != 16.0 || l != registry.LayerDefault {
 		t.Errorf("following ui.font_size at 16: %v from %v", v, l)
 	}
 	if heard != 1 {
 		t.Errorf("setting the option it follows ran its watchers %d times", heard)
 	}
-	o.Set("ui.tooltip.font_size", registry.LayerUser, registry.At{}, 11.0)
-	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 20.0)
+	if err := o.Set("ui.tooltip.font_size", registry.LayerUser, registry.At{}, 11.0); err != nil {
+		t.Fatal(err)
+	}
+	if err := o.Set("ui.font_size", registry.LayerUser, registry.At{}, 20.0); err != nil {
+		t.Fatal(err)
+	}
 	if v, l, _ := o.Get("ui.tooltip.font_size", registry.At{}); v != 11.0 || l != registry.LayerUser {
 		t.Errorf("set to 11, then ui.font_size to 20: %v from %v", v, l)
 	}

@@ -31,7 +31,7 @@ func TestFromATerminalTheAppHasNoTerminal(t *testing.T) {
 	if err != nil {
 		t.Skipf("no pseudo-terminal here: %v", err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	printed, _ := io.ReadAll(p)
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("supervisor: %v; printed %q", err, printed)
@@ -84,7 +84,7 @@ func TestTheTerminalsModesAreRestored(t *testing.T) {
 	if err != nil {
 		t.Skipf("no pseudo-terminal here: %v", err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	printed, _ := io.ReadAll(p)
 	if err := cmd.Wait(); err != nil {
 		t.Fatalf("supervisor: %v; printed %q", err, printed)
@@ -107,7 +107,7 @@ func TestSignalsReachTheApp(t *testing.T) {
 	if err != nil {
 		t.Skipf("no pseudo-terminal here: %v", err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	var printed bytes.Buffer
 	readUntil(t, p, &printed, "ready")
 	for n := 1; n <= 2; n++ {
@@ -142,7 +142,9 @@ func detachTest(t *testing.T, role string) string {
 	t.Setenv("ORIEL_DETACH_TEST", role)
 	t.Setenv("ORIEL_DETACH_OUT", out)
 	t.Setenv(appEnv, "")
-	os.Unsetenv(appEnv)
+	if err := os.Unsetenv(appEnv); err != nil {
+		t.Fatal(err)
+	}
 	return out
 }
 
@@ -155,7 +157,7 @@ func detachHelper(role, out string) {
 	case "notty":
 		f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 		if err == nil {
-			f.Close()
+			_ = f.Close()
 		}
 		sid, _ := unix.Getsid(0)
 		fmt.Println("the app says hello")

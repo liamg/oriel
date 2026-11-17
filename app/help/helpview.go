@@ -175,6 +175,9 @@ func (v *View) find(topic string) string {
 	return best
 }
 
+// follow opens a help id from a click or a request, saying in a notice when there's no page for it.
+func (v *View) follow(id string) { kit.NotifyError(v.h, "help.error", v.show(id), true) }
+
 // show opens a help id, the page before it going on the back stack.
 func (v *View) show(id string) error {
 	if id == "" {
@@ -221,7 +224,7 @@ func (v *View) title(id string) string {
 func (v *View) build(c *ui.Ctx, vc uireg.ViewCtx) {
 	if u := v.h.UI(); u != nil {
 		if id, ok := u.TakeHelpRequest(); ok {
-			v.show(id)
+			v.follow(id)
 		}
 	}
 	if v.mode {
@@ -263,7 +266,7 @@ func (v *View) markers(c *ui.Ctx) {
 			Label: "Help: " + v.title(n.Help)}, func(c *ui.Ctx) {
 			c.Text("q", "?", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: th.C(tHelpMarker)})
 		}).Clicked {
-			v.show(n.Help)
+			v.follow(n.Help)
 		}
 	}
 }
@@ -320,7 +323,7 @@ func (v *View) page(c *ui.Ctx) {
 								c.Text("t", v.title(r), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(tHelpLink)})
 								c.Text("id", r, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)})
 							}).Clicked {
-							v.show(r)
+							v.follow(r)
 						}
 					}
 					c.Box("gap1", ui.Style{H: ui.Px(10)}, nil)

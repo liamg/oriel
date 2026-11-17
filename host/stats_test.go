@@ -47,7 +47,9 @@ func (f *loggedFake) Logs(cwd, _ string) []agent.Log {
 func namedRepo(t *testing.T, name string) string {
 	t.Helper()
 	r := &gittest.Repo{T: t, Dir: filepath.Join(t.TempDir(), name), When: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)}
-	os.MkdirAll(r.Dir, 0o755)
+	if err := os.MkdirAll(r.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	r.Git("init", "-q", "-b", "main")
 	r.Write(map[string]string{"README": name + "\n"})
 	r.Commit("Ada", "first")
@@ -92,7 +94,7 @@ func statsHost(t *testing.T) (*Host, *loggedFake) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	return w, f
 }
 
@@ -146,7 +148,9 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	body, _ := os.ReadFile(p)
 	body = []byte(strings.Replace(string(body), `"output_tokens":120000`, `"output_tokens":999999`, 1))
 	body = append(body, []byte(`{"type":"assistant","timestamp":"2026-10-03T09:00:00Z","message":{"id":"m3","model":"claude-opus-5","content":[],"usage":{"input_tokens":0,"output_tokens":40000}}}`+"\n")...)
-	os.WriteFile(p, body, 0o644)
+	if err := os.WriteFile(p, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	q.Group = stats.ByRepo
 	r = w.StatsQuery(q)
 	if !near(r.Totals.Cost, 17) {

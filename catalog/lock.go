@@ -71,7 +71,7 @@ func (l *Lock) Set(id string, e Locked) error {
 	if old, ok := l.Get(id); ok && equalLocked(old, e) {
 		return nil
 	}
-	l.doc.Delete(id)
+	_ = l.doc.Delete(id)
 	set := func(k string, v any) error { return l.doc.Set([]string{id, k}, v) }
 	caps := make([]any, len(e.Capabilities))
 	for i, c := range e.Capabilities {

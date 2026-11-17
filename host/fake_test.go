@@ -79,7 +79,7 @@ func (r *rig) open() {
 		r.t.Fatal(err)
 	}
 	r.w = w
-	r.t.Cleanup(func() { w.Close() })
+	r.t.Cleanup(func() { _ = w.Close() })
 }
 
 func (r *rig) now() time.Time { return r.clock.Fake.Now() }

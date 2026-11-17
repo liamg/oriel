@@ -255,6 +255,10 @@ func (x *Inbox) isDismissed(k string) bool {
 }
 
 // dismiss takes a card off the stack, and tells its source.
+// dismissDrawn dismisses a card from its own dialog or ✕: it was drawn waiting, and one answered since has nothing
+// left to dismiss.
+func (x *Inbox) dismissDrawn(k string) { _ = x.dismiss(k) }
+
 func (x *Inbox) dismiss(k string) error {
 	x.gather()
 	x.mu.Lock()
@@ -267,7 +271,7 @@ func (x *Inbox) dismiss(k string) error {
 	fn := r.card.Dismissed
 	x.mu.Unlock()
 	if fn != nil {
-		registry.Call(func() error { fn(); return nil })
+		registry.Try(func() { fn() })
 	}
 	return nil
 }
@@ -383,12 +387,12 @@ func (x *Inbox) promptPause() time.Duration {
 func (x *Inbox) promptDialog(c *ui.Ctx, r *inboxRow) {
 	k := r.card.Key()
 	n, of := x.queued(r)
-	place := uireg.CardPlace{Stacked: true, TakeFocus: true, Dismiss: func() { x.dismiss(k) }, Prompt: true, N: n, Of: of}
+	place := uireg.CardPlace{Stacked: true, TakeFocus: true, Dismiss: func() { x.dismissDrawn(k) }, Prompt: true, N: n, Of: of}
 	o := widget.DialogOpts{Label: cmp.Or(r.card.Title, r.card.Kicker), Help: inboxHelp + "#prompts", Width: widget.PromptWidth(c)}
 	if widget.Dialog(c, "prompt", o, func(c *ui.Ctx) {
 		c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.draw(c, r, place) })
 	}) {
-		x.dismiss(k)
+		x.dismissDrawn(k)
 	}
 }
 
@@ -483,7 +487,7 @@ func (x *Inbox) dialog(c *ui.Ctx, r *inboxRow) {
 	if widget.Dialog(c, "dialog", widget.DialogOpts{Label: cmp.Or(r.card.Kicker, r.card.Title), Help: inboxHelp + "#dialogs"}, func(c *ui.Ctx) {
 		x.card(c, r, true)
 	}) {
-		x.dismiss(k)
+		x.dismissDrawn(k)
 	}
 }
 
@@ -492,7 +496,7 @@ func (x *Inbox) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 	k := r.card.Key()
 	p := uireg.CardPlace{Stacked: stacked, TakeFocus: stacked && r.card.Top}
 	if stacked {
-		p.Dismiss = func() { x.dismiss(k) }
+		p.Dismiss = func() { x.dismissDrawn(k) }
 	}
 	c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.draw(c, r, p) })
 }
@@ -551,7 +555,7 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 	}
 	a := cd.Actions[res.Action]
 	if a.Run != nil {
-		registry.Call(func() error { a.Run(); return nil })
+		registry.Try(func() { a.Run() })
 		return
 	}
 	if a.Command != "" {
@@ -647,7 +651,7 @@ func (x *Inbox) choose(r *inboxRow, toggle bool) {
 	}
 	x.mu.Unlock()
 	if open := r.card.Open; open != nil && r.waiting() {
-		registry.Call(func() error { open(); return nil })
+		registry.Try(func() { open() })
 	}
 }
 

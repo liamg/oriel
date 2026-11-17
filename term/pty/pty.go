@@ -25,9 +25,9 @@ func Start(cmd *exec.Cmd, cols, rows int) (*PTY, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer slave.Close()
+	defer func() { _ = slave.Close() }()
 	if err := setSize(master, cols, rows); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, err
 	}
 	if cmd.Stdin == nil {
@@ -50,7 +50,7 @@ func Start(cmd *exec.Cmd, cols, rows int) (*PTY, error) {
 		cmd.SysProcAttr.Ctty = 3
 	}
 	if err := cmd.Start(); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, err
 	}
 	return &PTY{f: master, cmd: cmd}, nil

@@ -100,7 +100,7 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 	}
 	if err := c.Start(); err != nil {
 		cancel()
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		return nil, err
 	}
 	x := &Exec{run: run, cancel: cancel, done: make(chan struct{})}
@@ -116,18 +116,18 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 	}
 	go func() {
 		defer close(x.done)
-		defer os.RemoveAll(dir)
+		defer func() { _ = os.RemoveAll(dir) }()
 		parsed := make(chan error, 1)
 		go func() {
 			err := req.Adapter.Parse(pr, send)
-			io.Copy(io.Discard, pr)
+			_, _ = io.Copy(io.Discard, pr)
 			parsed <- err
 		}()
 		werr := c.Wait()
 		if errors.Is(werr, exec.ErrWaitDelay) {
 			werr = nil // it exited cleanly; a child kept its output open
 		}
-		pw.Close()
+		_ = pw.Close()
 		perr := <-parsed
 		mu.Lock()
 		run.Raw = rawBuf.String()
@@ -149,7 +149,7 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 			if cv, ok := req.Adapter.(Coverer); ok {
 				if f, err := os.Open(filepath.Join(dir, cmd.CoverFile)); err == nil {
 					run.Coverage, err = cv.Coverage(req.Workspace, f)
-					f.Close()
+					_ = f.Close()
 					if err != nil && x.err == nil {
 						x.err = err
 					}

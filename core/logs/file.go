@@ -103,7 +103,7 @@ func (f *File) open() error {
 	}
 	st, err := fh.Stat()
 	if err != nil {
-		fh.Close()
+		_ = fh.Close()
 		return err
 	}
 	f.f, f.size = fh, st.Size()
@@ -111,14 +111,14 @@ func (f *File) open() error {
 }
 
 func (f *File) rotate() error {
-	f.f.Close()
+	_ = f.f.Close()
 	f.f = nil
 	keep := f.Keep
 	if keep <= 0 {
 		keep = 3
 	}
 	for i := keep - 1; i >= 1; i-- {
-		os.Rename(fmt.Sprintf("%s.%d", f.Path, i), fmt.Sprintf("%s.%d", f.Path, i+1))
+		_ = os.Rename(fmt.Sprintf("%s.%d", f.Path, i), fmt.Sprintf("%s.%d", f.Path, i+1))
 	}
 	if err := os.Rename(f.Path, f.Path+".1"); err != nil {
 		return err

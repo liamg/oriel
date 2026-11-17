@@ -151,7 +151,9 @@ func TestNoWebTurnsWebSearchOff(t *testing.T) {
 
 func TestGatewayConfig(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "gw.json")
-	os.WriteFile(f, []byte(`{"mcpServers":{"gw":{"type":"http","url":"http://gw/mcp","headers":{"X":"y"}},"local":{"command":"x","args":["a"]}}}`), 0o644)
+	if err := os.WriteFile(f, []byte(`{"mcpServers":{"gw":{"type":"http","url":"http://gw/mcp","headers":{"X":"y"}},"local":{"command":"x","args":["a"]}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := newSession(&Provider{OrielBin: "/bin/oriel"}, agent.StartSpec{Sandbox: &agent.Sandbox{GatewayMCP: f, HookSocket: "/run/oriel/hook.sock"}})
 	defer s.events.Close()
 	s.tools = &toolServer{path: "/tmp/s.sock"}
@@ -280,7 +282,9 @@ func TestLoginMark(t *testing.T) {
 		t.Errorf("no auth.json: %q", m)
 	}
 	write := func(token string) string {
-		os.WriteFile(filepath.Join(dir, "auth.json"), []byte(`{"OPENAI_API_KEY":null,"tokens":{"id_token":"x","access_token":"`+token+`","refresh_token":"r","account_id":null},"last_refresh":"2026-10-01T00:00:00Z"}`), 0o600)
+		if err := os.WriteFile(filepath.Join(dir, "auth.json"), []byte(`{"OPENAI_API_KEY":null,"tokens":{"id_token":"x","access_token":"`+token+`","refresh_token":"r","account_id":null},"last_refresh":"2026-10-01T00:00:00Z"}`), 0o600); err != nil {
+			t.Error(err)
+		}
 		return loginMark(dir)
 	}
 	a, b := write("one"), write("two")
@@ -293,7 +297,9 @@ func TestLoginMark(t *testing.T) {
 func TestDetectMarksTheLogin(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEX_HOME", dir)
-	os.WriteFile(filepath.Join(dir, "auth.json"), []byte(`{"tokens":{"access_token":"t"}}`), 0o600)
+	if err := os.WriteFile(filepath.Join(dir, "auth.json"), []byte(`{"tokens":{"access_token":"t"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	in, err := fakeProvider(t).Detect(context.Background())
 	if err != nil || in.Login == "" || in.Login != loginMark(dir) {
 		t.Errorf("install = %+v, %v", in, err)
@@ -334,8 +340,12 @@ func TestLogs(t *testing.T) {
 	t.Setenv("CODEX_HOME", dir)
 	id := "0199a213-81c0-7800-8aa1-bbab2a035a53"
 	p := filepath.Join(dir, "sessions/2026/10/01/rollout-2026-10-01T09-00-00-"+id+".jsonl")
-	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, []byte("{}\n"), 0o644)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	logs := (&Provider{}).Logs("/w", id)
 	if len(logs) != 1 || logs[0].Path != p || logs[0].Format != "codex" {
 		t.Errorf("logs = %+v", logs)

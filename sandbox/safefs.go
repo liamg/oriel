@@ -29,7 +29,7 @@ func WriteFile(root, path string, data []byte, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	tmp, f, err := createTemp(r, rel)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func ReadFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return io.ReadAll(f)
 }
 
@@ -147,6 +147,6 @@ func Open(path string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	return r.Open(rel)
 }

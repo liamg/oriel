@@ -32,6 +32,8 @@ func BenchmarkDocumentHighlightsVisible(b *testing.B) {
 	mid := 1_000_000
 	b.ReportAllocs()
 	for b.Loop() {
-		d.Highlights(mid, mid+4000)
+		if _, err := d.Highlights(mid, mid+4000); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

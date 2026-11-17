@@ -32,12 +32,12 @@ func encode(w *bufio.Writer, v any) error {
 		return encodeInt(w, v)
 	case uint64:
 		if v > math.MaxInt64 {
-			w.WriteByte(0xcf)
+			_ = w.WriteByte(0xcf)
 			return binary.Write(w, binary.BigEndian, v)
 		}
 		return encodeInt(w, int64(v))
 	case float64:
-		w.WriteByte(0xcb)
+		_ = w.WriteByte(0xcb)
 		return binary.Write(w, binary.BigEndian, math.Float64bits(v))
 	case string:
 		writeHeader(w, len(v), 0xa0, 31, 0xd9, 0xda, 0xdb)
@@ -71,7 +71,9 @@ func encode(w *bufio.Writer, v any) error {
 		}
 		slices.Sort(keys)
 		for _, k := range keys {
-			encode(w, k)
+			if err := encode(w, k); err != nil {
+				return err
+			}
 			if err := encode(w, v[k]); err != nil {
 				return err
 			}
@@ -79,7 +81,7 @@ func encode(w *bufio.Writer, v any) error {
 		return nil
 	case Ext:
 		writeHeader(w, len(v.Data), 0, -1, 0xc7, 0xc8, 0xc9)
-		w.WriteByte(byte(v.Type))
+		_ = w.WriteByte(byte(v.Type))
 		_, err := w.Write(v.Data)
 		return err
 	}
@@ -93,16 +95,16 @@ func encodeInt(w *bufio.Writer, n int64) error {
 	case n < 0 && n >= -32:
 		return w.WriteByte(byte(int8(n)))
 	case n >= math.MinInt8 && n <= math.MaxInt8:
-		w.WriteByte(0xd0)
+		_ = w.WriteByte(0xd0)
 		return w.WriteByte(byte(int8(n)))
 	case n >= math.MinInt16 && n <= math.MaxInt16:
-		w.WriteByte(0xd1)
+		_ = w.WriteByte(0xd1)
 		return binary.Write(w, binary.BigEndian, int16(n))
 	case n >= math.MinInt32 && n <= math.MaxInt32:
-		w.WriteByte(0xd2)
+		_ = w.WriteByte(0xd2)
 		return binary.Write(w, binary.BigEndian, int32(n))
 	}
-	w.WriteByte(0xd3)
+	_ = w.WriteByte(0xd3)
 	return binary.Write(w, binary.BigEndian, n)
 }
 
@@ -111,16 +113,16 @@ func encodeInt(w *bufio.Writer, n int64) error {
 func writeHeader(w *bufio.Writer, n int, fix byte, fixMax int, c8, c16, c32 byte) {
 	switch {
 	case n <= fixMax:
-		w.WriteByte(fix | byte(n))
+		_ = w.WriteByte(fix | byte(n))
 	case c8 != 0 && n <= math.MaxUint8:
-		w.WriteByte(c8)
-		w.WriteByte(byte(n))
+		_ = w.WriteByte(c8)
+		_ = w.WriteByte(byte(n))
 	case n <= math.MaxUint16:
-		w.WriteByte(c16)
-		binary.Write(w, binary.BigEndian, uint16(n))
+		_ = w.WriteByte(c16)
+		_ = binary.Write(w, binary.BigEndian, uint16(n))
 	default:
-		w.WriteByte(c32)
-		binary.Write(w, binary.BigEndian, uint32(n))
+		_ = w.WriteByte(c32)
+		_ = binary.Write(w, binary.BigEndian, uint32(n))
 	}
 }
 

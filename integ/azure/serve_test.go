@@ -50,11 +50,19 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 	methods := plugin.HostMethods(h)
 	toProc, procIn := io.Pipe()
 	procOut, fromProc := io.Pipe()
-	go azure.Serve(toProc, fromProc)
+	go func() {
+		if err := azure.Serve(toProc, fromProc); err != nil {
+			t.Error(err)
+		}
+	}()
 	conn := jsonrpc.NewConn(procOut, procIn, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
-		go func() { r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)) }()
+		go func() {
+			if err := r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)); err != nil {
+				t.Error(err)
+			}
+		}()
 	}}, jsonrpc.Options{Version: "2.0"})
-	t.Cleanup(func() { conn.Close() })
+	t.Cleanup(func() { _ = conn.Close() })
 	return conn
 }
 
@@ -75,7 +83,9 @@ func TestReviewRequests(t *testing.T) {
 	if err := conn.Call(ctx, "requested", azure.Params{Site: azuretest.Cloud, Orgs: []string{"acme"}}, nil); !errors.As(err, &rpc) || rpc.Code != azure.CodeNoKey {
 		t.Fatalf("with no token: %v", err)
 	}
-	secrets.SetSecret(azure.Secret, azuretest.Token)
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
 
 	priya := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000002", DisplayName: "Priya K", UniqueName: "priya@acme.com"}
 	asked := az.AddPR("acme", "web", "dashboard", azure.PullRequest{Title: "Usage chart", CreatedBy: priya, Source: "refs/heads/usage",
@@ -139,7 +149,9 @@ func TestReviewRequests(t *testing.T) {
 // head the user saw, refused once the source has moved on.
 func TestShipAndMerge(t *testing.T) {
 	az, conn, secrets := fixture(t)
-	secrets.SetSecret(azure.Secret, azuretest.Token)
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
 	ctx := t.Context()
 	repo := azure.CodeRepo{Remote: "https://acme@dev.azure.com/acme/web/_git/dashboard", Repo: "dashboard", Site: azuretest.Cloud}
 
@@ -283,7 +295,9 @@ func TestServerSite(t *testing.T) {
 		}
 	}
 
-	secrets.SetSecret(azuretest.OnPrem.Secret, azuretest.Token)
+	if err := secrets.SetSecret(azuretest.OnPrem.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
 	asked := az.AddPR("DefaultCollection", "web", "billing", azure.PullRequest{Title: "Invoice PDFs", CreatedBy: azuretest.Me,
 		Source: "refs/heads/pdf", Target: "refs/heads/main", Reviewers: []azure.Reviewer{{Identity: azuretest.Me}}})
 	var got azure.Requested
@@ -317,7 +331,9 @@ func TestServerSite(t *testing.T) {
 // its state; reply "answering the new comment's id", in a thread or as a new one in the conversation.
 func TestThreadsAndReply(t *testing.T) {
 	az, conn, secrets := fixture(t)
-	secrets.SetSecret(azure.Secret, azuretest.Token)
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
 	ctx := t.Context()
 	priya := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000002", DisplayName: "Priya K", UniqueName: "priya@acme.com"}
 	stranger := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000009", DisplayName: "Drive-by", UniqueName: "x@else.com"}

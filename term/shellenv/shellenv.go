@@ -121,7 +121,7 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 	// stop kills the shell's session and lets the terminal go, never waiting long: this runs as the app starts.
 	stop := func() {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the shell leads a session of its own: it, and what it started
-		p.Close()                                           // what it hadn't written yet goes, so it can exit
+		_ = p.Close()                                       // what it hadn't written yet goes, so it can exit
 		exited <- <-exited                                  // killed, and its terminal let go: it exits
 		select {
 		case <-read:

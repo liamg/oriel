@@ -18,7 +18,9 @@ import (
 func TestSetIsPerBufferAndOnThePage(t *testing.T) {
 	s := editorScene(t)
 	dir := s.Editor().Dir()
-	os.WriteFile(filepath.Join(dir, "other.txt"), []byte("x\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "other.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	e := engine(s)
 
 	keys(s, ":set sw=2 et<CR>gg>>")
@@ -88,7 +90,7 @@ func TestOptionList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var rows []string
 	in := false
 	sc := bufio.NewScanner(f)

@@ -386,25 +386,25 @@ func (c *Client) Stop(ctx context.Context) error {
 	c.mu.Unlock()
 	exited := make(chan struct{})
 	go func() {
-		c.proc.Wait()
+		_ = c.proc.Wait()
 		close(exited)
 	}()
 	select {
 	case <-exited:
 	case <-time.After(5 * time.Second):
-		c.proc.Kill()
+		_ = c.proc.Kill()
 	case <-ctx.Done():
-		c.proc.Kill()
+		_ = c.proc.Kill()
 	}
-	c.proc.Close()
+	_ = c.proc.Close()
 	<-c.done
 	return err
 }
 
 func (c *Client) kill() {
-	c.proc.Kill()
-	c.proc.Close()
-	c.proc.Wait()
+	_ = c.proc.Kill()
+	_ = c.proc.Close()
+	_ = c.proc.Wait()
 }
 
 // call sends a request and decodes its response's body into out.
@@ -575,7 +575,7 @@ func (c *Client) reverse(m *Message) {
 	seq := c.seq
 	c.mu.Unlock()
 	body, _ := json.Marshal(response{Seq: seq, Type: "response", RequestSeq: m.Seq, Command: m.Command, Message: "not supported by Oriel"})
-	c.write(body)
+	_ = c.write(body)
 }
 
 func (c *Client) event(m *Message) {
@@ -593,7 +593,7 @@ func (c *Client) event(m *Message) {
 			AllThreadsStopped bool   `json:"allThreadsStopped"`
 			HitBreakpointIDs  []int  `json:"hitBreakpointIds"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		ev = Stopped{Reason: b.Reason, Description: b.Description, Text: b.Text, Thread: b.ThreadID, AllThreads: b.AllThreadsStopped,
 			Breakpoints: b.HitBreakpointIDs}
 	case "continued":
@@ -601,7 +601,7 @@ func (c *Client) event(m *Message) {
 			ThreadID            int  `json:"threadId"`
 			AllThreadsContinued bool `json:"allThreadsContinued"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		ev = Continued{Thread: b.ThreadID, AllThreads: b.AllThreadsContinued}
 	case "output":
 		var b struct {
@@ -610,7 +610,7 @@ func (c *Client) event(m *Message) {
 			Source   *wireSource `json:"source"`
 			Line     int         `json:"line"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		if b.Category == "" {
 			b.Category = "console"
 		}
@@ -626,7 +626,7 @@ func (c *Client) event(m *Message) {
 		var b struct {
 			ExitCode int `json:"exitCode"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		ev = Exited{Code: b.ExitCode}
 	case "terminated":
 		c.mu.Lock()
@@ -638,14 +638,14 @@ func (c *Client) event(m *Message) {
 			Reason   string `json:"reason"`
 			ThreadID int    `json:"threadId"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		ev = ThreadChanged{Reason: b.Reason, Thread: b.ThreadID}
 	case "breakpoint":
 		var b struct {
 			Reason     string         `json:"reason"`
 			Breakpoint wireBreakpoint `json:"breakpoint"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		bs := c.updateBreakpoint(b.Breakpoint, b.Reason)
 		ev = BreakpointChanged{Reason: b.Reason, Breakpoint: bs}
 	case "process":
@@ -653,7 +653,7 @@ func (c *Client) event(m *Message) {
 			Name            string `json:"name"`
 			SystemProcessID int    `json:"systemProcessId"`
 		}
-		json.Unmarshal(m.Body, &b)
+		_ = json.Unmarshal(m.Body, &b)
 		ev = ProcessStarted{Name: b.Name, PID: b.SystemProcessID}
 	case "capabilities":
 		var b struct {
@@ -661,7 +661,7 @@ func (c *Client) event(m *Message) {
 		}
 		if json.Unmarshal(m.Body, &b) == nil && len(b.Capabilities) > 0 {
 			c.mu.Lock()
-			json.Unmarshal(b.Capabilities, &c.caps)
+			_ = json.Unmarshal(b.Capabilities, &c.caps)
 			c.mu.Unlock()
 		}
 		return

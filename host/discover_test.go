@@ -38,7 +38,9 @@ func (codexLike) UsageFormats() []usage.Format { return (&codex.Provider{}).Usag
 
 func writeLines(t *testing.T, path string, lines ...string) {
 	t.Helper()
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +102,9 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	writeLines(t, rolloutPath(codexHome, at, "0199a213-81c0-7800-8aa1-bbab2a035a53"), codexRollout(at, elsewhere, "")...)
 	old := filepath.Join(config, "projects", "-w-old", "old.jsonl")
 	writeLines(t, old, claudeLog(r.now().AddDate(0, 0, -200), "/w/old", "long ago")...)
-	os.Chtimes(old, r.now().AddDate(0, 0, -200), r.now().AddDate(0, 0, -200))
+	if err := os.Chtimes(old, r.now().AddDate(0, 0, -200), r.now().AddDate(0, 0, -200)); err != nil {
+		t.Fatal(err)
+	}
 
 	q := stats.Query{Group: stats.BySession, From: r.now().AddDate(0, 0, -7), To: r.now().Add(time.Hour)}
 	rep := r.w.StatsQuery(q)

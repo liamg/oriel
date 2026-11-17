@@ -24,7 +24,9 @@ func (s *Scene) Run(id string, args registry.Args) {
 	s.T.Helper()
 	var err error
 	done := false
-	s.Registry().Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args)
+	if err := s.Registry().Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args); err != nil {
+		s.T.Fatal(err)
+	}
 	if !done && !s.Headless.Until(Timeout, func() bool { return done }) {
 		s.T.Fatalf("%s never finished", id)
 	}

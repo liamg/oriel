@@ -106,16 +106,18 @@ func (m *Manager) Sync(ctx context.Context, entries []Entry, keep func(id string
 		if listed[id] {
 			continue
 		}
-		lock.Delete(id)
+		_ = lock.Delete(id)
 		if keep == nil || !keep(id) {
-			m.Store.Remove(id)
+			_ = m.Store.Remove(id)
 		}
 		removed = append(removed, id)
 	}
 	for _, s := range sts {
 		if s.State == Ready {
 			// The commit can move without asking again (a path source, the same capabilities).
-			lock.Set(s.Entry.ID, s.Locked)
+			if err := lock.Set(s.Entry.ID, s.Locked); err != nil {
+				return sts, removed, err
+			}
 		}
 	}
 	return sts, removed, lock.Save()
@@ -180,7 +182,7 @@ func (m *Manager) resolve(ctx context.Context, lock *Lock, e Entry) Status {
 				return fail(err)
 			}
 			if file != "" {
-				defer os.Remove(file)
+				defer func() { _ = os.Remove(file) }()
 				r.Archives = map[string]string{r.Platform: sum}
 			}
 		}

@@ -34,7 +34,7 @@ func (r REST) Get(ctx context.Context, path, accept string) (*http.Response, err
 	}
 	resp, err := r.do(ctx, url, accept, tok)
 	if err == nil && tok != "" && resp.StatusCode == http.StatusUnauthorized {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		resp, err = r.do(ctx, url, accept, "") // a public repo reads without the token GitHub refused
 	}
 	return resp, err
@@ -59,7 +59,7 @@ func (r REST) JSON(ctx context.Context, path string, out any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if err := refused(resp); err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (r REST) OpenAsset(ctx context.Context, a Asset) (io.ReadCloser, error) {
 		return nil, err
 	}
 	if err := refused(resp); err != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, err
 	}
 	return resp.Body, nil
@@ -136,6 +136,6 @@ func (r REST) ReadAsset(ctx context.Context, a Asset, limit int64) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	return io.ReadAll(io.LimitReader(rc, limit))
 }

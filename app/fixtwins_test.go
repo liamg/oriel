@@ -110,7 +110,9 @@ var fixEntries = []fixEntry{
 	}},
 	{"a plugin's menu entry", "build", func(t *testing.T) *apptest.Scene {
 		dir := t.TempDir()
-		os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644)
+		if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
+			t.Error(err)
+		}
 		s := apptest.New(t, apptest.Options{WorkDir: dir})
 		s.WriteConfig(map[string]string{"init.lua": `oriel.menu.add{ label = "Ask the agent to fix the build", group = "agent",
   when = { view = "editor" }, run = "agent.fix", args = { kind = "build", subject = "the build is red", context = "main.go:3: boom" } }

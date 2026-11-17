@@ -157,7 +157,7 @@ func Build(ctx context.Context, s Spec, log io.Writer) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), p.GoMod, 0o644); err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func Build(ctx context.Context, s Spec, log io.Writer) error {
 		cmd.Dir = dir
 		cmd.Env = append(append(os.Environ(), "GOWORK=off", "GOFLAGS=-mod=mod"), s.Env...)
 		cmd.Stdout, cmd.Stderr = log, log
-		fmt.Fprintln(log, "go", strings.Join(args, " "))
+		_, _ = fmt.Fprintln(log, "go", strings.Join(args, " "))
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("go %s: %w", args[0], err)
 		}

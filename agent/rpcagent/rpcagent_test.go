@@ -35,8 +35,8 @@ func behind(t *testing.T, name string, p agent.Provider) agent.Provider {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		closer(c).Close()
-		bw.Close()
+		_ = closer(c).Close()
+		_ = bw.Close()
 		if err := <-done; err != nil {
 			t.Error(err)
 		}
@@ -85,7 +85,7 @@ func TestEventsCrossWhole(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	fs := f.WaitStarted(t)
 	if fs.Spec.Policy != agent.PolicyAsk || fs.Spec.Mode != "auto" || !slices.Equal(fs.Spec.Allow, []string{"WebSearch"}) {
 		t.Errorf("the provider started on policy %q, mode %q, allowing %q; want ask, auto, WebSearch", fs.Spec.Policy, fs.Spec.Mode, fs.Spec.Allow)
@@ -152,7 +152,7 @@ func TestStopProcessCrosses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	fs := f.WaitStarted(t)
 	ps, ok := s.(agent.ProcessStopper)
 	if !ok {
@@ -170,7 +170,7 @@ func TestStopProcessCrosses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s2.Close()
+	defer func() { _ = s2.Close() }()
 	if err := s2.(agent.ProcessStopper).StopProcess(context.Background(), "p2"); err == nil {
 		t.Error("a session that can't stop processes stopped one")
 	}
@@ -184,7 +184,7 @@ func TestEventsNameTheClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	fs := f.WaitStarted(t)
 	fs.LoseLogin("revoked")
 	for ev := range s.Events() {
@@ -237,7 +237,7 @@ func TestExecRunsOnOriel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	if got := rec.started(); len(got) != 1 || got[0] != "fake" {
 		t.Errorf("Oriel's Exec ran %v, want the agent's own process", got)
 	}
@@ -257,7 +257,13 @@ func TestExecOutsideASandboxIsAllowed(t *testing.T) {
 		asked = append(asked, path)
 		return errors.New("exec isn't granted for " + path)
 	}})
-	defer func() { closer(c).Close(); bw.Close(); <-done }()
+	defer func() {
+		_ = closer(c).Close()
+		_ = bw.Close()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
 	_, err := c.Start(context.Background(), agent.StartSpec{Exec: &recordExec{}})
 	if err == nil || !strings.Contains(err.Error(), "isn't granted") || len(asked) != 1 || !strings.HasSuffix(asked[0], "/true") {
 		t.Errorf("start = %v, asked %v", err, asked)
@@ -297,7 +303,7 @@ func TestTerminalCrosses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	term := s.Terminal()
 	if term == nil {
 		t.Fatal("no terminal")
@@ -330,6 +336,8 @@ func TestTerminalCrosses(t *testing.T) {
 	} else {
 		detach()
 	}
-	term.Write([]byte("after\r"))
+	if _, err := term.Write([]byte("after\r")); err != nil {
+		t.Fatal(err)
+	}
 	shows("after")
 }

@@ -179,7 +179,7 @@ func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 	defer cancel()
 	var wg sync.WaitGroup
 	for _, f := range files {
-		wg.Go(func() { f.sub.Fresh(ctx) })
+		wg.Go(func() { _, _ = f.sub.Fresh(ctx) })
 	}
 	wg.Wait()
 }
@@ -738,7 +738,9 @@ func (s *Settings) undoLast() error {
 	for _, f := range s.allFiles() {
 		if f.path == u.path {
 			if f.trust {
-				s.trustFile(f.path)
+				if err := s.trustFile(f.path); err != nil {
+					return err
+				}
 			}
 			if !u.had {
 				u.src = nil

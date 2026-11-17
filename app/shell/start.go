@@ -77,7 +77,7 @@ func (s *start) recentDirs(h plugin.Host) []startDir {
 	d := &s.dirs
 	if f, _ := rd.File(s.sh.recents.path); !kit.SameBytes(f.Data, d.data) {
 		var rf recentFile
-		json.Unmarshal(f.Data, &rf)
+		_ = json.Unmarshal(f.Data, &rf)
 		d.data, d.recent, d.forgot = f.Data, rf.Directories, nil
 	}
 	var out []startDir
@@ -315,7 +315,9 @@ func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
 				}
 			},
 			forget: func() {
-				s.sh.recents.forget(d.Path)
+				if err := s.sh.recents.forget(d.Path); err != nil {
+					h.Log().Warn("the recent directories", "err", err)
+				}
 				if s.dirs.forgot == nil {
 					s.dirs.forgot = map[string]bool{}
 				}
@@ -560,7 +562,7 @@ func (s *start) links(c *ui.Ctx, from int, links []startRow) {
 // entryNote is an entry's figure, or "".
 func entryNote(e *uireg.StartEntry) (note string) {
 	if e.Note != nil {
-		registry.Call(func() error { note = e.Note(); return nil })
+		registry.Try(func() { note = e.Note() })
 	}
 	return note
 }

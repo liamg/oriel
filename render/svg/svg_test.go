@@ -57,8 +57,12 @@ func TestBadge(t *testing.T) {
 	img := draw(t, d, 2)
 	if os.Getenv("SVG_OUT") != "" {
 		f, _ := os.Create(os.Getenv("SVG_OUT"))
-		png.Encode(f, img)
-		f.Close()
+		if err := png.Encode(f, img); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 	grey, blue := color.NRGBA{0x55, 0x55, 0x55, 255}, color.NRGBA{0x00, 0x7e, 0xc6, 255}
 	if c := img.RGBAAt(4, 20); !near(c, grey) {

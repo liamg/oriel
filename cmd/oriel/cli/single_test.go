@@ -40,7 +40,9 @@ func TestOnlyOneOrielAtATime(t *testing.T) {
 	if code := second(); code != 3 {
 		t.Errorf("a second process on the same home exited %d, want refused (3)", code)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if code := second(); code != 0 {
 		t.Errorf("after the first let go, a second exited %d", code)
 	}
@@ -53,7 +55,7 @@ func TestAnOldWorkerStopsTheApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(home)
+	defer func() { _ = os.RemoveAll(home) }()
 	path := filepath.Join(home, "worker.sock")
 	ln, err := net.Listen("unix", path)
 	if err != nil {
@@ -63,7 +65,9 @@ func TestAnOldWorkerStopsTheApp(t *testing.T) {
 		t.Errorf("with a host listening: %v", err)
 	}
 	ln.(*net.UnixListener).SetUnlinkOnClose(false)
-	ln.Close()
+	if err := ln.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("the stale socket should still be there for the test: %v", err)
 	}

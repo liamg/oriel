@@ -99,7 +99,9 @@ func TestResolveTimeout(t *testing.T) {
 
 	// ref:   nvim/options.txt *'timeout'*
 	// quote: "if <c-f> is pressed and 'timeout' is set, Nvim will wait 'timeoutlen' milliseconds for any key that can follow <c-f> in a mapping."
-	r.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false)
+	if err := r.Options().Set("keymap.timeout", registry.LayerUser, registry.At{}, false); err != nil {
+		t.Fatal(err)
+	}
 	res = registry.NewResolver(r)
 	res.Feed([]string{"n"}, "q", t0)
 	if !res.Deadline().IsZero() {
@@ -162,7 +164,9 @@ func TestLeaderIsExpandedWhenDefined(t *testing.T) {
 		t.Fatal(err)
 	}
 	bind(r, "n", "<Leader>A", "comma")
-	r.Options().Set("keymap.leader", registry.LayerUser, registry.At{}, ";")
+	if err := r.Options().Set("keymap.leader", registry.LayerUser, registry.At{}, ";"); err != nil {
+		t.Fatal(err)
+	}
 	bind(r, "n", "<Leader>B", "semi")
 	t0 := time.Unix(0, 0)
 	for keys, want := range map[string]string{",A": "run:comma", ";B": "run:semi", ";A": "key:; key:A"} {

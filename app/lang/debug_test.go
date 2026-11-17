@@ -61,7 +61,9 @@ func debugFixture(t *testing.T, src, adapter, transcript, open string, change fu
 	ents, _ := os.ReadDir(src)
 	for _, e := range ents {
 		b, _ := os.ReadFile(filepath.Join(src, e.Name()))
-		os.WriteFile(filepath.Join(root, e.Name()), b, 0o644)
+		if err := os.WriteFile(filepath.Join(root, e.Name()), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s := apptest.New(t, apptest.Options{WorkDir: root, Config: change})
 	vars := daptest.MachineVars(root)
@@ -78,13 +80,17 @@ func debugFixture(t *testing.T, src, adapter, transcript, open string, change fu
 			rec := &daptest.Recorder{Vars: vars}
 			spec.Connect = rec.Launcher(dap.Exec)
 			finish = func() {
-				os.MkdirAll(filepath.Dir(transcript), 0o755)
+				if err := os.MkdirAll(filepath.Dir(transcript), 0o755); err != nil {
+					t.Error(err)
+				}
 				f, err := os.Create(transcript)
 				if err != nil {
 					t.Fatal(err)
 				}
-				defer f.Close()
-				rec.Transcript(daptest.Header{Adapter: adapter, Version: adapterVersions[adapter], Cmd: spec.Cmd}).Write(f)
+				defer func() { _ = f.Close() }()
+				if err := rec.Transcript(daptest.Header{Adapter: adapter, Version: adapterVersions[adapter], Cmd: spec.Cmd}).Write(f); err != nil {
+					t.Error(err)
+				}
 			}
 		} else {
 			tr, err := daptest.Load(transcript)
@@ -253,9 +259,13 @@ func TestDebugConfigsAndState(t *testing.T) {
 	}
 
 	dir := filepath.Dir(main)
-	os.MkdirAll(filepath.Join(dir, ".oriel"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".oriel", "debug.toml"), []byte("[[debug]]\nname = \"tests\"\ntype = \"go\"\nprogram = \".\"\nmode = \"test\"\n\n"+
-		"[[debug]]\nname = \"attach\"\ntype = \"go\"\nrequest = \"attach\"\npid = 42\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, ".oriel"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".oriel", "debug.toml"), []byte("[[debug]]\nname = \"tests\"\ntype = \"go\"\nprogram = \".\"\nmode = \"test\"\n\n"+
+		"[[debug]]\nname = \"attach\"\ntype = \"go\"\nrequest = \"attach\"\npid = 42\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	cfgs, err := x.Configs()
 	if err != nil || len(cfgs) != 2 || cfgs[0].Program != dir || cfgs[0].Extra["mode"] != "test" || cfgs[1].PID != 42 {
 		t.Fatalf("configs = %+v, %v", cfgs, err)

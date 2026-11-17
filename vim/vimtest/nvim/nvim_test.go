@@ -57,7 +57,7 @@ func TestPendingKeysFail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer e.Close()
+	defer func() { _ = e.Close() }()
 	if err := e.Feed(vimtest.ParseKeys("2")); err == nil || !strings.Contains(err.Error(), "waiting for more keys") {
 		t.Errorf("feeding a lone count: got %v, want a waiting-for-keys error", err)
 	}

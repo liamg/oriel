@@ -227,7 +227,7 @@ func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt 
 	if err != nil {
 		cancel()
 		if box != nil {
-			box.Close()
+			_ = box.Close()
 		}
 		return nil, nil, err
 	}

@@ -30,7 +30,7 @@ func TestLiveUnansweredCheckRefusesMCP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	for ev := range s.Events() {
 		if _, ok := ev.(agent.Ready); ok {
 			break
@@ -96,7 +96,7 @@ func TestLiveConnectorAsksOriel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	defer func() { t.Logf("the screen ended: %s", s.(*session).lastScreen()) }()
 	ran := map[string]string{}
 	// What bounds a wait is go test's own -timeout: nothing here measures a while.

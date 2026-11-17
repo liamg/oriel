@@ -169,7 +169,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		d := x.docs[w.File]
 		x.mu.Unlock()
 		if d != nil && d.client != nil {
-			x.m.Save(d.path, d.buf.Snapshot())
+			_ = x.m.Save(d.path, d.buf.Snapshot())
 		}
 		return registry.Verdict{}, nil
 	}))
@@ -205,7 +205,7 @@ func (x *LSP) Deactivate(ctx context.Context) error {
 	plugin.Teardown(ctx, func(ctx context.Context) {
 		sctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
-		x.m.Shutdown(sctx)
+		_ = x.m.Shutdown(sctx)
 		x.work.Stop()
 	})
 	return x.Disposer.Deactivate(ctx)
@@ -349,7 +349,7 @@ func (x *LSP) doc(path string, buf *text.Buffer) *lspDoc {
 			}
 			d.client = c
 			for _, ch := range d.queue {
-				x.m.Change(path, ch)
+				_ = x.m.Change(path, ch)
 			}
 			d.queue = nil
 			x.h.Redraw()

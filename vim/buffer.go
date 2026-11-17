@@ -393,7 +393,7 @@ func (e *Engine) deleteBuffer(b *buffer, wipe, keepListed bool) {
 		}
 		e.window, e.buffer = w, w.buf
 		b.modified = false
-		e.switchBuffer(next, true)
+		_ = e.switchBuffer(next, true)
 		if w == cur {
 			cur = e.window
 		}

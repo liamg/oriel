@@ -260,7 +260,9 @@ func TestPermissionLayers(t *testing.T) {
 	rm, _ := json.Marshal(map[string]string{"command": "rm -rf build"})
 	ans = a.Ask(agent.Permission{ID: "p3", Tool: "Bash", Input: rm})
 	r.eventually(id, "the card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p3", Decision: "deny", Note: "use the Makefile target"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p3", Decision: "deny", Note: "use the Makefile target"}); err != nil {
+		t.Fatal(err)
+	}
 	if d := <-ans; d.Allow || !strings.Contains(d.Note, "use the Makefile target") {
 		t.Errorf("deny = %+v", d)
 	}
@@ -305,7 +307,9 @@ func TestAnMCPCallAsksThroughTheSessionsLayers(t *testing.T) {
 	}
 	ans = a.Ask(agent.Permission{ID: "m3", Tool: "mcp__claude_ai_Claude_Docs__delete", Input: json.RawMessage(`{}`)})
 	r.eventually(id, "a card for the other tool", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "m3", Decision: "deny"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "m3", Decision: "deny"}); err != nil {
+		t.Fatal(err)
+	}
 	if d := <-ans; d.Allow {
 		t.Errorf("the other tool was allowed: %+v", d)
 	}
@@ -330,7 +334,9 @@ func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
 	if k := se.Asks[0].Kind; k != core.AskPermission || se.Asks[0].Summary != ask.Summary {
 		t.Fatalf("ask = %+v", se.Asks[0])
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "always"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "always"}); err != nil {
+		t.Fatal(err)
+	}
 	if v := <-got; v.Decision != "allow" || v.By != "the user" {
 		t.Errorf("always = %+v", v)
 	}
@@ -342,7 +348,9 @@ func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
 		got <- v
 	}()
 	se = r.eventually(id, "the second card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "deny", Note: "not that"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "deny", Note: "not that"}); err != nil {
+		t.Fatal(err)
+	}
 	if v := <-got; v.Decision != "deny" || v.Note != "not that" {
 		t.Errorf("deny = %+v", v)
 	}
@@ -362,7 +370,9 @@ func TestQuestionsWaitForTheUser(t *testing.T) {
 	if se.Asks[0].Kind != core.AskQuestion {
 		t.Fatalf("status %s, asks %+v", se.Status, se.Asks)
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Decision: "answer", Answers: map[string]string{"Which colour?": "blue"}})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Decision: "answer", Answers: map[string]string{"Which colour?": "blue"}}); err != nil {
+		t.Fatal(err)
+	}
 	if d := <-ch; d.Answers["Which colour?"] != "blue" {
 		t.Errorf("answers = %+v", d.Answers)
 	}
@@ -387,7 +397,9 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	if se.Asks[0].Thread != req {
 		t.Errorf("an unnamed question was asked in %q, want the active thread %q", se.Asks[0].Thread, req)
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
+		t.Fatal(err)
+	}
 	<-ch
 
 	// Named, through Oriel's own tool, it's asked there, and the tool answers with the user's choice.
@@ -403,7 +415,9 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	if se.Asks[0].Thread != other || se.Asks[0].Kind != core.AskQuestion || se.Asks[0].Questions[0].Question != "Which zero?" {
 		t.Errorf("the ask tool asked %+v, want a question in %q", se.Asks[0], other)
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Answers: map[string]string{"Which zero?": "-0"}})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Answers: map[string]string{"Which zero?": "-0"}}); err != nil {
+		t.Fatal(err)
+	}
 	if out := <-got; !strings.Contains(out, "Which zero?") || !strings.Contains(out, "-0") {
 		t.Errorf("the ask tool answered %q", out)
 	}
@@ -432,7 +446,9 @@ func TestAQuestionOffAThreadIsAskedInTheRequest(t *testing.T) {
 	if se.Asks[0].Thread != req {
 		t.Errorf("the question was asked in %q, want the request %q", se.Asks[0].Thread, req)
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
+		t.Fatal(err)
+	}
 	<-ch
 }
 
@@ -448,7 +464,9 @@ func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
 	if !ok || th.Anchor != nil || !th.Open() {
 		t.Fatalf("the question is in thread %q (%+v), want an open general one", se.Asks[0].Thread, th)
 	}
-	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}}); err != nil {
+		t.Fatal(err)
+	}
 	<-ch
 	// The thread was the question's own: it keeps the answer, and is resolved.
 	se = r.eventually(id, "the question's thread resolved", func(se core.SessionState) bool {

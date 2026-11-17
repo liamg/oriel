@@ -152,7 +152,9 @@ func TestAFileChangeRunsTwoGits(t *testing.T) {
 	}
 
 	before, refs := r.runs(), r.runs("rev-parse")
-	os.WriteFile(filepath.Join(r.repo.Dir, "new.go"), []byte("package main\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(r.repo.Dir, "new.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.change(t, "new.go")
 	r.advance(time.Hour)
 	if st, _, _ := s.Get(); st == nil {
@@ -167,16 +169,26 @@ func TestAFileChangeRunsTwoGits(t *testing.T) {
 		t.Errorf("a file change read the refs again (%d rev-parses)", n)
 	}
 
-	os.MkdirAll(filepath.Join(r.repo.Dir, "build"), 0o755)
+	if err := os.MkdirAll(filepath.Join(r.repo.Dir, "build"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	r.change(t, "build") // the new ignored folder is read once
 	r.advance(time.Hour)
 	git := filepath.Join(r.repo.Dir, ".git")
 	before = r.runs()
 	for i := range 3 {
-		os.WriteFile(filepath.Join(r.repo.Dir, "build", "out"), []byte{byte(i)}, 0o644)
-		os.WriteFile(filepath.Join(git, "worktrees", "other", "index"), []byte{byte(i)}, 0o644)
-		os.WriteFile(filepath.Join(git, "FETCH_HEAD"), []byte{byte(i)}, 0o644)
-		os.WriteFile(filepath.Join(other, "main.go"), []byte{byte(i)}, 0o644)
+		if err := os.WriteFile(filepath.Join(r.repo.Dir, "build", "out"), []byte{byte(i)}, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(git, "worktrees", "other", "index"), []byte{byte(i)}, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(git, "FETCH_HEAD"), []byte{byte(i)}, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(other, "main.go"), []byte{byte(i)}, 0o644); err != nil {
+			t.Fatal(err)
+		}
 		r.change(t, filepath.Join("build", "out"), filepath.Join(".git", "worktrees", "other", "index"),
 			filepath.Join(".git", "FETCH_HEAD"))
 		r.script.Change(filepath.Join(other, "main.go"))
@@ -216,7 +228,9 @@ func TestCountsOnlyWhileSubscribed(t *testing.T) {
 	r := newRig(t)
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
 	until(t, s, "a status", anyReading)
-	os.WriteFile(filepath.Join(r.repo.Dir, "main.go"), []byte("package main\n// more\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(r.repo.Dir, "main.go"), []byte("package main\n// more\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	until(t, s, "the change", func(st *gitx.State) bool { _, ok := st.File("main.go"); return ok })
 	if n := r.runs("--numstat"); n > 0 {
 		t.Fatalf("ran %d numstats with no one counting", n)

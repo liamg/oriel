@@ -40,14 +40,14 @@ func (s *Server) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
 		mu.Lock()
 		defer mu.Unlock()
 		if stopped {
-			req.Reply(nil, ctx.Err())
+			_ = req.Reply(nil, ctx.Err())
 			return
 		}
 		wg.Go(func() {
 			hctx, stop := context.WithCancel(ctx)
 			defer context.AfterFunc(req.Context(), stop)()
 			defer stop()
-			req.Reply(s.handle(hctx, req.Method, req.Params))
+			_ = req.Reply(s.handle(hctx, req.Method, req.Params))
 		})
 	}
 	conn := jsonrpc.NewConn(struct{ io.Reader }{r}, struct{ io.Writer }{w}, jsonrpc.Handlers{Request: request},
@@ -71,13 +71,13 @@ func (s *Server) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
 		}
 	case <-ctx.Done():
 		err = ctx.Err()
-		conn.Close()
+		_ = conn.Close()
 	}
 	mu.Lock()
 	stopped = true
 	mu.Unlock()
 	wg.Wait()
-	conn.Close()
+	_ = conn.Close()
 	return err
 }
 
@@ -88,7 +88,7 @@ func (s *Server) NotifyToolsChanged() {
 	c := s.conn
 	s.mu.Unlock()
 	if c != nil {
-		c.Notify("notifications/tools/list_changed", nil)
+		_ = c.Notify("notifications/tools/list_changed", nil)
 	}
 }
 

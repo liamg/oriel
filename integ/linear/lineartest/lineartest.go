@@ -107,7 +107,9 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Header.Get("Authorization") != Key {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"errors":[{"message":"Authentication required, not authenticated","extensions":{"code":"AUTHENTICATION_ERROR"}}]}`))
+		if _, err := w.Write([]byte(`{"errors":[{"message":"Authentication required, not authenticated","extensions":{"code":"AUTHENTICATION_ERROR"}}]}`)); err != nil {
+			l.t.Fatal(err)
+		}
 		return
 	}
 	var in struct {
@@ -117,7 +119,9 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 	body, _ := io.ReadAll(r.Body)
 	if err := json.Unmarshal(body, &in); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"errors":[{"message":"Must provide query string."}]}`))
+		if _, err := w.Write([]byte(`{"errors":[{"message":"Must provide query string."}]}`)); err != nil {
+			l.t.Fatal(err)
+		}
 		return
 	}
 	l.mu.Lock()
@@ -127,16 +131,22 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 	case strings.Contains(q, "issueUpdate"):
 		l.mutations = append(l.mutations, Mutation{Op: "issueUpdate", Vars: in.Variables})
 		ok := l.update(in.Variables)
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"issueUpdate": map[string]any{"success": ok}}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"issueUpdate": map[string]any{"success": ok}}}); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "issueCreate"):
 		l.mutations = append(l.mutations, Mutation{Op: "issueCreate", Vars: in.Variables})
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"issueCreate": l.create(in.Variables)}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"issueCreate": l.create(in.Variables)}}); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "commentCreate"):
 		l.mutations = append(l.mutations, Mutation{Op: "commentCreate", Vars: in.Variables})
 		input, _ := in.Variables["input"].(map[string]any)
 		n := l.issue(fmt.Sprint(input["issueId"]))
 		if n == nil {
-			w.Write([]byte(`{"data":null,"errors":[{"message":"Entity not found: Issue","extensions":{"code":"INPUT_ERROR"}}]}`))
+			if _, err := w.Write([]byte(`{"data":null,"errors":[{"message":"Entity not found: Issue","extensions":{"code":"INPUT_ERROR"}}]}`)); err != nil {
+				l.t.Fatal(err)
+			}
 			return
 		}
 		url := fmt.Sprint(n["url"]) + "#comment-" + strconv.Itoa(len(l.mutations))
@@ -144,29 +154,47 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 		comments := path(n, "comments")
 		comments["nodes"] = append(comments["nodes"].([]any), map[string]any{"body": input["body"], "createdAt": "2026-11-05T12:00:00.000Z",
 			"user": map[string]any{"name": viewer["name"], "displayName": viewer["displayName"]}})
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"commentCreate": map[string]any{"success": true, "comment": map[string]any{"url": url}}}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"commentCreate": map[string]any{"success": true, "comment": map[string]any{"url": url}}}}); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "attachmentCreate"):
 		l.mutations = append(l.mutations, Mutation{Op: "attachmentCreate", Vars: in.Variables})
-		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"attachmentCreate": map[string]any{"success": true}}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"attachmentCreate": map[string]any{"success": true}}}); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "projects("):
-		json.NewEncoder(w).Encode(l.projects)
+		if err := json.NewEncoder(w).Encode(l.projects); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "teams"):
-		json.NewEncoder(w).Encode(l.teams)
+		if err := json.NewEncoder(w).Encode(l.teams); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "users("):
-		json.NewEncoder(w).Encode(l.matchUsers(in.Variables))
+		if err := json.NewEncoder(w).Encode(l.matchUsers(in.Variables)); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "assignedIssues"):
-		json.NewEncoder(w).Encode(l.assigned)
+		if err := json.NewEncoder(w).Encode(l.assigned); err != nil {
+			l.t.Fatal(err)
+		}
 	case strings.Contains(q, "issue(id:"):
 		key, _ := in.Variables["id"].(string)
 		is, ok := l.issues[key]
 		if !ok {
-			w.Write([]byte(`{"data":null,"errors":[{"message":"Entity not found: Issue","extensions":{"code":"INPUT_ERROR"}}]}`))
+			if _, err := w.Write([]byte(`{"data":null,"errors":[{"message":"Entity not found: Issue","extensions":{"code":"INPUT_ERROR"}}]}`)); err != nil {
+				l.t.Fatal(err)
+			}
 			return
 		}
-		json.NewEncoder(w).Encode(is)
+		if err := json.NewEncoder(w).Encode(is); err != nil {
+			l.t.Fatal(err)
+		}
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"errors":[{"message":"not in the recording"}]}`))
+		if _, err := w.Write([]byte(`{"errors":[{"message":"not in the recording"}]}`)); err != nil {
+			l.t.Fatal(err)
+		}
 	}
 }
 

@@ -76,8 +76,12 @@ L.keymap.set("n", "<leader>D", "Deploys", { desc = "Deploys" })
 func TestPluginDemo(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "internal", "pricing", "round.go")
-	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, []byte(rig.RoundGo()), 0o644)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(rig.RoundGo()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
 	s.WriteConfig(map[string]string{"init.lua": demoPlugin})
@@ -111,7 +115,9 @@ func TestPluginDemo(t *testing.T) {
 		t.Errorf("the panel didn't redraw with the plugin's state:\n%s", s.Text())
 	}
 	for _, n := range s.Store().State().Notifications {
-		s.Store().Apply(core.Dismissal(n))
+		if err := s.Store().Apply(core.Dismissal(n)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s.WaitHighlights()
 	s.Golden("plugin-demo")

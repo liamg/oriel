@@ -76,7 +76,7 @@ func (s Store) FetchGit(ctx context.Context, id, url, rev string) (dir, commit s
 	if err != nil {
 		return "", "", err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	work := filepath.Join(tmp, "src")
 	if err := gitx.Clone(ctx, url, work); err != nil {
 		return "", "", err
@@ -100,7 +100,7 @@ func (s Store) FetchGit(ctx context.Context, id, url, rev string) (dir, commit s
 		return "", "", err
 	}
 	if !s.Has(id, commit) {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 		if err := os.Rename(work, dir); err != nil {
 			return "", "", err
 		}
@@ -126,14 +126,14 @@ func (s Store) FetchArchive(id, commit, archive string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	if _, err := Unpack(archive, tmp); err != nil {
 		return "", err
 	}
 	if err := checkPlugin(tmp, id); err != nil {
 		return "", err
 	}
-	os.RemoveAll(dir)
+	_ = os.RemoveAll(dir)
 	if err := os.Rename(tmp, dir); err != nil {
 		return "", err
 	}
@@ -171,7 +171,7 @@ func (s Store) activate(id, commit string) error {
 		return nil
 	}
 	tmp := link + ".new"
-	os.Remove(tmp)
+	_ = os.Remove(tmp)
 	if err := os.Symlink(commit, tmp); err != nil {
 		return err
 	}
@@ -184,9 +184,9 @@ func (s Store) Remove(id string) error {
 	if err != nil {
 		return err
 	}
-	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err == nil && d.IsDir() {
-			os.Chmod(p, 0o755)
+			_ = os.Chmod(p, 0o755)
 		}
 		return nil
 	})
@@ -195,7 +195,7 @@ func (s Store) Remove(id string) error {
 	}
 	owner := filepath.Dir(dir)
 	if es, err := os.ReadDir(owner); err == nil && len(es) == 0 {
-		os.Remove(owner)
+		_ = os.Remove(owner)
 	}
 	return nil
 }
@@ -203,7 +203,7 @@ func (s Store) Remove(id string) error {
 // readOnly takes write permission off everything under dir.
 func readOnly(dir string) {
 	var dirs []string
-	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -212,12 +212,12 @@ func readOnly(dir string) {
 			return nil
 		}
 		if i, err := d.Info(); err == nil && i.Mode().IsRegular() {
-			os.Chmod(p, i.Mode().Perm()&^0o222)
+			_ = os.Chmod(p, i.Mode().Perm()&^0o222)
 		}
 		return nil
 	})
 	for i := len(dirs) - 1; i >= 0; i-- {
-		os.Chmod(dirs[i], 0o555)
+		_ = os.Chmod(dirs[i], 0o555)
 	}
 }
 

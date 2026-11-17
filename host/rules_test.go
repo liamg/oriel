@@ -103,7 +103,9 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 		t.Fatalf("removed, yet %+v", rules)
 	}
 	ans = r.askedCard(four, a4, goTest("p6", "./..."))
-	r.w.Answer(hostapi.AnswerReq{Session: four, Ask: "p6", Decision: "deny"})
+	if err := r.w.Answer(hostapi.AnswerReq{Session: four, Ask: "p6", Decision: "deny"}); err != nil {
+		t.Fatal(err)
+	}
 	if d := <-ans; d.Allow {
 		t.Error("denied, yet allowed")
 	}
@@ -124,7 +126,7 @@ func TestUtilityAgentsIgnoreRulesForAllSessions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer u.Close()
+	defer func() { _ = u.Close() }()
 	fs := r.fake.WaitStarted(t)
 	if d := <-fs.Ask(goTest("p1", "./...")); d.Allow {
 		t.Errorf("a rule for all sessions let the assistant run go test: %+v", d)

@@ -15,13 +15,13 @@ func TestPipeWaitsForBothDirections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 	go func() {
 		c, err := ln.Accept()
 		if err != nil {
 			return
 		}
-		defer c.Close()
+		defer func() { _ = c.Close() }()
 		got, _ := io.ReadAll(c)
 		_, _ = c.Write([]byte("reply to " + string(got)))
 	}()
@@ -29,7 +29,7 @@ func TestPipeWaitsForBothDirections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	var out bytes.Buffer
 	if err := pipe(c, strings.NewReader("hello"), &out); err != nil {
 		t.Fatal(err)

@@ -66,7 +66,7 @@ func (l *Logs) Restore(store core.Store) error {
 			continue
 		}
 		n, err := core.ReplayVault(bufio.NewReader(f), store, l.vault(id))
-		f.Close()
+		_ = f.Close()
 		if se, ok := store.State().Session(id); ok && se.Snapshot().Source == "crit" {
 			_ = store.Apply(core.SessionClosed{ID: id})
 			_ = os.RemoveAll(l.env.SessionDir(id))

@@ -242,15 +242,19 @@ func TestGitHubLatest(t *testing.T) {
 		}
 		switch {
 		case r.URL.Path == "/repos/liamg/oriel/releases":
-			w.Write([]byte(`[{"draft":true,"assets":[]},` +
+			if _, err := w.Write([]byte(`[{"draft":true,"assets":[]},` +
 				`{"prerelease":true,"assets":[` + asset("n", "manifest.json") + `,` + asset("n", "manifest.sig") + `]},` +
-				`{"assets":[` + asset("s", "manifest.json") + `,` + asset("s", "manifest.sig") + `,` + asset("s", "oriel-linux-amd64") + `]}]`))
+				`{"assets":[` + asset("s", "manifest.json") + `,` + asset("s", "manifest.sig") + `,` + asset("s", "oriel-linux-amd64") + `]}]`)); err != nil {
+				t.Error(err)
+			}
 		case files[r.URL.Path] != nil:
 			if r.Header.Get("Accept") != "application/octet-stream" {
 				http.Error(w, "want octet-stream", http.StatusBadRequest)
 				return
 			}
-			w.Write(files[r.URL.Path])
+			if _, err := w.Write(files[r.URL.Path]); err != nil {
+				t.Error(err)
+			}
 		default:
 			http.NotFound(w, r)
 		}
@@ -277,7 +281,9 @@ func TestGitHubLatest(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ := io.ReadAll(r)
-	r.Close()
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(got, body) {
 		t.Fatalf("downloaded %q", got)
 	}
@@ -290,7 +296,9 @@ func TestGitHubLatest(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ = io.ReadAll(r)
-	r.Close()
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(got, body) {
 		t.Fatalf("the cache served %q", got)
 	}
@@ -313,11 +321,17 @@ func TestGitHubPublicNeedsNoToken(t *testing.T) {
 		}
 		switch r.URL.Path {
 		case "/repos/liamg/oriel/releases":
-			w.Write([]byte(`[{"assets":[{"name":"manifest.json","url":"` + srv.URL + `/m"},{"name":"manifest.sig","url":"` + srv.URL + `/s"}]}]`))
+			if _, err := w.Write([]byte(`[{"assets":[{"name":"manifest.json","url":"` + srv.URL + `/m"},{"name":"manifest.sig","url":"` + srv.URL + `/s"}]}]`)); err != nil {
+				t.Error(err)
+			}
 		case "/m":
-			w.Write(rel.Manifest)
+			if _, err := w.Write(rel.Manifest); err != nil {
+				t.Error(err)
+			}
 		case "/s":
-			w.Write(rel.Signature)
+			if _, err := w.Write(rel.Signature); err != nil {
+				t.Error(err)
+			}
 		default:
 			http.NotFound(w, r)
 		}

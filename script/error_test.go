@@ -14,7 +14,9 @@ func config(t *testing.T, files map[string]string) (*VM, string) {
 	dir := t.TempDir()
 	for name, src := range files {
 		p := filepath.Join(dir, name)
-		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(p, []byte(src), 0o644); err != nil {
 			t.Fatal(err)
 		}

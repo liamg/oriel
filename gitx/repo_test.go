@@ -29,8 +29,12 @@ func fixture(t *testing.T) Repo {
 		}
 	}
 	write := func(name, body string) {
-		os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755)
-		os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644)
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(name)), 0o755); err != nil {
+			t.Error(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Error(err)
+		}
 	}
 	commit := func(who, msg string, at time.Time) {
 		d := at.Format(time.RFC3339)
@@ -91,7 +95,9 @@ func TestRepo(t *testing.T) {
 
 func TestNoUpstream(t *testing.T) {
 	r := fixture(t)
-	exec.Command("git", "-C", r.Dir, "branch", "--unset-upstream").Run()
+	if err := exec.Command("git", "-C", r.Dir, "branch", "--unset-upstream").Run(); err != nil {
+		t.Fatal(err)
+	}
 	if ab, err := r.AheadBehind(context.Background()); err != nil || ab.Upstream != "" {
 		t.Errorf("AheadBehind with no upstream = %+v, %v", ab, err)
 	}

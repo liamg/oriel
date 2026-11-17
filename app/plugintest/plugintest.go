@@ -52,7 +52,9 @@ func New(t testing.TB, o Options) *App {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	cfg := app.Config{Window: app.Window{ConfigDir: filepath.Join(home, ".config", "oriel"), StateDir: filepath.Join(home, "state"), Version: "dev"}}
-	os.MkdirAll(cfg.ConfigDir, 0o755)
+	if err := os.MkdirAll(cfg.ConfigDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if o.Config != nil {
 		o.Config(&cfg)
 	}
@@ -151,7 +153,9 @@ func (a *App) Run(id string, args registry.Args) {
 	a.t.Helper()
 	var err error
 	done := false
-	a.Registry().Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args)
+	if err := a.Registry().Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), id, args); err != nil {
+		a.t.Fatal(err)
+	}
 	if !done {
 		a.Until(id+" to finish", func() bool { return done })
 	}

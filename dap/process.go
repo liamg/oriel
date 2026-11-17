@@ -67,7 +67,7 @@ func execReverse(ctx context.Context, spec AdapterSpec, dir string, stderr io.Wr
 	if err != nil {
 		return nil, err
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 	cmd := command(spec, dir, map[string]string{"${addr}": ln.Addr().String()})
 	cmd.Stdout, cmd.Stderr = stderr, stderr
 	p, err := jsonrpc.Spawn(cmd)
@@ -84,7 +84,7 @@ func execReverse(ctx context.Context, spec AdapterSpec, dir string, stderr io.Wr
 		got <- accepted{c, err}
 	}()
 	fail := func(err error) (Process, error) {
-		p.Kill()
+		_ = p.Kill()
 		return nil, err
 	}
 	select {
@@ -110,7 +110,7 @@ func execTCP(ctx context.Context, spec AdapterSpec, dir string, stderr io.Writer
 		return nil, err
 	}
 	port := strconv.Itoa(ln.Addr().(*net.TCPAddr).Port)
-	ln.Close()
+	_ = ln.Close()
 	cmd := command(spec, dir, map[string]string{"${port}": port})
 	cmd.Stdout, cmd.Stderr = stderr, stderr
 	p, err := jsonrpc.Spawn(cmd)
@@ -129,12 +129,12 @@ func execTCP(ctx context.Context, spec AdapterSpec, dir string, stderr io.Writer
 		case <-p.Exited():
 			return nil, fmt.Errorf("dap: %s exited before listening: %v", spec.Name, p.Wait())
 		case <-ctx.Done():
-			p.Kill()
+			_ = p.Kill()
 			return nil, ctx.Err()
 		case <-time.After(50 * time.Millisecond):
 		}
 		if time.Now().After(deadline) {
-			p.Kill()
+			_ = p.Kill()
 			return nil, fmt.Errorf("dap: %s didn't listen on %s in %v", spec.Name, port, connectTimeout)
 		}
 	}

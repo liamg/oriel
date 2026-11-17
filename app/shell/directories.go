@@ -73,7 +73,7 @@ func (l *dirList) walk() {
 // them (root too) are repos.
 func walkDirs(root string) ([]string, map[string]bool) {
 	dirs, repos := []string{}, map[string]bool{}
-	filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return nil
 		}

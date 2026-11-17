@@ -121,8 +121,8 @@ func (c *Client) fetch(ctx context.Context, s Source) (Index, error) {
 	if c.Cache != "" {
 		dir := filepath.Join(c.Cache, filepath.FromSlash(s.Repo))
 		if err := os.MkdirAll(dir, 0o755); err == nil {
-			os.WriteFile(filepath.Join(dir, IndexFile), body, 0o644)
-			os.WriteFile(filepath.Join(dir, IndexSig), sig, 0o644)
+			_ = os.WriteFile(filepath.Join(dir, IndexFile), body, 0o644)
+			_ = os.WriteFile(filepath.Join(dir, IndexSig), sig, 0o644)
 		}
 	}
 	return ix, nil

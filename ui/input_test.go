@@ -104,7 +104,9 @@ func TestStateSnapshots(t *testing.T) {
 
 	path := filepath.Join("testdata", "states.golden")
 	if *update {
-		os.WriteFile(path, []byte(b.String()), 0o644)
+		if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {

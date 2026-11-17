@@ -135,7 +135,7 @@ func (a *atspiApp) watch(session string) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	defer a.leave()
 	ch := make(chan *dbus.Signal, 8)
 	conn.Signal(ch)
@@ -184,13 +184,13 @@ func (a *atspiApp) join(session dbus.BusObject) {
 	a.self = bus.Names()[0]
 	a.mu.Unlock()
 	if err := a.export(bus); err != nil {
-		bus.Close()
+		_ = bus.Close()
 		return
 	}
 	var desk atspiRef
 	if err := bus.Object("org.a11y.atspi.Registry", atspiRoot).Call("org.a11y.atspi.Socket.Embed", 0,
 		atspiRef{a.self, atspiRoot}).Store(&desk); err != nil {
-		bus.Close()
+		_ = bus.Close()
 		return
 	}
 	a.mu.Lock()
@@ -210,7 +210,7 @@ func (a *atspiApp) leave() {
 	a.bus = nil
 	a.mu.Unlock()
 	if bus != nil {
-		bus.Close()
+		_ = bus.Close()
 	}
 }
 
@@ -226,7 +226,7 @@ func (a *atspiApp) emit(bus *dbus.Conn, win uint32, ev atspiEvent) {
 	case string, uint32:
 		data = d
 	}
-	bus.Emit(dbus.ObjectPath(atspiPath(win, ev.ID)), "org.a11y.atspi.Event."+ev.Member, ev.Kind, ev.Detail1, ev.Detail2,
+	_ = bus.Emit(dbus.ObjectPath(atspiPath(win, ev.ID)), "org.a11y.atspi.Event."+ev.Member, ev.Kind, ev.Detail1, ev.Detail2,
 		dbus.MakeVariant(data), map[string]dbus.Variant{})
 }
 
@@ -234,7 +234,7 @@ func (a *atspiApp) emitRoot(bus *dbus.Conn, kind string, win uint32) {
 	a.mu.Lock()
 	i := slices.Index(a.order(), win)
 	a.mu.Unlock()
-	bus.Emit(atspiRoot, "org.a11y.atspi.Event.Object.ChildrenChanged", kind, int32(max(i, 0)), int32(0),
+	_ = bus.Emit(atspiRoot, "org.a11y.atspi.Event.Object.ChildrenChanged", kind, int32(max(i, 0)), int32(0),
 		dbus.MakeVariant(a.ref(win, 0)), map[string]dbus.Variant{})
 }
 

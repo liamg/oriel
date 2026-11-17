@@ -279,7 +279,9 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	b := boot(t, pointy{})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
+	if _, err := b.win.WaitFrame(ctx, func(headless.Frame) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
 	// The root view sits under the titlebar, right of the rail.
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: kit.RailW + 30, Y: kit.TitleH + 10}})
 	apptest.Poll(t, "the pointer cursor over the link", func() bool { return b.win.Cursor() == render.CursorPointer })
@@ -307,7 +309,9 @@ func background(f headless.Frame) render.Color {
 func TestThemeFileReloadsLive(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "themes", "mine.toml")
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	write := func(bg string) {
 		src := "name = \"mine\"\nextends = \"oriel\"\n[semantic]\n\"bg.base\" = \"" + bg + "\"\n"
 		if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
@@ -352,8 +356,12 @@ func TestVariantFollowsTheOS(t *testing.T) {
 
 func TestBrokenThemeFallsBackToTheBuiltIn(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "themes"), 0o755)
-	os.WriteFile(filepath.Join(dir, "themes", "bad.toml"), []byte("name = \"bad\"\n[semantic]\naccent = \"nope\"\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, "themes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "themes", "bad.toml"), []byte("name = \"bad\"\n[semantic]\naccent = \"nope\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	b := bootIn(t, dir, themePicker("bad"))
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

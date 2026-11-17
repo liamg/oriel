@@ -108,11 +108,18 @@ func (t *Tools) runRg(ctx context.Context, q Query, emit func([]Match)) error {
 		if err != nil {
 			return err
 		}
-		defer os.Remove(f.Name())
+		defer func() { _ = os.Remove(f.Name()) }()
+		var ignore strings.Builder
 		for _, x := range q.Exclude {
-			fmt.Fprintf(f, "/%s\n", gitignoreEscape(x))
+			ignore.WriteString("/" + gitignoreEscape(x) + "\n")
 		}
-		f.Close()
+		_, err = f.WriteString(ignore.String())
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
+			return fmt.Errorf("writing the search's excludes: %w", err)
+		}
 		args = append(args, "--ignore-file", f.Name())
 	}
 	args = append(args, "-e", q.Pattern, "--", ".")
@@ -158,7 +165,7 @@ func (t *Tools) runRg(ctx context.Context, q Query, emit func([]Match)) error {
 			batch = nil
 		}
 		if n >= q.Max {
-			cmd.Process.Kill()
+			_ = cmd.Process.Kill()
 			break
 		}
 	}
@@ -199,7 +206,7 @@ func files(ctx context.Context, dir string) []string {
 		}
 	}
 	var out []string
-	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}

@@ -18,10 +18,10 @@ func appearanceSignals(changed func()) (stop func()) {
 	}
 	end, err := watchPortal(conn, changed)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return func() {}
 	}
-	return func() { end(); conn.Close() }
+	return func() { end(); _ = conn.Close() }
 }
 
 // colorSchemeChanged says whether s is the portal saying the color scheme changed.
@@ -57,7 +57,7 @@ func watchPortal(conn *dbus.Conn, changed func()) (stop func(), err error) {
 	}()
 	return func() {
 		conn.RemoveSignal(ch)
-		conn.RemoveMatchSignal(match...)
+		_ = conn.RemoveMatchSignal(match...)
 		close(done)
 	}, nil
 }

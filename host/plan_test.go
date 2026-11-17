@@ -33,7 +33,9 @@ func TestPlanThreadsReachTheAgentByPlace(t *testing.T) {
 	if !se.StartWork || !se.Planning() {
 		t.Fatalf("a plan session doesn't wait on Start work: %+v", se)
 	}
-	os.WriteFile(filepath.Join(se.Dir, "PLAN.md"), []byte("# Round\n\n## Approach\n\n- Round each line in minor units, ties to even.\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(se.Dir, "PLAN.md"), []byte("# Round\n\n## Approach\n\n- Round each line in minor units, ties to even.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	a.Emit(agent.TurnStart{})
 	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})

@@ -99,7 +99,9 @@ func TestSettingsPrecedence(t *testing.T) {
 	settingsOf(s).Reload()
 	expect(here, "from-user", registry.LayerUser, user)
 
-	o.SetFrom("test.level", registry.LayerLua, registry.At{}, "from-lua", "init.lua:12")
+	if err := o.SetFrom("test.level", registry.LayerLua, registry.At{}, "from-lua", "init.lua:12"); err != nil {
+		t.Fatal(err)
+	}
 	expect(here, "from-lua", registry.LayerLua, "init.lua:12")
 
 	rig.WriteFile(t, project, "[test]\nlevel = \"from-project\"\n")
@@ -117,7 +119,9 @@ func TestSettingsPrecedence(t *testing.T) {
 	settingsOf(s).Reload()
 	expect(here, "from-lua", registry.LayerLua, "init.lua:12")
 
-	o.Set("test.level", registry.LayerSession, registry.At{Session: "s1"}, "from-session")
+	if err := o.Set("test.level", registry.LayerSession, registry.At{Session: "s1"}, "from-session"); err != nil {
+		t.Fatal(err)
+	}
 	expect(registry.At{Project: work, Session: "s1"}, "from-session", registry.LayerSession, "")
 
 	o.Unset("test.level", registry.LayerLua, registry.At{})
@@ -132,7 +136,9 @@ func TestSettingsLuaIsReadOnly(t *testing.T) {
 	path := filepath.Join(s.ConfigDir, "settings.toml")
 	rig.WriteFile(t, path, handWritten)
 	settingsOf(s).Reload()
-	s.Registry().Options().SetFrom("whichkey.enabled", registry.LayerLua, registry.At{}, false, "init.lua:12")
+	if err := s.Registry().Options().SetFrom("whichkey.enabled", registry.LayerLua, registry.At{}, false, "init.lua:12"); err != nil {
+		t.Fatal(err)
+	}
 	err := s.Registry().Run(context.Background(), "settings.set", registry.Args{"name": "whichkey.enabled", "value": true})
 	if err == nil || !strings.Contains(err.Error(), "init.lua:12") {
 		t.Errorf("setting a Lua-set option: %v", err)
@@ -162,7 +168,9 @@ func TestSettingsLuaIsReadOnly(t *testing.T) {
 func TestSettingsLuaIsOverriddenAboveIt(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
 	settingsOf(s).Reload()
-	s.Registry().Options().SetFrom("editor.expand_tab", registry.LayerLua, registry.At{}, false, "init.lua:12")
+	if err := s.Registry().Options().SetFrom("editor.expand_tab", registry.LayerLua, registry.At{}, false, "init.lua:12"); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.Registry().Run(context.Background(), "settings.set", registry.Args{"name": "editor.expand_tab", "value": true, "scope": "session"}); err != nil {
 		t.Fatalf("setting it for the session: %v", err)
 	}
@@ -207,7 +215,9 @@ func TestSettingsSnapshot(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
 	rig.WriteFile(t, filepath.Join(s.ConfigDir, "settings.toml"), handWritten)
 	settingsOf(s).Reload()
-	s.Registry().Options().SetFrom("ui.reduced_motion", registry.LayerLua, registry.At{}, true, "init.lua:12")
+	if err := s.Registry().Options().SetFrom("ui.reduced_motion", registry.LayerLua, registry.At{}, true, "init.lua:12"); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("Settings", registry.Args{"args": "ui"})
 	s.Golden("settings")
 }
@@ -319,7 +329,9 @@ func TestSettingsSlider(t *testing.T) {
 // A part's font size shows the UI's while it follows it, and says so.
 func TestSettingsFollows(t *testing.T) {
 	s := settingsAt(t, "ui.tooltip.font_size")
-	s.Registry().Options().Set("ui.font_size", registry.LayerUser, registry.At{}, 15.0)
+	if err := s.Registry().Options().Set("ui.font_size", registry.LayerUser, registry.At{}, 15.0); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	s.Frame()
 	if v := s.Node("ui.tooltip.font_size").Value; v != "15" {

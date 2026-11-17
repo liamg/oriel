@@ -175,7 +175,7 @@ func HostMethods(r Reporter) *Methods {
 	ms := NewMethods()
 	path := func(raw json.RawMessage) string {
 		var p struct{ Path string }
-		json.Unmarshal(raw, &p)
+		_ = json.Unmarshal(raw, &p)
 		return RealPath(p.Path)
 	}
 	ms.Add(Method{Name: "log", Cap: CapNotify, Run: func(_ context.Context, p Caller, raw json.RawMessage) (any, error) {

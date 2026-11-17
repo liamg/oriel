@@ -21,7 +21,7 @@ func SandboxedScene(t *testing.T, backend sandbox.Backend) (*Scene, *rig.Host, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(home) })
+	t.Cleanup(func() { _ = os.RemoveAll(home) })
 	f := host.NewSandboxFactory(func() sandbox.Config { return sandbox.Config{} })
 	f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return backend, nil }
 	f.Available = func() []string { return []string{"test"} }

@@ -170,7 +170,7 @@ func themePicker(h plugin.Host) uireg.PickerSource {
 			return
 		}
 		if before.had {
-			o.SetFrom("ui.theme", registry.LayerUser, registry.At{}, before.v, before.source)
+			_ = o.SetFrom("ui.theme", registry.LayerUser, registry.At{}, before.v, before.source)
 		} else {
 			o.Unset("ui.theme", registry.LayerUser, registry.At{})
 		}
@@ -202,7 +202,7 @@ func themePicker(h plugin.Host) uireg.PickerSource {
 				}
 				before = &prev{v, had, src, cur}
 			}
-			o.Set("ui.theme", registry.LayerUser, registry.At{}, it.ID)
+			_ = o.Set("ui.theme", registry.LayerUser, registry.At{}, it.ID)
 		},
 		Cancel:  restore,
 		Preview: func(it uireg.PickerItem) ui.Node { return themeSwatches(h, previews, it.ID) },

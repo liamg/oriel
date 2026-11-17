@@ -71,9 +71,9 @@ func (Exec) Start(ctx context.Context, cmd *exec.Cmd) (agent.Process, error) {
 	}
 	cmd.SysProcAttr.Setpgid = true
 	err = cmd.Start()
-	w.Close()
+	_ = w.Close()
 	if err != nil {
-		out.Close()
+		_ = out.Close()
 		return nil, err
 	}
 	p := &proc{cmd: cmd, in: in, out: out, done: make(chan struct{})}

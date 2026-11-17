@@ -353,10 +353,10 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 				answer = out
 			}
 			if f.Label != nil {
-				registry.Call(func() error { label = f.Label(session); return nil })
+				registry.Try(func() { label = f.Label(session) })
 			}
 		}
-		g.a.Host.Do(func() { g.a.VM.Call(fn, answer, msg, label) })
+		g.a.Host.Do(func() { g.a.callOnce(fn, answer, msg, label) })
 	}()
 	return nil
 }

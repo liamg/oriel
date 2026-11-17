@@ -21,7 +21,7 @@ const buildUsage = `oriel build --with PKG[@VERSION][=DIR] ... [--oriel VERSION|
 func runBuild(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("oriel build", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintln(stderr, buildUsage) }
+	fs.Usage = func() { _, _ = fmt.Fprintln(stderr, buildUsage) }
 	var with multi
 	fs.Var(&with, "with", "a native plugin: PKG[@VERSION][=DIR]; repeat for more")
 	base := fs.String("oriel", "", "oriel's version, or a checkout's directory")
@@ -59,7 +59,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	if err := nativebuild.Build(context.Background(), s, stderr); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, "wrote", s.Output)
+	_, _ = fmt.Fprintln(stdout, "wrote", s.Output)
 	return nil
 }
 

@@ -27,14 +27,16 @@ func TestReplayRecordedLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	s := New()
 	if err := core.Replay(f, s); err != nil {
 		t.Fatal(err)
 	}
 	got := snapshot(t, s)
 	if *update {
-		os.WriteFile("testdata/sessions.state.json", got, 0o644)
+		if err := os.WriteFile("testdata/sessions.state.json", got, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	want, err := os.ReadFile("testdata/sessions.state.json")
 	if err != nil {
@@ -57,7 +59,7 @@ func TestRecordThenReplay(t *testing.T) {
 		core.SessionClosed{ID: "s2"},
 		core.SessionOpened{ID: "s3", Kind: "notes", Status: core.StatusQuiet},
 	} {
-		a.Apply(ev)
+		_ = a.Apply(ev) // "nope" is rejected, as it should be
 	}
 
 	b := New()
@@ -93,7 +95,9 @@ func TestPluginEventsReplay(t *testing.T) {
 	var log bytes.Buffer
 	a := New()
 	a.Subscribe(core.Filter{}, core.NewRecorder(&log).Record)
-	a.Apply(noted{Session: "s1", Text: "hi"})
+	if err := a.Apply(noted{Session: "s1", Text: "hi"}); err != nil {
+		t.Fatal(err)
+	}
 
 	var got []core.Event
 	b := New()
@@ -122,7 +126,9 @@ func TestReplayRejectsBadLogs(t *testing.T) {
 
 func TestRejectedEventLeavesStateAlone(t *testing.T) {
 	s := New()
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
 	before := snapshot(t, s)
 	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindPlan, Status: core.StatusCI}); err == nil {
 		t.Fatal("opened s1 twice")

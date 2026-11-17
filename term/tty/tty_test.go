@@ -23,7 +23,7 @@ func TestNullIsNotATerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if IsTerminal(f) || Foreground(f) {
 		t.Error("/dev/null was taken for a terminal")
 	}
@@ -42,7 +42,7 @@ func TestModesOnATerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	out, _ := io.ReadAll(p)
 	_ = cmd.Wait()
 	if !strings.Contains(string(out), "terminal=true foreground=true raw=true restored=true") {

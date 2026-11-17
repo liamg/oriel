@@ -23,7 +23,7 @@ func TestAClickGoesToTheFrameItWasMadeOn(t *testing.T) {
 		h.Contribute(uireg.StartEntry{Name: "first", Title: "Say first", Desc: "the one clicked", Command: "test.first", Order: 5})
 	}})
 	r.TextPoint("Say first") // on screen, and still
-	r.Do(func() error {
+	if err := r.Do(func() error {
 		// on the loop, so nothing's drawn between: the row above comes in, and the click is made on the frame showing
 		fs := r.Win.Frames()
 		var at render.Point
@@ -35,7 +35,9 @@ func TestAClickGoesToTheFrameItWasMadeOn(t *testing.T) {
 		host.Contribute(uireg.StartEntry{Name: "above", Title: "Pushed in above", Desc: "landed just before the click", Command: "test.above", Order: 1})
 		r.Click(at)
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if got := apptest.Recv(t, "the click to run something", ran); got != "first" {
 		t.Errorf("the click ran %q, which moved under it after it was made; it was aimed at first", got)
 	}

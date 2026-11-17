@@ -149,8 +149,8 @@ func Start(ctx context.Context, spec ServerSpec, root string, opts Options) (*Cl
 	go c.watch()
 	c.notifyStatus()
 	if err := c.initialize(ctx); err != nil {
-		proc.Kill()
-		c.conn.Close()
+		_ = proc.Kill()
+		_ = c.conn.Close()
 		return nil, fmt.Errorf("lsp: initializing %s: %w", spec.Name, err)
 	}
 	return c, nil
@@ -189,7 +189,7 @@ func (c *Client) initialize(ctx context.Context) error {
 		return err
 	}
 	if len(c.spec.Settings) > 0 {
-		c.conn.Notify("workspace/didChangeConfiguration", protocol.DidChangeConfigurationParams{Settings: c.spec.Settings})
+		_ = c.conn.Notify("workspace/didChangeConfiguration", protocol.DidChangeConfigurationParams{Settings: c.spec.Settings})
 	}
 	c.mu.Lock()
 	c.status.Version = c.version
@@ -254,7 +254,7 @@ func (c *Client) watch() {
 	case <-c.conn.Done():
 	case <-time.After(time.Second):
 	}
-	c.conn.Close()
+	_ = c.conn.Close()
 	c.mu.Lock()
 	if c.stopping {
 		c.status.State = Stopped
@@ -279,12 +279,12 @@ func (c *Client) Shutdown(ctx context.Context) error {
 	c.mu.Unlock()
 	err := c.conn.Call(ctx, "shutdown", nil, nil)
 	if err == nil {
-		c.conn.Notify("exit", nil)
+		_ = c.conn.Notify("exit", nil)
 	}
 	select {
 	case <-c.done:
 	case <-ctx.Done():
-		c.proc.Kill()
+		_ = c.proc.Kill()
 		<-c.done
 	}
 	return err
@@ -456,7 +456,7 @@ func NewConn(rwc io.ReadWriteCloser, h jsonrpc.Handlers) *jsonrpc.Conn {
 			// ref: lsp/specification.md#dollarRequests
 			// quote: "If a server or client receives a request starting with '\\$/' it must error the request with error code `MethodNotFound` (e.g. `-32601`)."
 			if strings.HasPrefix(r.Method, "$/") {
-				r.Reply(nil, jsonrpc.ErrMethodNotFound)
+				_ = r.Reply(nil, jsonrpc.ErrMethodNotFound)
 				return
 			}
 			req(r)
@@ -486,7 +486,7 @@ func (c *Client) handleRequest(ctx context.Context, method string, params json.R
 				RegisterOptions json.RawMessage `json:"registerOptions"`
 			} `json:"registrations"`
 		}
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		c.mu.Lock()
 		for _, r := range p.Registrations {
 			c.regs[r.Method] = r.RegisterOptions
@@ -499,7 +499,7 @@ func (c *Client) handleRequest(ctx context.Context, method string, params json.R
 				Method string `json:"method"`
 			} `json:"unregisterations"`
 		}
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		c.mu.Lock()
 		for _, r := range p.Unregisterations {
 			delete(c.regs, r.Method)
@@ -523,7 +523,7 @@ func (c *Client) handleRequest(ctx context.Context, method string, params json.R
 		return protocol.ApplyWorkspaceEditResult{Applied: applied, FailureReason: reason}, nil
 	case "window/showMessageRequest":
 		var p protocol.LogMessageParams
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		if c.opts.OnMessage != nil {
 			c.opts.OnMessage(c.spec.Name, MessageLevel(p.Type), p.Message)
 		}
@@ -573,16 +573,16 @@ func (c *Client) handleNotify(method string, params json.RawMessage) {
 		c.progress(params)
 	case "window/logMessage":
 		var p protocol.LogMessageParams
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		switch {
 		case c.opts.OnLog != nil:
 			c.opts.OnLog(c.spec.Name, MessageLevel(p.Type), p.Message)
 		case c.opts.Stderr != nil:
-			fmt.Fprintln(c.opts.Stderr, p.Message)
+			_, _ = fmt.Fprintln(c.opts.Stderr, p.Message)
 		}
 	case "window/showMessage":
 		var p protocol.LogMessageParams
-		json.Unmarshal(params, &p)
+		_ = json.Unmarshal(params, &p)
 		if c.opts.OnMessage != nil {
 			c.opts.OnMessage(c.spec.Name, MessageLevel(p.Type), p.Message)
 		}

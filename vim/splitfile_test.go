@@ -40,7 +40,7 @@ func TestSplitWithAFileEditsItInTheNewWindow(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer n.Close()
+			defer func() { _ = n.Close() }() // nvim exiting as it closes
 			if err := n.Exec("edit a.txt"); err != nil {
 				t.Fatal(err)
 			}

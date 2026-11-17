@@ -123,7 +123,9 @@ func TestScanFindsSiblings(t *testing.T) {
 	repoAt(t, filepath.Join(src, "removed"))
 	repoAt(t, filepath.Join(src, ".hidden"))
 	repoAt(t, filepath.Join(src, "group", "deeper"))
-	os.MkdirAll(filepath.Join(src, "plain"), 0o755)
+	if err := os.MkdirAll(filepath.Join(src, "plain"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	known.Git("worktree", "add", "-q", "-b", "wt", filepath.Join(src, "a-worktree"))
 
 	if _, err := r.w.AddRepoPath(ctx, filepath.Join(src, "removed")); err != nil {

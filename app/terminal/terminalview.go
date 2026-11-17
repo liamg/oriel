@@ -137,7 +137,7 @@ func (x *Terminals) draw(c *ui.Ctx, t *terminal) {
 		if cols != t.cols || rows != t.rows {
 			t.cols, t.rows = cols, rows
 			t.emu.Resize(cols, rows)
-			t.src.Resize(cols, rows)
+			_ = t.src.Resize(cols, rows)
 		}
 		if !t.normal {
 			x.pointer(c, t, in, r, charW)
@@ -311,13 +311,13 @@ func (x *Terminals) key(c *ui.Ctx, t *terminal, k render.KeyEvent) {
 	t.sel = nil
 	if n == "<D-v>" || n == "<C-S-v>" {
 		if s, ok := c.Clipboard().ReadClipboard(); ok {
-			t.src.Write(t.emu.Paste(s))
+			_, _ = t.src.Write(t.emu.Paste(s))
 		}
 		return
 	}
 	if b := t.emu.EncodeKey(termKey(k)); len(b) > 0 {
 		t.emu.Scroll(term.Scroll{To: term.ScrollBottom})
-		t.src.Write(b)
+		_, _ = t.src.Write(b)
 	}
 }
 
@@ -336,7 +336,7 @@ func (x *Terminals) wheel(c *ui.Ctx, t *terminal, in ui.Interaction, id ui.ID, c
 		row := min(max(int((at.Y-r.Min.Y-3)/termLineH), 0), t.rows-1)
 		if b := term.Wheel(t.emu, col, row, n); b != nil {
 			t.emu.Scroll(term.Scroll{To: term.ScrollBottom})
-			t.src.Write(b)
+			_, _ = t.src.Write(b)
 			return
 		}
 	}

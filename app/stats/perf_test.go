@@ -27,7 +27,7 @@ func TestCPUOpensThePerformancePage(t *testing.T) {
 	if err := agent.Start(); err != nil {
 		t.Skip("no sleep:", err)
 	}
-	t.Cleanup(func() { agent.Process.Kill(); agent.Wait() })
+	t.Cleanup(func() { _ = agent.Process.Kill(); _ = agent.Wait() })
 
 	s.ClickNode("CPU 34%, Performance")
 	if s.Find("Performance") == nil {

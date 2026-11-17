@@ -14,8 +14,12 @@ func TestEditorFontSize(t *testing.T) {
 	if m := editorOf(s).Metrics(); m.Font.Size != 13.5 || m.LineH != 21 {
 		t.Fatalf("default code %v px on %v px rows, want 13.5 on 21 (01-ide)", m.Font.Size, m.LineH)
 	}
-	s.Registry().Options().Set("editor.font_size", registry.LayerUser, registry.At{}, 18.0)
-	s.Registry().Options().Set("editor.line_height", registry.LayerUser, registry.At{}, 1.5)
+	if err := s.Registry().Options().Set("editor.font_size", registry.LayerUser, registry.At{}, 18.0); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Registry().Options().Set("editor.line_height", registry.LayerUser, registry.At{}, 1.5); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	m := editorOf(s).Metrics()
 	if m.Font.Size != 18 || m.LineH != 27 {

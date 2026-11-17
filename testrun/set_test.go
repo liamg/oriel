@@ -43,7 +43,9 @@ func (otherContribution) ContributionName() string { return "x" }
 
 func TestSetPluginAdapters(t *testing.T) {
 	ws := Workspace{Root: t.TempDir()}
-	os.WriteFile(filepath.Join(ws.Root, "Gemfile"), nil, 0o644)
+	if err := os.WriteFile(filepath.Join(ws.Root, "Gemfile"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	spec := filepath.Join(ws.Root, "calc_spec.rb")
 	src := []byte("describe Calc do\n  it \"adds\" do\n  end\nend\n")
 	s := Builtin()

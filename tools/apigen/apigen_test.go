@@ -41,7 +41,9 @@ type X struct{}
 //oriel:api doc="d"
 func (X) Open() {}
 `
-	os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Parse(dir); err == nil || !strings.Contains(err.Error(), "declares no capability") {
 		t.Errorf("a function with no capability: %v", err)
 	}
@@ -49,7 +51,9 @@ func (X) Open() {}
 //oriel:api doc="d" cap=exec
 func (X) Run() {}
 `
-	os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	nss, err := Parse(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +67,9 @@ func (X) Run() {}
 			t.Errorf("the glue doesn't check %s:\n%s", want, b)
 		}
 	}
-	os.WriteFile(filepath.Join(dir, "x.go"), []byte(strings.Replace(src, "cap=exec", "cap=exce", 1)), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte(strings.Replace(src, "cap=exec", "cap=exce", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := Parse(dir); err == nil || !strings.Contains(err.Error(), "isn't a capability") {
 		t.Errorf("a misspelt capability: %v", err)
 	}
@@ -81,7 +87,9 @@ type X struct{}
 //oriel:api doc="Run it." deprecated="use oriel.x.go"
 func (X) Run() {}
 `
-	os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	nss, err := Parse(dir)
 	if err != nil {
 		t.Fatal(err)

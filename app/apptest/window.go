@@ -168,7 +168,9 @@ func WindowPlugin[T plugin.Plugin](w *Window, id string) T {
 func (w *Window) Stop() {
 	w.once.Do(func() {
 		w.Win.Close()
-		<-w.done
+		if err := <-w.done; err != nil {
+			w.T.Errorf("the app exited with %v", err)
+		}
 	})
 }
 
@@ -205,12 +207,14 @@ func (w *Window) RunFinished(id string, a registry.Args) {
 		default:
 		}
 	}
-	w.Do(func() error {
+	if err := w.Do(func() error {
 		if err := w.Host.Run(registry.OnDone(context.Background(), send), id, a); err != nil {
 			send(err)
 		}
 		return nil
-	})
+	}); err != nil {
+		w.T.Fatal(err)
+	}
 	select {
 	case err := <-done:
 		if err != nil {
@@ -226,7 +230,9 @@ func (w *Window) WaitFor(what string, ok func() bool) {
 	w.T.Helper()
 	for deadline := time.Now().Add(Timeout); ; time.Sleep(10 * time.Millisecond) {
 		var done bool
-		w.Do(func() error { done = ok(); return nil })
+		if err := w.Do(func() error { done = ok(); return nil }); err != nil {
+			w.T.Fatal(err)
+		}
 		if done {
 			return
 		}
@@ -265,7 +271,9 @@ func (w *Window) WaitNotice(id string) core.Notification {
 func (w *Window) Shown() []layout.ViewRef {
 	w.T.Helper()
 	var got []layout.ViewRef
-	w.Do(func() error { got = w.Host.Layout().Shown(); return nil })
+	if err := w.Do(func() error { got = w.Host.Layout().Shown(); return nil }); err != nil {
+		w.T.Fatal(err)
+	}
 	return got
 }
 
@@ -374,7 +382,7 @@ func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, 
 	for deadline := time.Now().Add(Timeout); ; {
 		Settled(w, what, find)
 		sent := false
-		w.Do(func() error {
+		if err := w.Do(func() error {
 			fs := w.Win.Frames()
 			if p, ok := find(fs[len(fs)-1]); ok {
 				w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
@@ -385,7 +393,9 @@ func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, 
 				sent = true
 			}
 			return nil
-		})
+		}); err != nil {
+			w.T.Fatal(err)
+		}
 		if sent {
 			return
 		}
@@ -736,12 +746,18 @@ func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fak
 	p, _ := se.Snapshot().Primary()
 	dir := p.Dir
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) })
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the diff with the AI review column", func(s string) bool {
 		return HasAll(s, "func roundHalfEven", "AI REVIEW", "No AI review yet.", "REVIEWER", "Codex", "Review changes", "Prompt…")
 	})
@@ -766,7 +782,9 @@ func (w *Window) WaitGit() {
 	deadline := time.Now().Add(Timeout)
 	for {
 		var busy bool
-		w.Do(func() error { busy = kit.Git(w.Host).Busy(); return nil })
+		if err := w.Do(func() error { busy = kit.Git(w.Host).Busy(); return nil }); err != nil {
+			w.T.Fatal(err)
+		}
 		if !busy {
 			return
 		}

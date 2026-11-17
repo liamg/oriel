@@ -63,7 +63,10 @@ func TestSleeper(t *testing.T) {
 		t.Skip("only a child of TestFamily")
 	}
 	fmt.Println(sleeperReady)
-	io.Copy(io.Discard, os.Stdin) // until its parent is done with it
+	// until its parent is done with it
+	if _, err := io.Copy(io.Discard, os.Stdin); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // A child started with a session's variable is in this process's family, with its command line and session.
@@ -85,7 +88,7 @@ func TestFamily(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { stdin.Close(); cmd.Process.Kill(); cmd.Wait() })
+	t.Cleanup(func() { _ = stdin.Close(); _ = cmd.Process.Kill(); _ = cmd.Wait() })
 	for sc := bufio.NewScanner(stdout); ; {
 		if !sc.Scan() {
 			t.Fatal("the sleeper ended before it ran")

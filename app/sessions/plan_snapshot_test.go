@@ -37,12 +37,22 @@ const mockupPlan = "# Round invoice lines half-to-even\n\n## Goal\n\n" +
 func planScene(t *testing.T, config ...func(*apptest.Config)) *apptest.Scene {
 	t.Helper()
 	ws := t.TempDir()
-	os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte(mockupPlan), 0o644)
-	os.WriteFile(filepath.Join(ws, "api.md"), []byte("# API\n\n- `pricing.Round(amount, mode)`\n"), 0o644)
-	os.WriteFile(filepath.Join(ws, "ui.md"), []byte("# UI\n\nNothing changes on screen.\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte(mockupPlan), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, "api.md"), []byte("# API\n\n- `pricing.Round(amount, mode)`\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, "ui.md"), []byte("# UI\n\nNothing changes on screen.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	pricing, billing := filepath.Join(t.TempDir(), "pricing"), filepath.Join(t.TempDir(), "billing-ui")
-	os.MkdirAll(pricing, 0o755)
-	os.MkdirAll(billing, 0o755)
+	if err := os.MkdirAll(pricing, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(billing, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: pricing, ScriptedFiles: true, Config: func(cfg *apptest.Config) {
 		for _, c := range config {
 			c(cfg)
@@ -160,7 +170,9 @@ func TestStartWorkDialogSnapshot(t *testing.T) {
 	for _, th := range se.Snapshot().Threads {
 		if th.Status == core.ThreadOpen && th.Anchor != nil {
 			th.Status = core.ThreadDeferred
-			s.Store().Apply(core.ThreadUpdated{Session: "pricing-rounding", Thread: th})
+			if err := s.Store().Apply(core.ThreadUpdated{Session: "pricing-rounding", Thread: th}); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	s.Run("plan.open", nil)
@@ -213,7 +225,9 @@ func TestPlanClosedThreadUnfoldsWithoutReopening(t *testing.T) {
 // doc was read first.
 func TestPlanShowsPLANOnceItComesIn(t *testing.T) {
 	ws := t.TempDir()
-	os.WriteFile(filepath.Join(ws, "api.md"), []byte("# API\n\nthe api doc's body\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(ws, "api.md"), []byte("# API\n\nthe api doc's body\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	dir := t.TempDir()
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "p", Name: "p", Kind: core.KindPlan, StartWork: true, Status: core.StatusQuiet,
@@ -221,7 +235,9 @@ func TestPlanShowsPLANOnceItComesIn(t *testing.T) {
 	s.Apply(core.SessionFocused{ID: "p"})
 	s.Run("plan.open", nil)
 	s.Until("api.md shown", func() bool { return s.Has("the api doc's body") })
-	os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte("# Plan\n\nthe plan's own body\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte("# Plan\n\nthe plan's own body\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("PLAN.md shown, once it's there", func() bool {
 		s.SettleReads()
 		return s.Has("the plan's own body")
@@ -236,7 +252,9 @@ func TestAPlanDocClickedComesToTheFront(t *testing.T) {
 	s.SettleReads()
 	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "pricing-rounding"))
 	other := filepath.Join(se.Snapshot().Projects[0].Dir, "notes.go")
-	os.WriteFile(other, []byte("package pricing\n"), 0o644)
+	if err := os.WriteFile(other, []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": other})
 	s.Until("the file's tab", func() bool { return s.Find("notes.go") != nil })
 	s.ClickOn("notes.go") // its tab: the file in front, the plan behind it
@@ -272,7 +290,9 @@ func TestAResolvedThreadsLineTakesANewThread(t *testing.T) {
 func TestAShortenedDocStillTakesNewThreads(t *testing.T) {
 	s := planScene(t)
 	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "pricing-rounding"))
-	os.WriteFile(filepath.Join(se.Snapshot().Dir, "PLAN.md"), []byte("# Round invoice lines\n\nKeep it short.\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(se.Snapshot().Dir, "PLAN.md"), []byte("# Round invoice lines\n\nKeep it short.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("plan.open", nil)
 	s.SettleReads()
 	s.Quiet()

@@ -94,7 +94,7 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	h := &Headless{sh: sh, size: o.Size, poked: poked, cancel: func() { cancel(); unfont() }}
 	last, err := sh.activate(context.Background(), &h.plugins)
 	if err != nil {
-		h.Close()
+		_ = h.Close()
 		return nil, err
 	}
 	h.host = last
@@ -105,7 +105,7 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	st, _ := theme.Stack(theme.Builtins(), "oriel")
 	r, err := theme.Resolve(st, theme.Dark)
 	if err != nil {
-		h.Close()
+		_ = h.Close()
 		return nil, err
 	}
 	h.ui.SetTheme(r)
@@ -320,7 +320,7 @@ func (h *Headless) Press(key string) error {
 	var err error
 	if k, _ := reg.Lookup(h.sh.keyModesFor(key), keymap.Parse(key)); k != nil {
 		done := false
-		reg.Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), k.Command, k.Args)
+		_ = reg.Run(registry.OnDone(context.Background(), func(e error) { err, done = e, true }), k.Command, k.Args)
 		if !done && !h.Until(15*time.Second, func() bool { return done }) {
 			return errors.New(k.Command + " never finished")
 		}

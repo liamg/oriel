@@ -172,7 +172,7 @@ func (c *Client) dial(ctx context.Context) (Peer, Hello, error) {
 		err = fmt.Errorf("the plugin speaks version %d of the agent protocol, not %d", h.ProtocolVersion, Version)
 	}
 	if err != nil {
-		p.Close()
+		_ = p.Close()
 		return nil, Hello{}, fmt.Errorf("%s: initialize: %w", c.name(), localError(err))
 	}
 	return p, h, nil
@@ -341,7 +341,7 @@ func (c *Client) StartLogin(ctx context.Context) (agent.Login, error) {
 		p := c.peer
 		c.mu.Unlock()
 		if waiting && p != nil {
-			p.Notify("login/cancel", loginParams{Login: id})
+			_ = p.Notify("login/cancel", loginParams{Login: id})
 		}
 	}()
 	return agent.Login{URL: r.URL, Done: done}, nil
@@ -386,20 +386,20 @@ func (c *Client) notify(method string, params json.RawMessage) {
 		}
 	case "session/closed":
 		var e sessionParams
-		json.Unmarshal(params, &e)
+		_ = json.Unmarshal(params, &e)
 		if s := c.session(e.Session); s != nil {
 			c.forget(s)
 			s.finish(true)
 		}
 	case "terminal/output":
 		var e sessionParams
-		json.Unmarshal(params, &e)
+		_ = json.Unmarshal(params, &e)
 		if s := c.session(e.Session); s != nil {
 			s.term.Feed(unb64(e.Data))
 		}
 	case "login/done":
 		var l loginParams
-		json.Unmarshal(params, &l)
+		_ = json.Unmarshal(params, &l)
 		c.mu.Lock()
 		ch := c.logins[l.Login]
 		delete(c.logins, l.Login)
@@ -413,7 +413,7 @@ func (c *Client) notify(method string, params json.RawMessage) {
 		}
 	case "sandbox/report":
 		var r placeCall
-		json.Unmarshal(params, &r)
+		_ = json.Unmarshal(params, &r)
 		c.mu.Lock()
 		at := c.places[r.Call]
 		c.mu.Unlock()
@@ -453,7 +453,7 @@ func (c *Client) answer(ctx context.Context, method string, params json.RawMessa
 		return toolResult{Output: out}, nil
 	case "sandbox/env":
 		var r placeCall
-		json.Unmarshal(params, &r)
+		_ = json.Unmarshal(params, &r)
 		c.mu.Lock()
 		at := c.places[r.Call]
 		c.mu.Unlock()

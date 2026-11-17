@@ -92,7 +92,7 @@ func (x *LSP) agentDoc(ctx context.Context, path string) (c *lsp.Client, src []b
 		_, editing := x.docs[path]
 		x.mu.Unlock()
 		if !editing {
-			x.m.Close(path)
+			_ = x.m.Close(path)
 		}
 	}, nil
 }

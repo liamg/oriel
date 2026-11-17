@@ -136,7 +136,9 @@ func askIn(ctx context.Context, a *agenttest.FakeSession, tid core.ThreadID, q s
 func TestAQuestionStaysInItsResolvedThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	path := filepath.Join(projectDir(t, r), "round.go")
-	os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.Run("request.comment", registry.Args{"file": "round.go", "line": 4, "body": "Floor goes the wrong way."})
 	a.WaitSent(t)
 	th := threadWith(t, r, "Floor goes the wrong way.")
@@ -150,7 +152,9 @@ func TestAQuestionStaysInItsResolvedThread(t *testing.T) {
 	})
 	noQuestionOverTheWindow(t, r, "Which way should it go?")
 
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the question in its resolved thread between the lines", func(s string) bool {
 		return apptest.HasAll(s, "floor := scaled.Floor()", "Floor goes the wrong way.", "Which way should it go?", "down")
 	})
@@ -226,7 +230,9 @@ func TestAWithdrawnQuestionLeavesItsThread(t *testing.T) {
 func TestAQuestionWithNoThreadLandsInTheActiveThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	path := filepath.Join(projectDir(t, r), "round.go")
-	os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.Run("request.comment", registry.Args{"file": "round.go", "line": 4, "body": "Floor goes the wrong way."})
 	a.WaitSent(t)
 	th := threadWith(t, r, "Floor goes the wrong way.")
@@ -237,7 +243,9 @@ func TestAQuestionWithNoThreadLandsInTheActiveThread(t *testing.T) {
 	}
 	noQuestionOverTheWindow(t, r, "Use math.Round?")
 
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the question in the thread between the lines", func(s string) bool {
 		return apptest.HasAll(s, "floor := scaled.Floor()", "Floor goes the wrong way.", "Use math.Round?", "Keep Floor")
 	})
@@ -317,11 +325,15 @@ func TestAQuestionShowsInItsThreadInTheDiff(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.Run("request.comment", registry.Args{"file": "round.go", "line": 8, "body": "Negative ties?"})
 	a.WaitSent(t)
 	th := threadWith(t, r, "Negative ties?")
@@ -329,7 +341,9 @@ func TestAQuestionShowsInItsThreadInTheDiff(t *testing.T) {
 	asked(r, 1)
 	r.Run("request.resolve", registry.Args{"thread": string(th.ID)})
 	noQuestionOverTheWindow(t, r, "Toward zero or away?")
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the question in its thread between the diff's lines", func(s string) bool {
 		return apptest.HasAll(s, "@@ -5,8 +5,12 @@", "Negative ties?", "Toward zero or away?", "toward zero")
 	})

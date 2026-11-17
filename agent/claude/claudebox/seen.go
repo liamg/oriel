@@ -70,7 +70,7 @@ func seenIn(path string) []string {
 	if err != nil {
 		return out
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	const chunk, overlap = 4 << 20, 128 // a flag cut by a chunk's end is whole in the overlap
 	r := bufio.NewReaderSize(f, chunk)
 	buf := make([]byte, 0, chunk+overlap)

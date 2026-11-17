@@ -248,7 +248,7 @@ func atspiEnums(t *testing.T) (values map[string]uint32, names map[uint32]string
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	values, names = map[string]uint32{}, map[uint32]string{}
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {

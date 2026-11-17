@@ -187,7 +187,7 @@ func isELF(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var magic [4]byte
 	_, err = io.ReadFull(f, magic[:])
 	return err == nil && string(magic[:]) == "\x7fELF"

@@ -70,7 +70,9 @@ func box(fill uint8) Style {
 
 // Each transition: the start, a midpoint and the settled frame, and with reduced motion each jumps to settled.
 func TestTransitions(t *testing.T) {
-	os.MkdirAll(filepath.Join("testdata", "motion"), 0o755)
+	if err := os.MkdirAll(filepath.Join("testdata", "motion"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	for _, reduced := range []bool{false, true} {
 		suffix := ""
 		if reduced {

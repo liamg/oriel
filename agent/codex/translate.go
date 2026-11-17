@@ -263,11 +263,11 @@ func turnError(raw json.RawMessage) (string, string) {
 		Message        string          `json:"message"`
 		CodexErrorInfo json.RawMessage `json:"codexErrorInfo"`
 	}
-	json.Unmarshal(raw, &e)
+	_ = json.Unmarshal(raw, &e)
 	var name string
 	if json.Unmarshal(e.CodexErrorInfo, &name) != nil {
 		var obj map[string]json.RawMessage
-		json.Unmarshal(e.CodexErrorInfo, &obj)
+		_ = json.Unmarshal(e.CodexErrorInfo, &obj)
 		for k := range obj {
 			name = k
 		}
@@ -290,7 +290,7 @@ func (s *session) stream(id string, role core.ItemKind, delta string) {
 // str is a JSON string's value; "" for anything else.
 func str(raw json.RawMessage) string {
 	var v string
-	json.Unmarshal(raw, &v)
+	_ = json.Unmarshal(raw, &v)
 	return v
 }
 
@@ -369,7 +369,7 @@ func (s *session) itemCompleted(it item, agentID string) {
 		text := strings.Join(it.Summary, "\n")
 		if text == "" {
 			var parts []string
-			json.Unmarshal(it.Content, &parts)
+			_ = json.Unmarshal(it.Content, &parts)
 			text = strings.Join(parts, "\n")
 		}
 		if text != "" {
@@ -384,7 +384,7 @@ func (s *session) itemCompleted(it item, agentID string) {
 			Type string `json:"type"`
 			Text string `json:"text"`
 		}
-		json.Unmarshal(it.Content, &in)
+		_ = json.Unmarshal(it.Content, &in)
 		var parts []string
 		for _, i := range in {
 			if i.Type == "text" {

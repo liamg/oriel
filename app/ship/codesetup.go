@@ -193,7 +193,9 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 				res := widget.Input(c, "token", &a.token, widget.InputOpts{Label: hs.Site.Secret, Placeholder: "paste it here", Secret: true,
 					Help: codeSetupHelp, KeyMode: SetupKeyMode, Invalid: a.err != nil})
 				if res.Submitted {
-					x.saveSetup()
+					if err := x.saveSetup(); err != nil {
+						a.err = err
+					}
 				}
 				if page := hs.Setup.TokenPage(a.hostname); page != "" && widget.Button(c, "make", "Create a token ↗", widget.ButtonOpts{Ghost: true, Help: codeSetupHelp}) {
 					if err := kit.OpenURL(x.h, page); err != nil {
@@ -212,7 +214,9 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 				x.ask = nil
 			}
 			if widget.Button(c, "ok", "Save", widget.ButtonOpts{Primary: true, Key: "↵", Help: codeSetupHelp}) {
-				x.saveSetup()
+				if err := x.saveSetup(); err != nil {
+					a.err = err
+				}
 			}
 		})
 	})

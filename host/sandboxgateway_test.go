@@ -28,7 +28,9 @@ func (s *sandboxRig) allowed(id core.SessionID, root, tool string, args any) mcp
 		}
 		se := s.session(id)
 		if len(se.Asks) == 1 && se.Asks[0].Kind == core.AskGateway && se.Asks[0].Tool == tool {
-			s.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "allow"})
+			if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "allow"}); err != nil {
+				s.t.Fatal(err)
+			}
 			r := <-ch
 			got = &r
 			return true
@@ -118,7 +120,7 @@ func TestGatewayRunsOnTheHostAndLendsTheSSHAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { l.Close() })
+	t.Cleanup(func() { _ = l.Close() }) // the test is done with it
 	t.Setenv("SSH_AUTH_SOCK", sock)
 	if r := s.allowed(id, b.Root(), "oriel__ssh_agent", map[string]any{"why": "private deps", "minutes": 2}); r.IsError ||
 		!strings.Contains(r.Text(), "The ssh-agent is available until") {

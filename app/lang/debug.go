@@ -222,7 +222,7 @@ func (x *Debug) Deactivate(ctx context.Context) error {
 	plugin.Teardown(ctx, func(ctx context.Context) {
 		if c != nil {
 			sctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-			c.Stop(sctx)
+			_ = c.Stop(sctx)
 			cancel()
 		}
 		x.work.Stop()

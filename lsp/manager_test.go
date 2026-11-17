@@ -16,7 +16,9 @@ import (
 
 func touch(t *testing.T, path string) {
 	t.Helper()
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +250,9 @@ func TestManager(t *testing.T) {
 	for _, msg := range f.server(2).got {
 		if msg.Method == "textDocument/didOpen" {
 			var p protocol.DidOpenTextDocumentParams
-			json.Unmarshal(msg.Params, &p)
+			if err := json.Unmarshal(msg.Params, &p); err != nil {
+				t.Fatal(err)
+			}
 			opened = append(opened, filepath.Base(Path(p.TextDocument.URI))+"="+p.TextDocument.Text)
 		}
 	}

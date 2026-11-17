@@ -70,7 +70,9 @@ func TestLuaPatternsOracle(t *testing.T) {
 		script.WriteString("io.write(tostring(string.find(" + luaQuote(c.subject) + ", " + luaQuote(c.pattern) + ") ~= nil), '\\n')\n")
 	}
 	f := t.TempDir() + "/cases.lua"
-	os.WriteFile(f, []byte(script.String()), 0o644)
+	if err := os.WriteFile(f, []byte(script.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	out, err := exec.Command("nvim", "--headless", "-l", f).CombinedOutput()
 	if err != nil {
 		t.Fatalf("nvim: %v\n%s", err, out)

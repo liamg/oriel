@@ -51,15 +51,15 @@ func TestStartViewEntries(t *testing.T) {
 func TestOpenDirectory(t *testing.T) {
 	state := t.TempDir()
 	dir := filepath.Join(t.TempDir(), "proj")
-	os.MkdirAll(dir, 0o755)
-	os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi\n"), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOpts{State: state})
-	r.WaitText("Open Directory")
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "directory.open", registry.Args{"path": dir})
-	}); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state})
+	r.WaitText("Open Directory")
+	r.Run("directory.open", registry.Args{"path": dir})
 	r.WaitFrame("the window on proj", func(s string) bool {
 		return !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening proj")
 	})
@@ -131,7 +131,9 @@ func TestStartViewSnapshots(t *testing.T) {
 func TestTypedDirs(t *testing.T) {
 	home := t.TempDir()
 	for _, d := range []string{"src/oriel", "src/other", "src/.hidden", "docs"} {
-		os.MkdirAll(filepath.Join(home, d), 0o755)
+		if err := os.MkdirAll(filepath.Join(home, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, tt := range []struct{ q, want string }{
 		{"~/src/", "~/src ~/src/oriel ~/src/other"},
@@ -162,12 +164,20 @@ func addRecents(s *apptest.Scene) {
 		ago  time.Duration
 	}{{"notes", 7 * 24 * time.Hour}, {"dotfiles", 3 * 24 * time.Hour}, {"oriel", 10 * time.Minute}} {
 		p := filepath.Join(home, "src", d.name)
-		os.MkdirAll(p, 0o755)
-		if d.name != "notes" {
-			os.MkdirAll(filepath.Join(p, ".git"), 0o755)
-			os.WriteFile(filepath.Join(p, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			s.T.Fatal(err)
 		}
-		shell.AddRecent(s.Headless, p, time.Now().Add(-d.ago))
+		if d.name != "notes" {
+			if err := os.MkdirAll(filepath.Join(p, ".git"), 0o755); err != nil {
+				s.T.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(p, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+				s.T.Fatal(err)
+			}
+		}
+		if err := shell.AddRecent(s.Headless, p, time.Now().Add(-d.ago)); err != nil {
+			s.T.Fatal(err)
+		}
 	}
 	s.SettleReads()
 }
@@ -393,7 +403,9 @@ func TestDirectoriesWalkHomeOffTheLoop(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	home, _ := os.UserHomeDir()
 	for _, d := range []string{"src/oriel/.git", "src/notes"} {
-		os.MkdirAll(filepath.Join(home, d), 0o755)
+		if err := os.MkdirAll(filepath.Join(home, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	src, walks := shell.DirectoriesSource(s.Headless)
 	defer walks.Dispose()
@@ -419,7 +431,9 @@ func TestDirectoriesWalkHomeOffTheLoop(t *testing.T) {
 func TestWindowOpensOnTheThemesBackground(t *testing.T) {
 	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
 		r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: func(h plugin.Host) {
-			h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, string(v))
+			if err := h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, string(v)); err != nil {
+				t.Error(err)
+			}
 		}})
 		st, err := theme.Stack(theme.Builtins(), "oriel")
 		if err != nil {

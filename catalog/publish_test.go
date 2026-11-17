@@ -40,8 +40,12 @@ func taggedPlugin(t *testing.T, manifest string) (dir, commit string) {
 	t.Setenv("GIT_CONFIG_VALUE_0", "https://github.com/acme/oriel-jira")
 	dir = t.TempDir()
 	git(t, dir, "init", "-q", "-b", "main")
-	os.WriteFile(filepath.Join(dir, "oriel.toml"), []byte(manifest), 0o644)
-	os.WriteFile(filepath.Join(dir, "init.lua"), []byte("oriel.notify(\"hi\")\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "oriel.toml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte("oriel.notify(\"hi\")\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	git(t, dir, "add", ".")
 	git(t, dir, "commit", "-q", "-m", "v0.4.2")
 	git(t, dir, "tag", "v0.4.2")

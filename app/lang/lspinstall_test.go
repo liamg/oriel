@@ -30,7 +30,9 @@ mkdir -p "$5/node_modules/.bin" && printf '#!/bin/sh\nexit 1\n' > "$5/node_modul
 	}
 	dir := t.TempDir()
 	file := filepath.Join(dir, "main.ts")
-	os.WriteFile(file, []byte("const x = 1\n"), 0o644)
+	if err := os.WriteFile(file, []byte("const x = 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Registry().Contribute(reglang.LSPServer{Name: "fake-ls", Language: []string{"typescript"}, Cmd: []string{"fake-ls", "--stdio"},
 		Roots: []string{".git"}, Source: "test", Install: &lsp.Install{Tool: lsp.ToolNPM, Packages: []string{"fake-ls"}}})

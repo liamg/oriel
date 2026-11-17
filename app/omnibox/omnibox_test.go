@@ -19,10 +19,18 @@ import (
 // omnibox up.
 func omniScene(t *testing.T, query string) *apptest.Scene {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "internal", "pricing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "internal", "pricing", "round.go"), []byte(rig.RoundGo()), 0o644)
-	os.WriteFile(filepath.Join(dir, "internal", "pricing", "tiers.go"), []byte("package pricing\n\n// PriceForTier is a tier's price.\nfunc PriceForTier(t int) int {\n\treturn t * 100\n}\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# pricing\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, "internal", "pricing"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "internal", "pricing", "round.go"), []byte(rig.RoundGo()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "internal", "pricing", "tiers.go"), []byte("package pricing\n\n// PriceForTier is a tier's price.\nfunc PriceForTier(t int) int {\n\treturn t * 100\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1600, Y: 1000}})
 	for _, ev := range []core.SessionOpened{
 		{ID: "s1", Name: "pricing-rounding", Kind: core.KindPlan, Status: core.StatusWorking},
@@ -30,9 +38,13 @@ func omniScene(t *testing.T, query string) *apptest.Scene {
 		{ID: "s3", Name: "price-feed backfill", Kind: core.KindJob, Status: core.StatusOff},
 		{ID: "s4", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer},
 	} {
-		s.Store().Apply(ev)
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
 	}
-	s.Store().Apply(core.SessionFocused{ID: "s1"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "s1"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
 	s.Run("editor.open", registry.Args{"path": "internal/pricing/tiers.go"})
 	s.Registry().Command(registry.Command{ID: "plan.new", Title: "New plan from price…", Run: func(registry.Ctx, registry.Args) error { return nil }})
@@ -100,8 +112,12 @@ func TestOmniboxRanksManyFilesOffTheLoop(t *testing.T) {
 	dir := t.TempDir()
 	for i := range omnibox.RankAway + 500 {
 		p := filepath.Join(dir, fmt.Sprintf("pkg%d", i%20), fmt.Sprintf("f%05d.go", i))
-		os.MkdirAll(filepath.Dir(p), 0o755)
-		os.WriteFile(p, []byte("package p\n"), 0o644)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("package p\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1600, Y: 1000}})
 	sourcesLoaded(s)

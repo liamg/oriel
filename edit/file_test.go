@@ -53,7 +53,9 @@ func TestReadOnlyFiles(t *testing.T) {
 	dir := t.TempDir()
 	for name, b := range map[string]string{"bin": "a\x00b", "latin1": "caf\xe9\n"} {
 		p := filepath.Join(dir, name)
-		os.WriteFile(p, []byte(b), 0o644)
+		if err := os.WriteFile(p, []byte(b), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		text, f, err := ReadFile(p)
 		if err != nil {
 			t.Fatal(err)
@@ -75,9 +77,13 @@ func TestReadOnlyFiles(t *testing.T) {
 func TestWriteKeepsModeAndLinks(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "run.sh")
-	os.WriteFile(p, []byte("echo hi\r\n"), 0o750)
+	if err := os.WriteFile(p, []byte("echo hi\r\n"), 0o750); err != nil {
+		t.Fatal(err)
+	}
 	link := filepath.Join(dir, "link.sh")
-	os.Symlink(p, link)
+	if err := os.Symlink(p, link); err != nil {
+		t.Fatal(err)
+	}
 	text, f, err := ReadFile(link)
 	if err != nil {
 		t.Fatal(err)
@@ -102,20 +108,28 @@ func TestWriteKeepsModeAndLinks(t *testing.T) {
 
 func TestChangedOnDisk(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(p, []byte("one\n"), 0o644)
+	if err := os.WriteFile(p, []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	_, f, _ := ReadFile(p)
 	if ch, _ := f.ChangedOnDisk(); ch {
 		t.Error("changed straight after reading")
 	}
-	os.Chtimes(p, time.Now().Add(time.Hour), time.Now().Add(time.Hour))
+	if err := os.Chtimes(p, time.Now().Add(time.Hour), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
 	if ch, _ := f.ChangedOnDisk(); ch {
 		t.Error("a touch with the same bytes is a change")
 	}
-	os.WriteFile(p, []byte("two\n"), 0o644)
+	if err := os.WriteFile(p, []byte("two\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if ch, _ := f.ChangedOnDisk(); !ch {
 		t.Error("new bytes aren't a change")
 	}
-	os.Remove(p)
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
 	if ch, _ := f.ChangedOnDisk(); !ch {
 		t.Error("deleting isn't a change")
 	}

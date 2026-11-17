@@ -95,7 +95,7 @@ func (x *Editor) newPresent(top int) (kit.PresentState, error) {
 func presents(pr uireg.BufferPresenter, path string) bool {
 	ok := pr.When == nil
 	if !ok {
-		registry.Call(func() error { ok = pr.When(path); return nil })
+		registry.Try(func() { ok = pr.When(path) })
 	}
 	return ok
 }

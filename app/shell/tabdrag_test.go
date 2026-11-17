@@ -15,8 +15,12 @@ import (
 // tabDragScene is a.go and b.go open as tabs in main, and the agent console in the bottom dock.
 func tabDragScene(t *testing.T) *apptest.Scene {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n\nfunc Alpha() {}\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "b.go"), []byte("package b\n\nfunc Bravo() {}\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n\nfunc Alpha() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package b\n\nfunc Bravo() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": "a.go"})
 	s.Run("editor.open", registry.Args{"path": "b.go"})

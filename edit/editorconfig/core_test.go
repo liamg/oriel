@@ -185,9 +185,15 @@ func TestCoreSuite(t *testing.T) {
 // line, and the file's other sections still apply.
 func TestSourcesAndProblems(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "sub"), 0o755)
-	os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("root = true\n\n[*]\nindent_style = space\nindent_size = 4\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "sub", ".editorconfig"), []byte("[*.go]\nnonsense line\nindent_style = tab\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".editorconfig"), []byte("root = true\n\n[*]\nindent_style = space\nindent_size = 4\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sub", ".editorconfig"), []byte("[*.go]\nnonsense line\nindent_style = tab\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	res, err := Resolve(filepath.Join(dir, "sub", "a.go"), Options{})
 	if err != nil {
 		t.Fatal(err)

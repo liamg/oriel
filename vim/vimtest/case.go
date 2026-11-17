@@ -82,7 +82,9 @@ func Load(t testing.TB, glob string) []Case {
 			t.Fatal(err)
 		}
 		cs, err := Parse(f, r)
-		r.Close()
+		if err := r.Close(); err != nil {
+			t.Fatal(err)
+		}
 		if err != nil {
 			t.Fatal(err)
 		}

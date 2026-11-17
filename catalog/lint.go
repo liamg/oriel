@@ -103,7 +103,7 @@ func luaFiles(dir string) []string {
 	if _, err := os.Stat(filepath.Join(dir, plugin.EntryFile)); err == nil {
 		out = append(out, plugin.EntryFile)
 	}
-	filepath.WalkDir(filepath.Join(dir, "lua"), func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(filepath.Join(dir, "lua"), func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".lua") {
 			rel, _ := filepath.Rel(dir, p)
 			out = append(out, filepath.ToSlash(rel))

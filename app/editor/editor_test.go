@@ -69,11 +69,15 @@ func TestEditorIDEViews(t *testing.T) {
 func TestEditorReloadsFromDisk(t *testing.T) {
 	r := runEditor(t, map[string]string{"a.txt": "one\n"}, []string{"a.txt"})
 	r.WaitText("one")
-	os.WriteFile(filepath.Join(r.dir, "a.txt"), []byte("changed outside\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(r.dir, "a.txt"), []byte("changed outside\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("changed outside")
 	r.TypeKeys("x")
 	r.WaitText("hanged outside")
-	os.WriteFile(filepath.Join(r.dir, "a.txt"), []byte("again\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(r.dir, "a.txt"), []byte("again\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	n := r.waitNotice("editor.changed-on-disk.a.txt")
 	if n.Severity != core.SevQuestion || len(n.Actions) != 2 || n.Actions[0].Command != "editor.reload" {
 		t.Errorf("notice = %+v", n)

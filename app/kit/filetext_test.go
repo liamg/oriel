@@ -35,7 +35,9 @@ func until(t *testing.T, what string, ok func() bool) {
 func TestFileTextReadsOffTheLoop(t *testing.T) {
 	_, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
-	os.WriteFile(path, []byte("package a\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	fs := FileTexts{}
 	if f := fs.Of(r, path); !f.Loading() || f.Src != nil {
 		t.Fatalf("the first ask read the file on the loop: %q", f.Src)
@@ -50,7 +52,9 @@ func TestFileTextReadsOffTheLoop(t *testing.T) {
 func TestFileTextHighlightsOffTheLoop(t *testing.T) {
 	_, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
-	os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	fs := FileTexts{}
 	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
@@ -65,7 +69,9 @@ func TestFileTextHighlightsOffTheLoop(t *testing.T) {
 func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 	rd, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
-	os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	fs := FileTexts{}
 	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
@@ -78,18 +84,24 @@ func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 		t.Error("an unchanged file was read or highlighted again")
 	}
 
-	os.WriteFile(path, []byte("package b\n"), 0o644)
+	if err := os.WriteFile(path, []byte("package b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	until(t, "the changed file", func() bool { return slices.Equal(fs.Of(r, path).Lines(), []string{"package b"}) })
 
 	buf := text.New([]byte("one\ntwo\n"), text.Author{})
 	if got := f.Load(rd, buf, path).Lines(); !slices.Equal(got, []string{"one", "two"}) {
 		t.Errorf("the buffer's lines = %q", got)
 	}
-	buf.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: 3}, Text: []byte("uno")}}})
+	if _, err := buf.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 0, End: 3}, Text: []byte("uno")}}}); err != nil {
+		t.Fatal(err)
+	}
 	if got := f.Load(rd, buf, path).Lines(); got[0] != "uno" {
 		t.Errorf("after an edit, the buffer's lines = %q", got)
 	}
 
-	os.Remove(path)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
 	until(t, "the file missing", func() bool { return fs.Of(r, path).Missing() })
 }

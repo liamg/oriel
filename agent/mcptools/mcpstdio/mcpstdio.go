@@ -28,12 +28,12 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 		}
 	}
 	if sock == "" {
-		fmt.Fprintln(stderr, "oriel hook mcp: "+SockEnv+" isn't set")
+		_, _ = fmt.Fprintln(stderr, "oriel hook mcp: "+SockEnv+" isn't set")
 		return 2
 	}
 	nc, err := net.Dial("unix", sock)
 	if err != nil {
-		fmt.Fprintln(stderr, "oriel hook mcp:", err)
+		_, _ = fmt.Fprintln(stderr, "oriel hook mcp:", err)
 		return 1
 	}
 	srv := &mcp.Server{Name: "oriel", Version: "0"}
@@ -42,7 +42,7 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 			srv.NotifyToolsChanged()
 		}
 	}}, jsonrpc.Options{Version: "2.0"})
-	defer host.Close()
+	defer func() { _ = host.Close() }()
 	srv.Handler = forward{host}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -55,10 +55,10 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 		case <-ctx.Done():
 		}
 	}()
-	srv.Serve(ctx, stdin, stdout)
+	_ = srv.Serve(ctx, stdin, stdout)
 	select {
 	case <-gone:
-		fmt.Fprintln(stderr, "oriel hook mcp: the session is gone")
+		_, _ = fmt.Fprintln(stderr, "oriel hook mcp: the session is gone")
 		return 1
 	default:
 		return 0

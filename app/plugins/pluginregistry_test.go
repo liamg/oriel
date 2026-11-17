@@ -46,22 +46,30 @@ func newFakeRegistry(t *testing.T) *fakeRegistry {
 		defer r.mu.Unlock()
 		switch {
 		case req.URL.Path == "/repos/"+catalog.DefaultRepo+"/releases":
-			json.NewEncoder(w).Encode([]map[string]any{{"tag_name": "index-1", "assets": []map[string]string{
+			if err := json.NewEncoder(w).Encode([]map[string]any{{"tag_name": "index-1", "assets": []map[string]string{
 				{"name": catalog.IndexFile, "url": r.srv.URL + "/asset/" + catalog.IndexFile},
-				{"name": catalog.IndexSig, "url": r.srv.URL + "/asset/" + catalog.IndexSig}}}})
+				{"name": catalog.IndexSig, "url": r.srv.URL + "/asset/" + catalog.IndexSig}}}}); err != nil {
+				t.Error(err)
+			}
 		case strings.HasPrefix(req.URL.Path, "/asset/"):
-			w.Write(r.files[strings.TrimPrefix(req.URL.Path, "/asset/")])
+			if _, err := w.Write(r.files[strings.TrimPrefix(req.URL.Path, "/asset/")]); err != nil {
+				t.Error(err)
+			}
 		case strings.HasSuffix(req.URL.Path, "/tags"):
 			out := []map[string]any{}
 			for _, tag := range r.tags[strings.TrimSuffix(strings.TrimPrefix(req.URL.Path, "/repos/"), "/tags")] {
 				out = append(out, map[string]any{"name": tag.name, "commit": map[string]string{"sha": tag.commit}})
 			}
-			json.NewEncoder(w).Encode(out)
+			if err := json.NewEncoder(w).Encode(out); err != nil {
+				t.Error(err)
+			}
 		case strings.Contains(req.URL.Path, "/commits/"):
 			repo, sha, _ := strings.Cut(strings.TrimPrefix(req.URL.Path, "/repos/"), "/commits/")
 			for _, tag := range r.tags[repo] {
 				if tag.commit == sha {
-					json.NewEncoder(w).Encode(map[string]any{"commit": map[string]any{"committer": map[string]string{"date": tag.at.Format(time.RFC3339)}}})
+					if err := json.NewEncoder(w).Encode(map[string]any{"commit": map[string]any{"committer": map[string]string{"date": tag.at.Format(time.RFC3339)}}}); err != nil {
+						t.Error(err)
+					}
 					return
 				}
 			}

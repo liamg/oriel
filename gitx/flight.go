@@ -227,14 +227,14 @@ func (r Repo) Fingerprint(ctx context.Context, since string) (string, error) {
 		if p == "" {
 			continue
 		}
-		fmt.Fprintf(h, "\x00%s\x00", p)
+		_, _ = fmt.Fprintf(h, "\x00%s\x00", p)
 		f, err := os.Open(filepath.Join(r.Dir, p))
 		if err != nil {
 			h.Write([]byte("\x00gone"))
 			continue
 		}
 		_, _ = io.Copy(h, f)
-		f.Close()
+		_ = f.Close()
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16], nil
 }

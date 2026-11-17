@@ -143,7 +143,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	cmd.Stderr = errs
 	proc, err := ex.Start(ctx, cmd)
 	if err != nil {
-		tools.Close()
+		_ = tools.Close()
 		return nil, fmt.Errorf("codex app-server: %w", err)
 	}
 	s := newSession(p, spec)
@@ -151,7 +151,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	s.rpc = jsonrpc.NewConn(proc.Stdout(), proc.Stdin(), jsonrpc.Handlers{Request: s.onRequest, Notify: s.onNotify}, jsonrpc.Options{})
 	go s.wait()
 	fail := func(err error) (agent.Session, error) {
-		s.Close()
+		_ = s.Close()
 		if t := errs.String(); t != "" {
 			err = fmt.Errorf("%w\n%s", err, t)
 		}
@@ -345,8 +345,8 @@ func (s *session) wait() {
 	case <-s.rpc.Done():
 	case <-time.After(2 * time.Second):
 	}
-	s.rpc.Close()
-	s.tools.Close()
+	_ = s.rpc.Close()
+	_ = s.tools.Close()
 	ex := agent.Exited{}
 	select {
 	case <-s.closing:
@@ -378,8 +378,8 @@ func (s *session) Terminal() agent.Terminal { return nil }
 func (s *session) Close() error {
 	s.once.Do(func() {
 		close(s.closing)
-		s.rpc.Close()
-		s.proc.Kill()
+		_ = s.rpc.Close()
+		_ = s.proc.Kill()
 	})
 	<-s.finished
 	return nil
@@ -509,7 +509,7 @@ func (s *session) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			s.rpc.Call(ctx, "thread/unsubscribe", map[string]any{"threadId": r.Thread.ID}, nil)
+			_ = s.rpc.Call(ctx, "thread/unsubscribe", map[string]any{"threadId": r.Thread.ID}, nil)
 		}()
 	}()
 	input := []map[string]any{{"type": "text", "text": f.Prompt}}

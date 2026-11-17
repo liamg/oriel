@@ -31,7 +31,9 @@ func TestGitHubHostAsksThroughTheWindowsNet(t *testing.T) {
 			Header: http.Header{"Content-Type": {"application/json"}}, Request: req}, nil
 	})}
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret("GITHUB_TOKEN", "site-token")
+	if err := secrets.SetSecret("GITHUB_TOKEN", "site-token"); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.Net, cfg.Secrets = net, secrets }})
 	h, ok := registry.HostByName(s.Registry(), "github")
 	if !ok || h.Requested == nil {

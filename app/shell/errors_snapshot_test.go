@@ -84,7 +84,9 @@ func TestErrorsSnapshots(t *testing.T) {
 			t.Errorf("the frame lacks %q", want)
 		}
 	}
-	s.Store().Apply(core.Dismissal(row))
+	if err := s.Store().Apply(core.Dismissal(row)); err != nil {
+		t.Fatal(err)
+	}
 	s.Logs.Router.Write(logs.Record{Time: apptest.At(14, 7, 10), Session: "config", Source: "session", Msg: "config session opened"})
 	for _, sc := range []struct {
 		name  string
@@ -212,8 +214,12 @@ func TestCrashOfferedOnceALaunch(t *testing.T) {
 		t.Fatalf("no crash report at launch:\n%s", s.Text())
 	}
 	s.ClickText("Close")
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "billing", Name: "billing", Kind: core.KindWork, Status: core.StatusQuiet, Dir: b}})
-	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "billing", Name: "billing", Kind: core.KindWork, Status: core.StatusQuiet, Dir: b}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "billing"}); err != nil {
+		t.Fatal(err)
+	}
 	if !s.Moves() {
 		t.Fatal("the window didn't reopen on the session")
 	}
@@ -225,7 +231,9 @@ func TestCrashOfferedOnceALaunch(t *testing.T) {
 // A toast that goes by itself can still be closed before its time, by its ✕.
 func TestTimedToastCloses(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Store().Apply(core.Notified{Notice: core.Notice{ID: "saved", Severity: core.SevInfo, Source: "core", Text: "Saved the thing", Time: s.Now}})
+	if err := s.Store().Apply(core.Notified{Notice: core.Notice{ID: "saved", Severity: core.SevInfo, Source: "core", Text: "Saved the thing", Time: s.Now}}); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("the toast", func() bool { return s.Has("Saved the thing") })
 	b := s.FindRole(render.RoleButton, "Dismiss")
 	if b == nil {

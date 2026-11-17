@@ -88,7 +88,7 @@ func (s *state) kill(from, to int, save bool) {
 	}
 	s.ed.SetRegister('+', edit.Register{Text: s.kills[len(s.kills)-1]})
 	if !save {
-		s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+		_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
 		s.ed.SetCursors([]edit.Cursor{{Off: from}})
 	}
 }
@@ -188,12 +188,12 @@ func (s *state) Key(k string) input.Result {
 		snap := s.ed.Buf()
 		if from := s.cursor(); from < snap.Len() {
 			to, _ := edit.Motion(snap, from, edit.CharNext, 1, 0)
-			s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
 		}
 	case "<BS>":
 		if to := s.cursor(); to > 0 {
 			from, _ := edit.Motion(s.ed.Buf(), to, edit.CharPrev, 1, 0)
-			s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
 			s.ed.SetCursors([]edit.Cursor{{Off: from}})
 		}
 	case "<C-/>", "<C-_>":
@@ -226,7 +226,7 @@ func (s *state) insert(t string, alone bool) {
 		s.group = s.ed.NewGroup()
 	}
 	off := s.cursor()
-	s.ed.Do([]text.Replace{{Range: text.Range{Start: off, End: off}, Text: []byte(t)}}, s.group)
+	_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: off, End: off}, Text: []byte(t)}}, s.group)
 	s.goTo(off + len(t))
 	if alone {
 		s.group = 0

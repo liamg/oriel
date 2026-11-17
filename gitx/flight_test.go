@@ -101,7 +101,9 @@ func TestFlightReadsEachStep(t *testing.T) {
 	upstream.Write(map[string]string{"limiter.go": "package limiter\n\nfunc Allow() bool {\n\treturn !true\n}\n"})
 	upstream.Commit("Other", "fix")
 	upstream.Git("push", "-q", "origin", "main")
-	r.Fetch(ctx)
+	if err := r.Fetch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	f, _ = r.Flight(ctx, "main")
 	if f.Behind != 2 || !slices.Equal(f.Conflicts, []string{"limiter.go"}) {
 		t.Fatalf("behind by a conflicting commit: %d, conflicts %q", f.Behind, f.Conflicts)
@@ -132,7 +134,9 @@ func TestRebaseCarriesWorkOver(t *testing.T) {
 	upstream.Write(map[string]string{"README": "hello\n"})
 	upstream.Commit("Other", "docs")
 	upstream.Git("push", "-q", "origin", "main")
-	r.Fetch(ctx)
+	if err := r.Fetch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.Rebase(ctx, "origin/main"); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +160,9 @@ func TestPushAfterRebase(t *testing.T) {
 	upstream.Write(map[string]string{"README": "hello\n"})
 	upstream.Commit("Other", "docs")
 	upstream.Git("push", "-q", "origin", "main")
-	r.Fetch(ctx)
+	if err := r.Fetch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.Rebase(ctx, "origin/main"); err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +184,9 @@ func TestPushAfterRebase(t *testing.T) {
 	upstream.Commit("Other", "feat: theirs")
 	upstream.Git("push", "-q", "origin", "feature")
 	work.Git("commit", "-q", "--amend", "-m", "feat: a, amended")
-	r.Fetch(ctx)
+	if err := r.Fetch(ctx); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.Push(ctx, "feature"); err == nil {
 		t.Fatal("pushed over a commit the branch never had")
 	}

@@ -114,9 +114,15 @@ func TestToolchainsStayOutOfCredentials(t *testing.T) {
 func TestLinkReplacesMountPoints(t *testing.T) {
 	dir, target := t.TempDir(), t.TempDir()
 	empty, file, stale := filepath.Join(dir, "empty"), filepath.Join(dir, "CLAUDE.md"), filepath.Join(dir, "stale")
-	os.Mkdir(empty, 0o700)
-	os.WriteFile(file, nil, 0o600)
-	os.Symlink("/elsewhere", stale)
+	if err := os.Mkdir(empty, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/elsewhere", stale); err != nil {
+		t.Fatal(err)
+	}
 	for _, at := range []string{empty, file, stale, filepath.Join(dir, "new", "x")} {
 		if err := link(at, target); err != nil {
 			t.Fatal(err)
@@ -126,7 +132,9 @@ func TestLinkReplacesMountPoints(t *testing.T) {
 		}
 	}
 	full := filepath.Join(dir, "full")
-	os.WriteFile(full, []byte("mine"), 0o600)
+	if err := os.WriteFile(full, []byte("mine"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if err := link(full, target); err == nil {
 		t.Error("a file with content was replaced")
 	}
@@ -150,10 +158,16 @@ func TestSandboxExecConfines(t *testing.T) {
 	}
 	home := t.TempDir()
 	git := filepath.Join(home, "repo", ".git")
-	os.MkdirAll(git, 0o700)
+	if err := os.MkdirAll(git, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	secret, config := filepath.Join(home, "secret"), filepath.Join(git, "config")
-	os.WriteFile(secret, []byte("x"), 0o600)
-	os.WriteFile(config, []byte("x"), 0o600)
+	if err := os.WriteFile(secret, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	p := real(Profile{Hide: []string{home}, Paths: []Access{{Path: git, Write: true}, {Path: config}}, Listen: true, Loopback: true})
 	sh := func(script string) error {
 		return exec.Command("/usr/bin/sandbox-exec", "-p", SBPL(p), "/bin/sh", "-c", script).Run()
@@ -189,7 +203,7 @@ func TestCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(home) })
+	t.Cleanup(func() { _ = os.RemoveAll(home) })
 	t.Setenv("HOME", home)
 	repo, root := filepath.Join(home, "src", "repo"), filepath.Join(home, "work")
 	gitT(t, home, "init", "-q", repo)
@@ -202,7 +216,7 @@ func TestCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := &Seatbelt{}
-	defer s.Stop(context.Background(), root)
+	defer func() { _ = s.Stop(context.Background(), root) }()
 	transcripts := filepath.Join(home, ".agent", "projects")
 	if err := os.MkdirAll(transcripts, 0o700); err != nil {
 		t.Fatal(err)

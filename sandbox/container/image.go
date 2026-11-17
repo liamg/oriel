@@ -73,12 +73,12 @@ func EnsureImage(ctx context.Context, tag, dockerfile, log string) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		err = pull(ctx, PublishedBase(), tag, f)
 		if err == nil {
 			return nil
 		}
-		fmt.Fprintf(f, "\n%v\nBuilding it here instead.\n\n", err)
+		_, _ = fmt.Fprintf(f, "\n%v\nBuilding it here instead.\n\n", err)
 		return Build(ctx, tag, dockerfile, f, false)
 	}
 	return buildLogged(ctx, tag, dockerfile, log, false)
@@ -108,7 +108,7 @@ func buildLogged(ctx context.Context, tag, dockerfile, log string, noCache bool)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Build(ctx, tag, dockerfile, f, noCache)
 }
 

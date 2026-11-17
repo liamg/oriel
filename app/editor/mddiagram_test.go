@@ -26,8 +26,12 @@ const diagramsMD = "# Rounding\n\n## Flow\n\n" +
 func diagramsScene(t *testing.T) *apptest.Scene {
 	t.Helper()
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "DESIGN.md"), []byte(diagramsMD), 0o644)
-	os.WriteFile(filepath.Join(dir, "shot.png"), editor.PNGBytes(t, photo(360, 120)), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "DESIGN.md"), []byte(diagramsMD), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "shot.png"), editor.PNGBytes(t, photo(360, 120)), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir, [4]string{"DESIGN.md", "5", "```mermaid", "Should tiers round first?"})
 	s.Run("editor.open", registry.Args{"path": "DESIGN.md"})
 	s.Frames(3)
@@ -98,7 +102,9 @@ func TestMarkdownDiagramOpensInTheLightbox(t *testing.T) {
 // A thread's comment draws its markdown compactly, diagrams included.
 func TestThreadMarkdownDiagram(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir, [4]string{"main.go", "3", "func main() {}", "How it runs:\n\n```mermaid\ngraph LR\n  main --> serve --> done\n```"})
 	s.Run("editor.open", registry.Args{"path": "main.go"})
 	s.Frames(4)
@@ -114,7 +120,9 @@ func TestThreadMarkdownDiagram(t *testing.T) {
 func TestMarkdownDiagramTruncatedTooltip(t *testing.T) {
 	long := "pricing.RoundingModeHalfEvenWithBankersTiesAppliedPerInvoiceLineBeforeTheTotal"
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "DESIGN.md"), []byte("# Rounding\n\n```mermaid\nflowchart TD\n  meter --> r[\""+long+"\"] --> invoice\n```\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "DESIGN.md"), []byte("# Rounding\n\n```mermaid\nflowchart TD\n  meter --> r[\""+long+"\"] --> invoice\n```\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir)
 	s.Run("editor.open", registry.Args{"path": "DESIGN.md"})
 	s.Frames(3)

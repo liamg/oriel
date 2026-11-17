@@ -25,8 +25,12 @@ func TestWrite(t *testing.T) {
 	}
 
 	real := filepath.Join(dir, "dotfiles", "settings.toml")
-	os.MkdirAll(filepath.Dir(real), 0o755)
-	os.WriteFile(real, []byte("old\n"), 0o644)
+	if err := os.MkdirAll(filepath.Dir(real), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(real, []byte("old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	link := filepath.Join(dir, "linked.toml")
 	if err := os.Symlink(real, link); err != nil {
 		t.Fatal(err)

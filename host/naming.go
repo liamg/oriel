@@ -60,7 +60,7 @@ func (w *Host) askName(ctx context.Context, prompt string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer u.Close()
+	defer func() { _ = u.Close() }()
 	var said string
 	for {
 		select {

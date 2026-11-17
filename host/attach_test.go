@@ -29,7 +29,9 @@ func TestAttachKeepsFilesForTheAgent(t *testing.T) {
 	}
 
 	src := filepath.Join(t.TempDir(), "notes.txt")
-	os.WriteFile(src, []byte("hi"), 0o644)
+	if err := os.WriteFile(src, []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	p, err = r.w.Attach(hostapi.AttachReq{Session: id, Path: src})
 	if err != nil {
 		t.Fatal(err)

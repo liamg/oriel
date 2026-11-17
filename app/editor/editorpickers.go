@@ -150,7 +150,9 @@ func (x *Editor) grepSource() uireg.PickerSource {
 			if !all {
 				sq.Exclude = x.unsearchable()
 			}
-			x.Tools.Run(ctx, sq, emit(q))
+			if err := x.Tools.Run(ctx, sq, emit(q)); err != nil && ctx.Err() == nil {
+				x.h.Log().Warn("grep", "query", q, "err", err)
+			}
 			g.mu.Lock()
 			if g.query == q {
 				g.running = false
@@ -257,7 +259,7 @@ func (l *fileList) walk(dir string, first bool) {
 // walkFiles is the files under dir, relative to it, at most maxFiles; each, when not nil, sees them as they're found.
 func walkFiles(dir string, each func(found []string)) []string {
 	var found []string
-	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}

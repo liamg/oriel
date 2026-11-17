@@ -24,9 +24,11 @@ func TestOnDoneHearsACommandThatEndsAsItReturns(t *testing.T) {
 	r.Command(registry.Command{ID: "x.ok", Run: func(registry.Ctx, registry.Args) error { return nil }})
 	r.Command(registry.Command{ID: "x.fail", Run: func(registry.Ctx, registry.Args) error { return boom }})
 	var ok, failed, missing waiter
-	r.Run(ok.ctx(), "x.ok", nil)
-	r.Run(failed.ctx(), "x.fail", nil)
-	r.Run(missing.ctx(), "x.none", nil)
+	if err := r.Run(ok.ctx(), "x.ok", nil); err != nil {
+		t.Fatal(err)
+	}
+	_ = r.Run(failed.ctx(), "x.fail", nil)  // fails: what the waiter hears is checked
+	_ = r.Run(missing.ctx(), "x.none", nil) // isn't there: likewise
 	if ok.calls != 1 || ok.err != nil {
 		t.Errorf("x.ok: told %d times, err %v", ok.calls, ok.err)
 	}
@@ -75,7 +77,9 @@ func TestLaterWithNobodyWaiting(t *testing.T) {
 		finish(nil)
 		return nil
 	}})
-	r.Run(context.Background(), "x.slow", nil)
+	if err := r.Run(context.Background(), "x.slow", nil); err != nil {
+		t.Fatal(err)
+	}
 	if waited {
 		t.Error("Later says a caller waits when none asked")
 	}

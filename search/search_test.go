@@ -21,8 +21,12 @@ func fixture(t *testing.T) string {
 		"bin.dat":                   "Round\x00\x01",
 	} {
 		p := filepath.Join(dir, name)
-		os.MkdirAll(filepath.Dir(p), 0o755)
-		os.WriteFile(p, []byte(body), 0o644)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return dir
 }
@@ -98,7 +102,9 @@ func TestBadPattern(t *testing.T) {
 func TestPlanAndApply(t *testing.T) {
 	dir := fixture(t)
 	var ms []Match
-	NewTools().run(context.Background(), Query{Dir: dir, Pattern: `Round(\w*)\(`, Exclude: []string{"gen/api.pb.go"}}, Auto, func(b []Match) { ms = append(ms, b...) })
+	if err := NewTools().run(context.Background(), Query{Dir: dir, Pattern: `Round(\w*)\(`, Exclude: []string{"gen/api.pb.go"}}, Auto, func(b []Match) { ms = append(ms, b...) }); err != nil {
+		t.Fatal(err)
+	}
 	plan, err := Plan(Query{Dir: dir, Pattern: `Round(\w*)\(`}, "Rounded$1(", ms, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +124,9 @@ func TestPlanAndApply(t *testing.T) {
 		t.Errorf("after applying:\n%s", b)
 	}
 	// A file that changed since the search isn't overwritten.
-	os.WriteFile(filepath.Join(dir, "internal/pricing/round.go"), []byte("changed\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "internal/pricing/round.go"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := plan[0].Write(dir); err == nil {
 		t.Error("applying over a file that changed since the plan didn't fail")
 	}

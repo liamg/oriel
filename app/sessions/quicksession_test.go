@@ -27,9 +27,11 @@ func TestQuickSessionIsTheLaunchersDefaults(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
-	r.Do(func() error { // the test host has no sandbox factory
+	if err := r.Do(func() error { // the test host has no sandbox factory
 		return r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	newest := func(what string, n int) core.SessionState {
 		t.Helper()
 		var se core.SessionState
@@ -71,9 +73,11 @@ func TestQuickSessionIsOffered(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitText("Quick Session")
-	r.Do(func() error { // the test host has no sandbox factory
+	if err := r.Do(func() error { // the test host has no sandbox factory
 		return r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host")
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	r.Run("session.start", registry.Args{"kind": "work", "name": "first", "provider": "fake", "repos": []string{lw.Repo}})
 	lw.Fake.WaitStarted(t)
 	r.WaitAccess("the + after the tab", func(w *apptest.Window) bool { return w.Access("New session") != nil })

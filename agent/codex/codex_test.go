@@ -169,7 +169,9 @@ func TestPackInstructions(t *testing.T) {
 		t.Errorf("reply = %q", got)
 	}
 	id := s.S.ID()
-	s.S.Close()
+	if err := s.S.Close(); err != nil {
+		t.Fatal(err)
+	}
 	resumed := h
 	resumed.Spec = func(t *testing.T, dir string) agent.StartSpec { sp := h.Spec(t, dir); sp.Prompt = ""; return sp }
 	r := agenttest.StartIn(t, resumed, dir, id)
@@ -187,7 +189,9 @@ func TestPackInstructions(t *testing.T) {
 // The memory directory, and its index as it is, are in the instructions.
 func TestMemoryInstructions(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "MEMORY.md"), []byte("- [tests](tests.md): run them with make\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "MEMORY.md"), []byte("- [tests](tests.md): run them with make\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	in := instructions(agent.StartSpec{Pack: agent.Pack{Text: "Be brief."}, Memory: dir})
 	for _, want := range []string{"Be brief.", "Your memory directory is " + dir, "- [tests](tests.md): run them with make"} {
 		if !strings.Contains(in, want) {
@@ -221,11 +225,15 @@ func TestRefusesAPIKey(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s.Close()
+				if err := s.Close(); err != nil {
+					t.Fatal(err)
+				}
 				return
 			}
 			if err == nil {
-				s.Close()
+				if err := s.Close(); err != nil {
+					t.Fatal(err)
+				}
 				t.Fatal("started")
 			}
 			if !strings.Contains(err.Error(), tc.want) {
@@ -305,9 +313,11 @@ func TestDetectModelsUsage(t *testing.T) {
 
 func TestRateLimits(t *testing.T) {
 	var r rateLimits
-	json.Unmarshal([]byte(`{"limitId":"codex","primary":{"usedPercent":50,"windowDurationMins":300,"resetsAt":100},
+	if err := json.Unmarshal([]byte(`{"limitId":"codex","primary":{"usedPercent":50,"windowDurationMins":300,"resetsAt":100},
 		"secondary":{"usedPercent":5,"windowDurationMins":10080,"resetsAt":200},
-		"credits":{"hasCredits":true,"unlimited":false,"balance":"12.50"},"planType":"pro_lite"}`), &r)
+		"credits":{"hasCredits":true,"unlimited":false,"balance":"12.50"},"planType":"pro_lite"}`), &r); err != nil {
+		t.Fatal(err)
+	}
 	now := time.Unix(50, 0)
 	u := r.usage(now)
 	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Tier: "Pro Lite", Credits: "12.50", Sampled: now, Source: "Codex's account/rateLimits/read", Windows: []core.UsageWindow{
@@ -319,14 +329,18 @@ func TestRateLimits(t *testing.T) {
 	}
 	// A sparse update keeps what it leaves out.
 	var up rateLimits
-	json.Unmarshal([]byte(`{"primary":{"usedPercent":60,"windowDurationMins":300,"resetsAt":100}}`), &up)
+	if err := json.Unmarshal([]byte(`{"primary":{"usedPercent":60,"windowDurationMins":300,"resetsAt":100}}`), &up); err != nil {
+		t.Fatal(err)
+	}
 	m := r.merge(up).usage(now)
 	if m.Plan != "ChatGPT Pro Lite" || len(m.Windows) != 2 || m.Windows[0].Used != 0.6 || m.Credits != "12.50" {
 		t.Errorf("merged = %+v", m)
 	}
 	// Without lengths, the first window is the 5-hour one.
 	var bare rateLimits
-	json.Unmarshal([]byte(`{"primary":{"usedPercent":1},"secondary":{"usedPercent":2},"credits":{"hasCredits":false,"unlimited":true}}`), &bare)
+	if err := json.Unmarshal([]byte(`{"primary":{"usedPercent":1},"secondary":{"usedPercent":2},"credits":{"hasCredits":false,"unlimited":true}}`), &bare); err != nil {
+		t.Fatal(err)
+	}
 	if b := bare.usage(now); b.Windows[0].Name != "Current session" || b.Windows[1].Name != "Current week" || b.Credits != "unlimited" || b.Plan != "" || b.Tier != "" {
 		t.Errorf("bare = %+v", b)
 	}
@@ -393,15 +407,17 @@ func TestMCPServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tools.Close()
+	defer func() { _ = tools.Close() }()
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
 	code := make(chan int, 1)
-	go func() { code <- MCPMain(inR, outW, []string{SockEnv + "=" + tools.path}); outW.Close() }()
+	go func() { code <- MCPMain(inR, outW, []string{SockEnv + "=" + tools.path}); _ = outW.Close() }()
 	out := bufio.NewReader(outR)
 	send := func(s string) map[string]any {
 		t.Helper()
-		io.WriteString(inW, s+"\n")
+		if _, err := io.WriteString(inW, s+"\n"); err != nil {
+			t.Error(err)
+		}
 		line, err := out.ReadString('\n')
 		if err != nil {
 			t.Fatal(err)
@@ -419,7 +435,9 @@ func TestMCPServer(t *testing.T) {
 	if r := init["result"].(map[string]any); r["protocolVersion"] != "2025-03-26" || r["serverInfo"].(map[string]any)["name"] != "oriel" {
 		t.Errorf("initialize = %v", init)
 	}
-	io.WriteString(inW, `{"jsonrpc":"2.0","method":"notifications/initialized"}`+"\n")
+	if _, err := io.WriteString(inW, `{"jsonrpc":"2.0","method":"notifications/initialized"}`+"\n"); err != nil {
+		t.Fatal(err)
+	}
 	list := send(`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`)
 	b, _ := json.Marshal(list["result"])
 	if !strings.Contains(string(b), `"name":"echo"`) || !strings.Contains(string(b), `"readOnlyHint":true`) || !strings.Contains(string(b), `"inputSchema":{"type":"object"}`) {
@@ -442,7 +460,9 @@ func TestMCPServer(t *testing.T) {
 	if e, _ := unknown["error"].(map[string]any); e == nil || e["code"] != float64(jsonrpc.MethodNotFound) {
 		t.Errorf("unknown = %v", unknown)
 	}
-	inW.Close()
+	if err := inW.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case c := <-code:
 		if c != 0 {
@@ -462,7 +482,9 @@ func TestMCPMainWithoutSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ln.Close()
+	if err := ln.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if c := MCPMain(strings.NewReader(""), io.Discard, []string{SockEnv + "=" + path}); c == 0 {
 		t.Error("ran without the session")
 	}

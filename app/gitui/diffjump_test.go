@@ -1,7 +1,6 @@
 package gitui_test
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -54,11 +53,7 @@ func TestDiffOpenLandsOnTheLine(t *testing.T) {
 	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	jump := func(file string, line int, text string) {
 		t.Helper()
-		if err := app.Do(func() error {
-			return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, file), "line": line})
-		}); err != nil {
-			t.Fatal(err)
-		}
+		app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, file), "line": line})
 		app.Latest(text+" selected in the middle of the view", func(_ headless.Frame) bool { return centred(app, text) })
 	}
 	jump("f00.go", 30, "// f00 line 30 changed")
@@ -80,19 +75,11 @@ func shows(w *apptest.Window, text string) bool {
 func TestDiffOpenExpandsTheFile(t *testing.T) {
 	r := jumpRepo(t, 12)
 	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
-	if err := app.Do(func() error {
-		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, "f00.go"), "line": 285})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "f00.go"), "line": 285})
 	app.Latest("f00.go's line 285", func(headless.Frame) bool { return centred(app, "// f00 line 285 changed") })
 	open := func(f string) {
 		app.T.Helper()
-		if err := app.Do(func() error {
-			return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, f)})
-		}); err != nil {
-			t.Fatal(err)
-		}
+		app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, f)})
 	}
 	for _, f := range []string{"f09", "f03", "f09", "f11", "f00"} {
 		open(f + ".go")
@@ -110,13 +97,7 @@ func TestDiffOpenExpandsTheFile(t *testing.T) {
 func TestDiffOpenLandsOnAnOldLine(t *testing.T) {
 	r := jumpRepo(t, 6)
 	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
-	app.Do(func() error {
-		return app.Host.Run(context.Background(), "diff.layout", registry.Args{"layout": "unified"})
-	})
-	if err := app.Do(func() error {
-		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, "f04.go"), "line": 210, "side": "old"})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	app.Run("diff.layout", registry.Args{"layout": "unified"})
+	app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "f04.go"), "line": 210, "side": "old"})
 	app.Latest("the removed line 210 selected in the middle of the view", func(headless.Frame) bool { return centred(app, "// f04 line 210") })
 }

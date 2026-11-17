@@ -82,8 +82,12 @@ func TestLockRoundTrip(t *testing.T) {
 	if ids := strings.Join(again.IDs(), " "); ids != "acme/jira me/wip" {
 		t.Errorf("ids %s", ids)
 	}
-	again.Delete("acme/jira")
-	again.Delete("me/wip")
+	if err := again.Delete("acme/jira"); err != nil {
+		t.Fatal(err)
+	}
+	if err := again.Delete("me/wip"); err != nil {
+		t.Fatal(err)
+	}
 	if err := again.Save(); err != nil {
 		t.Fatal(err)
 	}

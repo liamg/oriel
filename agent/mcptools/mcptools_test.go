@@ -31,15 +31,20 @@ func TestServeOverStdio(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
 	code := make(chan int, 1)
-	go func() { code <- mcpstdio.Main(inR, outW, io.Discard, []string{SockEnv + "=" + s.Path()}); outW.Close() }()
+	go func() {
+		code <- mcpstdio.Main(inR, outW, io.Discard, []string{SockEnv + "=" + s.Path()})
+		_ = outW.Close()
+	}()
 	out := bufio.NewReader(outR)
 	send := func(msg string) string {
 		t.Helper()
-		io.WriteString(inW, msg+"\n")
+		if _, err := io.WriteString(inW, msg+"\n"); err != nil {
+			t.Error(err)
+		}
 		line, err := out.ReadString('\n')
 		if err != nil {
 			t.Fatal(err)
@@ -58,7 +63,9 @@ func TestServeOverStdio(t *testing.T) {
 	if got := send(`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fail"}}`); !strings.Contains(got, `"isError":true`) {
 		t.Errorf("a failing tool = %s", got)
 	}
-	inW.Close()
+	if err := inW.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case c := <-code:
 		if c != 0 {
@@ -82,11 +89,14 @@ func TestToolsChangeAfterTheStart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
 	code := make(chan int, 1)
-	go func() { code <- mcpstdio.Main(inR, outW, io.Discard, []string{SockEnv + "=" + s.Path()}); outW.Close() }()
+	go func() {
+		code <- mcpstdio.Main(inR, outW, io.Discard, []string{SockEnv + "=" + s.Path()})
+		_ = outW.Close()
+	}()
 	out := bufio.NewReader(outR)
 	read := func() string {
 		t.Helper()
@@ -96,7 +106,9 @@ func TestToolsChangeAfterTheStart(t *testing.T) {
 		}
 		return line
 	}
-	io.WriteString(inW, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}`+"\n")
+	if _, err := io.WriteString(inW, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}`+"\n"); err != nil {
+		t.Fatal(err)
+	}
 	if got := read(); !strings.Contains(got, `"listChanged":true`) {
 		t.Errorf("initialize = %s", got)
 	}
@@ -106,12 +118,16 @@ func TestToolsChangeAfterTheStart(t *testing.T) {
 	mu.Lock()
 	tools = append(tools, late)
 	mu.Unlock()
-	io.WriteString(inW, `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`+"\n")
+	if _, err := io.WriteString(inW, `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`+"\n"); err != nil {
+		t.Fatal(err)
+	}
 	got := read() + read()
 	if !strings.Contains(got, `"name":"linear_issue"`) || !strings.Contains(got, `"method":"notifications/tools/list_changed"`) {
 		t.Errorf("after a tool was added = %s", got)
 	}
-	inW.Close()
+	if err := inW.Close(); err != nil {
+		t.Fatal(err)
+	}
 	select {
 	case <-code:
 	case <-time.After(10 * time.Second):
@@ -136,7 +152,9 @@ func TestSocketPathFitsUnderALongTempDir(t *testing.T) {
 		if got := len(filepath.Dir(filepath.Dir(s.Path()))) + len(sockTail); got > sockPathMax {
 			t.Errorf("TMPDIR of %d bytes: the path can reach %d bytes", len(long), got)
 		}
-		s.Close()
+		if err := s.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

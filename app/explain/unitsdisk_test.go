@@ -28,7 +28,9 @@ func TestChangedUnitsFollowTheDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 	later := time.Now().Add(time.Minute)
-	os.Chtimes(path, later, later)
+	if err := os.Chtimes(path, later, later); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("the panel to show the file as rewritten", func() bool {
 		apptest.PluginOf[*explain.Explain](s, "explain").Wait()
 		return strings.Contains(s.Text(), "func C")

@@ -108,7 +108,7 @@ func (p Piper) Speak(ctx context.Context, text string) error {
 	}
 	out := tmp.Name()
 	_ = tmp.Close()
-	defer os.Remove(out)
+	defer func() { _ = os.Remove(out) }()
 	if err := r(ctx, text, bin, "--model", model, "--output_file", out); err != nil {
 		return err
 	}

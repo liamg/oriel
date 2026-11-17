@@ -213,7 +213,7 @@ func (g guardedView) Title(instance string) (title string) {
 	if !ok {
 		return ""
 	}
-	registry.Call(func() error { title = t.Title(instance); return nil })
+	registry.Try(func() { title = t.Title(instance) })
 	return title
 }
 

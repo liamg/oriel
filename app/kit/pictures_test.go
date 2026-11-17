@@ -26,7 +26,9 @@ import (
 // A remote image's client dials no loopback or private address, whatever the URL names.
 func TestPictureClientRefusesLocalAddresses(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(pngBytes(t, solidImage(2, 2, color.NRGBA{A: 255})))
+		if _, err := w.Write(pngBytes(t, solidImage(2, 2, color.NRGBA{A: 255}))); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer srv.Close()
 	if _, err := getPicture(context.Background(), NewPictures(nil, nil).client, srv.URL+"/a.png"); err == nil || !strings.Contains(err.Error(), "127.0.0.1") {
@@ -37,7 +39,11 @@ func TestPictureClientRefusesLocalAddresses(t *testing.T) {
 // It follows at most 3 redirects, each to http(s) only, and checks every hop's address as it dials.
 func TestPictureClientRedirects(t *testing.T) {
 	img := pngBytes(t, solidImage(2, 2, color.NRGBA{A: 255}))
-	blocked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(img) }))
+	blocked := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write(img); err != nil {
+			t.Error(err)
+		}
+	}))
 	defer blocked.Close()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/r/"))
@@ -49,7 +55,9 @@ func TestPictureClientRedirects(t *testing.T) {
 		case n > 0:
 			http.Redirect(w, r, fmt.Sprintf("/r/%d", n-1), http.StatusFound)
 		default:
-			w.Write(img)
+			if _, err := w.Write(img); err != nil {
+				t.Error(err)
+			}
 		}
 	}))
 	defer srv.Close()
@@ -167,7 +175,9 @@ func testPictures(t *testing.T, client *http.Client) *Pictures {
 // A file's picture is read and decoded off the loop: loading at first, then the image.
 func TestPictureFileDecodesOffTheLoop(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "a.png")
-	os.WriteFile(path, pngBytes(t, solidImage(3, 2, color.NRGBA{G: 200, A: 255})), 0o644)
+	if err := os.WriteFile(path, pngBytes(t, solidImage(3, 2, color.NRGBA{G: 200, A: 255})), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	pics := testPictures(t, nil)
 	if pc := pics.File(path); !pc.Loading || pc.Img != nil {
 		t.Fatalf("the first ask decoded on the loop: %+v", pc)

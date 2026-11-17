@@ -46,17 +46,27 @@ func serving(t *testing.T, h host, more ...plugin.Grant) *jsonrpc.Conn {
 	methods := plugin.HostMethods(h)
 	toProc, procIn := io.Pipe()
 	procOut, fromProc := io.Pipe()
-	go Serve(toProc, fromProc)
+	go func() {
+		if err := Serve(toProc, fromProc); err != nil {
+			t.Error(err)
+		}
+	}()
 	conn := jsonrpc.NewConn(procOut, procIn, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
-		go func() { r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)) }()
+		go func() {
+			if err := r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)); err != nil {
+				t.Error(err)
+			}
+		}()
 	}}, jsonrpc.Options{Version: "2.0"})
-	t.Cleanup(func() { conn.Close() })
+	t.Cleanup(func() { _ = conn.Close() })
 	return conn
 }
 
 func keyed(t *testing.T, g *gitlabtest.GitLab) *jsonrpc.Conn {
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret(Secret, gitlabtest.Key)
+	if err := secrets.SetSecret(Secret, gitlabtest.Key); err != nil {
+		t.Fatal(err)
+	}
 	return serving(t, host{client: g.Client(), secrets: secrets})
 }
 
@@ -82,7 +92,9 @@ func TestServeReviewsThroughTheHost(t *testing.T) {
 	if !errors.As(err, &rpc) || rpc.Code != CodeNoKey {
 		t.Fatalf("with no token: %v", err)
 	}
-	secrets.SetSecret(Secret, gitlabtest.Key)
+	if err := secrets.SetSecret(Secret, gitlabtest.Key); err != nil {
+		t.Fatal(err)
+	}
 
 	var got struct {
 		Requests []registry.ReviewRequest `json:"requests"`
@@ -216,7 +228,9 @@ func TestServeASelfHostedSite(t *testing.T) {
 		Reviewers: []string{gitlabtest.Me}})
 	site := Site{Host: "git.acme.corp", API: "https://git.acme.corp/api/v4", Secret: "GITLAB_TOKEN:git.acme.corp"}
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
-	secrets.SetSecret(site.Secret, gitlabtest.Key)
+	if err := secrets.SetSecret(site.Secret, gitlabtest.Key); err != nil {
+		t.Fatal(err)
+	}
 	conn := serving(t, host{client: g.Client(), secrets: secrets},
 		plugin.Grant{Cap: plugin.CapNet, Scope: []string{"git.acme.corp", "example.org"}},
 		plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{site.Secret + "@git.acme.corp"}})

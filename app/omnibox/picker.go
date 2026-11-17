@@ -69,7 +69,7 @@ func sourceLoading(s uireg.PickerSource) bool {
 		return false
 	}
 	busy := false
-	registry.Call(func() error { busy = s.Loading(); return nil })
+	registry.Try(func() { busy = s.Loading() })
 	return busy
 }
 
@@ -191,7 +191,7 @@ func (p *Picker) build(c *ui.Ctx) {
 	if p.open && len(g.hits) > 0 && s.Hover != nil {
 		if key := s.ID + "\x00" + g.hits[p.sel].item.ID; key != p.hovered {
 			p.hovered = key
-			registry.Call(func() error { s.Hover(g.hits[p.sel].item); return nil })
+			registry.Try(func() { s.Hover(g.hits[p.sel].item) })
 		}
 	}
 	if !p.open {
@@ -302,7 +302,7 @@ func (p *Picker) act(a uireg.PickerAction, g group) {
 func (p *Picker) close(cancelled bool) {
 	p.open, p.hovered = false, ""
 	if s, ok := p.src(); ok && cancelled && s.Cancel != nil {
-		registry.Call(func() error { s.Cancel(); return nil })
+		registry.Try(func() { s.Cancel() })
 	}
 }
 
@@ -342,7 +342,7 @@ func (p *Picker) step(back bool) {
 		}
 	}
 	if s, ok := p.src(); ok && s.Cancel != nil {
-		registry.Call(func() error { s.Cancel(); return nil })
+		registry.Try(func() { s.Cancel() })
 	}
 	p.hovered = ""
 	i := slices.Index(ids, p.source)

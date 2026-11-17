@@ -109,7 +109,7 @@ func Pack(ctx context.Context, dir string, o PackOpts) (Packed, error) {
 		a.Platform = plat
 		if a.Size > plugin.MaxSize {
 			probs = append(probs, Problem{Text: fmt.Sprintf("%s is %s unpacked: a plugin may be at most %s", file, mb(a.Size), mb(plugin.MaxSize))})
-			os.Remove(a.Path)
+			_ = os.Remove(a.Path)
 			continue
 		}
 		p.Archives = append(p.Archives, a)
@@ -248,7 +248,7 @@ func goBinaries(ctx context.Context, dir, goos, goarch, goCmd string) ([]entry, 
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	var out []entry
 	for _, p := range pkgs {
 		bin := filepath.Join(tmp, p)

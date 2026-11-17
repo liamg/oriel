@@ -114,4 +114,4 @@ func (m *module) str(fn string, args ...uint64) string {
 	return string(m.bytes(p, m.u32(lp)))
 }
 
-func (m *module) close() { m.m.Close(context.Background()) }
+func (m *module) close() { _ = m.m.Close(context.Background()) }

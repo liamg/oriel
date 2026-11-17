@@ -94,11 +94,15 @@ func TestRenameBranchTool(t *testing.T) {
 func TestRenameBranchWaitsForAnOpenPR(t *testing.T) {
 	r := newRig(t)
 	id, p, _, a := branchSession(t, r)
-	r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch, Open: true})
+	if err := r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch, Open: true}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := a.CallErr("rename_branch", map[string]any{"name": "tester/backoff"}); err == nil || !strings.Contains(err.Error(), "is open") {
 		t.Fatalf("renamed under an open PR: %v", err)
 	}
-	r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch})
+	if err := r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch}); err != nil {
+		t.Fatal(err)
+	}
 	a.Call(t, "rename_branch", map[string]any{"name": "tester/backoff"})
 	if got := r.project(id).Branch; got != "tester/backoff" {
 		t.Errorf("once the PR closed, the branch is %q", got)

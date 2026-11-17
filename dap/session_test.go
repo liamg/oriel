@@ -77,7 +77,9 @@ func project(t *testing.T, name string) string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		os.WriteFile(filepath.Join(dir, e.Name()), b, 0o644)
+		if err := os.WriteFile(filepath.Join(dir, e.Name()), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return dir
 }
@@ -180,7 +182,7 @@ func script(t *testing.T, fx fixture, launch dap.Launcher, root string) *result 
 		select {
 		case <-c.Done():
 		default:
-			c.Stop(context.Background())
+			_ = c.Stop(context.Background())
 		}
 	}()
 	r.caps = c.Capabilities()
@@ -300,7 +302,7 @@ func run(t *testing.T, fx fixture, live bool) *result {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := rec.Transcript(daptest.Header{Adapter: spec.Name, Version: version, Cmd: spec.Cmd}).Write(f); err != nil {
 		t.Fatal(err)
 	}

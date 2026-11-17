@@ -339,12 +339,12 @@ func TestHookMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	ln, err := net.Listen("unix", sockPath(dir))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 	go func() {
 		for {
 			c, err := ln.Accept()
@@ -358,7 +358,7 @@ func TestHookMain(t *testing.T) {
 				res = response{Error: "no such op"}
 			}
 			_ = json.NewEncoder(c).Encode(res)
-			c.Close()
+			_ = c.Close()
 		}
 	}()
 	t.Setenv("ORIEL_HOOK_SOCK", sockPath(dir))
@@ -390,7 +390,7 @@ func TestSockPathIsShort(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 	if n := len(sockPath(dir)); n > 100 {
 		t.Errorf("socket path is %d bytes; macOS allows 104", n)
 	}
@@ -805,8 +805,10 @@ func TestAccount(t *testing.T) {
 	if id, _ := account(nil); id != "" {
 		t.Errorf("signed out: %q", id)
 	}
-	os.WriteFile(filepath.Join(cfg, ".claude.json"), []byte(`{"oauthAccount":{"accountUuid":"u1","emailAddress":"ada@work.example",
-		"organizationUuid":"o1","organizationName":"Work Co"}}`), 0o600)
+	if err := os.WriteFile(filepath.Join(cfg, ".claude.json"), []byte(`{"oauthAccount":{"accountUuid":"u1","emailAddress":"ada@work.example",
+		"organizationUuid":"o1","organizationName":"Work Co"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if id, name := account(nil); id != "u1/o1" || name != "ada@work.example" {
 		t.Errorf("account = %q %q", id, name)
 	}

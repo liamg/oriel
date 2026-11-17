@@ -418,7 +418,9 @@ func TestArchiveKeepsThreadsAndTranscriptSearchable(t *testing.T) {
 	if err := r.w.Archive(context.Background(), id); err == nil {
 		t.Fatal("archived over uncommitted work")
 	}
-	os.Remove(filepath.Join(wt, "dirty.txt"))
+	if err := os.Remove(filepath.Join(wt, "dirty.txt")); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.w.Archive(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
@@ -685,7 +687,9 @@ func TestRedactedBodyStaysOutOfTheLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, _ = f.WriteString(`{"seq":`)
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 	r.restart()
 	if inLog() {
 		t.Error("the compacted log has the redacted body")

@@ -14,7 +14,7 @@ func mapFile(file string) (data []byte, unmap func() error, err error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	fi, err := f.Stat()
 	if err != nil {
 		return nil, nil, err

@@ -83,15 +83,15 @@ func startIn(dir string) (*engine, error) {
 	e := &engine{cmd: cmd, c: newClient(stdout, stdin, 5*time.Second)}
 	// nvim's default mappings (Y, &, gc…) aren't vim's.
 	if _, err := e.c.call("nvim_exec2", "mapclear | mapclear! | tmapclear", map[string]any{}); err != nil {
-		e.Close()
+		_ = e.Close()
 		return nil, err
 	}
 	return e, nil
 }
 
 func (e *engine) Close() error {
-	e.cmd.Process.Kill()
-	e.cmd.Wait()
+	_ = e.cmd.Process.Kill()
+	_ = e.cmd.Wait()
 	return nil
 }
 

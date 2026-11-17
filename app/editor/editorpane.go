@@ -356,7 +356,7 @@ func (x *Editor) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWin
 	on, ic, label := a.Shown(w)
 	note := ""
 	if a.Note != nil {
-		registry.Call(func() error { note = a.Note(w); return nil })
+		registry.Try(func() { note = a.Note(w) })
 	}
 	o := widget.ToggleChipOpts{Help: cmp.Or(a.Help, "editor/pane")}
 	switch {

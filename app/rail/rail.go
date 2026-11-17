@@ -314,7 +314,7 @@ func (r *Rail) entry(name string) (uireg.RailEntry, bool) {
 func active(h plugin.Host, e uireg.RailEntry, project string) bool {
 	if e.Active != nil {
 		on := false
-		registry.Call(func() error { on = e.Active(project); return nil })
+		registry.Try(func() { on = e.Active(project) })
 		return on
 	}
 	if id := e.Args.String("id"); id != "" && strings.HasPrefix(e.Command, "view.") {
@@ -568,7 +568,7 @@ func (r *Rail) tooltip(w kit.WindowProjects, row sideRow, wide bool) string {
 func noteOf(row sideRow) string {
 	note := ""
 	if row.entry.Note != nil {
-		registry.Call(func() error { note = row.entry.Note(row.scope); return nil })
+		registry.Try(func() { note = row.entry.Note(row.scope) })
 	}
 	return note
 }
@@ -867,6 +867,6 @@ func badge(e uireg.RailEntry) int {
 		return 0
 	}
 	n := 0
-	registry.Call(func() error { n = e.Badge(); return nil })
+	registry.Try(func() { n = e.Badge() })
 	return n
 }

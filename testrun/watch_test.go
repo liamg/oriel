@@ -98,9 +98,15 @@ func TestGoWatchRelistsWhenGoModChanges(t *testing.T) {
 		t.Errorf("after go.mod changed, go list ran %d times, want 2", n)
 	}
 	// A package added since: it's listed again to find it.
-	os.MkdirAll(filepath.Join(root, "e"), 0o755)
-	os.WriteFile(filepath.Join(root, "e", "e.go"), []byte("package e\n\nimport \"example.com/watch/d\"\n\nvar X = d.Hello()\n"), 0o644)
-	os.WriteFile(filepath.Join(root, "e", "e_test.go"), []byte("package e\n\nimport \"testing\"\n\nfunc TestE(t *testing.T) {}\n"), 0o644)
+	if err := os.MkdirAll(filepath.Join(root, "e"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "e", "e.go"), []byte("package e\n\nimport \"example.com/watch/d\"\n\nvar X = d.Hello()\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "e", "e_test.go"), []byte("package e\n\nimport \"testing\"\n\nfunc TestE(t *testing.T) {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	items, err := g.Affected(ws, filepath.Join(root, "e", "e.go"))
 	if err != nil {
 		t.Fatal(err)

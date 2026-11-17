@@ -15,18 +15,18 @@ func open() (master, slave *os.File, err error) {
 	// Non-blocking, so the runtime poller serves reads and Close interrupts one in progress.
 	master = os.NewFile(uintptr(fd), "/dev/ptmx")
 	if err := unix.IoctlSetPointerInt(fd, unix.TIOCSPTLCK, 0); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, nil, err
 	}
 	n, err := unix.IoctlGetUint32(fd, unix.TIOCGPTN)
 	if err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, nil, err
 	}
 	name := "/dev/pts/" + strconv.Itoa(int(n))
 	sfd, err := unix.Open(name, unix.O_RDWR|unix.O_NOCTTY|unix.O_CLOEXEC, 0)
 	if err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, nil, err
 	}
 	return master, os.NewFile(uintptr(sfd), name), nil

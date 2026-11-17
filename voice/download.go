@@ -250,7 +250,7 @@ func (w *Whisper) fetchTo(name string, d *download, src modelSource) error {
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	flag := os.O_TRUNC
 	switch {
 	case res.StatusCode == http.StatusPartialContent && have > 0 && strings.HasPrefix(res.Header.Get("Content-Range"), fmt.Sprintf("bytes %d-", have)):

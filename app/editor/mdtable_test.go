@@ -23,7 +23,9 @@ const tableMD = "# Rounding modes\n\nHow each mode rounds a tie, by currency pre
 // thread's own markdown.
 func TestMarkdownTablePreview(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "modes.md"), []byte(tableMD), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "modes.md"), []byte(tableMD), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir, [4]string{"modes.md", "7", "| `HalfEven` | 2 |", "Which do we keep?\n\n| Mode | Keep |\n|---|:-:|\n| `HalfEven` | yes |\n| `HalfUp` | no |"})
 	s.Run("editor.open", registry.Args{"path": "modes.md"})
 	s.Frames(3)
@@ -67,7 +69,9 @@ func runAt(s *apptest.Scene, text string, y float32) (render.Point, bool) {
 // delimiter row is no row.
 func TestMarkdownTableRowsTakeComments(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "modes.md"), []byte(tableMD), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "modes.md"), []byte(tableMD), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir)
 	s.Run("editor.open", registry.Args{"path": "modes.md"})
 	s.Frames(3)
@@ -122,7 +126,9 @@ func TestMarkdownTableRowsTakeComments(t *testing.T) {
 // beside that row, and a click on a row comments on its line.
 func TestLuaPresenterParts(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := threadsScene(t, dir, [4]string{"prices.csv", "4", "C-3,30", "Is C-3 right?"})
 	s.Run("lua", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
 		`when = function(p) return p:match("%.csv$") ~= nil end, ` +

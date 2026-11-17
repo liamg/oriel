@@ -30,7 +30,7 @@ func DropTelemetry(m dap.Message) bool {
 	var b struct {
 		Category string `json:"category"`
 	}
-	json.Unmarshal(m.Body, &b)
+	_ = json.Unmarshal(m.Body, &b)
 	return b.Category == "telemetry"
 }
 

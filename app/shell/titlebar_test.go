@@ -51,14 +51,18 @@ func openTabFixture(t *testing.T, store core.Store, evs []core.SessionOpened) {
 			t.Fatal(err)
 		}
 	}
-	store.Apply(core.SessionFocused{ID: evs[0].ID})
+	if err := store.Apply(core.SessionFocused{ID: evs[0].ID}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // A session has a tab once it's started or resumed, not for being on the start view's list.
 func TestSessionTabsAreTheOpenSessions(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
 	for _, ev := range tabFixture {
-		s.Store().Apply(ev)
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s.Frame()
 	for _, ev := range tabFixture {
@@ -66,8 +70,12 @@ func TestSessionTabsAreTheOpenSessions(t *testing.T) {
 			t.Errorf("%s has a tab before it was opened", ev.Name)
 		}
 	}
-	s.Store().Apply(core.SessionFocused{ID: "s3"})
-	s.Store().Apply(core.SessionFocused{ID: "s1"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "s3"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "s1"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Frame()
 	text := s.Text()
 	if !strings.Contains(text, "review #4410") || !strings.Contains(text, "pricing-rounding") || strings.Contains(text, "ENG-2231 search api") {
@@ -163,7 +171,9 @@ func glyphColour(l *render.List, s string) (render.Color, bool) {
 func TestSessionTabsSnapshot(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
 	openTabFixture(t, s.Store(), tabFixture)
-	s.Store().Apply(core.Notified{Notice: core.Notice{ID: "lsp.crashed", Severity: core.SevError, Session: "s4", Text: "gopls crashed"}})
+	if err := s.Store().Apply(core.Notified{Notice: core.Notice{ID: "lsp.crashed", Severity: core.SevError, Session: "s4", Text: "gopls crashed"}}); err != nil {
+		t.Fatal(err)
+	}
 	s.Golden("session-tabs")
 	text := s.Text()
 	for _, want := range []string{"ORIEL", "pricing-rounding", "plan", "needs you", "permission", "ci", "in review", "auth flow", "off", "✕1", "⌘7"} {
@@ -225,7 +235,9 @@ func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	d, side := snapshot.Compare(want, got, 0.1)
 	t.Logf("titlebar against 01-ide: %s", d)
 	if d.Mean > 0.036 || d.Off > 0.092 {
-		os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644)
+		if err := os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644); err != nil {
+			t.Fatal(err)
+		}
 		t.Errorf("the titlebar is %s off the mockup (testdata/session-tabs-mockup.failed.png)", d)
 	}
 }
@@ -239,7 +251,9 @@ func TestSessionTabsOverflow(t *testing.T) {
 		if err := s.Store().Apply(core.SessionOpened{ID: id, Name: fmt.Sprintf("job: sweep stale deps %d", i), Kind: core.KindJob, Status: core.StatusQuiet}); err != nil {
 			t.Fatal(err)
 		}
-		s.Store().Apply(core.SessionFocused{ID: id})
+		if err := s.Store().Apply(core.SessionFocused{ID: id}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s.Registry().View(kit.TitleRight+".99-probe", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("RIGHT-SIDE") }))
 	s.Frame()
@@ -265,8 +279,12 @@ func TestSessionTabsOverflow(t *testing.T) {
 // A new session is a click away with sessions open: the + after the tabs opens the launcher.
 func TestNewSessionFromTheTabs(t *testing.T) {
 	s, _ := apptest.HostScene(t)
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusQuiet}})
-	s.Store().Apply(core.SessionFocused{ID: "s1"})
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusQuiet}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Store().Apply(core.SessionFocused{ID: "s1"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Until("the tab", func() bool { return strings.Contains(s.Text(), "pricing-rounding") })
 	s.Frame()
 	b := s.NodeRole(render.RoleButton, "New session")
@@ -281,7 +299,7 @@ func TestNewSessionFromTheTabs(t *testing.T) {
 
 func encodePNG(img image.Image) []byte {
 	var b bytes.Buffer
-	png.Encode(&b, img)
+	_ = png.Encode(&b, img)
 	return b.Bytes()
 }
 
@@ -318,8 +336,12 @@ func TestSessionTabsReorderByDragging(t *testing.T) {
 func workspaceWithTabs(t *testing.T, n int) *apptest.Scene {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "internal", "pricing", "round.go")
-	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, []byte(rig.RoundGo()), 0o644)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(rig.RoundGo()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	openTabFixture(t, s.Store(), tabFixture[:n])
 	s.Run("editor.open", registry.Args{"path": "internal/pricing/round.go"})

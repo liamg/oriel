@@ -267,10 +267,18 @@ func solidImage(w, h int, c color.NRGBA) *image.NRGBA {
 // […]. A missing file or one that won't decode is a chip with its alt text and source, its tooltip saying why."
 func TestMarkdownPictureSources(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "docs"), 0o755)
-	os.WriteFile(filepath.Join(dir, "docs", "a b.png"), pngBytes(t, solidImage(30, 20, color.NRGBA{R: 255, A: 255})), 0o644)
-	os.WriteFile(filepath.Join(dir, "logo.svg"), []byte(testBadge), 0o644)
-	os.WriteFile(filepath.Join(dir, "broken.svg"), []byte("<svg width="), 0o644)
+	if err := os.MkdirAll(filepath.Join(dir, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "docs", "a b.png"), pngBytes(t, solidImage(30, 20, color.NRGBA{R: 255, A: 255})), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "logo.svg"), []byte(testBadge), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "broken.svg"), []byte("<svg width="), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	data := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngBytes(t, solidImage(4, 3, color.NRGBA{G: 255, A: 255})))
 	svgData := "data:image/svg+xml;utf8," + url.PathEscape(testBadge)
 	for _, c := range []struct {

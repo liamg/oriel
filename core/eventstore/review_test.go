@@ -40,7 +40,9 @@ func TestHunksReviewed(t *testing.T) {
 	if got := old.Snapshot().ReviewedHunks("pricing", "round.go"); len(got) != 2 {
 		t.Errorf("an older copy changed: %v", got)
 	}
-	a.Apply(core.HunksReviewed{Session: "pricing", Project: "pricing", File: "invoice.go", Hunks: []string{"c3"}})
+	if err := a.Apply(core.HunksReviewed{Session: "pricing", Project: "pricing", File: "invoice.go", Hunks: []string{"c3"}}); err != nil {
+		t.Fatal(err)
+	}
 	se, _ = a.State().Session("pricing")
 	if n := len(se.Snapshot().Reviews); n != 1 {
 		t.Errorf("a file with no marks left is still listed: %d reviews", n)

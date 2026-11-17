@@ -543,7 +543,7 @@ func (r *reg) Available(id string, args Args) bool {
 		return true
 	}
 	ok = false
-	Call(func() error { ok = c.Available(args); return nil })
+	Try(func() { ok = c.Available(args) })
 	return ok
 }
 
@@ -604,7 +604,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	for _, e := range ContributionsOf[ExclusiveKeys](r) {
 		active := true
 		if e.Active != nil {
-			Call(func() error { active = e.Active(); return nil })
+			Try(func() { active = e.Active() })
 		}
 		if !active {
 			continue
@@ -637,7 +637,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 		if allow != nil {
 			lent := false
 			if f.km != nil && exact == nil {
-				Call(func() error { lent = allow(*f.km); return nil })
+				Try(func() { lent = allow(*f.km) })
 			}
 			if lent {
 				exact = f.km

@@ -74,7 +74,7 @@ func isMedia(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
 		return false
 	}

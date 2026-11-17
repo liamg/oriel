@@ -72,7 +72,7 @@ func (c Client) call(ctx context.Context, method, path string, in, out any) erro
 			Message any    `json:"message"`
 			Error   string `json:"error"`
 		}
-		json.Unmarshal(resp, &e)
+		_ = json.Unmarshal(resp, &e)
 		msg := e.Error
 		if e.Message != nil {
 			msg = fmt.Sprint(e.Message)

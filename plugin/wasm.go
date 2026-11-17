@@ -192,7 +192,7 @@ func (w *WASM) hostNotify(ctx context.Context, mod api.Module, stack []uint64) {
 	method, ok1 := read(mod, stack[0], stack[1])
 	params, ok2 := read(mod, stack[2], stack[3])
 	if m != nil && ok1 && ok2 {
-		m.answer(ctx, string(method), params)
+		_, _ = m.answer(ctx, string(method), params)
 	}
 }
 
@@ -339,7 +339,7 @@ func (m *Module) Request(ctx context.Context, fn string, params any) (json.RawMe
 func (m *Module) Close(ctx context.Context) error {
 	m.w.forget(m.mod.Name())
 	if m.out != nil {
-		m.out.Close()
+		_ = m.out.Close()
 	}
 	return m.mod.Close(ctx)
 }

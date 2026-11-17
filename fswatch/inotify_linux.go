@@ -32,7 +32,7 @@ func newBackend() (backend, error) {
 	}
 	b := &inotify{fd: fd, wds: map[int32]string{}, paths: map[string]int32{}}
 	if err := unix.Pipe2(b.wake[:], unix.O_CLOEXEC|unix.O_NONBLOCK); err != nil {
-		unix.Close(fd)
+		_ = unix.Close(fd)
 		return nil, err
 	}
 	return b, nil
@@ -112,9 +112,9 @@ func (b *inotify) run(handle func([]raw)) {
 		b.mu.Lock()
 		defer b.mu.Unlock()
 		b.stopped = true
-		unix.Close(b.fd)
-		unix.Close(b.wake[0])
-		unix.Close(b.wake[1])
+		_ = unix.Close(b.fd)
+		_ = unix.Close(b.wake[0])
+		_ = unix.Close(b.wake[1])
 	}()
 	buf := make([]byte, 64<<10)
 	fds := []unix.PollFd{{Fd: int32(b.fd), Events: unix.POLLIN}, {Fd: int32(b.wake[0]), Events: unix.POLLIN}}

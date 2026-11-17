@@ -195,7 +195,7 @@ func (x *Debug) stackList(c *ui.Ctx) {
 				})
 			})
 		if res.Activated >= 0 && res.Activated != s.frame {
-			x.selectFrame(res.Activated)
+			_ = x.selectFrame(res.Activated)
 		}
 	})
 }

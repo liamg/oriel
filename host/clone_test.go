@@ -42,7 +42,9 @@ func TestCloneRegistersTheRepo(t *testing.T) {
 	if _, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "pricing-two"}); err != nil {
 		t.Errorf("a name taken by the same remote: %v", err)
 	}
-	os.MkdirAll(filepath.Join(r.w.opts.ReposDir, "taken"), 0o755)
+	if err := os.MkdirAll(filepath.Join(r.w.opts.ReposDir, "taken"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "taken"}); err == nil || !strings.Contains(err.Error(), "already") {
 		t.Errorf("cloning over a directory: %v", err)
 	}

@@ -40,11 +40,17 @@ func packArchive(t *testing.T, files ...packFile) []byte {
 			t.Fatal(err)
 		}
 		if h.Typeflag == tar.TypeReg {
-			tw.Write([]byte(f.body))
+			if _, err := tw.Write([]byte(f.body)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	tw.Close()
-	zw.Close()
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
 	return buf.Bytes()
 }
 
@@ -92,7 +98,9 @@ func TestPackInstall(t *testing.T) {
 	}
 
 	// Installing again replaces the pack whole: a file the old one had and the new one doesn't goes.
-	os.WriteFile(filepath.Join(dir, "gox", "queries", "stale.scm"), []byte("x"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "gox", "queries", "stale.scm"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := sums.Install(bytes.NewReader(packArchive(t, gox...)), dir); err != nil {
 		t.Fatal(err)
 	}

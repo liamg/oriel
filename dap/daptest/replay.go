@@ -94,7 +94,7 @@ func readAll(conn net.Conn) chan received {
 
 func (f *Fake) serve(conn net.Conn) {
 	defer close(f.done)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	in := readAll(conn)
 	var pending []received
 	seqs := map[int]int{} // recorded client seq → the live one
@@ -159,7 +159,7 @@ func (f *Fake) serve(conn net.Conn) {
 // withRequestSeq is a response with its request_seq changed.
 func withRequestSeq(body []byte, seq int) []byte {
 	var m map[string]json.RawMessage
-	json.Unmarshal(body, &m)
+	_ = json.Unmarshal(body, &m)
 	m["request_seq"], _ = json.Marshal(seq)
 	out, _ := json.Marshal(m)
 	return out

@@ -34,7 +34,11 @@ func blockGit(t *testing.T, what string) (started func(), release func()) {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	release = func() { os.WriteFile(gate, nil, 0o644) }
+	release = func() {
+		if err := os.WriteFile(gate, nil, 0o644); err != nil {
+			t.Error(err)
+		}
+	}
 	t.Cleanup(release)
 	started = func() {
 		t.Helper()
@@ -55,7 +59,9 @@ func slowCommand(t *testing.T, r *apptest.Window, started func(), release func()
 	started()
 	for range 3 {
 		before := len(r.Win.Frames())
-		r.Do(func() error { r.Host.Redraw(); return nil })
+		if err := r.Do(func() error { r.Host.Redraw(); return nil }); err != nil {
+			t.Fatal(err)
+		}
 		r.WaitAfter("another frame while "+id+" waits on git", before, func(string) bool { return true })
 	}
 	if done(r.Store.State()) {
@@ -102,11 +108,7 @@ func TestSessionArchiveLeavesTheLoopDrawing(t *testing.T) {
 	started, release := blockGit(t, "worktree remove")
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	r.Run("session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})
 	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	archived := func(st core.State) bool {
 		se, ok := st.Session(apptest.Named(st, "rounding"))

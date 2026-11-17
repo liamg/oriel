@@ -75,17 +75,27 @@ func (p *keeper) loaded() []string {
 func TestAStateFileFollowsTheWindow(t *testing.T) {
 	files, a, b := t.TempDir(), filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
 	for _, d := range []string{a, b} {
-		os.MkdirAll(d, 0o755)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
-	os.WriteFile(filepath.Join(files, "b.txt"), []byte("kept in b"), 0o644)
+	if err := os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(files, "b.txt"), []byte("kept in b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	p := &keeper{files: files}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
 
-	r.Do(func() error { p.text = "written"; p.f.Write([]byte("written")); return nil })
+	if err := r.Do(func() error { p.text = "written"; p.f.Write([]byte("written")); return nil }); err != nil {
+		t.Fatal(err)
+	}
 	waitFile(t, filepath.Join(files, "a.txt"), "written")
-	os.WriteFile(filepath.Join(files, "a.txt"), []byte("edited by hand"), 0o644)
+	if err := os.WriteFile(filepath.Join(files, "a.txt"), []byte("edited by hand"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFor("the edit loaded, the write not", func() bool { return strings.Join(p.loaded(), "|") == "kept in a|edited by hand" })
 
 	if err := r.Do(func() error { w, _ := kit.WindowOf(r.Host); return w.Reopen(b, "") }); err != nil {
@@ -100,9 +110,13 @@ func TestAStateFileFollowsTheWindow(t *testing.T) {
 func TestAStateFileBackOnADirectoryReadsItsWrite(t *testing.T) {
 	files, a, b := t.TempDir(), filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
 	for _, d := range []string{a, b} {
-		os.MkdirAll(d, 0o755)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
+	if err := os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	p := &keeper{files: files}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
@@ -136,15 +150,13 @@ func (p *plainView) Activate(_ context.Context, h plugin.Host) error {
 func TestBackOnADirectoryKeepsItsViews(t *testing.T) {
 	a, b := filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
 	for _, d := range []string{a, b} {
-		os.MkdirAll(d, 0o755)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{&plainView{}}})
 	r.WaitGone("Opening")
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "view.open", registry.Args{"id": "test/plain", "instance": "one", "place": "tab"})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	r.Run("view.open", registry.Args{"id": "test/plain", "instance": "one", "place": "tab"})
 	plain := func() int { // on the loop
 		n := 0
 		for _, v := range r.Host.Layout().All() {
@@ -180,9 +192,13 @@ func TestBackOnADirectoryKeepsItsViews(t *testing.T) {
 func TestAStateFileBackOnADirectoryReadsAnEditSince(t *testing.T) {
 	files, a, b := t.TempDir(), filepath.Join(t.TempDir(), "a"), filepath.Join(t.TempDir(), "b")
 	for _, d := range []string{a, b} {
-		os.MkdirAll(d, 0o755)
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
-	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
+	if err := os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	p := &keeper{files: files}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
@@ -195,7 +211,9 @@ func TestAStateFileBackOnADirectoryReadsAnEditSince(t *testing.T) {
 	}
 	move(b)
 	waitFile(t, filepath.Join(files, "a.txt"), "kept in a left")
-	os.WriteFile(filepath.Join(files, "a.txt"), []byte("edited by hand"), 0o644)
+	if err := os.WriteFile(filepath.Join(files, "a.txt"), []byte("edited by hand"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	move(a)
 	r.WaitFor("the edit loaded", func() bool { l := p.loaded(); return l[len(l)-1] == "edited by hand" })
 }

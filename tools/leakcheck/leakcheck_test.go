@@ -16,9 +16,15 @@ func TestTerms(t *testing.T) {
 
 func TestScanFindsTermsAnyCase(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.go"), []byte("ok\nsee ACME corp docs\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "b.png"), []byte("\x00acme corp"), 0o644)
-	os.WriteFile(filepath.Join(dir, "c.md"), []byte("path ~/.crit/work/x\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("ok\nsee ACME corp docs\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.png"), []byte("\x00acme corp"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "c.md"), []byte("path ~/.crit/work/x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	hits, err := Scan(dir, []string{"a.go", "b.png", "c.md", "gone.txt"}, append(Terms("acme corp"), Builtin...))
 	if err != nil {
 		t.Fatal(err)

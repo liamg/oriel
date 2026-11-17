@@ -45,17 +45,17 @@ func StartStdio(cmd *exec.Cmd, stderr io.Writer) (*Process, error) {
 	}
 	outR, outW, err := os.Pipe()
 	if err != nil {
-		inR.Close()
-		inW.Close()
+		_ = inR.Close()
+		_ = inW.Close()
 		return nil, err
 	}
 	cmd.Stdin, cmd.Stdout = inR, outW
 	p, err := Spawn(cmd)
-	inR.Close()
-	outW.Close()
+	_ = inR.Close()
+	_ = outW.Close()
 	if err != nil {
-		inW.Close()
-		outR.Close()
+		_ = inW.Close()
+		_ = outR.Close()
 		return nil, err
 	}
 	p.Connect(&stdio{in: inW, out: outR})
@@ -123,9 +123,9 @@ func (p *Process) Kill() error {
 
 // Stop kills the process, closes the connection and waits for it.
 func (p *Process) Stop() {
-	p.Kill()
-	p.Close()
-	p.Wait()
+	_ = p.Kill()
+	_ = p.Close()
+	_ = p.Wait()
 }
 
 // stdio is a command's stdin and stdout as one connection.
@@ -141,7 +141,7 @@ func (s *stdio) Write(b []byte) (int, error) { return s.in.Write(b) }
 func (s *stdio) Close() error {
 	var err error
 	s.once.Do(func() {
-		s.in.Close()
+		_ = s.in.Close()
 		err = s.out.Close()
 	})
 	return err

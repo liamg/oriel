@@ -15,7 +15,9 @@ import (
 func signedIn(t *testing.T, expires time.Time) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	os.MkdirAll(filepath.Join(home, ".claude"), 0o700)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	doc := fmt.Sprintf(`{"claudeAiOauth":{"accessToken":"tok-1","refreshToken":"r","expiresAt":%d}}`, expires.UnixMilli())
 	if err := os.WriteFile(filepath.Join(home, ".claude", ".credentials.json"), []byte(doc), 0o600); err != nil {
 		t.Fatal(err)
@@ -30,8 +32,10 @@ func TestUsageFromTheAPI(t *testing.T) {
 			http.Error(w, "no", http.StatusUnauthorized)
 			return
 		}
-		fmt.Fprint(w, `{"five_hour":{"utilization":21.0,"resets_at":"2026-11-02T14:00:00.877911+00:00"},
-			"seven_day":{"utilization":4.0,"resets_at":"2026-11-08T13:00:00.877932+00:00"},"seven_day_opus":null,"extra_usage":{"is_enabled":true}}`)
+		if _, err := fmt.Fprint(w, `{"five_hour":{"utilization":21.0,"resets_at":"2026-11-02T14:00:00.877911+00:00"},
+			"seven_day":{"utilization":4.0,"resets_at":"2026-11-08T13:00:00.877932+00:00"},"seven_day_opus":null,"extra_usage":{"is_enabled":true}}`); err != nil {
+			t.Error(err)
+		}
 	}))
 	defer srv.Close()
 	p := &Provider{UsageURL: srv.URL}

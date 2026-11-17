@@ -41,23 +41,31 @@ func wired(t *testing.T, spec agent.StartSpec) *wire {
 			var p struct {
 				Input []struct{ Text string } `json:"input"`
 			}
-			json.Unmarshal(r.Params, &p)
+			if err := json.Unmarshal(r.Params, &p); err != nil {
+				t.Error(err)
+			}
 			if len(p.Input) > 0 {
 				w.steers <- p.Input[0].Text
 			}
-			r.Reply(map[string]any{"turnId": "tu"}, nil)
+			if err := r.Reply(map[string]any{"turnId": "tu"}, nil); err != nil {
+				t.Error(err)
+			}
 		case "config/read":
 			w.mu.Lock()
 			res := w.reads
 			w.mu.Unlock()
-			r.Reply(res, nil)
+			if err := r.Reply(res, nil); err != nil {
+				t.Error(err)
+			}
 		default:
-			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method})
+			if err := r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method}); err != nil {
+				t.Error(err)
+			}
 		}
 	}}, jsonrpc.Options{})
 	t.Cleanup(func() {
-		s.rpc.Close()
-		w.codex.Close()
+		_ = s.rpc.Close()
+		_ = w.codex.Close()
 		s.events.Close()
 		for range s.events.Out() {
 		}
@@ -77,7 +85,7 @@ func (w *wire) call(method string, params any) <-chan json.RawMessage {
 	out := make(chan json.RawMessage, 1)
 	go func() {
 		var res json.RawMessage
-		w.codex.Call(context.Background(), method, params, &res)
+		_ = w.codex.Call(context.Background(), method, params, &res) // one still waiting as the test ends is closed with the wire; a test checks what's answered
 		out <- res
 	}()
 	return out
@@ -133,7 +141,9 @@ func TestFileChangeApproval(t *testing.T) {
 		var in struct {
 			File string `json:"file_path"`
 		}
-		json.Unmarshal(c.Input, &in)
+		if err := json.Unmarshal(c.Input, &in); err != nil {
+			t.Fatal(err)
+		}
 		if c.Tool != "Edit" || in.File != want {
 			t.Errorf("call = %+v, want an Edit of %s", c, want)
 		}
@@ -224,13 +234,17 @@ func TestQuestionAnswers(t *testing.T) {
 			"options": []map[string]any{{"label": "red", "description": ""}, {"label": "blue", "description": ""}}}}}
 	got := w.call("item/tool/requestUserInput", ask)
 	q := w.next().(agent.Question)
-	w.s.Answer(context.Background(), q.ID, agent.Decision{Allow: true, Answers: map[string]string{"Which colours?": "red, blue"}})
+	if err := w.s.Answer(context.Background(), q.ID, agent.Decision{Allow: true, Answers: map[string]string{"Which colours?": "red, blue"}}); err != nil {
+		t.Fatal(err)
+	}
 	if a := answered(t, got); !strings.Contains(a, `"colour":{"answers":["red","blue"]}`) {
 		t.Errorf("answers = %s", a)
 	}
 	got = w.call("item/tool/requestUserInput", ask)
 	q = w.next().(agent.Question)
-	w.s.Answer(context.Background(), q.ID, agent.Decision{Note: "decide yourself"})
+	if err := w.s.Answer(context.Background(), q.ID, agent.Decision{Note: "decide yourself"}); err != nil {
+		t.Fatal(err)
+	}
 	if a := answered(t, got); !strings.Contains(a, `"answers":{}`) {
 		t.Errorf("answers = %s", a)
 	}

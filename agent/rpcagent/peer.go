@@ -39,7 +39,7 @@ func newConn(r io.Reader, w io.Writer, h Handler) *conn {
 		Request: func(req *jsonrpc.Request) {
 			go func() {
 				res, err := h.Request(req.Context(), req.Method, req.Params)
-				req.Reply(res, WireError(err))
+				_ = req.Reply(res, WireError(err))
 			}()
 		},
 		Notify: h.Notify,

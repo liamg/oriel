@@ -26,17 +26,21 @@ func TestResponderAnswersInAnyOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 	rd := bufio.NewReader(p)
 	ask := func(seq int, command string, args any) dap.Message {
 		b, _ := json.Marshal(map[string]any{"seq": seq, "type": "request", "command": command, "arguments": args})
-		dap.WriteFrame(p, b)
+		if err := dap.WriteFrame(p, b); err != nil {
+			t.Fatal(err)
+		}
 		body, err := dap.ReadFrame(rd)
 		if err != nil {
 			t.Fatal(err)
 		}
 		var m dap.Message
-		json.Unmarshal(body, &m)
+		if err := json.Unmarshal(body, &m); err != nil {
+			t.Fatal(err)
+		}
 		return m
 	}
 	if m := ask(7, "evaluate", map[string]any{"expression": "/r"}); m.RequestSeq != 7 || string(m.Body) != `{"result":"/r"}` {

@@ -19,12 +19,18 @@ func TestCommentsTakeLines(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte("package pricing\n\nfunc roundHalfEven() {\n\tfloor := scaled.Floor()\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("floor := scaled.Floor()")
 	r.TypeKeys("4G")
 	r.WaitFrame("the cursor on line 4", func(s string) bool { return strings.Contains(s, "\n4:") })
-	r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) })
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitText("New thread")
 	r.TypeText("Floor goes the wrong way.")
 	r.TypeKeys("<S-CR><S-CR>")
@@ -57,9 +63,7 @@ func TestCommentsTakeLines(t *testing.T) {
 	a.Emit(agent.TurnEnd{})
 	r.TypeKeys("<D-R>")
 	r.WaitText("New request")
-	r.Do(func() error {
-		return r.Host.Run(context.Background(), "request.open", registry.Args{"thread": string(th.ID)})
-	})
+	r.Run("request.open", registry.Args{"thread": string(th.ID)})
 	r.ClickText("Reply, or ask more")
 	r.TypeText("one")
 	r.TypeKeys("<S-CR>")

@@ -111,7 +111,9 @@ func TestUtilityAgent(t *testing.T) {
 	if in := fs.WaitSent(t); in.Text != "and the PRs?" {
 		t.Errorf("sent %q", in.Text)
 	}
-	u.Close()
+	if err := u.Close(); err != nil {
+		t.Fatal(err)
+	}
 	until(t, "the agent to end with its stream", fs.Closed)
 	if err := u.Send(context.Background(), "still there?"); err == nil {
 		t.Error("a stopped utility agent took a turn")
@@ -126,7 +128,7 @@ func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer u.Close()
+	defer func() { _ = u.Close() }()
 	fs := r.fake.WaitStarted(t)
 	fs.Emit(agent.TurnStart{})
 	fs.Emit(agent.Dialog{Title: "New MCP server found in .mcp.json", Shown: true})

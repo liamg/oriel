@@ -47,7 +47,7 @@ func modStamp(root string) [32]byte {
 	h := sha256.New()
 	for _, n := range []string{"go.mod", "go.work"} {
 		b, _ := os.ReadFile(filepath.Join(root, n))
-		fmt.Fprintf(h, "%s %d\n", n, len(b))
+		_, _ = fmt.Fprintf(h, "%s %d\n", n, len(b))
 		h.Write(b)
 	}
 	var s [32]byte

@@ -68,7 +68,9 @@ func TestRankingGolden(t *testing.T) {
 	}
 	got := b.String()
 	if os.Getenv("ORIEL_UPDATE") != "" {
-		os.WriteFile("testdata/rank.golden", []byte(got), 0o644)
+		if err := os.WriteFile("testdata/rank.golden", []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	want, err := os.ReadFile("testdata/rank.golden")
 	if err != nil {

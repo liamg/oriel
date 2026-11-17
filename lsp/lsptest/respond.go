@@ -55,7 +55,7 @@ type answer struct {
 func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 	vars := transcript.MachineVars(root)
 	defer close(done)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	answers := map[string][]answer{}
 	byID := map[string]json.RawMessage{}
 	var methods = map[string]string{} // recorded request id → method
@@ -77,7 +77,7 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 				URI         string            `json:"uri"`
 				Diagnostics []json.RawMessage `json:"diagnostics"`
 			}
-			json.Unmarshal(m.Params, &p)
+			_ = json.Unmarshal(m.Params, &p)
 			if _, seen := diags[p.URI]; !seen || len(p.Diagnostics) > 0 {
 				diags[p.URI] = msg
 			}
@@ -92,7 +92,7 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 	write := func(b []byte) {
 		wmu.Lock()
 		defer wmu.Unlock()
-		jsonrpc.WriteFrame(conn, b)
+		_ = jsonrpc.WriteFrame(conn, b)
 	}
 	rd := bufio.NewReader(conn)
 	for {
@@ -116,7 +116,7 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 					URI string `json:"uri"`
 				} `json:"textDocument"`
 			}
-			json.Unmarshal(m.Params, &p)
+			_ = json.Unmarshal(m.Params, &p)
 			if d, ok := diags[p.TextDocument.URI]; ok {
 				write(d)
 			}
@@ -136,7 +136,7 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 			}
 		}
 		var out map[string]json.RawMessage
-		json.Unmarshal(reply, &out)
+		_ = json.Unmarshal(reply, &out)
 		out["id"], _ = json.Marshal(m.ID)
 		b, _ := json.Marshal(out)
 		write(b)

@@ -20,7 +20,7 @@ func TestGrammarChecksums(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	want := map[string]string{}
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -49,13 +49,15 @@ func TestGrammarChecksums(t *testing.T) {
 // The binary grows by under 12 MB for the core set: the grammars are embedded compressed.
 func TestCoreSetSize(t *testing.T) {
 	total := 0
-	fs.WalkDir(grammarFS, ".", func(p string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(grammarFS, ".", func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() {
 			info, _ := d.Info()
 			total += int(info.Size())
 		}
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	t.Logf("the core grammars take %.1f MB", float64(total)/(1<<20))
 	if total >= 12<<20 {
 		t.Errorf("the core grammars take %d bytes; the budget is 12 MB", total)
@@ -102,7 +104,7 @@ func TestCompilesWithItsCacheFolderGone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rt.Close(context.Background())
+	defer func() { _ = rt.Close(context.Background()) }()
 	compile := func(name string) error {
 		l, _ := Builtin().Language(name)
 		wasm, _, err := l.load()

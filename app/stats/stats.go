@@ -822,7 +822,7 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 				}
 				note := ""
 				if e.Note != nil {
-					registry.Call(func() error { note = e.Note(""); return nil })
+					registry.Try(func() { note = e.Note("") })
 				}
 				out = append(out, uireg.PickerItem{ID: e.Name, Label: e.Title, Detail: note, Icon: "▸", Key: kit.BoundKey(h, e.Command, e.Args),
 					Data: e})

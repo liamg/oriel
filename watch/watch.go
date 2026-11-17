@@ -236,7 +236,7 @@ func (m *Manager) Close() {
 	m.mu.Unlock()
 	m.cancel()
 	if fw != nil {
-		fw.Close()
+		_ = fw.Close()
 	}
 	m.wg.Wait()
 }

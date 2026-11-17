@@ -34,7 +34,7 @@ func TestAllowedFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if a, err := gomod.ParseAllowlist(f); err != nil || !a["golang.org/x/sys"]["v0"] {
 		t.Fatalf("allowed.txt: %v %v", a, err)
 	}

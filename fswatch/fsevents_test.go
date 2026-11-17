@@ -99,7 +99,7 @@ func TestTreeStream(t *testing.T) {
 	f := &treeFake{backend: b}
 	c := clocktest.New(time.Unix(0, 0))
 	w := newWatcher(f, c)
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	skip := func(rel string) bool { return rel == ".git/objects" || filepath.Base(rel) == "node_modules" }
 	if err := w.AddTree(root, skip); err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	f := &treeFake{backend: b}
 	c := clocktest.New(time.Unix(0, 0))
 	w := newWatcher(f, c)
-	t.Cleanup(func() { w.Close() })
+	t.Cleanup(func() { _ = w.Close() })
 	if err := w.AddTree(root, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,9 @@ func TestTreeRootMadeAsTheWatcherClosesStartsNoStream(t *testing.T) {
 	if err := w.AddTree(root, nil); err != nil {
 		t.Fatal(err)
 	}
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
 	write(t, filepath.Join(root, "my", "tickets.lua"), "return {}\n")
 	b.os(raw{path: root, dir: true, op: opCreated}) // the parent's watch, which the tree waits on until its root is made
 	f.mu.Lock()

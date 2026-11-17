@@ -112,8 +112,12 @@ func New(t testing.TB, o Options) *Scene {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	conf := filepath.Join(home, ".config", "oriel")
-	os.MkdirAll(conf, 0o755)
-	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
+	if err := os.MkdirAll(conf, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
 	s.clock = &sceneClock{now: func() time.Time { return s.Now }}
 	cfg := app.Config{

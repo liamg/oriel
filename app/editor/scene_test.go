@@ -40,8 +40,12 @@ var editorColumn = image.Rect(294, kit.TitleH, 1150, kit.TitleH+735)
 func editorScene(t *testing.T) *apptest.Scene {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "internal", "pricing", "round.go")
-	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, []byte(rig.RoundGo()), 0o644)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(rig.RoundGo()), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: float32(editorColumn.Dx()), Y: float32(editorColumn.Dy())}})
 	s.Registry().View(kit.TitleBarView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.ColumnNode() })) // the column starts under it
 	s.Registry().View(kit.RailView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.ColumnNode() }))     // and right of the rail
@@ -73,7 +77,7 @@ func waitHighlights(s *apptest.Scene) {
 
 func encodePNG(img image.Image) []byte {
 	var b bytes.Buffer
-	png.Encode(&b, img)
+	_ = png.Encode(&b, img)
 	return b.Bytes()
 }
 
@@ -144,7 +148,9 @@ func runEditorWith(t *testing.T, files map[string]string, open []string, plugins
 	dir := t.TempDir()
 	for name, body := range files {
 		p := filepath.Join(dir, name)
-		os.MkdirAll(filepath.Dir(p), 0o755)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}

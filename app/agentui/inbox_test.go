@@ -1,7 +1,6 @@
 package agentui_test
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -241,12 +240,10 @@ func TestSecurityKeyCardCancelsAWaitingCommit(t *testing.T) {
 			t.Fatalf("git config: %v: %s", err, out)
 		}
 	}
-	os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644)
-	if err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "ship.commit", registry.Args{"project": p.Name, "message": "two", "force": true})
-	}); err != nil {
+	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	r.Run("ship.commit", registry.Args{"project": p.Name, "message": "two", "force": true})
 	r.WaitFrame("the key's card", func(s string) bool { return apptest.HasAll(s, "Touch your security key", "Cancel") })
 	r.ClickText("Cancel")
 	r.WaitGone("Touch your security key")
@@ -404,7 +401,9 @@ func TestInboxSnapshot(t *testing.T) {
 			}
 		}
 	}
-	s.Store().Apply(core.SessionFocused{ID: "pricing-rounding"})
+	if err := s.Store().Apply(core.SessionFocused{ID: "pricing-rounding"}); err != nil {
+		t.Fatal(err)
+	}
 	s.Registry().Contribute(uireg.InboxSource{Name: "github", Cards: func() []uireg.InboxCard {
 		return []uireg.InboxCard{
 			{ID: "ci", Group: uireg.GroupCodeHost, Icon: "tests", Title: "CI passed · #4417 dash-filters", Sub: "github · 12 checks", Done: true, Created: ago(11 * time.Minute)},

@@ -16,7 +16,9 @@ import (
 func themeScene(t *testing.T) (*apptest.Scene, string) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
 	dir := filepath.Join(s.ConfigDir, "themes")
-	os.MkdirAll(dir, 0o755)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	for _, n := range []string{"dawn", "dusk"} {
 		p := filepath.Join(dir, n+".toml")
 		rig.WriteFile(t, p, "name = \""+n+"\"\nextends = \"oriel\"\n")
@@ -105,7 +107,9 @@ func TestThemeOptionIsAMenu(t *testing.T) {
 func TestThemePickerSnapshot(t *testing.T) {
 	s := apptest.EditorScene(t)
 	dir := filepath.Join(s.ConfigDir, "themes")
-	os.MkdirAll(dir, 0o755)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	p := filepath.Join(dir, "glacier.toml")
 	rig.WriteFile(t, p, "name = \"glacier\"\nextends = \"oriel\"\n\n[dark.palette]\nbg0 = \"#071018\"\nbg1 = \"#0b1620\"\nbg2 = \"#0f1c28\"\naccent = \"#5cc8ff\"\naccent2 = \"#2f9fe0\"\nbrand = \"#7fe3ff\"\n")
 	s.Registry().Theme(theme.File{Path: p})

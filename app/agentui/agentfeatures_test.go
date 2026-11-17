@@ -58,7 +58,9 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 	apptest.Poll(t, "the sign-in to start", lw.Fake.LoginStarted)
 	r.UntilState("the browser opened", func(core.State) bool {
 		var opened bool
-		r.Do(func() error { opened = slices.Contains(desk.Opened, agenttest.LoginURL); return nil })
+		if err := r.Do(func() error { opened = slices.Contains(desk.Opened, agenttest.LoginURL); return nil }); err != nil {
+			t.Error(err)
+		}
 		return opened
 	})
 	lw.Fake.FinishLogin(nil)

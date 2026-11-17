@@ -200,7 +200,7 @@ func (m *Manager) start(spec ServerSpec, key clientKey, st *start) {
 	m.mu.Unlock()
 	slices.Sort(reopen)
 	for _, p := range reopen {
-		c.DidOpen(p, docs[p].language, docs[p].snap)
+		_ = c.DidOpen(p, docs[p].language, docs[p].snap)
 	}
 	st.c, st.err = c, err
 	close(st.done)
@@ -283,7 +283,7 @@ func (m *Manager) Statuses() []Status {
 // Restart stops a client's server and starts it again with the same documents open.
 func (m *Manager) Restart(ctx context.Context, c *Client) (*Client, error) {
 	if !exited(c) {
-		c.Shutdown(ctx)
+		_ = c.Shutdown(ctx)
 	}
 	return m.client(ctx, c.spec, clientKey{c.spec.Name, c.root})
 }

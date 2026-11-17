@@ -78,7 +78,7 @@ type received struct {
 func (f *Fake) serve(conn net.Conn, root string) {
 	vars := transcript.MachineVars(root)
 	defer close(f.done)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	in := make(chan received, 256)
 	go func() {
 		defer close(in)
@@ -113,7 +113,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 					return
 				}
 				var m map[string]json.RawMessage
-				json.Unmarshal(body, &m)
+				_ = json.Unmarshal(body, &m)
 				m["id"], _ = json.Marshal(live)
 				body, _ = json.Marshal(m)
 			}
@@ -169,7 +169,7 @@ func describe(b []byte) string {
 // match finds the received message the recorded one stands for.
 func match(pending []received, rec jsonrpc.Message, want []byte) int {
 	var w jsonrpc.Message
-	json.Unmarshal(want, &w)
+	_ = json.Unmarshal(want, &w)
 	for j, p := range pending {
 		m := p.msg
 		switch {

@@ -107,7 +107,7 @@ func Can(r Contributions, k core.Kind, c Capability) bool {
 	sk, ok := KindOf(r, k)
 	ok2 := false
 	if ok {
-		Call(func() error { ok2 = sk.Can(c); return nil })
+		Try(func() { ok2 = sk.Can(c) })
 	}
 	return ok2
 }
@@ -116,7 +116,7 @@ func Can(r Contributions, k core.Kind, c Capability) bool {
 func Label(r Contributions, se core.SessionState) string {
 	out := string(se.Kind)
 	if sk, ok := KindOf(r, se.Kind); ok {
-		Call(func() error { out = sk.Label(se); return nil })
+		Try(func() { out = sk.Label(se) })
 	}
 	return out
 }
@@ -135,10 +135,10 @@ func (c CardChips) ContributionName() string { return c.Name }
 func Chips(r Contributions, se core.SessionState) []Chip {
 	var out []Chip
 	if sk, ok := KindOf(r, se.Kind); ok {
-		Call(func() error { out = sk.Chips(se); return nil })
+		Try(func() { out = sk.Chips(se) })
 	}
 	for _, cc := range ContributionsOf[CardChips](r) {
-		Call(func() error { out = append(out, cc.Chips(se)...); return nil })
+		Try(func() { out = append(out, cc.Chips(se)...) })
 	}
 	return out
 }
@@ -158,7 +158,7 @@ func (d SessionDone) ContributionName() string { return d.Name }
 func Done(r Contributions, se core.SessionState) string {
 	for _, d := range ContributionsOf[SessionDone](r) {
 		why := ""
-		Call(func() error { why = d.Done(se); return nil })
+		Try(func() { why = d.Done(se) })
 		if why != "" {
 			return why
 		}
@@ -182,7 +182,7 @@ func Unsaved(r Contributions, se core.SessionState) []string {
 	var out []string
 	for _, u := range ContributionsOf[SessionUnsaved](r) {
 		what := ""
-		Call(func() error { what = u.Unsaved(se); return nil })
+		Try(func() { what = u.Unsaved(se) })
 		if what != "" {
 			out = append(out, what)
 		}
@@ -198,7 +198,7 @@ func FrontSession(r Contributions) (core.SessionState, bool) {
 	}
 	var se core.SessionState
 	ok = false
-	Call(func() error { se, ok = s.Front(); return nil })
+	Try(func() { se, ok = s.Front() })
 	return se, ok
 }
 
@@ -210,7 +210,7 @@ func SessionByID(r Contributions, id core.SessionID) (core.SessionState, bool) {
 	}
 	var se core.SessionState
 	ok = false
-	Call(func() error { se, ok = s.Get(id); return nil })
+	Try(func() { se, ok = s.Get(id) })
 	return se, ok
 }
 

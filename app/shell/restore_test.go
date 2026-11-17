@@ -15,8 +15,12 @@ import (
 // A restart restores the layout, open buffers and cursor positions: the docks, the files open in it at their cursors, and the terminals, on the same directory.
 func TestLayoutComesBackAfterARestart(t *testing.T) {
 	state, dir := t.TempDir(), t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "b.go"), []byte("package b\n\nfunc B() {\n\treturn\n}\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.go"), []byte("package b\n\nfunc B() {\n\treturn\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	run := func(id string, args registry.Args) {
 		t.Helper()
@@ -37,11 +41,13 @@ func TestLayoutComesBackAfterARestart(t *testing.T) {
 	r2.WaitFrame("the layout back", func(s string) bool { return apptest.HasAll(s, "EXPLORER", "a.go", "b.go", "3:6", "restored-term") })
 	var all []layout.ViewRef
 	var left bool
-	r2.Do(func() error {
+	if err := r2.Do(func() error {
 		root := r2.Host.Layout()
 		all, left = root.All(), root.Docks[layout.Left].Open
 		return nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	ids := map[string]int{}
 	for _, v := range all {
 		ids[v.ID]++

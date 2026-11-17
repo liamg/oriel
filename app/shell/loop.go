@@ -547,7 +547,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		}
 		if k := a.Keymap; !l.ready(k) {
 			if k.Desc != "" {
-				l.store.Apply(core.Notified{Notice: core.Notice{ID: "command.unavailable." + k.Command, Severity: core.SevInfo, Source: "core",
+				_ = l.store.Apply(core.Notified{Notice: core.Notice{ID: "command.unavailable." + k.Command, Severity: core.SevInfo, Source: "core",
 					Text: k.Desc + " isn't available yet", Time: l.sh.now()}})
 			}
 			continue
@@ -556,7 +556,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
-				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
+				_ = l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
 			}
 		}
 	}
@@ -568,7 +568,7 @@ func (l *loop) ready(k *registry.Keymap) bool {
 	for _, c := range l.reg.Commands() {
 		if c.ID == k.Command && c.Available != nil {
 			ok := true
-			registry.Call(func() error { ok = c.Available(k.Args); return nil })
+			registry.Try(func() { ok = c.Available(k.Args) })
 			return ok
 		}
 	}

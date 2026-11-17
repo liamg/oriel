@@ -53,7 +53,9 @@ func (fx fixture) spec(t *testing.T) lsp.ServerSpec {
 			if fx.settings != nil {
 				var m map[string]any
 				if len(s.Settings) > 0 {
-					json.Unmarshal(s.Settings, &m)
+					if err := json.Unmarshal(s.Settings, &m); err != nil {
+						t.Fatal(err)
+					}
 				}
 				s.Settings, _ = json.Marshal(merge(m, fx.settings))
 			}
@@ -362,7 +364,7 @@ func run(t *testing.T, fx fixture) *result {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := rec.Transcript(h).Write(f); err != nil {
 		t.Fatal(err)
 	}

@@ -98,7 +98,7 @@ func cliHosts(path, section string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var out []string
 	in, child := section == "", -1
 	sc := bufio.NewScanner(f)
@@ -225,7 +225,9 @@ func (c *codeSites) Probe(ctx context.Context, hostname string) (registry.HostSi
 		var yes bool
 		if registry.Call(func() (err error) { yes, err = h.Setup.Probe(ctx, hostname); return err }) == nil && yes {
 			undo()
-			c.Remember(hostname, h.Name, "")
+			if err := c.Remember(hostname, h.Name, ""); err != nil {
+				c.h.Log().Warn("remembering a code host", "host", hostname, "err", err)
+			}
 			return c.site(h, hostname), true
 		}
 		undo()

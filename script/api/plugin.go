@@ -116,7 +116,7 @@ func (a *APIs) onLoop(f *script.Fn, params json.RawMessage) (any, error) {
 // decode is a JSON value as Lua sees it.
 func decode(raw json.RawMessage) any {
 	var v any
-	json.Unmarshal(raw, &v)
+	_ = json.Unmarshal(raw, &v)
 	return v
 }
 
@@ -147,7 +147,7 @@ func (p Process) Spawn(path string, opts script.Table) ([]any, error) {
 			if err != nil {
 				msg = err.Error()
 			}
-			a.Host.Do(func() { a.VM.Call(f, msg) })
+			a.Host.Do(func() { a.callOnce(f, msg) })
 		}
 	}
 	proc, err := a.processes().Spawn(a.Plugin, path, o)
@@ -194,7 +194,7 @@ func (p Process) Spawn(path string, opts script.Table) ([]any, error) {
 			}
 		})),
 		"stop": script.GoFunc(script.Method(func(*script.Args) ([]any, error) {
-			go proc.Stop()
+			go func() { _ = proc.Stop() }()
 			return nil, nil
 		})),
 	}}, nil

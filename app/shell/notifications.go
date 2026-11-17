@@ -87,11 +87,11 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy}))
 	cfg := n.sh.cfg
 	n.Add(h.OnFault(func(f registry.Fault) {
-		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
+		_ = cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 	}))
 	n.Add(h.OnFailure(func(f registry.Failure) {
 		if f.InARow < registry.FailLimit { // the fault that turns it off says so, on the same row
-			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
+			_ = cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 		}
 	}))
 	if n.sh.cfg.CrashDir != "" && !n.sh.crashSeen {
@@ -264,15 +264,15 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	switch {
 	case res.Action >= 0 && res.Action == details:
 		kit.RunOrNotify(n.h, "shell", "log.open", registry.Args{"seq": row.Seq})
-		n.h.Apply(core.Dismissal(row))
+		_ = n.h.Apply(core.Dismissal(row))
 	case res.Action >= 0:
 		a := row.Actions[res.Action]
 		if err := n.h.Run(ctx, a.Command, registry.Args(a.Args)); err != nil {
 			n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
 		}
-		n.h.Apply(core.Dismissal(row))
+		_ = n.h.Apply(core.Dismissal(row))
 	case res.Closed:
-		n.h.Apply(core.Dismissal(row))
+		_ = n.h.Apply(core.Dismissal(row))
 	}
 }
 
@@ -289,7 +289,7 @@ func (n *notices) inboxCards() []uireg.InboxCard {
 		card := uireg.InboxCard{ID: fmt.Sprint(row.Seq), Type: "notice", Mine: true, Session: string(row.Session), Icon: "!",
 			Tone: "accent", Kicker: titleOf(row), Title: row.Text, Sub: row.Source, Detail: row.Detail, Created: row.Time,
 			Interrupt: !row.Dismissed, Dialog: row.Confirm, Done: row.Dismissed}
-		answer := func() { n.h.Apply(core.Dismissal(row)) }
+		answer := func() { _ = n.h.Apply(core.Dismissal(row)) }
 		if row.Confirm {
 			card.Dismissed = answer // closing a confirm is its no
 		}

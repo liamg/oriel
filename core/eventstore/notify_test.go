@@ -19,7 +19,9 @@ func notice(id string, sev core.Severity, sess core.SessionID, at time.Duration)
 // keystroke is one row.
 func TestRepeatsCollapse(t *testing.T) {
 	s := New()
-	s.Apply(notice("other", core.SevInfo, "", 0))
+	if err := s.Apply(notice("other", core.SevInfo, "", 0)); err != nil {
+		t.Fatal(err)
+	}
 	for i := range 100 {
 		if err := s.Apply(notice("lua.error", core.SevError, "", time.Duration(i)*time.Second)); err != nil {
 			t.Fatal(err)
@@ -40,12 +42,18 @@ func TestRepeatsCollapse(t *testing.T) {
 
 func TestRepeatShowsAgainAndMovesLast(t *testing.T) {
 	s := New()
-	s.Apply(notice("a", core.SevWarning, "", 0))
-	s.Apply(notice("b", core.SevWarning, "", time.Second))
+	if err := s.Apply(notice("a", core.SevWarning, "", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("b", core.SevWarning, "", time.Second)); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.Apply(core.NoticeDismissed{ID: "a", Source: "test"}); err != nil {
 		t.Fatal(err)
 	}
-	s.Apply(notice("a", core.SevWarning, "", 2*time.Second))
+	if err := s.Apply(notice("a", core.SevWarning, "", 2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
 	st := s.State()
 	if got := st.Notifications[1]; got.ID != "a" || got.Dismissed || got.Count != 2 {
 		t.Errorf("last row = %+v", got)
@@ -54,9 +62,15 @@ func TestRepeatShowsAgainAndMovesLast(t *testing.T) {
 
 func TestSameIDInAnotherSessionIsAnotherRow(t *testing.T) {
 	s := New()
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
-	s.Apply(notice("lsp.crashed", core.SevWarning, "", 0))
-	s.Apply(notice("lsp.crashed", core.SevWarning, "s1", 0))
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("lsp.crashed", core.SevWarning, "", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("lsp.crashed", core.SevWarning, "s1", 0)); err != nil {
+		t.Fatal(err)
+	}
 	if n := len(s.State().Notifications); n != 2 {
 		t.Errorf("%d rows, want 2", n)
 	}
@@ -65,7 +79,9 @@ func TestSameIDInAnotherSessionIsAnotherRow(t *testing.T) {
 func TestHistoryIsCapped(t *testing.T) {
 	s := New()
 	for i := range core.MaxNotifications + 5 {
-		s.Apply(notice(fmt.Sprint("n", i), core.SevInfo, "", 0))
+		if err := s.Apply(notice(fmt.Sprint("n", i), core.SevInfo, "", 0)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	st := s.State()
 	if len(st.Notifications) != core.MaxNotifications || st.Notifications[0].ID != "n5" {
@@ -77,17 +93,31 @@ func TestHistoryIsCapped(t *testing.T) {
 // session's tab and wait in its log.
 func TestErrorInUnfocusedSessionMarksIt(t *testing.T) {
 	s := New()
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
-	s.Apply(core.SessionOpened{ID: "s2", Kind: core.KindWork, Status: core.StatusQuiet})
-	s.Apply(core.SessionFocused{ID: "s1"})
-	s.Apply(notice("e1", core.SevError, "s1", 0))
-	s.Apply(notice("e2", core.SevError, "s2", 0))
-	s.Apply(notice("w", core.SevWarning, "s2", 0))
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(core.SessionOpened{ID: "s2", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(core.SessionFocused{ID: "s1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("e1", core.SevError, "s1", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("e2", core.SevError, "s2", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("w", core.SevWarning, "s2", 0)); err != nil {
+		t.Fatal(err)
+	}
 	unseen := func(id core.SessionID) int { se, _ := s.Session(id); return se.Unseen() }
 	if unseen("s1") != 0 || unseen("s2") != 1 {
 		t.Errorf("unseen s1=%d s2=%d, want 0 1", unseen("s1"), unseen("s2"))
 	}
-	s.Apply(core.SessionFocused{ID: "s2"})
+	if err := s.Apply(core.SessionFocused{ID: "s2"}); err != nil {
+		t.Fatal(err)
+	}
 	if unseen("s2") != 0 {
 		t.Errorf("focusing s2 left %d unseen", unseen("s2"))
 	}
@@ -99,13 +129,27 @@ func TestErrorInUnfocusedSessionMarksIt(t *testing.T) {
 // The status line's ✕/⚠ counts are the focused session's plus Oriel's.
 func TestCounts(t *testing.T) {
 	s := New()
-	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
-	s.Apply(core.SessionOpened{ID: "s2", Kind: core.KindWork, Status: core.StatusQuiet})
-	s.Apply(notice("a", core.SevError, "", 0))
-	s.Apply(notice("b", core.SevWarning, "s1", 0))
-	s.Apply(notice("c", core.SevWarning, "s1", 0))
-	s.Apply(notice("d", core.SevError, "s2", 0))
-	s.Apply(notice("e", core.SevInfo, "s1", 0))
+	if err := s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(core.SessionOpened{ID: "s2", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("a", core.SevError, "", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("b", core.SevWarning, "s1", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("c", core.SevWarning, "s1", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("d", core.SevError, "s2", 0)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Apply(notice("e", core.SevInfo, "s1", 0)); err != nil {
+		t.Fatal(err)
+	}
 	if e, w := s.State().Counts("s1"); e != 1 || w != 2 {
 		t.Errorf("counts = %d %d, want 1 2", e, w)
 	}
@@ -117,16 +161,26 @@ func TestNotificationsReplay(t *testing.T) {
 	var log bytes.Buffer
 	a := New()
 	a.Subscribe(core.Filter{}, core.NewRecorder(&log).Record)
-	a.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
+	if err := a.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet}); err != nil {
+		t.Fatal(err)
+	}
 	n := notice("lua.error", core.SevError, "s1", 0)
 	n.Detail, n.Location = "stack traceback:\n\tinit.lua:15", "init.lua:15"
 	n.Actions = []core.Action{{Title: "Open at line", Command: "file.open", Args: map[string]any{"path": "init.lua", "line": 15.0}}}
 	for range 3 {
-		a.Apply(n)
+		if err := a.Apply(n); err != nil {
+			t.Fatal(err)
+		}
 	}
-	a.Apply(notice("info", core.SevInfo, "", time.Second))
-	a.Apply(core.NoticeDismissed{ID: "info", Source: "test"})
-	a.Apply(core.SessionFocused{ID: "s1"})
+	if err := a.Apply(notice("info", core.SevInfo, "", time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Apply(core.NoticeDismissed{ID: "info", Source: "test"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Apply(core.SessionFocused{ID: "s1"}); err != nil {
+		t.Fatal(err)
+	}
 
 	b := New()
 	if err := core.Replay(&log, b); err != nil {

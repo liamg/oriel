@@ -113,7 +113,9 @@ func TestBootRunsOnlyUnderTheLock(t *testing.T) {
 	if p, ok := in.Pending(); !ok || p.Boots != 0 {
 		t.Fatalf("a refused start booted the update: %+v, %v", p, ok)
 	}
-	first.Close()
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := claim(home, &cfg, in); err != nil {
 		t.Fatal(err)
