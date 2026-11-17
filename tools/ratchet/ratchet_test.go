@@ -21,7 +21,7 @@ var ceilings = map[string]int{
 	"functions over 120 lines in app/":     0,
 	"files over 900 lines in app/":         0,
 	"functions over 120 lines in host/":    0,
-	"functions over 120 lines elsewhere":   34,
+	"functions over 120 lines elsewhere":   32,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
 	"RequestFocus calls outside ui/":       35,

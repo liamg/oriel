@@ -21,11 +21,25 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
+// The tree's filters, in the order of their chips.
+const (
+	filterAll = iota
+	filterFailed
+	filterSlowest
+)
+
+// The output shown, in the order of its segments.
+const (
+	outputCase = iota
+	outputRun
+	outputJSON
+)
+
 // testsPanel is the Tests panel's own state.
 type testsPanel struct {
-	filter int    // 0 every test, 1 failed only, 2 the slowest
+	filter int    // a filter*, the ToggleChip's index
 	sel    string // the selected row's id: a result's key
-	out    int    // 0 this case's output, 1 the whole run's, 2 the raw JSON
+	out    int    // an output*, the Segmented's index
 	reveal string // a row to select on the next frame
 	lines  outputCache
 }
@@ -126,7 +140,7 @@ func (x *Tests) panelView(c *ui.Ctx) {
 					}
 					if len(items) == 0 {
 						msg := "No tests found."
-						if p.filter != 0 {
+						if p.filter != filterAll {
 							msg = "No tests run yet: ␣tt runs the one at the cursor, ␣tf the file's."
 						}
 						c.Text("none", msg, mono(11, theme.FgGhost))
@@ -223,7 +237,7 @@ func (x *Tests) testCount(known map[string]testrun.Item, latest map[string]*test
 func (x *Tests) treeItems(known map[string]testrun.Item, latest map[string]*testrun.Result, filter int) []widget.TreeItem {
 	type test struct{ pkg, name string }
 	all := map[string]test{}
-	if filter == 0 {
+	if filter == filterAll {
 		for k, it := range known {
 			all[k] = test{it.Package, it.Name}
 		}
@@ -255,7 +269,7 @@ func (x *Tests) treeItems(known map[string]testrun.Item, latest map[string]*test
 		}
 		return widget.TreeItem{ID: key, Label: label, Glyph: glyph, GlyphTone: th.C(tok), Open: r != nil && r.Status.Failing(), Help: "editor/pane#tests"}
 	}
-	if filter == 2 {
+	if filter == filterSlowest {
 		var rs []*testrun.Result
 		for _, r := range latest {
 			if r.Test != "" {
@@ -282,12 +296,12 @@ func (x *Tests) treeItems(known map[string]testrun.Item, latest map[string]*test
 	nodes := map[string]*widget.TreeItem{}
 	for _, k := range keys {
 		t := all[k]
-		if filter == 1 && !failingUnder(k) {
+		if filter == filterFailed && !failingUnder(k) {
 			continue
 		}
 		pkg := pkgs[t.pkg]
 		if pkg == nil {
-			pkg = &widget.TreeItem{ID: "\x01" + t.pkg, Label: t.pkg, Open: filter == 1, Help: "editor/pane#tests"}
+			pkg = &widget.TreeItem{ID: "\x01" + t.pkg, Label: t.pkg, Open: filter == filterFailed, Help: "editor/pane#tests"}
 			if r := latest[testrun.Key(t.pkg, "")]; r != nil && r.Status.Failing() {
 				pkg.Glyph, pkg.GlyphTone, pkg.Open = "✕", th.C(tTestFailed), true
 			}
@@ -408,7 +422,7 @@ func (x *Tests) outputLines(r *testrun.Result, which int) []string {
 		run = runs[len(runs)-1]
 	}
 	switch which {
-	case 1:
+	case outputRun:
 		if run == nil {
 			return nil
 		}
@@ -417,7 +431,7 @@ func (x *Tests) outputLines(r *testrun.Result, which int) []string {
 			out = append(out, t.Output...)
 		}
 		return append(out, run.Output...)
-	case 2:
+	case outputJSON:
 		if run == nil {
 			return nil
 		}

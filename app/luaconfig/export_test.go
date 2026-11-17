@@ -3,10 +3,10 @@ package luaconfig
 // Eval runs a line in the Lua REPL, as typing it there does.
 func (x *Lua) Eval(line string) { x.eval(line) }
 
-// Repl is the REPL's lines, and each one's kind: 0 input, 1 output, 2 error, 3 a frame of its trace.
+// Repl is the REPL's lines, and each one's kind as a number: replInput 0, replOutput 1, replError 2, replFrame 3.
 func (x *Lua) Repl() (texts []string, kinds []int) {
 	for _, l := range x.repl {
-		texts, kinds = append(texts, l.text), append(kinds, l.kind)
+		texts, kinds = append(texts, l.text), append(kinds, int(l.kind))
 	}
 	return texts, kinds
 }

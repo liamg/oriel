@@ -69,8 +69,17 @@ type Lua struct {
 
 type replLine struct {
 	text string
-	kind int // 0 input, 1 output, 2 error, 3 a frame of its trace
+	kind replKind
 }
+
+type replKind int
+
+const (
+	replInput replKind = iota
+	replOutput
+	replError
+	replFrame // a frame of an error's trace
+)
 
 // Events features fire later, declared now so hooks on them show what they wait for.
 var laterEvents = []registry.EventInfo{
@@ -280,7 +289,7 @@ func (x *Lua) clearMarks() {
 // eval runs a line at the REPL: as an expression first, so `1 + 1` shows 2, then as a statement. An error shows
 // with its trace; the expression is in a table, so a call in it keeps its frame rather than being a tail call.
 func (x *Lua) eval(line string) {
-	x.repl = append(x.repl, replLine{text: line})
+	x.repl = append(x.repl, replLine{text: line, kind: replInput})
 	x.history = append(x.history, line)
 	x.hist = len(x.history)
 	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("return unpack({ " + line + "\n})")})
@@ -288,11 +297,11 @@ func (x *Lua) eval(line string) {
 		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte(line)})
 	}
 	if err != nil {
-		x.repl = append(x.repl, replLine{text: err.Error(), kind: 2})
+		x.repl = append(x.repl, replLine{text: err.Error(), kind: replError})
 		if e := (*script.Error)(nil); errors.As(err, &e) {
 			for _, f := range e.Frames() {
 				if !f.Go {
-					x.repl = append(x.repl, replLine{text: "  " + f.Loc() + ": " + f.Fn, kind: 3})
+					x.repl = append(x.repl, replLine{text: "  " + f.Loc() + ": " + f.Fn, kind: replFrame})
 				}
 			}
 			x.mark(e)
@@ -300,7 +309,7 @@ func (x *Lua) eval(line string) {
 		return
 	}
 	for _, v := range out {
-		x.repl = append(x.repl, replLine{text: Show(v), kind: 1})
+		x.repl = append(x.repl, replLine{text: Show(v), kind: replOutput})
 	}
 }
 
@@ -381,11 +390,11 @@ func (x *Lua) replView(c *ui.Ctx) {
 		c.Column("out", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {
 			for i, l := range x.repl {
 				switch l.kind {
-				case 0:
+				case replInput:
 					c.Text(i, "› "+l.text, mono(theme.Fg))
-				case 1:
+				case replOutput:
 					c.Text(i, l.text, mono(tLuaOut))
-				case 3:
+				case replFrame:
 					c.Text(i, l.text, mono(theme.FgFaint))
 				default:
 					c.Text(i, l.text, mono(tLuaErr))

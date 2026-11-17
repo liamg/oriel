@@ -15,22 +15,22 @@ func (x *Tests) outputCommands() []registry.Command {
 			if !ok {
 				return fmt.Errorf("no test at the cursor")
 			}
-			return x.showOutput(ctx, it.Key(), 0)
+			return x.showOutput(ctx, it.Key(), outputCase)
 		}},
 		{ID: "tests.output", Title: "Show the last run's output in the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
-			return x.showOutput(ctx, x.panel.sel, 1)
+			return x.showOutput(ctx, x.panel.sel, outputRun)
 		}},
 		{ID: "test.attach", Title: "Follow the running test's output", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			key, ok := x.running()
 			if !ok {
 				return fmt.Errorf("no test running")
 			}
-			return x.showOutput(ctx, key, 0)
+			return x.showOutput(ctx, key, outputCase)
 		}},
 	}
 }
 
-// showOutput opens the Tests panel on key's output: which 0 its own, 1 the whole run's.
+// showOutput opens the Tests panel on key's output: an output*.
 func (x *Tests) showOutput(ctx registry.Ctx, key string, which int) error {
 	x.panel.sel, x.panel.reveal, x.panel.out = key, key, which
 	return x.h.Run(ctx, "tests.open", nil)

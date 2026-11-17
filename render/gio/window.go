@@ -307,29 +307,21 @@ func (w *Window) loop() {
 		close(w.queue)
 		mu.Unlock()
 	}()
-	stop, recheck := watchAppearance(osDark, appearanceEvery, func(dark bool) {
-		mu.Lock()
-		defer mu.Unlock()
-		if !closed {
-			w.post(render.AppearanceEvent{Dark: dark})
-		}
-	})
-	defer stop()
-	defer appearanceSignals(recheck)()
-	side := &sideWatcher{on: func(ev render.Event) {
+	// postOpen posts from another thread, unless the loop has ended and the queue closed.
+	postOpen := func(ev render.Event) {
 		mu.Lock()
 		defer mu.Unlock()
 		if !closed {
 			w.post(ev)
 		}
-	}}
+	}
+	stop, recheck := watchAppearance(osDark, appearanceEvery, func(dark bool) { postOpen(render.AppearanceEvent{Dark: dark}) })
+	defer stop()
+	defer appearanceSignals(recheck)()
+	side := &sideWatcher{on: postOpen}
 	defer side.close()
 	w.vis.tell = func(hidden bool) {
-		mu.Lock()
-		if !closed {
-			w.post(render.VisibleEvent{Visible: !hidden})
-		}
-		mu.Unlock()
+		postOpen(render.VisibleEvent{Visible: !hidden})
 		if !hidden && w.owed.Swap(false) {
 			go w.win.Invalidate()
 		}
@@ -342,7 +334,7 @@ func (w *Window) loop() {
 	defer hover.close()
 	drops := &dropWatcher{on: func(paths []string, x, y float64) {
 		size := w.Size()
-		w.post(render.DropEvent{Pos: render.Point{X: float32(x) * size.X, Y: float32(y) * size.Y}, Paths: paths})
+		postOpen(render.DropEvent{Pos: render.Point{X: float32(x) * size.X, Y: float32(y) * size.Y}, Paths: paths})
 	}}
 	defer drops.close()
 	var ops op.Ops

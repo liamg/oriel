@@ -59,6 +59,156 @@ type lightboxState struct {
 	clicked     time.Time    // the last click on the zoomed image, for a double-click
 }
 
+// lightboxView is a frame's geometry of the item shown: its own size, the room's centre and the zoom that fits it.
+type lightboxView struct {
+	iw, ih, fit float32
+	centre      render.Point
+	size        render.Point
+}
+
+func newLightboxView(it LightboxItem, size render.Point) lightboxView {
+	iw, ih := it.size()
+	room := render.Rect{Min: render.Point{X: lbSide, Y: lbTop}, Max: render.Point{X: max(size.X-lbSide, lbSide+1), Y: max(size.Y-lbBottom, lbTop+1)}}
+	// an image fits at no more than its own size; a vector, sharp at any size, up to twice it
+	fit := min(1, room.Dx()/iw, room.Dy()/ih)
+	if it.Image == nil {
+		fit = min(2, room.Dx()/iw, room.Dy()/ih)
+	}
+	return lightboxView{iw: iw, ih: ih, fit: fit, size: size,
+		centre: render.Point{X: (room.Min.X + room.Max.X) / 2, Y: (room.Min.Y + room.Max.Y) / 2}}
+}
+
+func (st *lightboxState) zoomIn(v lightboxView) float32 {
+	if st.zoom == 0 {
+		return v.fit
+	}
+	return st.zoom
+}
+
+// drawnAt is where the item is drawn.
+func (st *lightboxState) drawnAt(v lightboxView) render.Rect {
+	z := st.zoomIn(v)
+	w, h := v.iw*z, v.ih*z
+	return render.XYWH(v.centre.X+st.off.X-w/2, v.centre.Y+st.off.Y-h/2, w, h)
+}
+
+// pan keeps the zoomed item over the window.
+func (st *lightboxState) pan(v lightboxView) {
+	d := st.drawnAt(v)
+	st.off.X = panAxis(st.off.X, d.Dx(), v.centre.X, v.size.X)
+	st.off.Y = panAxis(st.off.Y, d.Dy(), v.centre.Y, v.size.Y)
+}
+
+func (st *lightboxState) fitAgain() { st.zoom, st.off = 0, render.Point{} }
+
+// zoomAt zooms to z keeping the point under p where it is.
+func (st *lightboxState) zoomAt(v lightboxView, p render.Point, z float32) {
+	z = max(v.fit, min(z, max(v.fit, lbMaxZoom)))
+	d, was := st.drawnAt(v), st.zoomIn(v)
+	u := render.Point{X: (p.X - d.Min.X) / was, Y: (p.Y - d.Min.Y) / was}
+	if z <= v.fit {
+		st.fitAgain()
+		return
+	}
+	st.zoom = z
+	st.off = render.Point{X: p.X - u.X*z + v.iw*z/2 - v.centre.X, Y: p.Y - u.Y*z + v.ih*z/2 - v.centre.Y}
+	st.pan(v)
+}
+
+// lightboxKeys is what a frame's keys ask of a lightbox: to close, to move between items, and zooms to apply once
+// the item they move to is known.
+type lightboxKeys struct {
+	close bool
+	step  int
+	zoom  []string
+}
+
+func readLightboxKeys(keys []render.KeyEvent) lightboxKeys {
+	var lk lightboxKeys
+	for _, k := range keys {
+		switch k.Key {
+		case "0", "1", "+", "=", "-":
+			lk.zoom = append(lk.zoom, k.Key)
+			continue
+		}
+		if k.Mods&^render.ModShift != 0 {
+			continue
+		}
+		switch k.Key {
+		case "Esc", "q":
+			lk.close = true
+			return lk
+		case "Left", "h":
+			lk.step--
+		case "Right", "l":
+			lk.step++
+		}
+	}
+	return lk
+}
+
+func (st *lightboxState) zoomKey(v lightboxView, key string) {
+	switch key {
+	case "0":
+		st.fitAgain()
+	case "1":
+		st.zoomAt(v, v.centre, 1)
+	case "+", "=":
+		st.zoomAt(v, v.centre, st.zoomIn(v)*1.25)
+	case "-":
+		st.zoomAt(v, v.centre, st.zoomIn(v)/1.25)
+	}
+}
+
+// click closes the lightbox (false) on a click off the item or on it while it fits; a double-click fits it again.
+func (st *lightboxState) click(v lightboxView, p render.Point, now time.Time) bool {
+	d := st.drawnAt(v)
+	onImage := p.X >= d.Min.X && p.X < d.Max.X && p.Y >= d.Min.Y && p.Y < d.Max.Y
+	switch {
+	case !onImage || st.zoom == 0:
+		return false
+	case now.Sub(st.clicked) < ui.DoubleClick:
+		st.fitAgain()
+		st.clicked = time.Time{}
+	default:
+		st.clicked = now
+	}
+	return true
+}
+
+// drag pans the zoomed item while the pointer is held and has moved.
+func (st *lightboxState) drag(v lightboxView, in ui.Interaction) {
+	if !in.Held {
+		st.held, st.moved = false, false
+		return
+	}
+	p := in.Pointer()
+	if !st.held {
+		from, ok := in.PressedAt()
+		if !ok {
+			from = p
+		}
+		st.held, st.moved, st.from, st.start = true, false, from, st.off
+	}
+	if abs32(p.X-st.from.X)+abs32(p.Y-st.from.Y) > 3 {
+		st.moved = true
+	}
+	if st.moved && st.zoom != 0 {
+		st.off = render.Point{X: st.start.X + p.X - st.from.X, Y: st.start.Y + p.Y - st.from.Y}
+		st.pan(v)
+	}
+}
+
+func (st *lightboxState) cursor() render.Cursor {
+	switch {
+	case st.zoom != 0 && st.held && st.moved:
+		return render.CursorGrabbing
+	case st.zoom != 0:
+		return render.CursorGrab
+	}
+	return render.CursorPointer
+}
+
 // Lightbox shows items[*at] large over a scrim while *open, fit to the window. Escape, a click on the scrim, a click on
 // the image while it fits, or the ✕ closes it. The wheel zooms around the pointer, a drag pans the zoomed image, a
 // double-click or 0 fits it again and 1 shows it at its own size; ←/→ (h/l) move *at between the items.
@@ -71,21 +221,12 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 	}
 	closeIt := func() { *open, st.shown = false, false }
 	in := c.Interaction(id)
-	for _, k := range in.Keys {
-		if k.Mods&^render.ModShift != 0 {
-			continue
-		}
-		switch k.Key {
-		case "Esc", "q":
-			closeIt()
-			return
-		case "Left", "h":
-			*at--
-		case "Right", "l":
-			*at++
-		}
+	keys := readLightboxKeys(in.Keys)
+	if keys.close {
+		closeIt()
+		return
 	}
-	*at = max(0, min(*at, len(items)-1))
+	*at = max(0, min(*at+keys.step, len(items)-1))
 	if !st.shown || st.at != *at {
 		*st = lightboxState{shown: st.shown, at: *at}
 	}
@@ -94,126 +235,66 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 		c.Focus(id)
 	}
 	it := items[*at]
-	size := c.Size()
-	iw, ih := it.size()
-	room := render.Rect{Min: render.Point{X: lbSide, Y: lbTop}, Max: render.Point{X: max(size.X-lbSide, lbSide+1), Y: max(size.Y-lbBottom, lbTop+1)}}
-	centre := render.Point{X: (room.Min.X + room.Max.X) / 2, Y: (room.Min.Y + room.Max.Y) / 2}
-	// an image fits at no more than its own size; a vector, sharp at any size, up to twice it
-	fit := min(1, room.Dx()/iw, room.Dy()/ih)
-	if it.Image == nil {
-		fit = min(2, room.Dx()/iw, room.Dy()/ih)
-	}
-	zoom := func() float32 {
-		if st.zoom == 0 {
-			return fit
-		}
-		return st.zoom
-	}
-	shown := func() render.Rect {
-		z := zoom()
-		w, h := iw*z, ih*z
-		return render.XYWH(centre.X+st.off.X-w/2, centre.Y+st.off.Y-h/2, w, h)
-	}
-	pan := func() {
-		d := shown()
-		st.off.X = panAxis(st.off.X, d.Dx(), centre.X, size.X)
-		st.off.Y = panAxis(st.off.Y, d.Dy(), centre.Y, size.Y)
-	}
-	zoomAt := func(p render.Point, z float32) {
-		z = max(fit, min(z, max(fit, lbMaxZoom)))
-		d, was := shown(), zoom()
-		u := render.Point{X: (p.X - d.Min.X) / was, Y: (p.Y - d.Min.Y) / was}
-		if z <= fit {
-			st.zoom, st.off = 0, render.Point{}
-			return
-		}
-		st.zoom = z
-		st.off = render.Point{X: p.X - u.X*z + iw*z/2 - centre.X, Y: p.Y - u.Y*z + ih*z/2 - centre.Y}
-		pan()
-	}
-	for _, k := range in.Keys {
-		switch k.Key {
-		case "0":
-			st.zoom, st.off = 0, render.Point{}
-		case "1":
-			zoomAt(centre, 1)
-		case "+", "=":
-			zoomAt(centre, zoom()*1.25)
-		case "-":
-			zoomAt(centre, zoom()/1.25)
-		}
+	v := newLightboxView(it, c.Size())
+	for _, k := range keys.zoom {
+		st.zoomKey(v, k)
 	}
 	if in.Scroll.Y != 0 {
-		zoomAt(in.Pointer(), zoom()*float32(math.Exp(float64(-in.Scroll.Y/240))))
+		st.zoomAt(v, in.Pointer(), st.zoomIn(v)*float32(math.Exp(float64(-in.Scroll.Y/240))))
 	}
-	if in.Clicked && !st.moved {
-		p := in.Pointer()
-		d := shown()
-		onImage := p.X >= d.Min.X && p.X < d.Max.X && p.Y >= d.Min.Y && p.Y < d.Max.Y
-		switch {
-		case !onImage || st.zoom == 0:
-			closeIt()
-			return
-		case c.Now().Sub(st.clicked) < ui.DoubleClick:
-			st.zoom, st.off, st.clicked = 0, render.Point{}, time.Time{}
-		default:
-			st.clicked = c.Now()
-		}
+	if in.Clicked && !st.moved && !st.click(v, in.Pointer(), c.Now()) {
+		closeIt()
+		return
 	}
-	if in.Held {
-		p := in.Pointer()
-		if !st.held {
-			from, ok := in.PressedAt()
-			if !ok {
-				from = p
-			}
-			st.held, st.moved, st.from, st.start = true, false, from, st.off
-		}
-		if abs32(p.X-st.from.X)+abs32(p.Y-st.from.Y) > 3 {
-			st.moved = true
-		}
-		if st.moved && st.zoom != 0 {
-			st.off = render.Point{X: st.start.X + p.X - st.from.X, Y: st.start.Y + p.Y - st.from.Y}
-			pan()
-		}
-	} else {
-		st.held, st.moved = false, false
-	}
-	cursor := render.CursorPointer
-	switch {
-	case st.zoom != 0 && st.held && st.moved:
-		cursor = render.CursorGrabbing
-	case st.zoom != 0:
-		cursor = render.CursorGrab
-	}
-	caption := it.Caption
-	if caption == "" {
-		caption = "Image"
-	}
-	d := shown()
+	st.drag(v, in)
+	d := st.drawnAt(v)
 	tip := ""
 	if in.Hovered {
 		tip = it.Vector.tipAt(d, in.Pointer())
 	}
+	lightboxDraw(c, key, lightboxFrame{items: items, at: at, it: it, v: v, d: d, zoom: st.zoomIn(v), cursor: st.cursor(), tip: tip,
+		help: o.Help, close: closeIt})
+}
+
+// lightboxFrame is what a frame of the lightbox draws.
+type lightboxFrame struct {
+	items  []LightboxItem
+	at     *int
+	it     LightboxItem
+	v      lightboxView
+	d      render.Rect
+	zoom   float32
+	cursor render.Cursor
+	tip    string
+	help   string
+	close  func()
+}
+
+func lightboxDraw(c *ui.Ctx, key any, lf lightboxFrame) {
+	size, it, items, at := lf.v.size, lf.it, lf.items, lf.at
+	caption := it.Caption
+	if caption == "" {
+		caption = "Image"
+	}
 	fg, muted, chrome := col(c, tLightboxFg), col(c, tLightboxMuted), col(c, tLightboxChrome)
 	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tLightboxScrim), Z: ui.LayerDialog, Float: &ui.Float{Point: &render.Point{}},
-		Interactive: true, Focusable: true, Trap: true, KeyMode: "lightbox", Wheel: true, Cursor: cursor, NoHover: true, Enter: fade, Exit: fade,
-		Role: ui.RoleDialog, Label: caption, Help: o.Help, Tooltip: tip}, func(c *ui.Ctx) {
+		Interactive: true, Focusable: true, Trap: true, KeyMode: "lightbox", Wheel: true, Cursor: lf.cursor, NoHover: true, Enter: fade, Exit: fade,
+		Role: ui.RoleDialog, Label: caption, Help: lf.help, Tooltip: lf.tip}, func(c *ui.Ctx) {
 		ic := imageCacheOf(c)
-		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(ic, f, it, d, r) })
+		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(ic, f, it, lf.d, r) })
 		c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -16, Y: 14}}}, func(c *ui.Ctx) {
-			if lightboxButton(c, "x", "✕", "Close", "Close (Esc)", false, fg, chrome, o.Help) {
-				closeIt()
+			if lightboxButton(c, "x", "✕", "Close", "Close (Esc)", false, fg, chrome, lf.help) {
+				lf.close()
 			}
 		})
 		if len(items) > 1 {
 			c.Box("prev", ui.Style{Float: &ui.Float{At: render.Point{Y: .5}, Self: render.Point{Y: .5}, Offset: render.Point{X: 16}}}, func(c *ui.Ctx) {
-				if lightboxButton(c, "b", "‹", "Previous image", "Previous (←)", *at == 0, fg, chrome, o.Help) {
+				if lightboxButton(c, "b", "‹", "Previous image", "Previous (←)", *at == 0, fg, chrome, lf.help) {
 					*at--
 				}
 			})
 			c.Box("next", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -16}}}, func(c *ui.Ctx) {
-				if lightboxButton(c, "b", "›", "Next image", "Next (→)", *at == len(items)-1, fg, chrome, o.Help) {
+				if lightboxButton(c, "b", "›", "Next image", "Next (→)", *at == len(items)-1, fg, chrome, lf.help) {
 					*at++
 				}
 			})
@@ -224,7 +305,7 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 			if len(items) > 1 {
 				c.Text("count", fmt.Sprintf("%d / %d", *at+1, len(items)), monoText(11, typeset.Normal, muted, 0))
 			}
-			c.Text("size", fmt.Sprintf("%d×%d · %d%%", int(math.Round(float64(iw))), int(math.Round(float64(ih))), int(math.Round(float64(zoom()*100)))), monoText(11, typeset.Normal, muted, 0))
+			c.Text("size", fmt.Sprintf("%d×%d · %d%%", int(math.Round(float64(lf.v.iw))), int(math.Round(float64(lf.v.ih))), int(math.Round(float64(lf.zoom*100)))), monoText(11, typeset.Normal, muted, 0))
 		})
 	})
 }

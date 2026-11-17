@@ -132,9 +132,7 @@ func (e *Engine) CursorShape() Shape {
 	switch {
 	case e.mode == Insert:
 		return Bar
-	case e.mode == Replace:
-		return Underline
-	case e.Mode() == "op-pending":
+	case e.mode == Replace || e.inOpPending():
 		return Underline
 	}
 	return Block
