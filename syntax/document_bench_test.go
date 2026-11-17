@@ -3,6 +3,7 @@ package syntax
 import (
 	"testing"
 
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -10,7 +11,7 @@ import (
 func bigDoc(n int) *Document {
 	d := &Document{}
 	for i := range n {
-		d.spans = append(d.spans, Span{Range: text.Range{Start: i * 10, End: i*10 + 5}, Capture: "keyword"})
+		d.spans = append(d.spans, tree.Span{Range: text.Range{Start: i * 10, End: i*10 + 5}, Capture: "keyword"})
 	}
 	return d
 }

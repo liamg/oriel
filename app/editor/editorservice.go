@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/registry/services"
+	"github.com/liamg/oriel/syntax/tree"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim"
 )
@@ -130,7 +130,7 @@ func (s editors) Hints(keys []string) []services.Hint {
 
 func (s editors) Shown() bool { return s.x.e != nil && s.x.shown() }
 
-func (s editors) Syntax(buf *text.Buffer) (*syntax.Document, bool) {
+func (s editors) Syntax(buf *text.Buffer) (tree.Doc, bool) {
 	if hl := s.x.docs[buf]; hl != nil && hl.doc != nil {
 		return hl.doc, true
 	}

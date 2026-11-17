@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -71,13 +72,8 @@ type Source struct {
 	Text text.Snapshot
 	// Syntax runs a named query over the buffer's parsed tree: its *syntax.Document, kept up to date as it's
 	// edited. Nil parses Text afresh, in the language its path names in Languages (the built-ins if nil).
-	Syntax    Querier
+	Syntax    tree.Querier // *syntax.Document and *syntax.Parser are both one
 	Languages *syntax.Set
-}
-
-// Querier runs a named query; *syntax.Document and *syntax.Parser are both one.
-type Querier interface {
-	Query(kind string) ([]syntax.Match, error)
 }
 
 // Kind is what an item is.

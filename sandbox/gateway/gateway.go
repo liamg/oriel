@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/sandbox/mcp"
+	"github.com/liamg/oriel/sandbox/policy"
 )
 
 // Builtin is one of oriel's own host actions.
@@ -105,28 +106,16 @@ func (g *Gateway) Tools(ctx context.Context) ([]mcp.Tool, error) {
 	return out, nil
 }
 
-// ToolPolicy is one tool and what a call to it would meet.
-type ToolPolicy struct {
-	Name        string `json:"name"`
-	Server      string `json:"server"`
-	Description string `json:"description,omitempty"`
-	Builtin     bool   `json:"builtin,omitempty"`
-	ReadOnly    bool   `json:"readOnly,omitempty"`
-	// Fixed tools take no rule: one that asks by nature, or does its own asking.
-	Fixed bool `json:"fixed,omitempty"`
-	Why
-}
-
 // Policy lists every tool, the denied ones included, with the decision a
 // call would get and where it comes from.
-func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
+func (g *Gateway) Policy(ctx context.Context) []policy.ToolPolicy {
 	levels := g.levels()
-	var out []ToolPolicy
+	var out []policy.ToolPolicy
 	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
-		p := ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, ReadOnly: readOnly(b.Tool), Why: Explain(name, b.hint(), levels)}
+		p := policy.ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, ReadOnly: readOnly(b.Tool), Why: Explain(name, b.hint(), levels)}
 		if b.Direct || (b.AlwaysAsk && p.Action != Deny) {
-			p.Fixed, p.Why = true, Why{Action: Ask, From: FromDefault}
+			p.Fixed, p.Why = true, policy.Why{Action: Ask, From: policy.FromDefault}
 		}
 		out = append(out, p)
 	}
@@ -134,7 +123,7 @@ func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
 		tools, _ := g.Up.Tools(ctx)
 		for _, t := range tools {
 			ro := readOnly(t.Tool)
-			out = append(out, ToolPolicy{Name: t.Name, Server: t.Server, Description: t.Description, ReadOnly: ro, Why: Explain(t.Name, serverHint(t.Tool), levels)})
+			out = append(out, policy.ToolPolicy{Name: t.Name, Server: t.Server, Description: t.Description, ReadOnly: ro, Why: Explain(t.Name, serverHint(t.Tool), levels)})
 		}
 	}
 	return out

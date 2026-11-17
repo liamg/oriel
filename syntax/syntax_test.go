@@ -12,6 +12,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -21,7 +22,7 @@ var update = flag.Bool("update", false, "rewrite the golden highlight snapshots"
 //
 //	3 | package shapes
 //	  | ^^^^^^^ keyword.import
-func snapshot(src []byte, spans []Span) string {
+func snapshot(src []byte, spans []tree.Span) string {
 	var b strings.Builder
 	lines := bytes.SplitAfter(src, []byte("\n"))
 	off := 0
@@ -274,10 +275,10 @@ func TestDocumentCatchesUpWithTyping(t *testing.T) {
 
 func TestShiftSpans(t *testing.T) {
 	buf := text.New([]byte("foo bar baz"), text.Author{})
-	spans := []Span{{text.Range{Start: 0, End: 3}, "a"}, {text.Range{Start: 4, End: 7}, "b"}, {text.Range{Start: 8, End: 11}, "c"}}
+	spans := []tree.Span{{Range: text.Range{Start: 0, End: 3}, Capture: "a"}, {Range: text.Range{Start: 4, End: 7}, Capture: "b"}, {Range: text.Range{Start: 8, End: 11}, Capture: "c"}}
 	ch, _ := buf.Apply(text.Edit{Ranges: []text.Replace{{Range: text.Range{Start: 5, End: 6}, Text: []byte("XYZ")}}})
 	got := shiftSpans(spans, []text.Change{ch})
-	want := []Span{{text.Range{Start: 0, End: 3}, "a"}, {text.Range{Start: 4, End: 9}, "b"}, {text.Range{Start: 10, End: 13}, "c"}}
+	want := []tree.Span{{Range: text.Range{Start: 0, End: 3}, Capture: "a"}, {Range: text.Range{Start: 4, End: 9}, Capture: "b"}, {Range: text.Range{Start: 10, End: 13}, Capture: "c"}}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("shiftSpans = %v, want %v", got, want)
 	}
@@ -316,7 +317,7 @@ func TestChunkedHighlightsMatchWhole(t *testing.T) {
 }
 
 // spanRuns is the capture at every byte, so adjacent spans of one capture compare equal to one span.
-func spanRuns(src []byte, spans []Span) string {
+func spanRuns(src []byte, spans []tree.Span) string {
 	caps := make([]string, len(src))
 	for _, s := range spans {
 		for i := s.Range.Start; i < s.Range.End && i < len(src); i++ {

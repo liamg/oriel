@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -187,7 +188,7 @@ func highlightRanges(r registry.Registry, path string, src []byte, lines []strin
 		if from >= to {
 			continue
 		}
-		var hl []syntax.Span
+		var hl []tree.Span
 		for start := starts[from]; start < starts[to]; start += 1 << 10 {
 			end := min(start+1<<10, starts[to])
 			spans, err := p.Highlights(start, end)

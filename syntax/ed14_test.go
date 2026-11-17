@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -75,8 +76,8 @@ func TestDocumentRehighlightsWhatChanged(t *testing.T) {
 }
 
 // merged joins adjacent spans of one capture, so chunking or splicing differently compares equal.
-func merged(spans []Span) []Span {
-	var out []Span
+func merged(spans []tree.Span) []tree.Span {
+	var out []tree.Span
 	for _, s := range spans {
 		if k := len(out) - 1; k >= 0 && out[k].Capture == s.Capture && out[k].Range.End == s.Range.Start {
 			out[k].Range.End = s.Range.End

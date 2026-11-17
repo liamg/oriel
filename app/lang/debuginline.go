@@ -5,7 +5,7 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 )
@@ -86,7 +86,7 @@ func (x *Debug) frameValues(s *debugSession) map[string]string {
 
 // valueLines are "name = value" texts by line, for lines from the start of the function around line to line. doc
 // is the buffer's syntax, nil when it has none (yet).
-func valueLines(doc *syntax.Document, snap text.Snapshot, line int, vals map[string]string) map[int]string {
+func valueLines(doc tree.Doc, snap text.Snapshot, line int, vals map[string]string) map[int]string {
 	if line >= snap.Lines() {
 		return nil
 	}
@@ -118,7 +118,7 @@ func valueLines(doc *syntax.Document, snap text.Snapshot, line int, vals map[str
 
 // enclosingFunction is the first line of the innermost function, method or closure around line, from the
 // language's units query.
-func enclosingFunction(doc *syntax.Document, snap text.Snapshot, line int) (int, bool) {
+func enclosingFunction(doc tree.Doc, snap text.Snapshot, line int) (int, bool) {
 	ms, err := doc.Query("units")
 	if err != nil {
 		return 0, false
@@ -145,7 +145,7 @@ func enclosingFunction(doc *syntax.Document, snap text.Snapshot, line int) (int,
 
 // lineIdents are the variables each line of [first, last] names, in order: the spans highlighted as variables or
 // parameters, or with no syntax, the identifiers not after a ".".
-func lineIdents(doc *syntax.Document, snap text.Snapshot, first, last int) map[int][]string {
+func lineIdents(doc tree.Doc, snap text.Snapshot, first, last int) map[int][]string {
 	out := map[int][]string{}
 	if doc != nil {
 		start, end := snap.LineStart(first), snap.LineEnd(last)

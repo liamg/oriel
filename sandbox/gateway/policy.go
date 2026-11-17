@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/policy"
 )
 
 // The actions a rule can take.
@@ -46,22 +47,6 @@ type Levels struct {
 	ReadOnly bool
 }
 
-// The levels a decision can come from.
-const (
-	FromSession  = "session"
-	FromProject  = "project"
-	FromGlobal   = "global"
-	FromReadOnly = "read-only"
-	FromDefault  = "default"
-)
-
-// Why is a decision and what made it: the level, and the rule's pattern.
-type Why struct {
-	Action string `json:"action"`
-	From   string `json:"from"`
-	Rule   string `json:"rule,omitempty"`
-}
-
 // Decide picks the action for tool. Within a level the most specific rule
 // wins, and the first level with a match decides — except that settings
 // always keep a deny, and keep an ask more specific than the session's grant:
@@ -71,20 +56,20 @@ func Decide(tool string, hint Hint, l Levels) string {
 }
 
 // Explain is Decide, with the rule that decided.
-func Explain(tool string, hint Hint, l Levels) Why {
-	var settings Why
+func Explain(tool string, hint Hint, l Levels) policy.Why {
+	var settings policy.Why
 	var pattern string
 	found := false
 	for _, lv := range []struct {
 		from  string
 		rules []Rule
-	}{{FromProject, l.Project}, {FromGlobal, l.Global}} {
+	}{{policy.FromProject, l.Project}, {policy.FromGlobal, l.Global}} {
 		if r, ok := Match(lv.rules, tool); ok {
 			if r.Action == Deny {
-				return Why{Deny, lv.from, r.Tool}
+				return policy.Why{Action: Deny, From: lv.from, Rule: r.Tool}
 			}
 			if !found {
-				settings, pattern, found = Why{r.Action, lv.from, r.Tool}, r.Tool, true
+				settings, pattern, found = policy.Why{Action: r.Action, From: lv.from, Rule: r.Tool}, r.Tool, true
 			}
 		}
 	}
@@ -92,16 +77,16 @@ func Explain(tool string, hint Hint, l Levels) Why {
 		if found && settings.Action == Ask && specificity(pattern) > specificity(r.Tool) {
 			return settings
 		}
-		return Why{r.Action, FromSession, r.Tool}
+		return policy.Why{Action: r.Action, From: policy.FromSession, Rule: r.Tool}
 	}
 	if found {
 		return settings
 	}
 	if hint == OwnReadOnly || (l.ReadOnly && hint == SaysReadOnly) {
-		return Why{Action: Allow, From: FromReadOnly}
+		return policy.Why{Action: Allow, From: policy.FromReadOnly}
 	}
 	r, _ := Match(Defaults, tool)
-	return Why{r.Action, FromDefault, r.Tool}
+	return policy.Why{Action: r.Action, From: policy.FromDefault, Rule: r.Tool}
 }
 
 // Match returns the most specific rule matching tool.

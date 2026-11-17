@@ -79,7 +79,10 @@ changes state through its `plugin.Host` (`State`, `Apply`).
 A contract lives where its types let it, its name beside its interface: the session host's calls and the types they
 carry in `host/hostapi`, a leaf the host's parts and the app both import (`app/kit` never reaches the host itself);
 one that draws, or carries the toolkit's or a plugin's types, in `app/kit`; `Sessions`, which the registry itself asks
-which session is in front, in `registry`; every other in `registry/services`. A lookup's name says how it answers a missing service:
+which session is in front, in `registry`; every other in `registry/services`. Every feature and plugin links the
+contracts, so what they carry are plain values from leaf packages (`syntax/tree` for a parse, `sandbox/policy` for a
+tool's decision), never the packages that make them: `registry/services` and `host/hostapi` never reach a wasm runtime,
+`sandbox/gateway` or `sandbox/mcp` (`tools/layout`). A lookup's name says how it answers a missing service:
 `XxxOf` answers `(T, bool)`; one that always answers something (`kit.Git`, `kit.Sites`) has no `Of`; and one that
 refuses with an error is named for its part (`kit.SessionCalls`, `kit.ShipCalls`).
 

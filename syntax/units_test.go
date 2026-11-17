@@ -3,9 +3,10 @@ package syntax
 import (
 	"strings"
 
-	"github.com/liamg/oriel/text"
 	"os"
 	"testing"
+
+	"github.com/liamg/oriel/text"
 )
 
 func parse(t *testing.T, lang, file string) (*Parser, []byte) {

@@ -4,10 +4,10 @@ import (
 	"log/slog"
 
 	"github.com/liamg/oriel/registry/services"
+	"github.com/liamg/oriel/syntax/tree"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 )
 
@@ -46,7 +46,7 @@ func openBuffer(r registry.Registry, path string) (services.EditorBuffer, bool) 
 }
 
 // syntaxOf is buf's parse, once the editor has made it.
-func syntaxOf(r registry.Registry, buf *text.Buffer) (*syntax.Document, bool) {
+func syntaxOf(r registry.Registry, buf *text.Buffer) (tree.Doc, bool) {
 	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Syntax(buf)
 	}

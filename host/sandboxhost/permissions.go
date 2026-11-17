@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
+	"github.com/liamg/oriel/sandbox/policy"
 )
 
 // Permissions reads session id's sandbox permissions. A session whose agent isn't running in a sandbox has none.
@@ -79,17 +80,17 @@ func (b *Box) permissions(ctx context.Context) hostapi.Permissions {
 	for _, t := range b.gateway.Policy(ctx) {
 		tp := hostapi.ToolPermission{ToolPolicy: t, Source: hostapi.SourceDefault}
 		switch t.From {
-		case gateway.FromSession:
+		case policy.FromSession:
 			tp.Source = hostapi.SourceSession
-		case gateway.FromProject:
+		case policy.FromProject:
 			tp.Source = hostapi.SourceProject
-		case gateway.FromGlobal:
+		case policy.FromGlobal:
 			tp.Source = hostapi.SourceSettings
 			mine := func(r gateway.Rule) bool { return r.Tool == t.Rule }
 			if slices.ContainsFunc(always.Rules, mine) && !slices.ContainsFunc(b.cfg.Rules, mine) {
 				tp.Source = hostapi.SourceAlways
 			}
-		case gateway.FromReadOnly:
+		case policy.FromReadOnly:
 			tp.Source = hostapi.SourceReadOnly
 		}
 		if i := slices.IndexFunc(session, func(r gateway.Rule) bool { return r.Tool == t.Name }); i >= 0 {

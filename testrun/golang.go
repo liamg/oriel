@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 )
 
 // Go runs `go test -json` and reads test2json's events.
@@ -115,7 +115,7 @@ func (g *Go) Discover(src Source) []Item {
 	}
 	var items []Item
 	namer := goNamer{}
-	add := func(n node, nameAt syntax.Capture, name string, path []string, kind Kind) {
+	add := func(n node, nameAt tree.Capture, name string, path []string, kind Kind) {
 		named = append(named, found{n, name})
 		items = append(items, Item{Package: pkg, Name: name, Path: path, File: src.Path, Line: nameAt.Start.Line, Kind: kind})
 	}

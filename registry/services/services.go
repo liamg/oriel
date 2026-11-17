@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/syntax"
+	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
 )
 
@@ -50,7 +50,7 @@ type Editors interface {
 	Hints(keys []string) []Hint
 	Shown() bool // an editor window is in the layout
 	// Syntax is buf's parse, once the editor has made it.
-	Syntax(buf *text.Buffer) (*syntax.Document, bool)
+	Syntax(buf *text.Buffer) (tree.Doc, bool)
 	SetCursor(pos text.Pos) // in the current window
 	// JumpTo goes to pos in the file at path as a vim jump in the current window, so ⌃O comes back.
 	JumpTo(path string, pos text.Pos) error
