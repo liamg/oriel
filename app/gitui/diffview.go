@@ -350,14 +350,14 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 			if open && (d == nil || d.images == nil) {
 				if widget.ToggleChip(c, "wrap", "wrap", x.wrap, widget.ToggleChipOpts{Label: "Wrap long lines", Help: "files/diff#wrap",
 					Tooltip: "Wrap long lines, or scroll across them (editor.wrap)"}) != x.wrap {
-					kit.RunOrNotify(x.h, "gitui", "diff.wrap", registry.Args{"wrap": !x.wrap})
+					kit.RunOrNotify(x.h, "gitui", "diff.wrap.toggle", registry.Args{"wrap": !x.wrap})
 				}
 				active := 0
 				if layout == "unified" {
 					active = 1
 				}
 				if widget.Segmented(c, "layout", []string{"split", "unified"}, &active, widget.SegmentedOpts{Label: "Layout", Help: "files/diff#layout"}) {
-					kit.RunOrNotify(x.h, "gitui", "diff.layout", registry.Args{"layout": []string{"split", "unified"}[active]})
+					kit.RunOrNotify(x.h, "gitui", "diff.layout.toggle", registry.Args{"layout": []string{"split", "unified"}[active]})
 				}
 			}
 		})

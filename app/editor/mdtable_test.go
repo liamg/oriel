@@ -130,14 +130,14 @@ func TestLuaPresenterParts(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := threadsScene(t, dir, [4]string{"prices.csv", "4", "C-3,30", "Is C-3 right?"})
-	s.Run("lua", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
+	s.Run("lua.eval", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
 		`when = function(p) return p:match("%.csv$") ~= nil end, ` +
 		`build = function(ctx) ctx.block(1, #ctx.lines, function() local rows = {} ` +
 		`for i, l in ipairs(ctx.lines) do local r = oriel.ui.row({ oriel.ui.text("row " .. i .. ": " .. l) }); r.lines = { i, i }; rows[#rows + 1] = r end ` +
 		`return oriel.ui.column(rows) end) end }`})
 	s.Run("editor.open", registry.Args{"path": "prices.csv"})
 	s.Frames(2)
-	s.Run("editor.present", registry.Args{"name": "csv"})
+	s.Run("editor.presenter.open", registry.Args{"name": "csv"})
 	s.Frames(4)
 	row, ok1 := s.TextStart("row 4: C-3,30")
 	card, ok2 := s.TextStart("· L4 ·")

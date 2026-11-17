@@ -31,7 +31,7 @@ func TestHelpLint(t *testing.T) {
 		s.Host().Notify(core.Notice{ID: fmt.Sprint("n", i), Severity: sev, Text: "a notice", Time: s.Now,
 			Actions: []core.Action{{Title: "Do it", Command: "Log"}}})
 	}
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Frame()
 	s.Frame()
 	s.Lint("toasts and the log")
@@ -43,7 +43,7 @@ func TestHelpLint(t *testing.T) {
 	if helpOf(s).Open() {
 		t.Fatal("Escape didn't close the help page")
 	}
-	s.Run("help.mode", nil)
+	s.Run("help.mode.toggle", nil)
 	s.Frame()
 	s.Frame()
 	s.Lint("help mode")
@@ -63,8 +63,8 @@ func TestHelpLint(t *testing.T) {
 	s.Frame()
 	s.Lint("the settings page")
 	s.Close("settings")
-	s.Run("lua", nil)
-	s.Run("Hooks", nil)
+	s.Run("lua.eval", nil)
+	s.Run("hooks.open", nil)
 	s.Frame()
 	s.Frame()
 	s.Lint("the Lua REPL and :Hooks")
@@ -96,7 +96,7 @@ func TestHelpWays(t *testing.T) {
 	s.Press("<Esc>")
 	s.Frame()
 	// F1 on what has focus: the editor pane.
-	s.Run("help.focused", nil)
+	s.Run("help.focused.open", nil)
 	if hv.Page() != "editor/pane" {
 		t.Errorf("F1 opened %q", hv.Page())
 	}
@@ -111,7 +111,7 @@ func TestHelpWays(t *testing.T) {
 		t.Fatalf("no Help in the right-click menu:\n%s", s.Text())
 	}
 	// Help mode: a ? on everything with help; clicking one opens its page.
-	s.Run("help.mode", nil)
+	s.Run("help.mode.toggle", nil)
 	s.Frame()
 	s.Frame()
 	if n := strings.Count(s.Text(), "?"); n < 3 {

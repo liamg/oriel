@@ -113,9 +113,9 @@ func TestEditorWindowsAreLayoutPanes(t *testing.T) {
 func TestEditorInputEnginePerBuffer(t *testing.T) {
 	r := runEditorWith(t, map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, []string{"a.txt", "b.txt"},
 		[]plugin.Plugin{&emacs.Plugin{}},
-		registry.Keymap{Mode: "global", Keys: "<F2>", Command: "editor.input", Args: registry.Args{"engine": "plain"}},
-		registry.Keymap{Mode: "global", Keys: "<F3>", Command: "editor.input", Args: registry.Args{"engine": "emacs"}},
-		registry.Keymap{Mode: "global", Keys: "<F4>", Command: "editor.input", Args: registry.Args{"engine": "vim"}},
+		registry.Keymap{Mode: "global", Keys: "<F2>", Command: "editor.input.set", Args: registry.Args{"engine": "plain"}},
+		registry.Keymap{Mode: "global", Keys: "<F3>", Command: "editor.input.set", Args: registry.Args{"engine": "emacs"}},
+		registry.Keymap{Mode: "global", Keys: "<F4>", Command: "editor.input.set", Args: registry.Args{"engine": "vim"}},
 		registry.Keymap{Mode: "global", Keys: "<F5>", Command: "editor.open", Args: registry.Args{"path": "a.txt"}})
 	r.WaitText("bravo")
 	r.TypeKeys("<F2>")

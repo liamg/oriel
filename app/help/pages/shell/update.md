@@ -1,6 +1,6 @@
 ---
 id: shell/update
-covers: [UpdateCheck, update.check, update.notes, update.install, update.restart, update.progress, app.overlay.update, hud.indicator.update]
+covers: [UpdateCheck, update.check, update.notes.open, update.install, update.restart, update.progress.open, app.overlay.update, hud.indicator.update]
 related: [shell/settings, shell/quit]
 ---
 
@@ -39,7 +39,7 @@ now** keeps the update installed for the next restart. Oriel then closes and ope
 says what it updated from.
 
 **Hide** (`esc`) leaves the update running in the background; the status line shows how far it's got, and a click on
-it (or `update.progress`) brings the page back. If a step fails, the page says why, and **Try again** starts over.
+it (or `update.progress.open`) brings the page back. If a step fails, the page says why, and **Try again** starts over.
 
 ## Installing {#install}
 

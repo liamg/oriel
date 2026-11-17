@@ -426,7 +426,7 @@ func (x *Debug) accessView(c *ui.Ctx) {
 			on := level == "allow"
 			if widget.ToggleChip(c, a.Action, strings.ToUpper(label), on, widget.ToggleChipOpts{Tone: tone, Help: debugHelp + "#agent",
 				Label: "Agents may " + a.Help + ": " + level, Tooltip: "Allow, ask or off: click for the next"}) != on {
-				x.run("debug.agent.access", registry.Args{"action": a.Action})
+				x.run("debug.agent_access.set", registry.Args{"action": a.Action})
 			}
 		}
 	})

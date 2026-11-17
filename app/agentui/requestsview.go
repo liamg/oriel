@@ -444,7 +444,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			for _, k := range c.Interaction(in).Keys {
 				if k.Key == "Up" && k.Mods == 0 {
 					if q := lastQueued(t); q != "" {
-						x.run("request.edit-queued", registry.Args{"thread": string(t.ID), "comment": q})
+						x.run("request.queued.edit", registry.Args{"thread": string(t.ID), "comment": q})
 					}
 				}
 			}

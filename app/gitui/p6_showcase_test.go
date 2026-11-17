@@ -22,6 +22,6 @@ func TestShowcaseP6Diff(t *testing.T) {
 	s.Run("diff.hunk.next", nil)
 	s.Run("diff.review", nil)
 	s.Shot("p6-05a-diff-split")
-	s.Run("diff.layout", registry.Args{"layout": "unified"})
+	s.Run("diff.layout.toggle", registry.Args{"layout": "unified"})
 	s.Shot("p6-05b-diff-unified")
 }

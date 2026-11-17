@@ -47,7 +47,9 @@ func lagApp(t *testing.T) *apptest.Window {
 	r.Do(func() error {
 		return r.Host.Run(context.Background(), "view.toggle", registry.Args{"id": kit.ExplorerView})
 	})
-	r.Do(func() error { return r.Host.Run(context.Background(), "explorer.scope", registry.Args{"scope": "all"}) })
+	r.Do(func() error {
+		return r.Host.Run(context.Background(), "explorer.scope.set", registry.Args{"scope": "all"})
+	})
 	r.WaitText("pkg")
 	r.ClickText("pkg")
 	r.WaitText("f25.go")

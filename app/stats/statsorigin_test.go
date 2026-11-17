@@ -101,7 +101,7 @@ func TestStatsOriginSplit(t *testing.T) {
 	if !ok || d.Origin != hoststats.OriginOutside || d.Totals.Requests == 0 {
 		t.Errorf("the outside session's stats = %+v", d)
 	}
-	if err := s.Host().Run(context.Background(), "stats.session", registry.Args{"id": "claude:nothing"}); err == nil {
+	if err := s.Host().Run(context.Background(), "stats.session.open", registry.Args{"id": "claude:nothing"}); err == nil {
 		t.Error("a session nobody has opened a tab")
 	}
 

@@ -173,8 +173,8 @@ func (l lister) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return nil
 	}})
-	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-k>", Command: "Keys"})
-	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-c>", Command: "Commands"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-k>", Command: "keymaps.browse"})
+	h.Keymap(registry.Keymap{Mode: "n", Keys: "<C-c>", Command: "commands.browse"})
 	return nil
 }
 func (lister) Deactivate(context.Context) error { return nil }

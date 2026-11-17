@@ -69,20 +69,20 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 		return h.State().Focus
 	}
 	for _, c := range []registry.Command{
-		{ID: "agent.permissions", Title: "Show what the sandboxed agent of the session in front may do, and its connections: the Workspace page's Permissions",
+		{ID: "agent.permissions.open", Title: "Show what the sandboxed agent of the session in front may do, and its connections: the Workspace page's Permissions",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "workspace.open", registry.Args{"tab": "permissions"})
 			}},
-		{ID: "agent.permissions.dock", Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
+		{ID: "agent.permissions.dock.toggle", Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return h.Run(ctx, "view.toggle", open) }},
-		{ID: "permissions.tool", Grant: string(plugin.CapGate), Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
+		{ID: "permissions.tool.set", Grant: string(plugin.CapGate), Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				return x.change(id, func(w hostapi.SandboxCalls) error {
 					return w.SetToolRule(id, a.String("tool"), hostapi.ToolAction(noneAsEmpty(a.String("action"))))
 				})
 			}},
-		{ID: "permissions.net", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
+		{ID: "permissions.net.set", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				h, port, err := hostPort(a.String("host"), a.Int("port"))
@@ -312,7 +312,7 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 				if v == opts[0] {
 					v = "none"
 				}
-				x.run("permissions.tool", registry.Args{"id": string(se.ID), "tool": t.Name, "action": v})
+				x.run("permissions.tool.set", registry.Args{"id": string(se.ID), "tool": t.Name, "action": v})
 			}
 		})
 	}
@@ -333,7 +333,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 		r := widget.Input(c, "host", &st.hostQ, widget.InputOpts{Label: "A host for this session", Placeholder: "host or host:port, *.example.com",
 			Width: ui.Px(300), Help: "agent/permissions#network"})
 		add := func(action string) {
-			x.run("permissions.net", registry.Args{"id": string(se.ID), "host": st.hostQ, "action": action})
+			x.run("permissions.net.set", registry.Args{"id": string(se.ID), "host": st.hostQ, "action": action})
 			st.hostQ = ""
 		}
 		typed := strings.TrimSpace(st.hostQ) != ""
@@ -370,7 +370,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			}
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 			if r.Source == hostapi.SourceSession && widget.Button(c, "rm", "Remove", widget.ButtonOpts{Ghost: true, Help: "agent/permissions#network"}) {
-				x.run("permissions.net", registry.Args{"id": string(se.ID), "host": r.Host, "port": r.Port, "action": "none"})
+				x.run("permissions.net.set", registry.Args{"id": string(se.ID), "host": r.Host, "port": r.Port, "action": "none"})
 			}
 		})
 	}
@@ -456,7 +456,7 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			label, action = "Allow", "allow"
 		}
 		if widget.Button(c, "act", label, widget.ButtonOpts{Ghost: true, Help: "agent/permissions#connections"}) {
-			x.run("permissions.net", registry.Args{"id": string(se.ID), "host": host, "port": port, "action": action})
+			x.run("permissions.net.set", registry.Args{"id": string(se.ID), "host": host, "port": port, "action": action})
 		}
 	}
 	verdict := func(c *ui.Ctx, allowed bool) {

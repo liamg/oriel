@@ -63,7 +63,7 @@ func (st *diffState) shareID(file string) ui.ID {
 	return ui.Child(ui.Child(0, "diff.across"), diffInstance(st.root, st.head)+"\x00"+file)
 }
 
-// panLines scrolls the files' lines across as diff.scroll asked, by columns or halves of a line's code box.
+// panLines scrolls the files' lines across as diff.lines.scroll asked, by columns or halves of a line's code box.
 func (st *diffState) panLines(c *ui.Ctx) {
 	col := c.Shaper().Shape("0", diffCodeFont).Advance
 	for _, p := range st.pan {

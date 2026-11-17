@@ -48,7 +48,7 @@ func (x *About) Activate(_ context.Context, h plugin.Host) error {
 			return nil
 		}},
 		{ID: "about.close", Title: "Put the About card away", Run: func(registry.Ctx, registry.Args) error { x.open = false; return nil }},
-		{ID: "about.website", Title: "Open Oriel's website in the browser", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "about.website.open", Title: "Open Oriel's website in the browser", Run: func(registry.Ctx, registry.Args) error {
 			return kit.OpenURL(x.h, RepoURL)
 		}},
 	} {
@@ -131,7 +131,7 @@ func (x *About) card(c *ui.Ctx) {
 		case x.h.Available("update.install", nil):
 			if widget.Button(c, "notes", "What's new", widget.ButtonOpts{Primary: true, Help: "shell/update"}) {
 				x.open = false
-				run("update.notes")
+				run("update.notes.open")
 			}
 		}
 		if x.h.Available("update.check", nil) && widget.Button(c, "check", "Check for updates", widget.ButtonOpts{Help: "shell/update#check"}) {
@@ -141,7 +141,7 @@ func (x *About) card(c *ui.Ctx) {
 	widget.Rule(c, "rule")
 	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 6, Wrap: true}, func(c *ui.Ctx) {
 		if widget.Button(c, "report", "Copy report", widget.ButtonOpts{Ghost: true, Help: "errors#log"}) {
-			run("log.copy_report")
+			run("log.report.copy")
 			x.h.Notify(core.Notice{ID: "about.report", Severity: core.SevInfo, Source: "about", AutoClear: true,
 				Text: fmt.Sprintf("Report copied: paste it into an issue at %s/issues", RepoURL)})
 		}
@@ -150,7 +150,7 @@ func (x *About) card(c *ui.Ctx) {
 			kit.RunOrNotify(x.h, "settings", "help.open", registry.Args{"id": "shell/help"})
 		}
 		if widget.Button(c, "website", "Website", widget.ButtonOpts{Ghost: true, Help: aboutHelp}) {
-			run("about.website")
+			run("about.website.open")
 		}
 	})
 }

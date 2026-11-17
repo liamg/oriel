@@ -108,7 +108,7 @@ Run <code>make build</code>.
 	s := threadsSceneWith(t, apptest.Options{WorkDir: dir, ImageNet: images})
 	s.Run("editor.open", registry.Args{"path": "README.md"})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	return s
 }
@@ -166,7 +166,7 @@ func TestMarkdownImageDensity(t *testing.T) {
 	s := threadsSceneWith(t, apptest.Options{WorkDir: dir})
 	s.Run("editor.open", registry.Args{"path": "README.md"})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	for name, want := range map[string]float32{"retina": 200, "windows": 400, "plain": 400} {
 		if b := s.NodeRole("image", name).Bounds; b.Dx() != want || b.Dy() != want/2 {

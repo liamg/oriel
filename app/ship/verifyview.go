@@ -161,7 +161,7 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 					widget.Wrap(c, "t", q.err.Error(), width, widget.MonoFont(11, th.C(theme.Error)))
 					if widget.Button(c, "retry", "Try again", widget.ButtonOpts{Help: verifyHelp}) {
 						if len(q.qs) == 0 {
-							x.run("verify.again")
+							x.run("verify.restart")
 						} else {
 							q.qs[q.at].Answer, q.answer = "", q.qs[q.at].Answer
 							q.err = nil
@@ -302,7 +302,7 @@ func (x *Verify) outcome(c *ui.Ctx, q *quiz) {
 		})
 		if q.result == core.VerifyFailed {
 			if widget.Button(c, "again", "Ask again", widget.ButtonOpts{Help: verifyHelp}) {
-				x.run("verify.again")
+				x.run("verify.restart")
 			}
 			return
 		}
@@ -318,7 +318,7 @@ func (x *Verify) footer(c *ui.Ctx, q *quiz) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 7), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("send", "⌘↵ send", widget.MonoFont(11, th.C(theme.FgFaint)))
 		if widget.Button(c, "file", "open the file it's asking about", widget.ButtonOpts{Ghost: true, Key: "⌥O", Disabled: f == "", Help: verifyHelp + "#file"}) {
-			x.run("verify.open-file")
+			x.run("verify.file.open")
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Text("opt", "optional: a raise never waits for it", widget.MonoFont(10.5, th.C(theme.FgGhost)))

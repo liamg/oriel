@@ -168,7 +168,7 @@ func TestLSPInspect(t *testing.T) {
 	if want == "" {
 		t.Fatal("the recording has no token on Welcome")
 	}
-	s.Run("Inspect", nil)
+	s.Run("inspect.open", nil)
 	lspSettle(s)
 	text := strings.ReplaceAll(s.Text(), "\n", " ")
 	for _, w := range []string{"LANGUAGE SERVER", "gopls", want} {

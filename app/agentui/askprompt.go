@@ -200,7 +200,7 @@ func (x *Console) promptCard(c *ui.Ctx, key string, se core.SessionState, a core
 		if p.Dismiss != nil {
 			p.Dismiss() // it steps aside for the console it takes you to, where it waits to be answered
 		}
-		x.run(context.Background(), "agent.console.show", registry.Args{"id": string(se.ID)})
+		x.run(context.Background(), "agent.console.open", registry.Args{"id": string(se.ID)})
 	case res.Option >= 0:
 		x.pick(se, a, d, d.options[res.Option], scope, true)
 	}

@@ -422,7 +422,7 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 	s.Run("view.close", registry.Args{"id": prui.PRView})
 	s.Until("the main area empty", func() bool { return !s.Showing(kit.DiffView) && !s.Showing(prui.PRView) })
 
-	s.Run("session.open-dir", registry.Args{"dir": lw.Repo})
+	s.Run("session.dir.open", registry.Args{"dir": lw.Repo})
 	s.Until("the window on the repo", s.Reopen)
 	s.Run("session.open", registry.Args{"id": string(id)})
 	s.Until("its Explorer on Uncommitted", func() bool {

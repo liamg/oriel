@@ -59,17 +59,17 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 		v.Add(h.HelpPage(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
 	for _, c := range []registry.Command{
-		{ID: "help.open", Title: "Open a help page: {id}, page#anchor", Run: func(_ registry.Ctx, a registry.Args) error {
-			return v.show(a.String("id"))
-		}},
-		{ID: "help", Title: "Help on a topic", Run: func(_ registry.Ctx, a registry.Args) error {
-			topic := strings.TrimSpace(a.String("args") + a.String("topic"))
+		{ID: "help.open", Title: "Open a help page: {id}, page#anchor, or the one on a {topic}", Ex: "help", ExArg: "topic", Run: func(_ registry.Ctx, a registry.Args) error {
+			if id := a.String("id"); id != "" {
+				return v.show(id)
+			}
+			topic := strings.TrimSpace(a.String("topic"))
 			if topic == "" {
 				return v.show("shell/help")
 			}
 			return v.show(v.find(topic))
 		}},
-		{ID: "help.focused", Title: "Help on what has focus", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.focused.open", Title: "Help on what has focus", Run: func(registry.Ctx, registry.Args) error {
 			u := h.UI()
 			if u == nil {
 				return nil
@@ -80,7 +80,7 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return v.show(id)
 		}},
-		{ID: "help.mode", Title: "Help mode: a ? on everything with help", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.mode.toggle", Title: "Help mode: a ? on everything with help", Run: func(registry.Ctx, registry.Args) error {
 			v.mode, v.into = !v.mode, false
 			return nil
 		}},
@@ -102,8 +102,8 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 		v.Add(h.Command(c))
 	}
 	for _, k := range []registry.Keymap{
-		{Mode: "global", Keys: "<F1>", Command: "help.focused", Desc: "Help on what has focus"},
-		{Mode: "global", Keys: "<D-?>", Command: "help.mode", Desc: "Help mode"},
+		{Mode: "global", Keys: "<F1>", Command: "help.focused.open", Desc: "Help on what has focus"},
+		{Mode: "global", Keys: "<D-?>", Command: "help.mode.toggle", Desc: "Help mode"},
 		{Mode: "help", Keys: "<C-o>", Command: "help.back", Desc: "Back"},
 		{Mode: "help", Keys: "<C-i>", Command: "help.forward", Desc: "Forward"},
 		{Mode: "help", Keys: "<X1Mouse>", Command: "help.back", Desc: "Back"},
@@ -114,7 +114,7 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 	}
 	// K is help on what has focus, in the widgets' own modes: not in an input, or the editor, where K is vim's.
 	for _, mode := range []string{"button", "list", "tree", "tabs", "menu", "toast", "datepicker"} {
-		v.Add(h.Keymap(registry.Keymap{Mode: mode, Keys: "K", Command: "help.focused", Desc: "Help on this"}))
+		v.Add(h.Keymap(registry.Keymap{Mode: mode, Keys: "K", Command: "help.focused.open", Desc: "Help on this"}))
 	}
 	v.Add(h.Picker(v.source()))
 	for _, t := range []registry.AgentTool{

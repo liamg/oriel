@@ -22,7 +22,7 @@ import (
 // own title). Raising a PR from the tab lands on its overview. Edit PR (`ship.pr.open {project, edit: true}`) is the
 // form, EDIT PR #790, with Cancel and Update PR: Cancel (`edit: false`) drops what was typed and Update goes back once
 // the code host has it, both to the overview. The PR's link opens in the browser (`ship.browse`), and Copy link
-// (`ship.copy-link`) puts it on the system clipboard.
+// (`ship.link.copy`) puts it on the system clipboard.
 func TestPRTabLandsOnTheOverview(t *testing.T) {
 	s, _, hub, se, _ := shipScene(t)
 	x := shipOf(s)
@@ -107,7 +107,7 @@ func TestPRTabLandsOnTheOverview(t *testing.T) {
 	s.Run("ship.pr.open", registry.Args{"project": "search-api", "edit": false})
 	s.Frame()
 	s.WantFrame("Copy link")
-	s.Run("project.panel", registry.Args{"name": "pull-request"})
+	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	s.Frame()
 	s.WantFrame("View PR")
 }

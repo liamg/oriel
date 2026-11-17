@@ -568,7 +568,7 @@ clip 20,109.110016 816x516.78 r 8
     text "⌘A" @160,390.46002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,378.73 325.6875x15.179993 r 0
-    text "editor.select-all" @392,390.46002 #b3ab99 JetBrains Mono 11.5
+    text "editor.all.select" @392,390.46002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,389.95 #ffd23f JetBrains Mono 11
   clip 160,397.91003 220x15.179993 r 0
@@ -589,7 +589,7 @@ clip 20,109.110016 816x516.78 r 8
     text "␣ *" @160,448.00003 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,436.27002 325.6875x15.179993 r 0
-    text "editor.grep-word" @392,448.00003 #b3ab99 JetBrains Mono 11.5
+    text "editor.word.search" @392,448.00003 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,447.49002 #ffd23f JetBrains Mono 11
   clip 160,455.45 220x15.179993 r 0

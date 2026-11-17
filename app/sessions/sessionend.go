@@ -78,7 +78,7 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}
 	for _, it := range []registry.MenuItem{
-		{Name: "session.close-tab", Label: "Close tab", Group: "session", Order: 10, When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"},
+		{Name: "session.tab.close", Label: "Close tab", Group: "session", Order: 10, When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"},
 			Source: "builtin:session-end", Run: onSession(func(ctx registry.Ctx, id string) error {
 				return h.Run(ctx, "session.close", registry.Args{"id": id})
 			})},
@@ -259,7 +259,7 @@ func (x *End) end(ctx registry.Ctx, r hostapi.EndReq) error {
 		name = kit.Label(s.Snapshot())
 	}
 	if slices.Contains(x.h.State().Tabs, r.Session) {
-		if err := x.h.Run(ctx, "session.close-tab", registry.Args{"id": string(r.Session)}); err != nil {
+		if err := x.h.Run(ctx, "session.tab.close", registry.Args{"id": string(r.Session)}); err != nil {
 			return err
 		}
 	}

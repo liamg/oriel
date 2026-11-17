@@ -1,6 +1,6 @@
 ---
 id: git/verify
-covers: [verify.open, verify.send, verify.again, verify.open-file, verify.close]
+covers: [verify.open, verify.send, verify.restart, verify.file.open, verify.close]
 related: [git/ship, agent/console]
 ---
 

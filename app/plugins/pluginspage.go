@@ -111,11 +111,7 @@ func (x *Catalog) pageCommands(h plugin.Host) {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "Plugins", Title: "The Plugins page; :Plugins {installed, updates or registry}", Run: func(_ registry.Ctx, a registry.Args) error {
-			open(strings.TrimSpace(a.String("args")))
-			return nil
-		}},
-		{ID: "plugins.open", Title: "Open the Plugins page at a {tab}: installed, updates or registry", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.open", Title: "Open the Plugins page at a {tab}: installed, updates or registry", Ex: "Plugins", ExArg: "tab", Run: func(_ registry.Ctx, a registry.Args) error {
 			open(a.String("tab"))
 			return nil
 		}},

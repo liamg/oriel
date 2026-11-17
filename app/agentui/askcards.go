@@ -157,11 +157,11 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 		k.terminal(a, prov, kicker)
 	}
 	if x.detail == nil || x.detail.ask != a.ID {
-		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details", args: registry.Args{"item": ""}, away: true})
+		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details.open", args: registry.Args{"item": ""}, away: true})
 	}
 	// A card away from its session's console can take you there, for the context to decide on.
 	if kicker && (a.Kind == core.AskPermission || a.Kind == core.AskNetwork || a.Kind == core.AskGateway || a.Kind == core.AskQuestion) {
-		k.action(widget.CardAction{Label: "Console", Key: "g"}, askAct{cmd: "agent.console.show", away: true})
+		k.action(widget.CardAction{Label: "Console", Key: "g"}, askAct{cmd: "agent.console.open", away: true})
 	}
 	body := k.body
 	if st.noting == a.ID && st.notingOn == p.Stacked {
@@ -277,13 +277,13 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	switch {
 	case l.Browser:
 		k.o.Note = "opens its sign-in in your browser"
-		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
+		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login.start"})
 	case l.Terminal != "":
 		k.o.Note = "opens its terminal with " + l.Terminal
-		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
+		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login.start"})
 	case len(l.HostCommand) > 0:
 		k.o.Note = "signs in on this machine: " + strings.Join(l.HostCommand, " ")
-		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
+		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login.start"})
 	case l.Shell != "":
 		k.o.Note = "run " + l.Shell + " in a terminal"
 	}
@@ -297,7 +297,7 @@ func (k *askCardParts) terminal(a core.Ask, prov string, kicker bool) {
 	if !kicker {
 		k.o.Kicker = "terminal"
 	}
-	k.action(widget.CardAction{Label: "Go to terminal", Key: "t", Primary: true}, askAct{cmd: "agent.terminal"})
+	k.action(widget.CardAction{Label: "Go to terminal", Key: "t", Primary: true}, askAct{cmd: "agent.terminal.open"})
 }
 
 func (x *Console) keyCard(k *askCardParts, se core.SessionState, a core.Ask) {
@@ -372,7 +372,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 					err = kit.OpenURL(x.h, url)
 				}
 				if err != nil {
-					kit.NotifyError(x.h, "agent.login", err, false)
+					kit.NotifyError(x.h, "agent.login.start", err, false)
 				}
 			})
 		})
@@ -380,7 +380,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 	case !canLogIn(l):
 		return fmt.Errorf("run %s in a terminal", cmp.Or(l.Shell, "the agent's login"))
 	case l.Terminal == "":
-		return x.h.Run(ctx, "term.host", registry.Args{"cmd": slices.Clone(l.HostCommand)})
+		return x.h.Run(ctx, "term.host.open", registry.Args{"cmd": slices.Clone(l.HostCommand)})
 	}
 	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")
 }

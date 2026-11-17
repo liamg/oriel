@@ -59,7 +59,7 @@ func (x *Explain) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 				tok = tExplainMarkQuiet
 			}
 			word, _ := unitStatusWord(st)
-			d := uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "?", Style: tok.Name(), Priority: 15, Command: "explain.unit",
+			d := uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "?", Style: tok.Name(), Priority: 15, Command: "explain.unit.ask",
 				Args: registry.Args{"file": ctx.Path, "line": line + 1}, Tooltip: "Explain " + fu.labels[i] + " · " + word}
 			switch j := len(out) - 1; {
 			case j < 0 || out[j].Line != line:
@@ -156,7 +156,7 @@ func (x *Explain) cardView(c *ui.Ctx, cd *explainCard) {
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				depth := cd.depth
 				if widget.Segmented(c, "depth", []string{"BRIEF", "DETAILED", "WHY · HISTORY"}, &depth, widget.SegmentedOpts{Help: help, Label: "Depth"}) {
-					run("explain.depth", registry.Args{"depth": string(explainDepths[depth])})
+					run("explain.depth.set", registry.Args{"depth": string(explainDepths[depth])})
 				}
 				by := ""
 				if a := x.shown(cd); a != nil {
@@ -166,7 +166,7 @@ func (x *Explain) cardView(c *ui.Ctx, cd *explainCard) {
 				a := x.shown(cd)
 				answered := a != nil && a.text != ""
 				if widget.Button(c, "follow", "Ask a follow-up", widget.ButtonOpts{Help: help, Disabled: !x.h.Available("request.new", nil)}) {
-					run("explain.follow-up", nil)
+					run("explain.follow_up.ask", nil)
 				}
 				if widget.Button(c, "pin", "Pin as note", widget.ButtonOpts{Help: help, Disabled: !answered || !x.h.Available("request.comment", nil)}) {
 					run("explain.pin", nil)

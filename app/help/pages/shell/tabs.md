@@ -67,7 +67,7 @@ merged with nothing uncommitted or unpushed in any of its projects. Closing a pu
 local branch too: there's nothing of it to keep (a kind of session says so with `deletes-on-end` in its `can`). It
 asks first, starting on Delete, only when something would be lost, such as a review you haven't sent. Cancel leaves
 the session as it was, its tab open. A plugin says when a session is finished with `oriel.session.done`, and what
-ending it would lose that only the plugin knows of with `oriel.session.unsaved`. `session.end` with `how` (`archive` or `delete`) ends one without asking; `session.close-tab`
+ending it would lose that only the plugin knows of with `oriel.session.unsaved`. `session.end` with `how` (`archive` or `delete`) ends one without asking; `session.tab.close`
 closes only the tab.
 
 Ending a session stops everything it was running: its agent, every process the agent started and left running

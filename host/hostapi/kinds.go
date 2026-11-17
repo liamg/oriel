@@ -26,7 +26,7 @@ var (
 		Caps:  []core.Capability{core.AddProjects, core.Delete, core.OwnsBranch, core.CommentsInDiff, core.RestartsAgent, core.DeletesOnEnd},
 		About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it.",
 		// The Explorer on what the PR changes, its diff in front and the review tab behind.
-		Opens: []core.KindCall{{Command: "explorer.scope", Args: map[string]any{"scope": "changed"}}, {Command: "ship.pr.open"},
+		Opens: []core.KindCall{{Command: "explorer.scope.set", Args: map[string]any{"scope": "changed"}}, {Command: "ship.pr.open"},
 			{Command: "view.open", Args: map[string]any{"id": "explorer", "place": "dock", "edge": "left", "alone": true, "fixed": true}},
 			{Command: "diff.open"}}}
 	JobKind = core.KindSpec{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: core.FromPrompt, Pack: "job",

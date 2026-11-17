@@ -30,7 +30,7 @@ last, in three scopes: Oriel's, the session in front, and all of them together.
   entry and choose **Copy** to copy just that one.
 - `:Log level debug` shows debug records from now on.
 
-{{keys "Log"}}
+{{keys "log.open"}}
 {{keys "log.*"}}
 
 ## Problems {#problems}

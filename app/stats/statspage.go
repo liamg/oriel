@@ -116,7 +116,7 @@ func (x *Stats) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta
 			}
 		}
 		if widget.Segmented(c, "origin", origins, &o, widget.SegmentedOpts{Label: "Origin", Help: "agent/stats#origin"}) {
-			x.run("stats.origin", registry.Args{"origin": statsOrigins[o].value})
+			x.run("stats.origin.set", registry.Args{"origin": statsOrigins[o].value})
 		}
 		switch {
 		case meta.state.Phase == widget.Pending:
@@ -125,7 +125,7 @@ func (x *Stats) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMeta
 			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.now()})
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
-			x.run("stats.session", registry.Args{"id": one[0]})
+			x.run("stats.session.open", registry.Args{"id": one[0]})
 		}
 		if widget.Button(c, "csv", "Copy as CSV", widget.ButtonOpts{Help: "agent/stats#table"}) {
 			x.run("stats.copy", nil)

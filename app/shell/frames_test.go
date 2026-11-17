@@ -167,8 +167,8 @@ func TestHomeShowsGlobalStatus(t *testing.T) {
 // :Log and the inbox, docked views in a workspace, open on Home as pages, and close with the page's Close or Escape.
 func TestDockedViewsArePagesOnHome(t *testing.T) {
 	for _, tt := range []struct{ command, id, page, close string }{
-		{"Log", "log", "Log", "click"}, {"inbox.open", "inbox", "Inbox", "click"},
-		{"Log", "log", "Log", "Escape"}, {"inbox.open", "inbox", "Inbox", "Escape"},
+		{"log.open", "log", "Log", "click"}, {"inbox.open", "inbox", "Inbox", "click"},
+		{"log.open", "log", "Log", "Escape"}, {"inbox.open", "inbox", "Inbox", "Escape"},
 	} {
 		t.Run(tt.id+" "+tt.close, func(t *testing.T) {
 			s := apptest.New(t, apptest.Options{})

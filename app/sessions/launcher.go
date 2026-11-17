@@ -106,7 +106,7 @@ func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
 	x.Add(h.Command(registry.Command{ID: "session.launch", Title: "Start the session the launcher holds",
 		Available: func(registry.Args) bool { return x.open }, Run: func(registry.Ctx, registry.Args) error { return x.start() }}))
-	x.Add(h.Command(registry.Command{ID: "launcher.pick-repo", Title: "Tick {repo} in the open launcher",
+	x.Add(h.Command(registry.Command{ID: "launcher.repo.pick", Title: "Tick {repo} in the open launcher",
 		Available: func(registry.Args) bool { return x.open }, Run: func(_ registry.Ctx, a registry.Args) error {
 			r := core.RepoID(a.String("repo"))
 			if r == "" {

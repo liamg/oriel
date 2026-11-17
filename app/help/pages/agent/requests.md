@@ -1,6 +1,6 @@
 ---
 id: agent/requests
-covers: [requests, request, requests.summary]
+covers: [requests, request, requests.summary.toggle]
 related: [agent/console, agent/asks, editor/pane]
 ---
 
@@ -81,7 +81,7 @@ the same way.
 
 ## Summary
 
-The session at a glance, at the window's right (`requests.summary`): its requests, the tasks rail (✓ done, ◐ in
+The session at a glance, at the window's right (`requests.summary.toggle`): its requests, the tasks rail (✓ done, ◐ in
 progress, ○ to do) and the stats: context, cache, cost, tasks and the latest tests.
 
 {{keys "request*"}}

@@ -32,7 +32,7 @@ func menuScene(t *testing.T) (*apptest.Scene, map[string]render.Rect) {
 	s.ReloadLua()
 	s.Run("editor.open", registry.Args{"path": "main.go"})
 	s.Run("editor.open", registry.Args{"path": "README.md", "place": "vsplit"})
-	s.Run("Problems", nil)
+	s.Run("problems.open", nil)
 	s.Frame()
 	s.Frame()
 	rects := map[string]render.Rect{}

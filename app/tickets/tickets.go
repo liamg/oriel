@@ -72,8 +72,8 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Command(c))
 	}
 	for _, k := range []registry.Keymap{
-		{Keys: "<CR>", Command: "tickets.plan", Desc: "Plan, or continue"},
-		{Keys: "w", Command: "tickets.work", Desc: "Work, with no plan"},
+		{Keys: "<CR>", Command: "tickets.plan.start", Desc: "Plan, or continue"},
+		{Keys: "w", Command: "tickets.work.start", Desc: "Work, with no plan"},
 		{Keys: "o", Command: "tickets.browse", Desc: "Open in the browser"},
 		{Keys: "r", Command: "tickets.refresh", Desc: "Refresh"},
 		{Keys: "/", Command: "tickets.filter", Desc: "Filter"},
@@ -105,10 +105,7 @@ func (x *Tickets) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "Tickets", Title: "The tickets page: your tickets from every tracker; :Tickets linear for one's", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.openPage(a.String("args"))
-		}},
-		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Ex: "Tickets", ExArg: "tracker", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("tracker"))
 		}},
 		{ID: "ticket.open", Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -122,28 +119,25 @@ func (x *Tickets) commands() []registry.Command {
 			x.refreshAll()
 			return nil
 		}},
-		{ID: "tickets.plan", Title: "Plan the ticket selected on the tickets page, or continue its session", Available: open,
+		{ID: "tickets.plan.start", Title: "Plan the ticket selected on the tickets page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("plan") }},
-		{ID: "tickets.work", Title: "Start work on the ticket selected on the tickets page, with no plan", Available: open,
+		{ID: "tickets.work.start", Title: "Start work on the ticket selected on the tickets page, with no plan", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("work") }},
 		{ID: "tickets.browse", Title: "Open the ticket selected on the tickets page in its tracker, in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
 		{ID: "tickets.filter", Title: "Filter the tickets page's list", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
-		{ID: "tickets.key", Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "tickets.key.set", Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Ex: "TicketKey", ExArg: "tracker", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, a.String("tracker"))
 		}},
-		{ID: "tickets.done", Title: "Mark a {ticket} done in its tracker", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "tickets.done.set", Title: "Mark a {ticket} done in its tracker", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.markDone(strings.TrimSpace(a.String("ticket")))
 		}},
-		{ID: "tickets.ask-done", Title: "Ask whether a {ticket} is done, as merging its session's last PR does; {session} is the session it's for",
+		{ID: "tickets.done.ask", Title: "Ask whether a {ticket} is done, as merging its session's last PR does; {session} is the session it's for",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				x.askDone(strings.TrimSpace(a.String("ticket")), core.SessionID(a.String("session")))
 				return nil
 			}},
-		{ID: "TicketKey", Title: "Set a ticket tracker's API key; :TicketKey linear", Run: func(ctx registry.Ctx, a registry.Args) error {
-			return x.askKey(ctx, strings.TrimSpace(a.String("args")))
-		}},
 	}
 	for i := range out {
 		c := &out[i]
@@ -488,7 +482,7 @@ func (x *Tickets) prMerged(ev prui.PrMerged) {
 }
 
 // askDoneID is the question asking whether to mark key done.
-func askDoneID(key string) string { return "tickets.done:" + key }
+func askDoneID(key string) string { return "tickets.done.set:" + key }
 
 // askDone asks whether a ticket is done, once its session's PRs are merged: it may need more of them, or something
 // done by hand, so it's never moved without a yes.
@@ -501,7 +495,7 @@ func (x *Tickets) askDone(key string, session core.SessionID) {
 		Title: "Mark " + key + " done in " + tr.Label() + "?",
 		Text:  "The session's PRs are merged. If the ticket needs nothing more (more PRs, something done by hand), mark it done.",
 		Actions: []core.Action{
-			{Title: "Mark done", Command: "tickets.done", Args: map[string]any{"ticket": key}},
+			{Title: "Mark done", Command: "tickets.done.set", Args: map[string]any{"ticket": key}},
 			{Title: "Not yet", Command: "notice.dismiss", Args: map[string]any{"id": askDoneID(key)}},
 		}})
 }

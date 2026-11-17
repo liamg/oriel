@@ -295,7 +295,8 @@ func TestCancelEndsTheRequestContext(t *testing.T) {
 			go func() {
 				<-r.Context().Done()
 				ended <- r.Context().Err()
-				if err := r.Reply(nil, r.Context().Err()); err != nil {
+				// The caller has given up, and the test may be done with the connection by now.
+				if err := r.Reply(nil, r.Context().Err()); err != nil && !errors.Is(err, ErrClosed) {
 					t.Error(err)
 				}
 			}()

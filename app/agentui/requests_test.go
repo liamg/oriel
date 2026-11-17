@@ -329,7 +329,7 @@ func TestLuaThreads(t *testing.T) {
 	a.Emit(agent.TurnEnd{})
 	lua := func(line string) {
 		t.Helper()
-		if err := r.Do(func() error { return r.Host.Run(context.Background(), "lua", registry.Args{"args": line}) }); err != nil {
+		if err := r.Do(func() error { return r.Host.Run(context.Background(), "lua.eval", registry.Args{"args": line}) }); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -351,7 +351,7 @@ func TestLuaThreads(t *testing.T) {
 // plan's usage windows as the provider reports them.
 func TestTasksRailStatsAndUsage(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	if err := r.Do(func() error { return r.Host.Run(context.Background(), "requests.summary", nil) }); err != nil {
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "requests.summary.toggle", nil) }); err != nil {
 		t.Fatal(err)
 	}
 	r.WaitText("No tasks yet")

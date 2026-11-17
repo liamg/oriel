@@ -81,7 +81,7 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 			offer = n
 		}
 	}
-	if len(offer.Actions) == 0 || offer.Actions[0].Command != "code.setup" || offer.Actions[0].Args["code_host"] != "azure" {
+	if len(offer.Actions) == 0 || offer.Actions[0].Command != "code.setup.open" || offer.Actions[0].Args["code_host"] != "azure" {
 		t.Errorf("no offer to set tfs.acme.corp up as Azure DevOps: %+v", offer)
 	}
 	if err := sites.Remember("tfs.acme.corp", "azure", ""); err != nil {
@@ -155,7 +155,7 @@ func TestCodeSetupDialog(t *testing.T) {
 	var allowed []string
 	s.Registry().Contribute(testGitLab(nil, &allowed))
 
-	s.Run("code.setup", registry.Args{"hostname": "git.acme.corp"})
+	s.Run("code.setup.open", registry.Args{"hostname": "git.acme.corp"})
 	s.Until("the dialog", func() bool { return strings.Contains(s.Text(), "Which code host is git.acme.corp?") })
 	s.WantFrame("GitHub", "GitLab", "None of these")
 	s.ClickText("GitLab")
@@ -177,7 +177,7 @@ func TestCodeSetupDialog(t *testing.T) {
 	}
 
 	// None of these: never asked again, and no host there.
-	s.Run("code.setup", registry.Args{"hostname": "git.other.org"})
+	s.Run("code.setup.open", registry.Args{"hostname": "git.other.org"})
 	s.Until("the dialog", func() bool { return strings.Contains(s.Text(), "Which code host is git.other.org?") })
 	s.ClickText("None of these")
 	s.ClickText("Save")

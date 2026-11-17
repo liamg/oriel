@@ -120,8 +120,8 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 func TestLuaSnapshots(t *testing.T) {
 	s := luaScene(t, sample(t))
 	s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
-	s.Run("Hooks", nil)
-	s.Run("lua", nil)
+	s.Run("hooks.open", nil)
+	s.Run("lua.eval", nil)
 	x := luaOf(s)
 	x.Eval("oriel.api.version")
 	x.Eval("#oriel.ui.row{}.children")
@@ -135,14 +135,14 @@ func TestLuaSnapshots(t *testing.T) {
 func TestREPLError(t *testing.T) {
 	s := luaScene(t, "local M = {}\nfunction M.boom() error('deep') end\noriel.boom = M.boom\n")
 	x := luaOf(s)
-	s.Run("lua", registry.Args{"args": `error("x")`})
-	s.Run("lua", registry.Args{"args": `oriel.boom()`})
+	s.Run("lua.eval", registry.Args{"args": `error("x")`})
+	s.Run("lua.eval", registry.Args{"args": `oriel.boom()`})
 	got, _ := x.Repl()
 	want := []string{`error("x")`, "repl:1: x", "  repl:1: in main chunk", "oriel.boom()", "init.lua:2: deep", "  init.lua:2: in function 'boom'", "  repl:1: in main chunk"}
 	if !slices.Equal(got, want) {
 		t.Errorf("repl\n%q\nwant\n%q", got, want)
 	}
-	s.Run("lua", nil)
+	s.Run("lua.eval", nil)
 	s.Frame()
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "init.lua:2: in function 'boom'") {

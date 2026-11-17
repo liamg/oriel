@@ -137,7 +137,7 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return nil
 		}},
-		{ID: "start.forget", Title: "Forget the selected recent directory", Available: showing, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "start.recent.remove", Title: "Forget the selected recent directory", Available: showing, Run: func(registry.Ctx, registry.Args) error {
 			if rows := s.all(h); s.sel < len(rows) && rows[s.sel].forget != nil {
 				rows[s.sel].forget()
 			}
@@ -149,7 +149,7 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range []registry.Keymap{
 		{Keys: "j", Command: "start.next"}, {Keys: "<Down>", Command: "start.next"},
 		{Keys: "k", Command: "start.prev"}, {Keys: "<Up>", Command: "start.prev"},
-		{Keys: "<CR>", Command: "start.run"}, {Keys: "<BS>", Command: "start.forget"},
+		{Keys: "<CR>", Command: "start.run"}, {Keys: "<BS>", Command: "start.recent.remove"},
 	} {
 		k.Mode = EmptyKeyMode
 		s.Add(h.Keymap(k))
@@ -227,8 +227,8 @@ func (sh *shell) openDir(ctx registry.Ctx, h plugin.Host, dir string) error {
 			return abs, nil
 		},
 		func(ctx registry.Ctx, dir string) error {
-			if sessionkit.HasSessions(sh.cfg.Registry) && sh.cfg.Registry.Available("session.open-dir", nil) {
-				return sh.cfg.Registry.Run(registry.OnDone(ctx, done), "session.open-dir", registry.Args{"dir": dir})
+			if sessionkit.HasSessions(sh.cfg.Registry) && sh.cfg.Registry.Available("session.dir.open", nil) {
+				return sh.cfg.Registry.Run(registry.OnDone(ctx, done), "session.dir.open", registry.Args{"dir": dir})
 			}
 			err := sh.reopenOn(reopenTo{dir: dir})
 			done(err)

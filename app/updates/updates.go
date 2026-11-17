@@ -152,11 +152,9 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 func (x *Update) commands() []registry.Command {
 	can := func(registry.Args) bool { return x.updater() != nil }
 	return []registry.Command{
-		{ID: "UpdateCheck", Title: "Check for a newer Oriel now, and show what it brings", Available: can,
+		{ID: "update.check", Title: "Check for a newer Oriel now, and show what it brings", Available: can, Ex: "UpdateCheck",
 			Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
-		{ID: "update.check", Title: "Check for a newer Oriel now, and show what it brings", Available: can,
-			Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
-		{ID: "update.notes", Title: "Show the update card: the newer release and its notes", Available: can,
+		{ID: "update.notes.open", Title: "Show the update card: the newer release and its notes", Available: can,
 			Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},
 		{ID: "update.install", UserOnly: true, Title: "Update Oriel now: download, verify and install the newer release, then restart onto it once the agents have handed over",
 			Available: func(registry.Args) bool { _, ok := x.latest(); return ok },
@@ -164,7 +162,7 @@ func (x *Update) commands() []registry.Command {
 		{ID: "update.restart", UserOnly: true, Title: "Restart onto the installed update: running agents hand over first",
 			Available: func(registry.Args) bool { _, ok := x.ready(); return ok },
 			Run:       func(registry.Ctx, registry.Args) error { return x.restart() }},
-		{ID: "update.progress", Title: "Show the Updating page: how the update is getting on",
+		{ID: "update.progress.open", Title: "Show the Updating page: how the update is getting on",
 			Available: func(registry.Args) bool { return x.current() != nil },
 			Run:       func(registry.Ctx, registry.Args) error { x.setPage(true); return nil }},
 	}
@@ -344,7 +342,7 @@ func (x *Update) download(m update.Manifest) {
 	case updateAsk:
 		x.h.Notify(core.Notice{ID: "update.available", Severity: core.SevInfo, Title: "Update",
 			Text:    fmt.Sprintf("Oriel %s is downloaded and ready: you have %s.", m.Version, x.updater().Version),
-			Actions: []core.Action{{Title: "What's new", Command: "update.notes"}, {Title: "Update", Command: "update.install"}}})
+			Actions: []core.Action{{Title: "What's new", Command: "update.notes.open"}, {Title: "Update", Command: "update.install"}}})
 	}
 }
 
@@ -497,7 +495,7 @@ func (x *Update) announce(version string, err error, restart bool) {
 	case err != nil:
 		x.h.Notify(core.Notice{ID: "update.failed", Severity: core.SevError, Title: "Update",
 			Text:    fmt.Sprintf("Oriel %s didn't install: %v", version, err),
-			Actions: []core.Action{{Title: "Details", Command: "update.progress"}}})
+			Actions: []core.Action{{Title: "Details", Command: "update.progress.open"}}})
 	case restart:
 		x.h.Do(func() {
 			if err := x.restart(); err != nil {

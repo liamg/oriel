@@ -11,7 +11,7 @@ merges and lists reviews through it, so the example stays in step with the API.
   asked for, a draft (a `WIP:` title) or a conflict.
 - **Reviews:** the pull requests asking for your review, on the Reviews page and its pill.
 - **Your own server:** a Gitea that isn't gitea.com is recognised by its probe (`/api/v1/version`), or you name it in
-  `code.hosts`, and set up once (`code.setup`): its API URL and its own token, kept by hostname.
+  `code.hosts`, and set up once (`code.setup.open`): its API URL and its own token, kept by hostname.
 - **The token:** the one you set, else `$GITEA_TOKEN`, else Oriel asks, with a link to make one.
 
 ## Installing it

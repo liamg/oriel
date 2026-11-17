@@ -225,19 +225,19 @@ func (x *quitDialog) Manifest() plugin.Manifest { return plugin.Manifest{ID: "qu
 
 func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.Add(h.Keymap(registry.Keymap{Mode: QuitKeyMode, Keys: "<D-CR>", Command: "quit.now", Desc: "Don't wait for the turns"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: QuitKeyMode, Keys: "<D-CR>", Command: "app.quit.confirm", Desc: "Don't wait for the turns"}))
 	x.Add(h.Contribute(registry.ExclusiveKeys{Mode: QuitKeyMode}))
 	x.Add(h.View(kit.OverlayPrefix+"quit", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "quit", Fn: x.drainView}
 	})))
-	x.Add(h.Command(registry.Command{ID: "quit", Title: "Quit Oriel, handing its agents over",
+	x.Add(h.Command(registry.Command{ID: "app.quit", Title: "Quit Oriel, handing its agents over",
 		Run: func(registry.Ctx, registry.Args) error {
 			if q, ok := services.QuitOf(h); ok {
 				q.Quit()
 			}
 			return nil
 		}}))
-	x.Add(h.Command(registry.Command{ID: "quit.now", Title: "Quit now, not waiting for the agents' turns",
+	x.Add(h.Command(registry.Command{ID: "app.quit.confirm", Title: "Quit now, not waiting for the agents' turns",
 		Available: func(registry.Args) bool { return x.draining.Load() != nil },
 		Run: func(registry.Ctx, registry.Args) error {
 			if r := x.draining.Load(); r != nil {

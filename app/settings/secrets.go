@@ -73,10 +73,7 @@ func (x *Secrets) Activate(_ context.Context, h plugin.Host) error {
 func (x *Secrets) commands() []registry.Command {
 	open := func(a registry.Args) bool { return x.dlg != nil }
 	return []registry.Command{
-		{ID: "Secret", Title: "Set a secret plugins name, in a dialog; :Secret NAME", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.open(strings.TrimSpace(a.String("args")))
-		}},
-		{ID: "secrets.set", UserOnly: true, Title: "Set a secret plugins name: {name}, its value typed into a dialog", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "secrets.set", UserOnly: true, Title: "Set a secret plugins name: {name}, its value typed into a dialog", Ex: "Secret", ExArg: "name", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.open(a.String("name"))
 		}},
 		{ID: "secrets.delete", UserOnly: true, Title: "Delete a secret: {name}", Run: func(_ registry.Ctx, a registry.Args) error {

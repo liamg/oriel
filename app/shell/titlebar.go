@@ -84,7 +84,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return focus(ss[n-1].ID())
 	}}))
-	t.Add(h.Command(registry.Command{ID: "session.close-tab", Title: "Close the tab of {id}, or of the session in front; the session stays",
+	t.Add(h.Command(registry.Command{ID: "session.tab.close", Title: "Close the tab of {id}, or of the session in front; the session stays",
 		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
 		Run:       func(_ registry.Ctx, a registry.Args) error { return t.close(h, core.SessionID(a.String("id"))) }}))
 	t.Add(h.Command(registry.Command{ID: "session.tab.move", Title: "Move the tab of {id}, or of the session in front, to the {index}th place",
@@ -338,7 +338,7 @@ func closeSession(h plugin.Host, id core.SessionID) {
 	args := registry.Args{"id": string(id)}
 	cmd := "session.close"
 	if !h.Available(cmd, args) {
-		cmd = "session.close-tab"
+		cmd = "session.tab.close"
 	}
 	if err := h.Run(context.Background(), cmd, args); err != nil {
 		kit.NotifyError(h, cmd, err, true)

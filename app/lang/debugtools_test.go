@@ -172,7 +172,7 @@ func TestAgentDebuggerTools(t *testing.T) {
 	pausedAt(t, s, "main.half", 11)
 
 	// Eval turned off is refused too.
-	s.Run("debug.agent.access", registry.Args{"action": "eval", "level": "off"})
+	s.Run("debug.agent_access.set", registry.Args{"action": "eval", "level": "off"})
 	if r = agentDebug(t, s, a, "debug_eval", map[string]any{"expression": "v"}); r.err == nil || !strings.Contains(r.err.Error(), "debug.agent.eval is off") {
 		t.Errorf("eval while off = %q, %v", r.out, r.err)
 	}

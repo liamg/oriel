@@ -53,7 +53,8 @@ func serving(t *testing.T, h host, more ...plugin.Grant) *jsonrpc.Conn {
 	}()
 	conn := jsonrpc.NewConn(procOut, procIn, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
 		go func() {
-			if err := r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)); err != nil {
+			// A call the test stopped waiting for is answered on a connection its cleanup closed.
+			if err := r.Reply(methods.Call(context.Background(), p, r.Method, r.Params)); err != nil && !errors.Is(err, jsonrpc.ErrClosed) {
 				t.Error(err)
 			}
 		}()

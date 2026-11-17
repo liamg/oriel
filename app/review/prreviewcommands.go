@@ -72,7 +72,7 @@ func (x *PRReview) triageCommands() []registry.Command {
 				x.setPick(se.ID, it.id, func(p *core.ReviewPick) { p.State = s })
 				return x.settle(ctx, se, it, s)
 			})},
-		{ID: "review.pr.severity", Title: "Rate the review's {item}: {severity} critical, high, medium, low or nit; '' for the reviewer's", Available: x.inReview,
+		{ID: "review.pr.severity.set", Title: "Rate the review's {item}: {severity} critical, high, medium, low or nit; '' for the reviewer's", Available: x.inReview,
 			Run: x.onItem(func(_ registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
 				s := a.String("severity")
 				if s != "" && !slices.Contains(core.Severities, s) {
@@ -107,7 +107,7 @@ func (x *PRReview) reworkCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.rework", Title: "Ask the agent to reword the review's {item} for the author: {how} shorter, friendlier, suggestion or detail, or {ask} in your words",
 			Available: x.inReview, Run: x.onItem(x.rework)},
-		{ID: "review.pr.rework.use", Title: "Use the agent's rewording of the review's {item}", Available: x.inReview,
+		{ID: "review.pr.rework.accept", Title: "Use the agent's rewording of the review's {item}", Available: x.inReview,
 			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				text, ok := reworded(se, it.pick)
 				if !ok {
@@ -116,12 +116,12 @@ func (x *PRReview) reworkCommands() []registry.Command {
 				x.setPick(se.ID, it.id, func(p *core.ReviewPick) { p.Body, p.Rework, p.ReworkAt = text, "", 0 })
 				return x.endRework(ctx, se, it)
 			})},
-		{ID: "review.pr.rework.drop", Title: "Keep your words for the review's {item}, not the agent's rewording", Available: x.inReview,
+		{ID: "review.pr.rework.discard", Title: "Keep your words for the review's {item}, not the agent's rewording", Available: x.inReview,
 			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				x.setPick(se.ID, it.id, func(p *core.ReviewPick) { p.Rework, p.ReworkAt = "", 0 })
 				return x.endRework(ctx, se, it)
 			})},
-		{ID: "review.pr.summary", Title: "Ask session {id}'s agent to draft the review's summary from the comments kept; it fills the summary box",
+		{ID: "review.pr.summary.ask", Title: "Ask session {id}'s agent to draft the review's summary from the comments kept; it fills the summary box",
 			Available: x.inReview, Run: x.askSummary},
 	}
 }
@@ -138,7 +138,7 @@ func (x *PRReview) moveCommands() []registry.Command {
 				x.step(se, a.Bool("back"))
 				return nil
 			}},
-		{ID: "review.pr.show", Title: "Show the review's {item} (the selected one by default) at its line in the diff", Available: x.inReview,
+		{ID: "review.pr.item.reveal", Title: "Show the review's {item} (the selected one by default) at its line in the diff", Available: x.inReview,
 			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				x.form(se.ID).sel = it.id
 				return x.h.Run(ctx, "diff.open", registry.Args{"path": filepath.Join(reviewDir(se, it.at.Project), filepath.FromSlash(it.at.File)), "line": it.at.Line, "side": it.at.Side})

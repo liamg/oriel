@@ -14,7 +14,7 @@ import (
 func TestExplainChangeAskingShowsTimeAndCancels(t *testing.T) {
 	s, _, _, _ := walkScene(t)
 	s.Now = apptest.At(14, 30, 0)
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	s.Frame()
 	s.Now = s.Now.Add(5 * time.Second)
 	s.Frame()

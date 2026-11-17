@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.push-all, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.switch-back, ship.adopt-branch, ship.merge, ship.merge-default, ship.next-pr, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.all.push, ship.sync, ship.raise, ship.all.raise, ship.pr.open, ship.rename, ship.branch.back, ship.branch.adopt, ship.merge, ship.default_branch.merge, ship.next_pr.start, ship.browse, ship.link.copy, ship.merge_method, code.setup.open, code.hosts, code.api]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -47,8 +47,8 @@ When a project's worktree is on a branch other than the session's anyway (the ag
 Oriel won't push it, and the Git panel and the project's column on the Ship page say **Not on this session's
 branch**, with two ways out:
 
-- **Switch back to** the session's branch (`ship.switch-back`), carrying uncommitted work over where git can.
-- **Make** the branch it's on **this session's branch** (`ship.adopt-branch`): from then on Oriel pushes it, and
+- **Switch back to** the session's branch (`ship.branch.back`), carrying uncommitted work over where git can.
+- **Make** the branch it's on **this session's branch** (`ship.branch.adopt`): from then on Oriel pushes it, and
   raises its PR from it. It's offered only when that's safe; otherwise it's off, saying why. The branch must not be
   detached, the repo's default branch or the branch the project merges into, or another session's (any session's
   project of the same repo, archived ones included). It must hold every commit of the session's branch, so nothing of
@@ -93,7 +93,7 @@ and says where.
 
 The commits origin hasn't got. **Push** pushes the session's branch, and only it. In an opened directory that's the
 branch it's on now. Once every project's PR is open, the header offers **Push all** in place of a raise, for any with
-commits to push (`ship.push-all`).
+commits to push (`ship.all.push`).
 
 A step that can't run says why when the pointer rests on it: Push with no origin to push to, when not on a branch
 or not on the session's,
@@ -158,7 +158,7 @@ once nothing in its worktrees is uncommitted.
 
 ## Merge into main, without a PR {#merge-default}
 
-**⋯ → Merge into main…** on the Git panel (`ship.merge-default`) merges the branch's commits into the repo's default
+**⋯ → Merge into main…** on the Git panel (`ship.default_branch.merge`) merges the branch's commits into the repo's default
 branch (origin's, as a local branch: `main` here) on this machine, after asking in a dialog in the middle of the window. It's a fast-forward where it can be,
 else a merge commit; one that would conflict is refused, naming the files, and nothing changes. Where `main` is checked
 out (your own checkout, say), that checkout moves to it, and only when it has no uncommitted changes. Nothing is
@@ -166,7 +166,7 @@ pushed: push `main` yourself when you're ready. Uncommitted work on the branch s
 
 ## The next PR {#next}
 
-Once a project's PR is merged, or closed with nothing left on its branch, **Start next PR** (`ship.next-pr`) moves it
+Once a project's PR is merged, or closed with nothing left on its branch, **Start next PR** (`ship.next_pr.start`) moves it
 on: it brings the default branch up to date and cuts a fresh branch from it, in the same worktree. It won't while the
 branch has uncommitted changes, or commits that aren't pushed or on the default branch: commit, push or drop them
 first. A PR closed with work still on its branch offers **Raise a new PR…** instead.
@@ -187,7 +187,7 @@ A project's PR goes to the code host its origin is on. github.com, gitlab.com an
 a server of your own, Oriel looks in turn at `code.hosts` (hostname → host), the servers gh and glab are logged into,
 and then asks the server itself, once and without a token. A URL whose shape says whose it is (`/_git/` is Azure
 DevOps) isn't enough to let that host's plugin reach the server: a notice offers to set it up. If none of those tells,
-**Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
+**Set up…** on the PR step asks you. **Set up…** (`code.setup.open`) is also where a server's token goes: the API URL
 (`code.api` when it isn't the usual one), the token with the host's instructions and **Create a token ↗**, kept as
 its own secret (`GITLAB_TOKEN:git.acme.corp`) and sent only to that server, by that host's plugin. It's asked once per
 server and used for every repo on it. **None of these** leaves the server's PR steps off.

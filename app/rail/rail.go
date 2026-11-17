@@ -167,7 +167,7 @@ func (r *Rail) entries(h plugin.Host) {
 		}
 		r.Add(h.Contribute(e))
 		if p.keys != "" {
-			r.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: p.keys, Command: "project.panel", Args: registry.Args{"name": p.name}, Desc: p.title}))
+			r.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: p.keys, Command: "project.panel.toggle", Args: registry.Args{"name": p.name}, Desc: p.title}))
 		}
 	}
 	for _, s := range []struct {
@@ -209,7 +209,7 @@ func (r *Rail) entries(h plugin.Host) {
 	}
 }
 
-// commands are project.open, project.move, project.fold, project.panel and sidebar.form.
+// commands are project.open, project.move, project.fold, project.panel.toggle and sidebar.form.
 func (r *Rail) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
 		{ID: "project.open", Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
@@ -250,7 +250,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return h.Apply(core.ProjectFolded{ID: w.Session.ID, Folded: folded})
 			}},
-		{ID: "project.panel", Title: "Show or hide a panel of the open project, or of {project}: {name}, a project entry's",
+		{ID: "project.panel.toggle", Title: "Show or hide a panel of the open project, or of {project}: {name}, a project entry's",
 			Available: func(a registry.Args) bool {
 				e, ok := r.entry(a.String("name"))
 				return ok && h.Available(e.Command, e.ArgsFor(r.scopeOf(a)))
@@ -262,7 +262,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return r.run(ctx, e, r.scopeOf(a))
 			}},
-		{ID: "sidebar.form", Title: "Make this window's sidebar {form}: wide or narrow; with neither, switch",
+		{ID: "sidebar.form.set", Title: "Make this window's sidebar {form}: wide or narrow; with neither, switch",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				f := a.String("form")
 				if f == "" {
@@ -545,7 +545,7 @@ func (r *Rail) tooltip(w kit.WindowProjects, row sideRow, wide bool) string {
 		}
 		cmd := row.entry.Command
 		if row.kind == rowEntry {
-			cmd = "project.panel"
+			cmd = "project.panel.toggle"
 		}
 		if k := kit.BoundKey(r.h, cmd, args); k != "" {
 			tip += "  " + k
@@ -676,7 +676,7 @@ func (r *Rail) wideRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 			})
 			r.addButton(c, w)
 			if widget.IconButton(c, "form", "«", widget.IconButtonOpts{Label: "Narrow the sidebar", Help: "shell/rail", Size: 20}) {
-				kit.RunOrNotify(r.h, "rail", "sidebar.form", registry.Args{"form": "narrow"})
+				kit.RunOrNotify(r.h, "rail", "sidebar.form.set", registry.Args{"form": "narrow"})
 			}
 		})
 		widget.Rule(c, "rule")
@@ -793,7 +793,7 @@ func (r *Rail) narrowRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 	case rowHeading:
 		cell("head", 30, func(c *ui.Ctx) {
 			if widget.IconButton(c, "form", "»", widget.IconButtonOpts{Label: "Widen the sidebar", Help: "shell/rail", Size: 22}) {
-				kit.RunOrNotify(r.h, "rail", "sidebar.form", registry.Args{"form": "wide"})
+				kit.RunOrNotify(r.h, "rail", "sidebar.form.set", registry.Args{"form": "wide"})
 			}
 		})
 	case rowAdd:

@@ -58,7 +58,7 @@ func (a *siteAsk) site() (registry.HostSite, bool) {
 func (x *CodeSites) activateSetup(h plugin.Host) {
 	open := func(registry.Args) bool { return x.ask != nil }
 	for _, c := range []registry.Command{
-		{ID: "code.setup", Title: "Set up a code host's server: {hostname}, as {code_host} if known; asks which host it is, its API URL and its token",
+		{ID: "code.setup.open", Title: "Set up a code host's server: {hostname}, as {code_host} if known; asks which host it is, its API URL and its token",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				return x.openSetup(a.String("hostname"), a.String("code_host"))
 			}},

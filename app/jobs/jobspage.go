@@ -536,7 +536,7 @@ func (x *Jobs) openRun(id core.SessionID) {
 	x.open = false
 	x.runInBackground("session.open", registry.Args{"id": string(id), "then": kit.Then(
 		kit.Call{Command: "view.open", Args: registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"}},
-		kit.Call{Command: "sidebar.form", Args: registry.Args{"form": "narrow"}},
+		kit.Call{Command: "sidebar.form.set", Args: registry.Args{"form": "narrow"}},
 	)})
 }
 
@@ -630,7 +630,7 @@ func (x *Jobs) costCell(c *ui.Ctx, r runRow) {
 			widget.Chart(c, "split", strip, widget.ChartOpts{Kind: widget.ChartStrip, Height: 3, Highlight: -1, Label: "Cost by repo", Help: "agent/jobs#cost"})
 		}
 	}).Clicked {
-		x.run("stats.session", registry.Args{"id": string(r.se.ID)})
+		x.run("stats.session.open", registry.Args{"id": string(r.se.ID)})
 	}
 	widget.HoverCard(c, "split", anchor, widget.HoverCardOpts{Label: "Cost by repo", Help: "agent/jobs#cost", Width: 190}, func(c *ui.Ctx) {
 		c.Text("t", r.se.Created.In(x.loc).Format("Jan 2")+" run · "+kit.Money(cost)+" est.", widget.Mono(11, typeset.SemiBold, th.C(theme.Fg)))

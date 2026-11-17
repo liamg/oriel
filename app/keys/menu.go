@@ -42,7 +42,7 @@ func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 		{Name: "pane.move", Label: "Move pane…", Key: "⌃W M", Group: "pane", Order: 90, When: registry.MenuWhen{View: "*"}, Source: "builtin:menus",
 			Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 				m.h.Layout().Show(layout.ViewRef{ID: at.View, Instance: at.Instance})
-				return m.h.Run(ctx, "layout.menu", nil)
+				return m.h.Run(ctx, "layout.menu.open", nil)
 			}},
 		{Name: "pane.close", Label: "Close", Group: "pane", Order: 91, When: registry.MenuWhen{View: "*"}, Source: "builtin:menus",
 			Run: func(ctx registry.Ctx, at registry.MenuCtx) error {

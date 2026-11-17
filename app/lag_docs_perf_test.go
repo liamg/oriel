@@ -32,7 +32,7 @@ func markdownPreviewScene(t *testing.T, n int) *apptest.Scene {
 	s := apptest.ThreadsScene(t, apptest.Options{WorkDir: dir}, [4]string{"notes.md", "3", "Intro paragraph.", "Is this intro enough?"})
 	s.Run("editor.open", registry.Args{"path": "notes.md"})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(3)
 	if !strings.Contains(s.Text(), "Is this intro enough?") {
 		t.Fatalf("the preview of %d sections doesn't show its thread:\n%s", n, s.Text())

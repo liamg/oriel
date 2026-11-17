@@ -164,7 +164,7 @@ func TestAIReviewFindingToThreadAndFix(t *testing.T) {
 	}
 }
 
-// Add project adds the repo a finding is about to the session (session.add-repo), and the finding can then go
+// Add project adds the repo a finding is about to the session (session.repo.add), and the finding can then go
 // to the agent.
 func TestAIReviewAddProject(t *testing.T) {
 	r, _, codex, lw := apptest.ReviewWindow(t)

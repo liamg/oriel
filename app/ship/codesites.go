@@ -153,7 +153,7 @@ func (c *codeSites) at(hostname, whole string) (registry.HostSite, bool) {
 }
 
 // offer asks, once, whether hostname is h's server, as its remotes' shape says: its plugin isn't let reach a server
-// until you set it up (code.setup), which names it h's.
+// until you set it up (code.setup.open), which names it h's.
 func (c *codeSites) offer(h registry.CodeHost, hostname string) {
 	c.mu.Lock()
 	done := c.offered[hostname]
@@ -164,7 +164,7 @@ func (c *codeSites) offer(h registry.CodeHost, hostname string) {
 	}
 	c.h.Notify(core.Notice{ID: "code.offer." + hostname, Severity: core.SevInfo, Source: "code hosts", Title: h.Label(),
 		Text:    hostname + "'s remotes look like " + h.Label() + "'s. Set it up to let its plugin reach the server.",
-		Actions: []core.Action{{Title: "Set up…", Command: "code.setup", Args: map[string]any{"hostname": hostname, "code_host": h.Name}}}})
+		Actions: []core.Action{{Title: "Set up…", Command: "code.setup.open", Args: map[string]any{"hostname": hostname, "code_host": h.Name}}}})
 }
 
 // site is h's self-hosted site at hostname, its plugin let reach it.

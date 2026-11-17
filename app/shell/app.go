@@ -257,11 +257,11 @@ func (cfg *Config) windowDefaults() {
 func (sh *shell) openDirect(ctx context.Context, log *slog.Logger) {
 	cfg := sh.cfg
 	st := sh.store.State()
-	if cfg.Host == nil || cfg.WorkDir == "" || !cfg.Registry.Available("session.open-dir", nil) {
+	if cfg.Host == nil || cfg.WorkDir == "" || !cfg.Registry.Available("session.dir.open", nil) {
 		return
 	}
 	if se, ok := st.Session(st.Focus); !ok || !kit.Holds(se.Snapshot(), cfg.WorkDir) {
-		if err := cfg.Registry.Run(ctx, "session.open-dir", registry.Args{"dir": cfg.WorkDir}); err != nil {
+		if err := cfg.Registry.Run(ctx, "session.dir.open", registry.Args{"dir": cfg.WorkDir}); err != nil {
 			log.Error("direct session", "dir", cfg.WorkDir, "err", err)
 		}
 	}

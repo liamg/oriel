@@ -32,7 +32,7 @@ func TestShowcaseP6Twins(t *testing.T) {
 	s.Registry().Contribute(registry.Explainer{Name: "show", Explain: rig.ShowExplainer, Label: func() string { return "fork of claude · knows this session" }})
 	s.Run("editor.open", registry.Args{"path": filepath.Join(dir, "round_test.go")})
 	s.WaitHighlights()
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	s.RunDone()
 	s.EditorKeys("20Gzt")
 	s.Frame()

@@ -10,14 +10,14 @@ import (
 // outputCommands show tests' output in the Tests panel.
 func (x *Tests) outputCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "test.output", Title: "Show the output of the test at the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "test.output.open", Title: "Show the output of the test at the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			it, ok := x.nearest()
 			if !ok {
 				return fmt.Errorf("no test at the cursor")
 			}
 			return x.showOutput(ctx, it.Key(), outputCase)
 		}},
-		{ID: "tests.output", Title: "Show the last run's output in the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "tests.output.open", Title: "Show the last run's output in the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.showOutput(ctx, x.panel.sel, outputRun)
 		}},
 		{ID: "test.attach", Title: "Follow the running test's output", Run: func(ctx registry.Ctx, _ registry.Args) error {

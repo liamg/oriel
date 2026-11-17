@@ -1,6 +1,6 @@
 ---
 id: agent/permissions
-covers: [agent.permissions, permissions.tool, permissions.net]
+covers: [agent.permissions.open, permissions.tool.set, permissions.net.set]
 related: [agent/asks, agent/console, agent/workspace]
 ---
 
@@ -8,7 +8,7 @@ related: [agent/asks, agent/console, agent/workspace]
 
 What the sandboxed agent of the session in front may do, and what it did: the Permissions tab of the
 [Workspace](agent/workspace) page. **Permissions and connections ›** under the console's Rules in force, or
-`agent.permissions`, opens it there; `agent.permissions.dock` docks it at the bottom beside the console instead. A change made
+`agent.permissions.open`, opens it there; `agent.permissions.dock.toggle` docks it at the bottom beside the console instead. A change made
 here lasts for the session; for every session, use the `sandbox.*` settings. A deny in settings can't be lifted from
 here.
 
@@ -43,7 +43,7 @@ always, the endpoints the sandbox's environment points at (the model's, such as 
 `OPENAI_BASE_URL`, which may reach private and tailnet addresses), what the session's agent itself reaches (Claude's
 `api.anthropic.com`, Codex's `chatgpt.com`: its provider says), and the built-in list. The most specific rule for a destination wins. Anything else asks
 you. Type a host (`api.example.com`, `*.example.com`, `host:443`) to allow or block it for the session; a session's
-own rule has **Remove**. From Lua or a keymap, `permissions.net` takes `private = true` to let an allow reach LAN and
+own rule has **Remove**. From Lua or a keymap, `permissions.net.set` takes `private = true` to let an allow reach LAN and
 tailnet addresses.
 
 When network filtering is off (`sandbox.egress_proxy`, or the session's network set to open), every connection is allowed and none of these rules apply. A docker sandbox's connections are still made from your machine, so what only it reaches (a VPN, a tailnet, its private DNS) stays reachable.

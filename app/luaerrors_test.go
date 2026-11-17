@@ -191,7 +191,7 @@ func TestFailingHookTurnedOff(t *testing.T) {
 	if !ok {
 		t.Fatalf("no Turn back on: %+v", rows[0].Actions)
 	}
-	s.Run("Hooks", nil)
+	s.Run("hooks.open", nil)
 	s.Frame()
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "off: init.lua:3: attempt to index") {
@@ -226,7 +226,7 @@ func TestFailingViewTurnedOff(t *testing.T) {
 func TestProblems(t *testing.T) {
 	s := apptest.LuaScene(t, "local L = oriel\n\nL.option.tabstop = = 4\n")
 	s.Registry().SetDiagnostics("gopls", filepath.Join(s.ConfigDir, "x.go"), []registry.Diagnostic{{Line: 9, Severity: registry.SevWarning, Message: "x declared and not used"}})
-	s.Run("Problems", nil)
+	s.Run("problems.open", nil)
 	s.Frame()
 	s.Frame()
 	text := s.Text()

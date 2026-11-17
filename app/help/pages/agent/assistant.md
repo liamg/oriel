@@ -1,6 +1,6 @@
 ---
 id: agent/assistant
-covers: [assistant.toggle, assistant.open, assistant.close, assistant.say, assistant.send, assistant.new, assistant.stop, assistant.answer, assistant.pick, assistant.undo, assistant.show, app.overlay.assistant]
+covers: [assistant.toggle, assistant.open, assistant.close, assistant.say, assistant.send, assistant.new, assistant.stop, assistant.answer, assistant.pick, assistant.undo, assistant.result.open, app.overlay.assistant]
 related: [agent/voice, agent/launcher, agent/jobs, agent/prompts]
 ---
 

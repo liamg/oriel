@@ -138,7 +138,7 @@ func TestRailPluginEntries(t *testing.T) {
 func TestRailKeyUnavailable(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Setup: func(h plugin.Host) {
 		h.Contribute(laterEntry)
-		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-L>", Command: "project.panel", Args: registry.Args{"name": "later"}, Desc: "Later"})
+		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-L>", Command: "project.panel.toggle", Args: registry.Args{"name": "later"}, Desc: "Later"})
 	}})
 	r.WaitText("ORIEL")
 	r.TypeKeys("<D-L>")

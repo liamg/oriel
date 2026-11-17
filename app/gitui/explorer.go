@@ -193,15 +193,15 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	}
 	e.Add(h.View(kit.OverlayPrefix+"explorer.ask", e.askOverlay()))
 	for i, s := range explorerScopes {
-		e.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<M-%d>", i+1), Command: "explorer.scope", Args: registry.Args{"scope": s},
+		e.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<M-%d>", i+1), Command: "explorer.scope.set", Args: registry.Args{"scope": s},
 			Desc: "Explorer: " + s}))
 	}
-	e.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<M-c>", Command: "explorer.changed-only", Desc: "Explorer: changed only"}))
+	e.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<M-c>", Command: "explorer.changed_only.toggle", Desc: "Explorer: changed only"}))
 	for _, k := range []registry.Keymap{
 		{Keys: "s", Command: "explorer.stage", Desc: "Stage or unstage"},
 		{Keys: "u", Command: "explorer.unstage", Desc: "Unstage"},
 		{Keys: "x", Command: "explorer.discard", Desc: "Discard"},
-		{Keys: "=", Command: "explorer.diff", Desc: "Diff"},
+		{Keys: "=", Command: "explorer.diff.open", Desc: "Diff"},
 		{Keys: "c", Command: "explorer.commit", Desc: "Commit"},
 		{Keys: "C", Command: "explorer.commit", Args: registry.Args{"all": true}, Desc: "Commit all"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
@@ -231,10 +231,10 @@ func (e *Explorer) commands() []registry.Command {
 				return nil
 			}
 		}
-		return h.Run(ctx, "project.panel", registry.Args{"name": "explorer"})
+		return h.Run(ctx, "project.panel.toggle", registry.Args{"name": "explorer"})
 	}
 	return []registry.Command{
-		{ID: "explorer.scope", Title: "Show the Explorer in a {scope}: changed, uncommitted or all", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "explorer.scope.set", Title: "Show the Explorer in a {scope}: changed, uncommitted or all", Run: func(ctx registry.Ctx, a registry.Args) error {
 			i := slices.Index(explorerScopes, a.String("scope"))
 			if i < 0 {
 				return fmt.Errorf("no scope %q: changed, uncommitted or all", a.String("scope"))
@@ -242,11 +242,11 @@ func (e *Explorer) commands() []registry.Command {
 			e.keep(func(k *explorerKept) { k.Scope = explorerScopes[i] })
 			return show(ctx)
 		}},
-		{ID: "explorer.changed-only", Title: "Show only changed files in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "explorer.changed_only.toggle", Title: "Show only changed files in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			e.changedOnly = !e.changedOnly
 			return nil
 		}},
-		{ID: "explorer.hidden", Title: "Show hidden files (dot files) in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "explorer.hidden.toggle", Title: "Show hidden files (dot files) in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			e.hidden = !e.hidden
 			return nil
 		}},
@@ -291,7 +291,7 @@ func (e *Explorer) commands() []registry.Command {
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a.Bool("all")})
 			}},
-		{ID: "explorer.diff", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.diff.open", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
 				return e.openDiff(ctx, f.Path)
 			}

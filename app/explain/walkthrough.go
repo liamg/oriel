@@ -43,7 +43,7 @@ var (
 
 const walkHelp = "editor/pane#explain-change"
 
-// Walkthrough is explain.change: it asks the first explainer for a walkthrough of the branch's change, as JSON
+// Walkthrough is explain.change.open: it asks the first explainer for a walkthrough of the branch's change, as JSON
 // steps (WalkFormat), and shows it a step at a time: the step's file with the lines it's about lit and its notes
 // beside them, and the step dock. It's thrown away once the code a step is about changes.
 type Walkthrough struct {
@@ -103,8 +103,8 @@ func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 			c.Row("explain", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 4), Main: ui.End}, func(c *ui.Ctx) {
 				if widget.Button(c, "go", "Explain this change", widget.ButtonOpts{Disabled: !h.Available(registry.ExplainCommand, nil),
 					Help: "editor/pane#explain-change"}) {
-					if err := h.Run(context.Background(), "explain.change", nil); err != nil {
-						h.Notify(core.Notice{ID: "explain.change", Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
+					if err := h.Run(context.Background(), "explain.change.open", nil); err != nil {
+						h.Notify(core.Notice{ID: "explain.change.open", Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
 					}
 				}
 			})
@@ -116,11 +116,11 @@ func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 func (x *Walkthrough) commands() []registry.Command {
 	ready := func(registry.Args) bool { return x.ready() }
 	return []registry.Command{
-		{ID: "explain.change", Title: "Explain this change: a walkthrough of the branch's change across every project and file, step by step, written by the session's agent; thrown away once the code it's about changes",
+		{ID: "explain.change.open", Title: "Explain this change: a walkthrough of the branch's change across every project and file, step by step, written by the session's agent; thrown away once the code it's about changes",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.open(ctx) }},
 		{ID: "explain.change.step", Title: "Go to step {step} of the walkthrough, or {by} steps on (-1 back)", Available: ready,
 			Run: func(_ registry.Ctx, a registry.Args) error { x.goTo(x.stepArg(a)); return nil }},
-		{ID: "explain.change.line", Title: "Move the walkthrough's line {by} lines, for a comment", Available: ready,
+		{ID: "explain.change.line.move", Title: "Move the walkthrough's line {by} lines, for a comment", Available: ready,
 			Run: func(_ registry.Ctx, a registry.Args) error { x.moveLine(a.Int("by")); return nil }},
 		{ID: "explain.change.ask", Title: "Ask about this step of the walkthrough: a new request with the step attached",
 			Available: func(registry.Args) bool { return x.ready() && x.h.Available("request.new", nil) },
@@ -141,15 +141,15 @@ func (x *Walkthrough) commands() []registry.Command {
 
 func (x *Walkthrough) keymaps() []registry.Keymap {
 	return []registry.Keymap{
-		{Mode: "n", Keys: "<Leader>E", Command: "explain.change", Desc: "Walk through the change"},
+		{Mode: "n", Keys: "<Leader>E", Command: "explain.change.open", Desc: "Walk through the change"},
 		{Mode: ExplainChangeKeyMode, Keys: "<Left>", Command: "explain.change.step", Args: registry.Args{"by": -1}, Desc: "Previous step"},
 		{Mode: ExplainChangeKeyMode, Keys: "h", Command: "explain.change.step", Args: registry.Args{"by": -1}, Desc: "Previous step"},
 		{Mode: ExplainChangeKeyMode, Keys: "<Right>", Command: "explain.change.step", Args: registry.Args{"by": 1}, Desc: "Next step"},
 		{Mode: ExplainChangeKeyMode, Keys: "l", Command: "explain.change.step", Args: registry.Args{"by": 1}, Desc: "Next step"},
-		{Mode: ExplainChangeKeyMode, Keys: "j", Command: "explain.change.line", Args: registry.Args{"by": 1}, Desc: "Next line"},
-		{Mode: ExplainChangeKeyMode, Keys: "<Down>", Command: "explain.change.line", Args: registry.Args{"by": 1}, Desc: "Next line"},
-		{Mode: ExplainChangeKeyMode, Keys: "k", Command: "explain.change.line", Args: registry.Args{"by": -1}, Desc: "Previous line"},
-		{Mode: ExplainChangeKeyMode, Keys: "<Up>", Command: "explain.change.line", Args: registry.Args{"by": -1}, Desc: "Previous line"},
+		{Mode: ExplainChangeKeyMode, Keys: "j", Command: "explain.change.line.move", Args: registry.Args{"by": 1}, Desc: "Next line"},
+		{Mode: ExplainChangeKeyMode, Keys: "<Down>", Command: "explain.change.line.move", Args: registry.Args{"by": 1}, Desc: "Next line"},
+		{Mode: ExplainChangeKeyMode, Keys: "k", Command: "explain.change.line.move", Args: registry.Args{"by": -1}, Desc: "Previous line"},
+		{Mode: ExplainChangeKeyMode, Keys: "<Up>", Command: "explain.change.line.move", Args: registry.Args{"by": -1}, Desc: "Previous line"},
 		{Mode: ExplainChangeKeyMode, Keys: "c", Command: "explain.change.comment", Desc: "Comment on the line"},
 		{Mode: ExplainChangeKeyMode, Keys: "a", Command: "explain.change.ask", Desc: "Ask about this step"},
 		{Mode: ExplainChangeKeyMode, Keys: "q", Command: "explain.change.close", Desc: "Quit the walkthrough"},
@@ -180,7 +180,7 @@ func (x *Walkthrough) current() walkStep {
 }
 
 func (x *Walkthrough) notify(sev core.Severity, msg string) {
-	x.h.Notify(core.Notice{ID: "explain.change", Severity: sev, Source: "explain", AutoClear: true, Text: msg})
+	x.h.Notify(core.Notice{ID: "explain.change.open", Severity: sev, Source: "explain", AutoClear: true, Text: msg})
 }
 
 // open shows the walkthrough, asking for one first unless there's one still good.

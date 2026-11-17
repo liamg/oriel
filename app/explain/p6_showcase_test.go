@@ -39,7 +39,7 @@ func TestShowcaseP6Explain(t *testing.T) {
 	s.Shot("p6-08c-explain-detailed")
 	s.ExplainKeys("<Esc>")
 
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	s.ExplainSettle()
 	s.ExplainSettle()
 	s.Shot("p6-08d-changed-units")
@@ -52,7 +52,7 @@ func TestShowcaseP6Explain(t *testing.T) {
 
 func TestShowcaseP6Walkthrough(t *testing.T) {
 	s, _, _, _ := walkScene(t)
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	s.WalkSettle()
 	s.Shot("p6-09a-walkthrough")
 	s.WalkKeys("<Right>")

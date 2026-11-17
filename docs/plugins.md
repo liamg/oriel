@@ -190,7 +190,7 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
 - `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. A command that does what a capability
-  guards needs it: `ask.answer`, `rules.add` and `permissions.tool` need `gate`, `session.start`, `session.stop` and
+  guards needs it: `ask.answer`, `rules.add` and `permissions.tool.set` need `gate`, `session.start`, `session.stop` and
   `jobs.run` `session.control`, `agent.send` `agent.prompt`. What changes who may do what is yours alone, and no
   plugin can run it: installing, enabling or updating plugins and accepting their consent, settings, secrets and
   updating Oriel.

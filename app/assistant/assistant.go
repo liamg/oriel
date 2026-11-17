@@ -169,7 +169,7 @@ func (x *Assistant) commands() []registry.Command {
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.pick(a.Int("n")) }},
 		{ID: "assistant.undo", Title: "Undo what the assistant did: {id}, else the latest it can undo",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.undo(a.String("id")) }},
-		{ID: "assistant.show", Title: "Open what the assistant's action made: {id}, else the latest",
+		{ID: "assistant.result.open", Title: "Open what the assistant's action made: {id}, else the latest",
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.show(ctx, a.String("id")) }},
 	}
 }

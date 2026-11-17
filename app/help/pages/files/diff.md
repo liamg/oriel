@@ -8,7 +8,7 @@ related: [files/explorer, files/commit, agent/requests]
 
 The review surface: a repo's branch against its base (the merge-base with origin's default branch, or main), your
 uncommitted work included. The Explorer's Changed scope, the agent console's **view in diff** and plan mode's
-**Preview diff** open it (`diff.open`). From Uncommitted (`explorer.diff`, or `diff.open` with `against` `head`), a
+**Preview diff** open it (`diff.open`). From Uncommitted (`explorer.diff.open`, or `diff.open` with `against` `head`), a
 file's diff is against the last commit instead: what isn't committed, in a tab of its own (**Uncommitted · repo**),
 each file once, staged and unstaged changes together. Opened at a line (a review's **Jump to code**, a finding's place), it
 selects that line, removed or added, in the middle of the view.
@@ -35,12 +35,12 @@ A hunk shows three unchanged lines either side of its change; the rest are hidde
 arrows show them as GitHub's do, 20 lines a click: **↑** above the first hunk shows lines up from it, **↓** below the
 last shows lines down to the file's end, and between two hunks **↓** shows lines down from the hunk above and **↑**
 lines up from the one below, until 20 or fewer are left, which **↕** shows at once. `zo` shows 20 lines each side
-of the selected hunk, `zR` every hidden line of the file (`diff.context.more`). The lines stay shown until the
+of the selected hunk, `zR` every hidden line of the file (`diff.context.expand`). The lines stay shown until the
 file's change does. Threads on them show under them, but comments are made on the diff's own lines.
 
 ## Long lines {#wrap}
 
-**wrap** in a file's header (or `diff.wrap`) wraps long lines onto the rows below, or stops; it's the editor's
+**wrap** in a file's header (or `diff.wrap.toggle`) wraps long lines onto the rows below, or stops; it's the editor's
 `editor.wrap`, so the editor's `:set wrap` and its status line's **wrap** switch it too. Not wrapped, a file's
 lines scroll across together, the line numbers staying put: with a sideways wheel or trackpad, ⇧ and the wheel, or
 `zl`/`zh` (a column) and `zL`/`zH` (half the view).

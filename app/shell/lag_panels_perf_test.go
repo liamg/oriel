@@ -20,7 +20,7 @@ func logPanelScene(t *testing.T, n int) *apptest.Scene {
 		s.Logs.Ring.Write(logs.Record{Time: at.Add(time.Duration(i) * time.Millisecond), Level: slog.LevelInfo, Source: "core",
 			Msg: fmt.Sprintf("record %d", i)})
 	}
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	return s
 }
 

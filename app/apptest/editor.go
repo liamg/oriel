@@ -40,7 +40,7 @@ func (s *Scene) EditorWindow() registry.EditorWindow {
 func (s *Scene) EditorKeys(keys string) {
 	s.T.Helper()
 	for _, k := range keymap.Parse(keys) {
-		s.Run("editor.keys", registry.Args{"keys": keymap.Format([]string{k}), "noremap": true})
+		s.Run("editor.keys.send", registry.Args{"keys": keymap.Format([]string{k}), "noremap": true})
 		s.Frame()
 	}
 }

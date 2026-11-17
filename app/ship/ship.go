@@ -51,7 +51,7 @@ type ShipRaise struct {
 	Draft     bool     `json:"draft,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
 	Edit      bool     `json:"edit,omitempty"` // the PR is open already
-	All       bool     `json:"all,omitempty"`  // one of ship.raise-all's, raised with the others in merge order
+	All       bool     `json:"all,omitempty"`  // one of ship.all.raise's, raised with the others in merge order
 }
 
 type Ship struct {

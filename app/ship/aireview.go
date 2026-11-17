@@ -90,7 +90,7 @@ func (x *AIReview) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.ai.run", Title: "AI review the change of session {id} (the one in front by default): what changed since the last review, or all of it with {full}",
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { return x.run(a) }},
-		{ID: "review.ai.thread", Title: "Turn the AI review's {finding} into a thread on its line, for the session's agent to answer", Available: has,
+		{ID: "review.ai.thread.new", Title: "Turn the AI review's {finding} into a thread on its line, for the session's agent to answer", Available: has,
 			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				return x.thread(ctx, se, f, false)
 			})},
@@ -107,12 +107,12 @@ func (x *AIReview) commands() []registry.Command {
 				}
 				return x.setFinding(se, f)
 			})},
-		{ID: "review.ai.add-project", Title: "Add the repo the AI review's {finding} is about to the session", Available: has,
+		{ID: "review.ai.project.add", Title: "Add the repo the AI review's {finding} is about to the session", Available: has,
 			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				if f.Repo == "" {
 					return errors.New("the finding names no other repo")
 				}
-				return x.h.Run(ctx, "session.add-repo", registry.Args{"id": string(se.ID), "repo": f.Repo})
+				return x.h.Run(ctx, "session.repo.add", registry.Args{"id": string(se.ID), "repo": f.Repo})
 			})},
 		{ID: "review.ai.open", Title: "Show the AI review's {finding} at its line in the diff",
 			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
@@ -131,9 +131,9 @@ func (x *AIReview) commands() []registry.Command {
 				x.filter = s
 				return nil
 			}},
-		{ID: "review.ai.dismissed", Title: "Show or hide the AI review's dismissed findings",
+		{ID: "review.ai.dismissed.toggle", Title: "Show or hide the AI review's dismissed findings",
 			Run: func(registry.Ctx, registry.Args) error { x.dismissed = !x.dismissed; return nil }},
-		{ID: "review.ai.prompt", Title: "Edit the AI review's prompt: your agents/ai-review.md, made from the built-in one the first time",
+		{ID: "review.ai.prompt.edit", Title: "Edit the AI review's prompt: your agents/ai-review.md, made from the built-in one the first time",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				path := x.promptPath()
 				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
@@ -361,7 +361,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 						}
 						c.Text("t", label, widget.UIFont(11, fg))
 					}).Clicked {
-						kit.RunOrNotify(x.h, "ship", "review.ai.dismissed", nil)
+						kit.RunOrNotify(x.h, "ship", "review.ai.dismissed.toggle", nil)
 					}
 				}
 			})
@@ -413,7 +413,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 					}
 				}
 				if widget.Button(c, "prompt", "Prompt…", widget.ButtonOpts{Ghost: true, Help: findHelp + "#prompt"}) {
-					if err := x.h.Run(context.Background(), "review.ai.prompt", nil); err != nil {
+					if err := x.h.Run(context.Background(), "review.ai.prompt.edit", nil); err != nil {
 						x.h.Log().Warn("ai review", "err", err)
 					}
 				}
@@ -471,7 +471,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 					switch {
 					case f.Repo != "" && !hasRepo(se, f.Repo):
 						if widget.Button(c, "add", "Add project", widget.ButtonOpts{Help: findHelp + "#actions"}) {
-							run("review.ai.add-project", nil)
+							run("review.ai.project.add", nil)
 						}
 					case f.Thread != "":
 						label := "Thread · open"
@@ -479,11 +479,11 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 							label = "Thread · " + string(t.Status)
 						}
 						if widget.Button(c, "thread", label, widget.ButtonOpts{Help: findHelp + "#actions"}) {
-							run("review.ai.thread", nil)
+							run("review.ai.thread.new", nil)
 						}
 					default:
 						if widget.Button(c, "thread", "→ Thread", widget.ButtonOpts{Help: findHelp + "#actions"}) {
-							run("review.ai.thread", nil)
+							run("review.ai.thread.new", nil)
 						}
 						if x.h.Available("review.ai.fix", nil) && widget.Button(c, "fix", "Fix", widget.ButtonOpts{Ghost: true, Help: findHelp + "#actions"}) {
 							run("review.ai.fix", nil)

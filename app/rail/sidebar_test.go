@@ -25,7 +25,7 @@ func TestSidebarSnapshots(t *testing.T) {
 	t.Run("three-projects", func(t *testing.T) {
 		ps := apptest.SidebarProjects(t)
 		s := apptest.SessionScene(t, core.KindWork, ps, apptest.SidebarSize)
-		s.Run("project.panel", registry.Args{"name": "explorer"})
+		s.Run("project.panel.toggle", registry.Args{"name": "explorer"})
 		s.Run("editor.open", registry.Args{"path": filepath.Join(ps[0].Dir, "src/components/FilterBar.tsx")})
 		s.Run("editor.open", registry.Args{"path": filepath.Join(ps[1].Dir, "proto/usage.proto")})
 		s.SettleGit()
@@ -44,9 +44,9 @@ func TestSidebarSnapshots(t *testing.T) {
 	t.Run("narrow", func(t *testing.T) {
 		ps := apptest.SidebarProjects(t)
 		s := apptest.SessionScene(t, core.KindWork, ps, apptest.SidebarSize)
-		s.Run("sidebar.form", registry.Args{"form": "narrow"})
+		s.Run("sidebar.form.set", registry.Args{"form": "narrow"})
 		s.Run("project.open", registry.Args{"project": "api"})
-		s.Run("project.panel", registry.Args{"name": "search"})
+		s.Run("project.panel.toggle", registry.Args{"name": "search"})
 		s.Golden("sidebar-narrow")
 		text := s.Text()
 		for _, want := range []string{"AD", "AP", "WE", "»", "api\nSEARCH"} {
@@ -58,8 +58,8 @@ func TestSidebarSnapshots(t *testing.T) {
 	t.Run("one-project", func(t *testing.T) {
 		ps := apptest.SidebarProjects(t)
 		s := apptest.SessionScene(t, core.KindWork, ps[:1], apptest.SidebarSize)
-		s.Run("sidebar.form", registry.Args{"form": "wide"})
-		s.Run("project.panel", registry.Args{"name": "explorer"})
+		s.Run("sidebar.form.set", registry.Args{"form": "wide"})
+		s.Run("project.panel.toggle", registry.Args{"name": "explorer"})
 		s.SettleGit()
 		s.Golden("sidebar-one")
 		text := s.Text()
@@ -79,8 +79,8 @@ func TestSidebarSnapshots(t *testing.T) {
 			}
 			cfg.WorkDir = apptest.FixtureRepo(t, src, "blog", "main", map[string]string{"posts/2026-09-vim.md": "# vim\n", "config.toml": "\n"}, 0, false)
 		}})
-		s.Run("sidebar.form", registry.Args{"form": "wide"})
-		s.Run("project.panel", registry.Args{"name": "explorer"})
+		s.Run("sidebar.form.set", registry.Args{"form": "wide"})
+		s.Run("project.panel.toggle", registry.Args{"name": "explorer"})
 		s.SettleGit()
 		s.Golden("sidebar-directory")
 		text := s.Text()
@@ -96,7 +96,7 @@ func TestSidebarGlobalEntriesAtFoot(t *testing.T) {
 	for _, form := range []string{"wide", "narrow"} {
 		t.Run(form, func(t *testing.T) {
 			s := apptest.SessionScene(t, core.KindWork, apptest.SidebarProjects(t)[:1], size)
-			s.Run("sidebar.form", registry.Args{"form": form})
+			s.Run("sidebar.form.set", registry.Args{"form": form})
 			s.Frame()
 			ship, settings := s.Node("Ship").Bounds, s.Node("Settings").Bounds
 			if foot := settings.Max.Y; foot < size.Y-60 {
@@ -130,7 +130,7 @@ func TestSidebarSwitchesProjects(t *testing.T) {
 			t.Errorf("admin-ui's %s is still in the dock", v.ID)
 		}
 	}
-	s.Run("project.panel", registry.Args{"name": "search"})
+	s.Run("project.panel.toggle", registry.Args{"name": "search"})
 	s.Press("<C-1>")
 	if got := apptest.OpenProject(s); got != "admin-ui" {
 		t.Fatalf("⌃1 opened %q", got)
@@ -316,7 +316,7 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 			t.Fatalf("%s: %v", id, err)
 		}
 	}
-	run("sidebar.form", registry.Args{"form": "wide"})
+	run("sidebar.form.set", registry.Args{"form": "wide"})
 	r.WaitText("Explorer")
 	r.ClickText("Explorer")
 	r.WaitText("ALL")
@@ -325,7 +325,7 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 	if strings.Contains(r.WaitText("Explorer"), "Pull request") {
 		t.Error("a directory without a remote lists Pull request")
 	}
-	run("sidebar.form", registry.Args{"form": "narrow"})
+	run("sidebar.form.set", registry.Args{"form": "narrow"})
 	r.WaitText("»")
 	r.Stop()
 	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})

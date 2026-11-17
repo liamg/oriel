@@ -275,7 +275,7 @@ func TestLuaShipGateThatThrowsFails(t *testing.T) {
 
 // A per-frame callback that throws (a rail entry's badge) counts nothing and is reported, as a view's is.
 func TestLuaBadgeThatThrowsIsReported(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.rail.add{ name = "todo", icon = "◆", title = "Todo", command = "Settings", badge = function() error("no count") end }`)
+	s := apptest.LuaScene(t, `oriel.rail.add{ name = "todo", icon = "◆", title = "Todo", command = "settings.open", badge = function() error("no count") end }`)
 	var failed []registry.Failure
 	s.Registry().OnFailure(func(f registry.Failure) { failed = append(failed, f) })
 	for _, e := range registry.ContributionsOf[uireg.RailEntry](s.Registry()) {

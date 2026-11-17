@@ -32,7 +32,7 @@ const StartWorkKeyMode = "startwork"
 const startWorkHelp = "agent/plan#start-work"
 
 // startWork is the Start work dialog: how the plan becomes work, run through
-// session.start-work.
+// session.work.start.
 type startWork struct {
 	id               core.SessionID
 	clear, fresh     bool
@@ -113,7 +113,7 @@ func (x *Plan) closeStartWork() {
 	x.startGen++
 }
 
-// args are session.start-work's for what the dialog holds.
+// args are session.work.start's for what the dialog holds.
 func (d *startWork) args() registry.Args {
 	a := registry.Args{"id": string(d.id), "clear": d.clear, "fresh": d.fresh}
 	if d.model != d.shown[0] || d.effort != d.shown[1] {
@@ -150,7 +150,7 @@ func (x *Plan) runStartWork() error {
 	d.busy, d.err = true, ""
 	gen, life := x.startGen, x.life
 	plugin.Go(x.h, "plan: start work", func() {
-		err := plugin.Await(life, func(ctx registry.Ctx) error { return x.h.Run(ctx, "session.start-work", a) })
+		err := plugin.Await(life, func(ctx registry.Ctx) error { return x.h.Run(ctx, "session.work.start", a) })
 		x.h.Do(func() {
 			if gen != x.startGen || x.dialog == nil {
 				return
@@ -309,7 +309,7 @@ func (x *Plan) startWorkFooter(c *ui.Ctx, d *startWork) {
 			x.closeStartWork()
 		}
 		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Key: "⌘↵", Busy: d.busy, BusyLabel: "Starting",
-			Disabled: !x.h.Available("session.start-work", nil), Help: startWorkHelp}) {
+			Disabled: !x.h.Available("session.work.start", nil), Help: startWorkHelp}) {
 			_ = x.runStartWork()
 		}
 	})

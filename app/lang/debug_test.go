@@ -249,7 +249,7 @@ func TestDebugConfigsAndState(t *testing.T) {
 	s, main, _ := debugSceneWith(t, func(c *apptest.Config) { c.StateDir = state })
 	x := debugOf(s)
 	s.Run("debug.breakpoint.set", registry.Args{"file": main, "line": 10, "hit": "== 2"})
-	s.Run("Watch", registry.Args{"args": "v"})
+	s.Run("debug.watch.add", registry.Args{"expression": "v"})
 	if x.Counts() != "1 breakpoint · 1 conditional" {
 		t.Errorf("counts = %q", x.Counts())
 	}

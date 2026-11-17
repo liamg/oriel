@@ -206,7 +206,7 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 				x.run("ship.browse", registry.Args{"project": s.Project})
 			}
 			if widget.Button(c, "copy", "Copy link", widget.ButtonOpts{Ghost: true, Help: "git/ship#pr"}) {
-				x.run("ship.copy-link", registry.Args{"project": s.Project})
+				x.run("ship.link.copy", registry.Args{"project": s.Project})
 			}
 		})
 	}

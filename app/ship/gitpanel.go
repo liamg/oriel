@@ -144,6 +144,6 @@ func (x *Ship) gitMore(c *ui.Ctx, se core.SessionState, s shipRead) {
 	off := s.Default == "" || s.Branch == "" || s.Branch == s.Default || x.doing(se.ID, s.Project) != ""
 	items := []widget.MenuItem{{Label: "Merge into " + into + "…", Detail: "no PR", Disabled: off, Help: "git/ship#merge-default"}}
 	if widget.MenuButton(c, "more", items, widget.MenuButtonOpts{Label: "More git actions", Glyph: "⋯", Help: "git/ship#merge-default"}) == 0 {
-		x.run("ship.merge-default", registry.Args{"project": s.Project})
+		x.run("ship.default_branch.merge", registry.Args{"project": s.Project})
 	}
 }

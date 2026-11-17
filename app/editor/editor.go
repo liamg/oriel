@@ -207,14 +207,14 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 				}
 				return nil
 			}},
-		{ID: "editor.keys", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "editor.keys.send", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
 			noremap, _ := a["noremap"].(bool)
 			x.e.TypeMapped(keymap.Parse(a.String("keys")), noremap)
 			return nil
 		}},
 		{ID: "editor.copy", Title: "Copy the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("copy") }},
 		{ID: "editor.cut", Title: "Cut the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("cut") }},
-		{ID: "editor.select-all", Title: "Select the whole buffer", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.all.select", Title: "Select the whole buffer", Run: func(registry.Ctx, registry.Args) error {
 			b := x.e.Buf()
 			last := max(b.Lines()-1, 0)
 			x.e.Select(vim.Pos{}, vim.Pos{Line: last, Col: max(len(b.Line(last))-1, 0)}, 'v')
@@ -236,7 +236,7 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			return x.e.ReloadBuffer(n)
 		}},
 		{ID: "editor.keep", Title: "Keep a buffer's changes over its file's", Run: func(registry.Ctx, registry.Args) error { return nil }},
-		{ID: "editor.input", Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "editor.input.set", Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
 			id := a.String("engine")
 			if id == "" {
 				id = a.String("args")
@@ -254,11 +254,11 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			x.e.Run("w")
 			return nil
 		}},
-		{ID: "editor.complete", Title: "Complete the command line", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.cmdline.complete", Title: "Complete the command line", Run: func(registry.Ctx, registry.Args) error {
 			x.complete()
 			return nil
 		}},
-		{ID: "buffers.switch", Title: "Switch to an open buffer", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "buffers.pick", Title: "Switch to an open buffer", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "buffers"})
 		}},
 		{ID: "quickfix.open", Title: "Show the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -284,9 +284,9 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			x.e.MultiVertical(-1)
 			return nil
 		}},
-		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
+		{ID: "editor.presenter.open", Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(a.String("window"), a.String("name")) }},
-		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "editor.word.search", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
 	}
@@ -294,18 +294,18 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 
 // keymaps are the editor's keys.
 func (x *Editor) keymaps() []registry.Keymap {
-	out := []registry.Keymap{{Mode: "c", Keys: "<Tab>", Command: "editor.complete", Desc: "Complete the command line"}}
+	out := []registry.Keymap{{Mode: "c", Keys: "<Tab>", Command: "editor.cmdline.complete", Desc: "Complete the command line"}}
 	for _, k := range pickerKeys {
 		out = append(out, registry.Keymap{Mode: "n", Keys: k.keys, Command: "picker.open", Args: registry.Args{"source": k.source}, Desc: k.desc})
 	}
-	out = append(out, registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"})
+	out = append(out, registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.word.search", Desc: "Grep the word under the cursor"})
 	for _, mode := range []string{"n", kit.PresentKeyMode} {
-		out = append(out, registry.Keymap{Mode: mode, Keys: "<Leader>cp", Command: "editor.present", Desc: "Preview the file, or edit it again"})
+		out = append(out, registry.Keymap{Mode: mode, Keys: "<Leader>cp", Command: "editor.presenter.open", Desc: "Preview the file, or edit it again"})
 	}
 	out = append(out, []registry.Keymap{
-		{Mode: "n", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
-		{Mode: "x", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
-		{Mode: "i", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
+		{Mode: "n", Keys: "<D-a>", Command: "editor.all.select", Desc: "Select all"},
+		{Mode: "x", Keys: "<D-a>", Command: "editor.all.select", Desc: "Select all"},
+		{Mode: "i", Keys: "<D-a>", Command: "editor.all.select", Desc: "Select all"},
 		{Mode: "x", Keys: "<D-c>", Command: "editor.copy", Desc: "Copy"},
 		{Mode: "x", Keys: "<C-S-c>", Command: "editor.copy", Desc: "Copy"},
 		{Mode: "x", Keys: "<D-x>", Command: "editor.cut", Desc: "Cut"},
@@ -468,6 +468,9 @@ func (x *Editor) complete() {
 		cands = append(cands, vim.ExNames()...)
 		for _, c := range x.h.Commands() {
 			cands = append(cands, c.ID)
+			if c.Ex != "" {
+				cands = append(cands, c.Ex)
+			}
 		}
 		arg = cmd
 	} else {

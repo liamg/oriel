@@ -52,7 +52,7 @@ func TestShowcaseLSP(t *testing.T) {
 func TestShowcaseTests(t *testing.T) {
 	s, dir := apptest.TestsScene(t)
 	s.Shot("16-test-gutter")
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	s.RunDone()
 	s.EditorKeys("20Gzt")
 	s.Shot("17-test-failure-block")
@@ -60,7 +60,7 @@ func TestShowcaseTests(t *testing.T) {
 	s.Frame()
 	s.ClickText("-3.5")
 	s.Shot("18-tests-panel")
-	s.Run("test.coverage", nil)
+	s.Run("test.coverage.run", nil)
 	s.RunDone()
 	s.Run("editor.open", registry.Args{"path": filepath.Join(dir, "round.go")})
 	s.Shot("19-coverage")

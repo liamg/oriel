@@ -116,13 +116,16 @@ state directory until the session is gone.
 ### Command names
 
 A command's id is lower-case dotted words, the thing first and what's done to it last: `noun[.noun].verb`, a word's
-parts joined by `_` (`term.host.open`, `review.pr.submit`, `settings.reset_all`). The verb is one of a fixed set
-(`commandVerbs` in `app/commands_test.go`): `open`, `close` and `toggle`, not `show` and `hide`; `confirm` and
-`cancel` for a dialog's buttons. An ex command's capitalised name (`:Settings`) is an alias of the command it runs,
-not an id of its own.
+parts joined by `_`, never `-` (`term.host.open`, `review.pr.submit`, `term.last_output.copy`). The verb is one of a
+fixed set (`commandVerbs` in `app/commands_test.go`): `open`, `close` and `toggle`, not `show` and `hide`; `confirm`
+and `cancel` for a dialog's buttons. An ex command's name (`:Settings`, `:term`) is an alias of the command it runs,
+not an id of its own: the command's `Ex` (`registry.Command`), with what's typed after it handed over as the argument
+its `ExArg` names (`args` when it names none). `:Watch len(xs)` runs `debug.watch.add` with `expression`. A plugin
+gives its own the same way (`oriel.command(id, fn, { ex = "Hi" })`); one whose id is a single word (`Hello`) is
+its own ex name.
 
-Two tests in `app` hold this. `TestCommandNamesFollowTheConvention` counts the built-in commands named before the
-convention against a ceiling that only falls. `TestNamedCommandsAreRegistered` checks that every command something
+Two tests in `app` hold this. `TestCommandNamesFollowTheConvention` fails on a built-in command off the convention.
+`TestNamedCommandsAreRegistered` checks that every command something
 names is registered: a keymap's, any contribution's `Command` (menu items, start and rail entries…), a help page's
 `{{keys}}`, and an id written out in a `Run` in the code. Ids are strings, so a rename that misses one would
 otherwise leave a key or button doing nothing.

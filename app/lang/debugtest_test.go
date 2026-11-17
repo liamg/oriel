@@ -105,7 +105,7 @@ func TestDebugFailingCase(t *testing.T) {
 	}
 	s, root, finish := pricingScene(t, "testdata/dap/go-test-failing.jsonl")
 	x := debugOf(s)
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	runDone(t, s)
 	s.EditorKeys("18Gzt")
 	s.Frame()
@@ -153,7 +153,7 @@ func TestDebugPytestCase(t *testing.T) {
 	finish()
 }
 
-// Right-click ▶ → "Debug test" launches debug.test with that test's key and file, as ⇧-click does.
+// Right-click ▶ → "Debug test" launches test.debug with that test's key and file, as ⇧-click does.
 func TestDebugFromSignMenu(t *testing.T) {
 	s, root, finish := pricingScene(t, "testdata/dap/go-test.jsonl")
 	x := debugOf(s)

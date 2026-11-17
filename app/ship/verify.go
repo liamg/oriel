@@ -91,7 +91,7 @@ func (x *Verify) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Command(c))
 	}
 	x.Add(h.Keymap(registry.Keymap{Mode: VerifyKeyMode, Keys: "<D-CR>", Command: "verify.send", Desc: "Send the answer"}))
-	x.Add(h.Keymap(registry.Keymap{Mode: VerifyKeyMode, Keys: "<M-o>", Command: "verify.open-file", Desc: "Open the file it's asking about"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: VerifyKeyMode, Keys: "<M-o>", Command: "verify.file.open", Desc: "Open the file it's asking about"}))
 	x.Add(h.Keymap(registry.Keymap{Mode: VerifyKeyMode, Keys: "<Esc>", Command: "verify.close", Desc: "Close the quiz"}))
 	x.Add(h.View(kit.OverlayPrefix+"verify", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "verify", Fn: x.dialog}
@@ -111,9 +111,9 @@ func (x *Verify) commands() []registry.Command {
 			}},
 		{ID: "verify.send", Title: "Send your answer to the quiz's question: {text}, else what's in the composer", Available: open,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.send(x.shown(), a.String("text")) }},
-		{ID: "verify.again", Title: "Take the verify quiz again, with new questions", Available: open,
+		{ID: "verify.restart", Title: "Take the verify quiz again, with new questions", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.again(x.shown()) }},
-		{ID: "verify.open-file", Title: "Open the file the quiz is asking about", Available: open,
+		{ID: "verify.file.open", Title: "Open the file the quiz is asking about", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.openFile(ctx, x.shown()) }},
 		{ID: "verify.close", Title: "Close the verify quiz; it waits where it was", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.open = ""; return nil }},

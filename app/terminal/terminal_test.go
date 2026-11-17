@@ -80,7 +80,7 @@ func TestShellIntegration(t *testing.T) {
 	if dots[cmds[0].Prompt.Y] != "ok" || dots[cmds[1].Prompt.Y] != "failed" {
 		t.Errorf("exit dots %v", dots)
 	}
-	s.Run("term.copy_last_output", nil)
+	s.Run("term.last_output.copy", nil)
 	if got, _ := s.Desktop.ReadClipboard(); got != "oops\nstill oops" {
 		t.Errorf("the last output copied is %q", got)
 	}
@@ -141,7 +141,7 @@ func TestTerminalKeepsControlKeys(t *testing.T) {
 	waitTerm(t, s, "027") // od's octal for ⌃W, which reached the program
 	for _, k := range []string{"<C-Esc>", `<C-\><C-n>`} {
 		m, _ := s.Registry().Lookup([]string{terminal.TerminalKeyMode}, keymap.Parse(k))
-		if m == nil || m.Command != "term.normal" {
+		if m == nil || m.Command != "term.normal.enter" {
 			t.Errorf("%s in a terminal is %+v", k, m)
 		}
 	}

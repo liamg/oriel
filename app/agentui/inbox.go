@@ -139,7 +139,7 @@ func (x *Inbox) keymaps() []registry.Keymap {
 		{Mode: InboxKeyMode, Keys: "<Down>", Command: "inbox.next", Desc: "Next card"},
 		{Mode: InboxKeyMode, Keys: "k", Command: "inbox.prev", Desc: "Card before"},
 		{Mode: InboxKeyMode, Keys: "<Up>", Command: "inbox.prev", Desc: "Card before"},
-		{Mode: InboxKeyMode, Keys: "<CR>", Command: "inbox.choose", Desc: "Go where it's answered, or open it"},
+		{Mode: InboxKeyMode, Keys: "<CR>", Command: "inbox.card.open", Desc: "Go where it's answered, or open it"},
 		{Mode: InboxKeyMode, Keys: "<Esc>", Command: "view.close", Args: registry.Args{"docked": true}, Desc: "Close the inbox"},
 		{Mode: InboxKeyMode, Keys: "q", Command: "view.close", Desc: "Close"},
 		{Mode: InboxKeyMode, Keys: "<C-w>c", Command: "view.close", Desc: "Close"},
@@ -175,7 +175,7 @@ func (x *Inbox) commands() []registry.Command {
 			}},
 		{ID: "inbox.next", Title: "Inbox: the next card", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "inbox.prev", Title: "Inbox: the card before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
-		{ID: "inbox.choose", Title: "Inbox: go where the selected card is answered (a question's thread), or open it",
+		{ID: "inbox.card.open", Title: "Inbox: go where the selected card is answered (a question's thread), or open it",
 			Run: func(registry.Ctx, registry.Args) error { return x.chooseSelected() }},
 	}
 }

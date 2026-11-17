@@ -41,7 +41,7 @@ func currentTheme(t *testing.T, s *apptest.Scene) string {
 // A theme picker: the highlighted theme shows at once, Esc goes back to the one before, Enter keeps it.
 func TestThemePicker(t *testing.T) {
 	s, settings := themeScene(t)
-	s.Run("Themes", nil)
+	s.Run("themes.browse", nil)
 	s.Frame()
 	s.Frame()
 	text := s.Text()
@@ -69,7 +69,7 @@ func TestThemePicker(t *testing.T) {
 		t.Errorf("Esc left %s", got)
 	}
 
-	s.Run("Themes", nil)
+	s.Run("themes.browse", nil)
 	s.Frame()
 	s.Type("Up", "CR")
 	if got := currentTheme(t, s); got != "one-dark" {
@@ -90,7 +90,7 @@ func TestThemeOptionIsAMenu(t *testing.T) {
 	if got := strings.Join(sp.Choices(), " "); got != "abyss aurora bloodthirsty catppuccin dawn dracula dusk ember everforest graphite gruvbox hacker kanagawa neon nord obsidian one-dark oriel plum rose-pine solarized tokyonight verdigris" {
 		t.Errorf("choices %q", got)
 	}
-	s.Run("Settings", registry.Args{"args": "ui"})
+	s.Run("settings.open", registry.Args{"query": "ui"})
 	s.Frame()
 	s.Frame()
 	if !strings.Contains(s.Text(), "oriel ▾") {
@@ -114,7 +114,7 @@ func TestThemePickerSnapshot(t *testing.T) {
 	rig.WriteFile(t, p, "name = \"glacier\"\nextends = \"oriel\"\n\n[dark.palette]\nbg0 = \"#071018\"\nbg1 = \"#0b1620\"\nbg2 = \"#0f1c28\"\naccent = \"#5cc8ff\"\naccent2 = \"#2f9fe0\"\nbrand = \"#7fe3ff\"\n")
 	s.Registry().Theme(theme.File{Path: p})
 	s.Resize(apptest.MockupSize)
-	s.Run("Themes", nil)
+	s.Run("themes.browse", nil)
 	s.Frame()
 	s.Type("Up", "Up", "Up", "Up", "Up", "Up", "Up", "Up", "Up") // oriel, up past one-dark, obsidian, nord, neon, kanagawa, hacker, gruvbox and graphite
 	if got := currentTheme(t, s); got != "glacier" {

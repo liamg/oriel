@@ -97,7 +97,7 @@ func TestDiffOpenExpandsTheFile(t *testing.T) {
 func TestDiffOpenLandsOnAnOldLine(t *testing.T) {
 	r := jumpRepo(t, 6)
 	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
-	app.Run("diff.layout", registry.Args{"layout": "unified"})
+	app.Run("diff.layout.toggle", registry.Args{"layout": "unified"})
 	app.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "f04.go"), "line": 210, "side": "old"})
 	app.Latest("the removed line 210 selected in the middle of the view", func(headless.Frame) bool { return centred(app, "// f04 line 210") })
 }

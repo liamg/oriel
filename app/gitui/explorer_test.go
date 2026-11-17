@@ -78,7 +78,7 @@ func TestExplorerScopes(t *testing.T) {
 // ref: oracle git
 func TestExplorerMarkers(t *testing.T) {
 	s, _ := explorerScene(t)
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Quiet()
 	after := func(name string) string {
 		lines := strings.Split(s.Text(), "\n")
@@ -110,7 +110,7 @@ func TestExplorerMarkers(t *testing.T) {
 // ⌥C narrows All to the changed files, and back.
 func TestExplorerChangedOnly(t *testing.T) {
 	s, _ := explorerScene(t)
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Quiet()
 	if !strings.Contains(s.Text(), "go.mod") {
 		t.Fatal("All doesn't list go.mod")
@@ -133,7 +133,7 @@ func TestExplorerHiddenFiles(t *testing.T) {
 	r.Write(map[string]string{".env.example": "KEY=\n"})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Quiet()
 	all := s.Text()
 	if strings.Contains(all, ".gitignore") {
@@ -168,7 +168,7 @@ func selectRow(t *testing.T, s *apptest.Scene, text string) {
 // ref: oracle git
 func TestExplorerStagesFiles(t *testing.T) {
 	s, r := explorerScene(t)
-	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "uncommitted"})
 	s.Quiet()
 	s.Click(s.TextPoint("STAGED"), 0)
 	s.Click(s.TextPoint("STAGED"), 0) // closed by the first click, open again: the tree has focus
@@ -222,14 +222,14 @@ func TestExplorerStagesFiles(t *testing.T) {
 // A click on a file opens it in the editor; in Changed, its branch diff, not the plain file.
 func TestExplorerOpensFiles(t *testing.T) {
 	s, r := explorerScene(t)
-	s.Run("explorer.scope", registry.Args{"scope": "changed"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "changed"})
 	s.Quiet() // the scope's files are read off the loop
 	s.Click(s.TextPoint("currency.go"), 0)
 	s.Frame()
 	if file, ok := diffOf(s).SelectedFile(r.Dir); !s.Showing(gitui.DiffView) || !ok || file != "internal/pricing/currency.go" {
 		t.Fatalf("a click on currency.go in Changed didn't open its diff")
 	}
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Quiet()
 	s.Click(s.TextPoint("go.mod"), 0)
 	s.Frame()
@@ -266,7 +266,7 @@ func TestExplorerStagesHunks(t *testing.T) {
 	r.Write(map[string]string{"f.txt": work})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
-	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "uncommitted"})
 	s.Quiet()
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	s.Click(s.TextPoint("UNSTAGED"), 0)
@@ -303,7 +303,7 @@ func TestExplorerHunksFollowTheSelection(t *testing.T) {
 	})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
-	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "uncommitted"})
 	s.Quiet()
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	s.Click(s.TextPoint("UNSTAGED"), 0)
@@ -485,7 +485,7 @@ func TestExplorerCommentMarks(t *testing.T) {
 			{ID: "t5", Status: core.ThreadOpen, Btw: true, Anchor: at("internal/pricing/currency.go", 3), Comments: []core.Comment{{ID: "c5", Author: core.AuthorYou, Body: "e"}}},
 		}}
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Frame()
 	after := func(name string) string {
 		lines := strings.Split(s.Text(), "\n")
@@ -515,7 +515,7 @@ func TestExplorerLuaBadge(t *testing.T) {
 	s.WriteConfig(map[string]string{"init.lua": fmt.Sprintf(`oriel.explorer.badge{ name = "todos", glyph = "☐", noun = "todo",
   counts = function(session) return { [%q] = 4 } end }`, filepath.FromSlash(file))})
 	s.ReloadLua()
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Until("the todo mark", func() bool { s.Frame(); return s.Find("4 todos") != nil })
 }
 

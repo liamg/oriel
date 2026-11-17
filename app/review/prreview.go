@@ -208,16 +208,16 @@ func (x *PRReview) keymaps() []registry.Keymap {
 		{Keys: "u", Command: "review.pr.pick", Args: registry.Args{"state": ""}, Desc: "Undecide it"},
 		{Keys: "e", Command: "review.pr.edit", Desc: "Edit its words"},
 		{Keys: "r", Command: "review.pr.rework", Args: registry.Args{"how": "shorter"}, Desc: "Ask the agent to shorten it"},
-		{Keys: "<CR>", Command: "review.pr.show", Desc: "Show it in the diff"},
-		{Keys: "o", Command: "review.pr.show", Desc: "Show it in the diff"},
-		{Keys: "S", Command: "review.pr.summary", Desc: "Draft the summary"},
+		{Keys: "<CR>", Command: "review.pr.item.reveal", Desc: "Show it in the diff"},
+		{Keys: "o", Command: "review.pr.item.reveal", Desc: "Show it in the diff"},
+		{Keys: "S", Command: "review.pr.summary.ask", Desc: "Draft the summary"},
 	}
 	for i := range out {
 		out[i].Mode = PRReviewKeyMode
 	}
 	out = append(out, registry.Keymap{Mode: PRReviewPreviewKeyMode, Keys: "<Esc>", Command: "review.pr.preview", Args: registry.Args{"verdict": ""}, Desc: "Back"})
 	for i, s := range core.Severities {
-		out = append(out, registry.Keymap{Mode: PRReviewKeyMode, Keys: fmt.Sprint(i + 1), Command: "review.pr.severity", Args: registry.Args{"severity": s},
+		out = append(out, registry.Keymap{Mode: PRReviewKeyMode, Keys: fmt.Sprint(i + 1), Command: "review.pr.severity.set", Args: registry.Args{"severity": s},
 			Desc: "Rate it " + s})
 	}
 	return out

@@ -187,7 +187,7 @@ func TestReviewsStartOffersToClone(t *testing.T) {
 			s.Until("the requests", func() bool { return strings.Contains(s.Text(), "Rate-limit the search") })
 			if how == "start" {
 				s.Press("<CR>")
-			} else if err := s.Host().Run(context.Background(), "reviews.start-background", registry.Args{"url": prs["ratelimit"].URL}); err != nil {
+			} else if err := s.Host().Run(context.Background(), "reviews.background.start", registry.Args{"url": prs["ratelimit"].URL}); err != nil {
 				t.Fatal(err)
 			}
 			s.Until("the Add repo dialog", func() bool {
@@ -403,7 +403,7 @@ func TestReviewsPageCloses(t *testing.T) {
 		for _, how := range []string{"Esc", "✕"} {
 			switch over {
 			case "Settings":
-				s.Run("Settings", nil)
+				s.Run("settings.open", nil)
 			case "omnibox":
 				s.Run("omnibox.open", nil)
 			}

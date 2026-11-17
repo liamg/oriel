@@ -293,7 +293,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 			asked := x.draft(se).SummaryAsk != ""
 			if widget.Button(c, "draft", "Draft summary", widget.ButtonOpts{Ghost: true, Key: "S", Busy: asked, BusyLabel: "The agent is drafting it",
 				Help: prReviewHelp}) {
-				x.run("review.pr.summary", registry.Args{"id": string(se.ID)})
+				x.run("review.pr.summary.ask", registry.Args{"id": string(se.ID)})
 			}
 		})
 		widget.Prose(c, "summary", &f.body, widget.ProseOpts{Label: "Summary", Placeholder: "A summary for " + cmp.Or(se.Name, "the author") + "…",
@@ -359,7 +359,7 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 			at := widget.Clickable(c, "at", ui.Style{Role: ui.RoleLink, Label: "Show " + place, Tooltip: "Show it in the diff", Help: prReviewKeysHelp},
 				func(c *ui.Ctx) { c.Text("t", place, widget.MonoFont(11, th.C(theme.Accent))) })
 			if at.Clicked {
-				x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
+				x.run("review.pr.item.reveal", registry.Args{"id": string(se.ID), "item": it.id})
 			}
 			in := widget.Clickable(c, "go", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Focusable: true, KeyMode: PRReviewKeyMode, Role: ui.RoleButton,
 				Label: "Select " + place, Tooltip: "Select it; again to show it in the diff", Help: prReviewKeysHelp}, func(c *ui.Ctx) {
@@ -376,12 +376,12 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 			})
 			if in.Clicked {
 				if sel {
-					x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
+					x.run("review.pr.item.reveal", registry.Args{"id": string(se.ID), "item": it.id})
 				}
 				f.sel = it.id
 			}
 			if widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
-				x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
+				x.run("review.pr.item.reveal", registry.Args{"id": string(se.ID), "item": it.id})
 			}
 			x.itemMenu(c, se, it)
 		})
@@ -433,9 +433,9 @@ func (x *PRReview) itemMenu(c *ui.Ctx, se core.SessionState, it reviewItem) {
 		{"Ask in your words…", "", nil},
 	}
 	for _, s := range core.Severities {
-		acts = append(acts, act{"Rate it " + s, "review.pr.severity", registry.Args{"severity": s}})
+		acts = append(acts, act{"Rate it " + s, "review.pr.severity.set", registry.Args{"severity": s}})
 	}
-	acts = append(acts, act{"Show in the diff  ⏎", "review.pr.show", nil})
+	acts = append(acts, act{"Show in the diff  ⏎", "review.pr.item.reveal", nil})
 	items := make([]widget.MenuItem, len(acts))
 	for i, a := range acts {
 		items[i] = widget.MenuItem{Label: a.label, Help: prReviewHelp}
@@ -500,10 +500,10 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			kit.MarkdownText(c, x.h, "t", text, width-84, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
-					x.run("review.pr.rework.drop", registry.Args{"id": string(se.ID), "item": it.id})
+					x.run("review.pr.rework.discard", registry.Args{"id": string(se.ID), "item": it.id})
 				}
 				if widget.Button(c, "use", "Use it", widget.ButtonOpts{Primary: true, Help: prReviewHelp}) {
-					x.run("review.pr.rework.use", registry.Args{"id": string(se.ID), "item": it.id})
+					x.run("review.pr.rework.accept", registry.Args{"id": string(se.ID), "item": it.id})
 				}
 			})
 		})
@@ -688,7 +688,7 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhe
 				x.run("ship.pr.open", nil)
 			}
 			if where != uireg.ThreadInCode && widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
-				x.run("review.pr.show", a(nil))
+				x.run("review.pr.item.reveal", a(nil))
 			}
 		})
 }

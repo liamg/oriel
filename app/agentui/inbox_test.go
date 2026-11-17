@@ -344,12 +344,12 @@ func TestAnInboxCardOpensWhereItsAnswered(t *testing.T) {
 func TestNoticesThatAskAreInboxCards(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	var started []string
-	s.Registry().Command(registry.Command{ID: "reviews.start-background", Run: func(_ registry.Ctx, a registry.Args) error {
+	s.Registry().Command(registry.Command{ID: "reviews.background.start", Run: func(_ registry.Ctx, a registry.Args) error {
 		started = append(started, a.String("url"))
 		return nil
 	}})
 	s.Host().Notify(core.Notice{ID: "reviews.asked:u1", Severity: core.SevQuestion, Source: "plugin:reviews", Title: "Review requested",
-		Text: "mkhan asked you to review api#812", Actions: []core.Action{{Title: "Start review", Command: "reviews.start-background", Args: map[string]any{"url": "u1"}}}})
+		Text: "mkhan asked you to review api#812", Actions: []core.Action{{Title: "Start review", Command: "reviews.background.start", Args: map[string]any{"url": "u1"}}}})
 	s.Host().Notify(core.Notice{ID: "saved", Severity: core.SevInfo, Source: "plugin:x", Text: "Saved the thing"})
 	s.Frame()
 	s.Frame()

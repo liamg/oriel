@@ -382,7 +382,7 @@ func TestLinearDormantUntilKeyed(t *testing.T) {
 		t.Fatalf("%d Linear entries before the key", n)
 	}
 
-	s.Run("Settings", registry.Args{"args": "secrets"})
+	s.Run("settings.open", registry.Args{"query": "secrets"})
 	s.Frame()
 	if n := s.Count("Linear tickets"); n != 0 {
 		t.Fatalf("%d Linear entries in the rail before the key", n)
@@ -420,7 +420,7 @@ func TestLinearDormantUntilKeyed(t *testing.T) {
 	s.Frame()
 	railEntry(s, t, "Linear tickets")
 
-	s.Run("Settings", registry.Args{"args": "secrets"})
+	s.Run("settings.open", registry.Args{"query": "secrets"})
 	s.Frame()
 	s.ClickNode("Clear")
 	if _, ok := secrets.Secret("LINEAR_TOKEN"); !ok {

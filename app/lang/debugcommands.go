@@ -26,19 +26,15 @@ func (x *Debug) sessionCommands() []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "debug.start", Title: "Start debugging: the launch config {config} by name, else the first in .oriel/debug.toml, else one for the current file",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.startNamed(a.String("config")) }},
+			Ex: "Debug", ExArg: "config", Run: func(_ registry.Ctx, a registry.Args) error { return x.startNamed(a.String("config")) }},
 		{ID: "debug.launch", Title: "Start debugging a launch config given whole: {name, type, request, program, args, cwd, env, pid} and the adapter's own keys, as in .oriel/debug.toml",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.launch(a) }},
-		{ID: "Debug", Title: "Start debugging; :Debug {config}", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.startNamed(strings.TrimSpace(a.String("args")))
-		}},
-		{ID: "debug.continue", Title: "Continue, or start debugging when nothing is", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "debug.continue", Title: "Continue, or start debugging when nothing is", Ex: "Dc", Run: func(registry.Ctx, registry.Args) error {
 			if !x.sess.live() {
 				return x.startNamed("")
 			}
 			return x.resume()
 		}},
-		{ID: "Dc", Title: "Continue (:Dc)", Available: paused, Run: func(registry.Ctx, registry.Args) error { return x.resume() }},
 		{ID: "debug.pause", Title: "Pause the debuggee", Available: running, Run: func(registry.Ctx, registry.Args) error { return x.pause() }},
 		{ID: "debug.step.over", Title: "Step over", Available: paused, Run: step(dap.StepOver)},
 		{ID: "debug.step.into", Title: "Step into", Available: paused, Run: step(dap.StepIn)},
@@ -48,7 +44,7 @@ func (x *Debug) sessionCommands() []registry.Command {
 			cfg, spec := x.sess.cfg, x.sess.spec
 			return x.stopSession(func() { x.start(spec, cfg) })
 		}},
-		{ID: "debug.frame", Title: "Select a frame of the stack: {index}, 0 the innermost", Available: paused, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "debug.frame.select", Title: "Select a frame of the stack: {index}, 0 the innermost", Available: paused, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.selectFrame(int(a.Int("index")))
 		}},
 		{ID: "debug.frame.up", Title: "Select the caller's frame", Available: paused, Run: func(registry.Ctx, registry.Args) error {
@@ -72,6 +68,7 @@ func (x *Debug) breakpointCommands() []registry.Command {
 				return nil
 			}},
 		{ID: "debug.breakpoint.set", Title: "Set a breakpoint at {file}:{line} (the cursor's by default) with a {condition}, {hit} condition or {log} message; {keep} leaves one already there as it is",
+			Ex: "Breakpoint", ExArg: "condition",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				file, line, err := x.place(a)
 				if err != nil {
@@ -83,18 +80,9 @@ func (x *Debug) breakpointCommands() []registry.Command {
 				x.set(file, debugBreakpoint{Line: line, Condition: a.String("condition"), HitCondition: a.String("hit"), LogMessage: a.String("log")})
 				return nil
 			}},
-		{ID: "Breakpoint", Title: "Set a breakpoint on the cursor's line; :Breakpoint {condition} makes it conditional",
+		{ID: "debug.logpoint.set", Title: "Set a logpoint on the cursor's line: {message}, {expressions} in braces", Ex: "Logpoint", ExArg: "message",
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				file, line, err := x.place(nil)
-				if err != nil {
-					return err
-				}
-				x.set(file, debugBreakpoint{Line: line, Condition: strings.TrimSpace(a.String("args"))})
-				return nil
-			}},
-		{ID: "Logpoint", Title: "Set a logpoint on the cursor's line: :Logpoint {message}, {expressions} in braces",
-			Run: func(_ registry.Ctx, a registry.Args) error {
-				msg := strings.TrimSpace(a.String("args"))
+				msg := strings.TrimSpace(a.String("message"))
 				if msg == "" {
 					return errors.New("a logpoint needs a message: :Logpoint x is {x}")
 				}
@@ -129,11 +117,8 @@ func (x *Debug) breakpointCommands() []registry.Command {
 // watchCommands watch and evaluate expressions, and show the panel.
 func (x *Debug) watchCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "debug.watch.add", Title: "Watch an {expression}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "debug.watch.add", Title: "Watch an {expression}", Ex: "Watch", ExArg: "expression", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.addWatch(a.String("expression"))
-		}},
-		{ID: "Watch", Title: "Watch an expression: :Watch {expression}", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.addWatch(strings.TrimSpace(a.String("args")))
 		}},
 		{ID: "debug.watch.remove", Title: "Stop watching the {index}th expression (0-based)", Run: func(_ registry.Ctx, a registry.Args) error {
 			i := int(a.Int("index"))
@@ -146,11 +131,8 @@ func (x *Debug) watchCommands() []registry.Command {
 			x.refresh()
 			return nil
 		}},
-		{ID: "debug.eval", Title: "Evaluate an {expression} in the selected frame, in the debug console", Available: x.live,
+		{ID: "debug.eval", Title: "Evaluate an {expression} in the selected frame, in the debug console", Available: x.live, Ex: "Eval", ExArg: "expression",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.eval(a.String("expression")) }},
-		{ID: "Eval", Title: "Evaluate in the debug console: :Eval {expression}", Available: x.live, Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.eval(strings.TrimSpace(a.String("args")))
-		}},
 		{ID: "debug.open", Title: "Show the Debug panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.h.Run(ctx, "view.open", debugViewArgs())
 		}},

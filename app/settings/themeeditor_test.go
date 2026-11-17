@@ -46,7 +46,7 @@ func TestThemePickMode(t *testing.T) {
 		}}
 	}))
 	s.Frame()
-	s.Run("Theme", registry.Args{"args": "pick"})
+	s.Run("theme.edit", registry.Args{"args": "pick"})
 	te := themeEditor(s)
 	if !te.Picking() {
 		t.Fatal("not picking")

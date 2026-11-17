@@ -1,6 +1,6 @@
 ---
 id: agent/tickets
-covers: [Tickets, tickets.open, tickets.refresh, tickets.plan, tickets.work, tickets.browse, tickets.filter, app.overlay.tickets]
+covers: [Tickets, tickets.open, tickets.refresh, tickets.plan.start, tickets.work.start, tickets.browse, tickets.filter, app.overlay.tickets]
 related: [agent/launcher, plugins/secrets]
 ---
 

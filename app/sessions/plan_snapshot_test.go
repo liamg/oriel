@@ -176,7 +176,7 @@ func TestStartWorkDialogSnapshot(t *testing.T) {
 		}
 	}
 	s.Run("plan.open", nil)
-	s.Run("plan.start-work", nil)
+	s.Run("plan.work.start", nil)
 	for range 3 {
 		s.Frame()
 	}

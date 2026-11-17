@@ -56,14 +56,14 @@ func TestShowcaseP6Ship(t *testing.T) {
 func TestShowcaseP6RaisePR(t *testing.T) {
 	s, _ := shipShowcase(t)
 	s.Run("view.close", registry.Args{"id": prui.ShipView})
-	s.Run("project.panel", registry.Args{"name": "pull-request"})
+	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.Shot("p6-02-raise-pr")
 
 	d, _ := shipShowcase(t)
 	d.Run("view.close", registry.Args{"id": prui.ShipView})
 	d.Run("project.open", registry.Args{"project": "web-dashboard"})
-	d.Run("project.panel", registry.Args{"name": "pull-request"})
+	d.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	d.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})
 	d.Frame()
 	d.Shot("p6-03-pr-checklist")

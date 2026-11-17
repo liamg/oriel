@@ -1,6 +1,6 @@
 ---
 id: agent/workspace
-covers: [workspace.open, session.rename, workspace.rebuild, workspace.restart, agent.permissions.dock, term.host]
+covers: [workspace.open, session.rename, workspace.image.rebuild, workspace.restart, agent.permissions.dock.toggle, term.host.open]
 related: [agent/permissions, agent/console]
 ---
 
@@ -25,7 +25,7 @@ mounts follow, each read-only or read-write.
 conversation carries on.
 
 **Sandbox terminal** opens a shell in the sandbox, beside the agent: every terminal you open while a sandboxed
-session is in front runs there. **Host terminal** (`term.host`) opens one on your machine instead, in the
+session is in front runs there. **Host terminal** (`term.host.open`) opens one on your machine instead, in the
 workspace, with your own access.
 
 ## Files
@@ -58,7 +58,7 @@ The end of the image's last build, following a rebuild as it runs. **Copy** copi
 ## Permissions
 
 What the sandboxed agent may do and the connections it made: see [Permissions](agent/permissions).
-`agent.permissions.dock` docks the same view at the bottom instead.
+`agent.permissions.dock.toggle` docks the same view at the bottom instead.
 
 A session whose agent runs on your machine has its directories only: no sandbox, image or permissions.
 

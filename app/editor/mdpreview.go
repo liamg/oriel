@@ -62,7 +62,7 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Service{Name: kit.MarkdownService, Impl: x, Source: "markdown"}))
 	x.Add(h.Contribute(uireg.BufferPresenter{Name: "markdown", Label: "Preview", When: isMarkdown, Comments: true, Build: markdownBlocks,
 		Help: "editor/pane#present"}))
-	x.Add(h.Contribute(registry.EditorAction{Name: "markdown.preview", Label: "Preview", LabelOn: "Edit", Command: "editor.present",
+	x.Add(h.Contribute(registry.EditorAction{Name: "markdown.preview", Label: "Preview", LabelOn: "Edit", Command: "editor.presenter.open",
 		Args: registry.Args{"name": "markdown"}, When: isMarkdown, On: func(w registry.EditorWindow) bool { return w.Presenter == "markdown" },
 		Order: 5, Help: "editor/pane#present"}))
 	x.Add(h.Option(registry.OptionSpec{Name: RemoteImagesOption, Type: registry.Bool, Default: true,
@@ -74,9 +74,9 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 	remoteImages()
 	x.Add(h.Options().Watch(RemoteImagesOption, remoteImages))
 	x.Add(registry.DisposeFunc(func() { x.Pictures.SetRemote(true) }))
-	x.Add(h.Command(registry.Command{ID: "MarkdownPreview", Title: "Preview the markdown file in the focused window, or edit it again",
+	x.Add(h.Command(registry.Command{ID: "markdown.preview", Ex: "MarkdownPreview", Title: "Preview the markdown file in the focused window, or edit it again",
 		Run: func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "editor.present", registry.Args{"name": "markdown"})
+			return h.Run(ctx, "editor.presenter.open", registry.Args{"name": "markdown"})
 		}}))
 	return nil
 }

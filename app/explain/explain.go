@@ -172,10 +172,10 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 	}
 	cardOpen := func(registry.Args) bool { return x.card != nil }
 	for _, c := range []registry.Command{
-		{ID: "explain.unit", Title: "Explain the code unit at the cursor, or at {file}'s {line}; again widens to the unit around it",
+		{ID: "explain.unit.ask", Title: "Explain the code unit at the cursor, or at {file}'s {line}; again widens to the unit around it",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.explainUnit(a) }},
-		{ID: "explain.selection", Title: "Explain the Visual selection", Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
-		{ID: "explain.this", Title: "Explain this: the selection, or the unit at the cursor",
+		{ID: "explain.selection.ask", Title: "Explain the Visual selection", Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
+		{ID: "explain.this.ask", Title: "Explain this: the selection, or the unit at the cursor",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if ed, ok := services.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
 					return x.explainSelection()
@@ -192,29 +192,29 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(registry.Ctx, registry.Args) error { x.step(-1); return nil }},
 		{ID: "explain.narrow", Title: "Explain the unit inside the one explained", Available: cardOpen,
 			Run: func(registry.Ctx, registry.Args) error { x.step(1); return nil }},
-		{ID: "explain.depth", Title: "Explain at a {depth}: brief, detailed, or why (with its history)", Available: cardOpen,
+		{ID: "explain.depth.set", Title: "Explain at a {depth}: brief, detailed, or why (with its history)", Available: cardOpen,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.setDepth(a.String("depth")) }},
 		{ID: "explain.refresh", Title: "Explain the unit again, as it reads now", Available: cardOpen,
 			Run: func(registry.Ctx, registry.Args) error { return x.refresh() }},
-		{ID: "explain.follow-up", Title: "Ask a follow-up to the explanation: a new request with it attached", Available: cardOpen,
+		{ID: "explain.follow_up.ask", Title: "Ask a follow-up to the explanation: a new request with it attached", Available: cardOpen,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.followUp(ctx) }},
 		{ID: "explain.pin", Title: "Pin the explanation as a note: a resolved thread on its lines", Available: cardOpen,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.pin(ctx) }},
 		{ID: "explain.close", Title: "Close the explain card", Available: cardOpen,
 			Run: func(registry.Ctx, registry.Args) error { x.closeCard(); return nil }},
-		{ID: "explain.units", Title: "Show or hide the Changed units panel: every unit the branch touched, with its explain status",
+		{ID: "explain.units.toggle", Title: "Show or hide the Changed units panel: every unit the branch touched, with its explain status",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "view.toggle", registry.Args{"id": ChangedUnitsView, "place": "dock", "edge": "right", "size": 350, "title": "Changed units"})
 			}},
-		{ID: "request.this", Title: "Write a request about the selection, the unit at the cursor, or the cursor's place: {what} is review, tests or refactor",
+		{ID: "request.this.compose", Title: "Write a request about the selection, the unit at the cursor, or the cursor's place: {what} is review, tests or refactor",
 			Available: func(registry.Args) bool { return h.Available("request.new", nil) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.requestThis(ctx, a.String("what")) }},
 	} {
 		x.Add(h.Command(c))
 	}
 	for _, k := range []registry.Keymap{
-		{Mode: "n", Keys: "<Leader>e", Command: "explain.unit", Desc: "Explain the unit (again: wider)"},
-		{Mode: "x", Keys: "<Leader>e", Command: "explain.selection", Desc: "Explain the selection"},
+		{Mode: "n", Keys: "<Leader>e", Command: "explain.unit.ask", Desc: "Explain the unit (again: wider)"},
+		{Mode: "x", Keys: "<Leader>e", Command: "explain.selection.ask", Desc: "Explain the selection"},
 		{Mode: ExplainKeyMode, Keys: "[", Command: "explain.widen", Desc: "Wider", Nowait: true},
 		{Mode: ExplainKeyMode, Keys: "]", Command: "explain.narrow", Desc: "Narrower", Nowait: true},
 		{Mode: ExplainKeyMode, Keys: "<Esc>", Command: "explain.close", Desc: "Close the explanation"},
@@ -224,16 +224,16 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused}))
 	x.Add(h.Decoration("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	for _, it := range []registry.MenuItem{
-		{Name: "explain.this", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this"},
-		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this", Args: registry.Args{"what": "review"}},
-		{Name: "request.tests", Label: "Write tests for this", Group: "agent", Order: 30, Command: "request.this", Args: registry.Args{"what": "tests"}},
-		{Name: "request.refactor", Label: "Refactor this…", Group: "agent", Order: 40, Command: "request.this", Args: registry.Args{"what": "refactor"}},
+		{Name: "explain.this.ask", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this.ask"},
+		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this.compose", Args: registry.Args{"what": "review"}},
+		{Name: "request.tests", Label: "Write tests for this", Group: "agent", Order: 30, Command: "request.this.compose", Args: registry.Args{"what": "tests"}},
+		{Name: "request.refactor", Label: "Refactor this…", Group: "agent", Order: 40, Command: "request.this.compose", Args: registry.Args{"what": "refactor"}},
 	} {
 		it.When, it.Source = registry.MenuWhen{View: kit.EditorView}, "builtin:explain"
 		x.Add(h.Contribute(it))
 	}
 	x.Add(h.View(ChangedUnitsView, changedUnitsView{x}))
-	x.Add(h.Contribute(registry.EditorAction{Name: "explain.units", Label: "explain by unit", Command: "explain.units", Order: 60,
+	x.Add(h.Contribute(registry.EditorAction{Name: "explain.units", Label: "explain by unit", Command: "explain.units.toggle", Order: 60,
 		Help: "editor/pane#explain", When: func(path string) bool { _, n := x.changedIn(path); return n > 0 },
 		On: func(registry.EditorWindow) bool { return h.Layout().Find(layout.ViewRef{ID: ChangedUnitsView}) != nil },
 		Note: func(w registry.EditorWindow) string {
@@ -430,7 +430,7 @@ func (x *Explain) explainSelection() error {
 
 // leaveVisual takes the editor out of Visual mode, as <Esc> does.
 func (x *Explain) leaveVisual() {
-	kit.RunOrNotify(x.h, "explain", "editor.keys", registry.Args{"keys": "<Esc>", "noremap": true})
+	kit.RunOrNotify(x.h, "explain", "editor.keys.send", registry.Args{"keys": "<Esc>", "noremap": true})
 }
 
 // explainRange opens a card on a range of a buffer, under the units around it; kind is what it is, a selection if "".

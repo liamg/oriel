@@ -81,7 +81,7 @@ func TestClosedIsCalledOnceTheWindowCloses(t *testing.T) {
 // The quit command quits as the close button does.
 func TestTheQuitCommandHandsTheAgentsOver(t *testing.T) {
 	r, lw, _ := quitScene(t, nil)
-	r.Run("quit", nil)
+	r.Run("app.quit", nil)
 	r.WaitExit()
 	if !handedOver(lw) {
 		t.Error("the agent wasn't handed over")
@@ -192,7 +192,7 @@ func TestQuitDialogSnapshot(t *testing.T) {
 	if err := s.Store().Apply(core.SessionSynced{Session: se}); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("quit", nil)
+	s.Run("app.quit", nil)
 	// The dialog is of the quit under way: its deadline is a timer Quiet would otherwise run.
 	s.Midway(func() {
 		// The session's name is on the home page too: wait for it in the dialog, which comes once the quit has looked.

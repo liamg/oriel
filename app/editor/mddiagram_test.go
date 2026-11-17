@@ -35,7 +35,7 @@ func diagramsScene(t *testing.T) *apptest.Scene {
 	s := threadsScene(t, dir, [4]string{"DESIGN.md", "5", "```mermaid", "Should tiers round first?"})
 	s.Run("editor.open", registry.Args{"path": "DESIGN.md"})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	return s
 }
@@ -126,7 +126,7 @@ func TestMarkdownDiagramTruncatedTooltip(t *testing.T) {
 	s := threadsScene(t, dir)
 	s.Run("editor.open", registry.Args{"path": "DESIGN.md"})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	at, ok := s.TextStart("pricing.Rounding")
 	if !ok || !drew(s, "…") {

@@ -55,5 +55,5 @@ Opens a dialog of how the plan becomes work; `⌘↵` starts, `esc` or Cancel cl
 
 Start work makes a worktree of each repo on its branch, tells the agent the plan is approved and where to implement
 it, and moves the window to the worktree. From then on it's a work session: comments arrive on the code.
-`session.start-work` does the same from Lua, with `clear`, `fresh`, `branches`, `sandbox`, `network`, `model` and
+`session.work.start` does the same from Lua, with `clear`, `fresh`, `branches`, `sandbox`, `network`, `model` and
 `effort`.

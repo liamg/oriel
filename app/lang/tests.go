@@ -84,7 +84,7 @@ var testFiles = []string{"*_test.go", "test_*.py", "*_test.py", "*.test.*", "*.s
 
 // Manifest loads it on the first use of one of its commands, keys or views, or a test file opening.
 func (x *Tests) Manifest() plugin.Manifest {
-	lz := kit.LazyOn(append(x.commands(), registry.Command{ID: "test.run.show"}), x.keymaps())
+	lz := kit.LazyOn(append(x.commands(), registry.Command{ID: "test.results.open"}), x.keymaps())
 	lz.Views = []string{TestsView, TestRunView}
 	for _, f := range testFiles {
 		lz.Events = append(lz.Events, "BufRead "+f)
@@ -95,7 +95,7 @@ func (x *Tests) Manifest() plugin.Manifest {
 // TestsEntries are the tests' from the start: the rail entry, without its counts until they load, and its key.
 func TestsEntries() *kit.Entries {
 	return &kit.Entries{ID: "tests.entries", Contribs: []registry.Contribution{testsRail(nil)},
-		Keymaps: []registry.Keymap{{Mode: "global", Keys: "<D-T>", Command: "project.panel", Args: registry.Args{"name": "tests"}, Desc: "Tests"}}}
+		Keymaps: []registry.Keymap{{Mode: "global", Keys: "<D-T>", Command: "project.panel.toggle", Args: registry.Args{"name": "tests"}, Desc: "Tests"}}}
 }
 
 func testsRail(note func(string) string) uireg.RailEntry {
@@ -192,12 +192,12 @@ func (x *Tests) runCommands() []registry.Command {
 			}
 			return x.runKeys(a.String("file"), []string{a.String("key")}, "gutter", mode)
 		}},
-		{ID: "test.run.nearest", Title: "Run the test at the cursor", Run: scope("nearest")},
-		{ID: "test.run.file", Title: "Run this file's tests, or {file}'s", Run: scope("file")},
-		{ID: "test.run.package", Title: "Run this package's tests", Run: scope("package")},
-		{ID: "test.run.all", Title: "Run every test", Run: scope("all")},
-		{ID: "test.run.failed", Title: "Run the tests that failed last time", Run: scope("failed")},
-		{ID: "test.run.last", Title: "Run the last run again", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.nearest.run", Title: "Run the test at the cursor", Run: scope("nearest")},
+		{ID: "test.file.run", Title: "Run this file's tests, or {file}'s", Run: scope("file")},
+		{ID: "test.package.run", Title: "Run this package's tests", Run: scope("package")},
+		{ID: "test.all.run", Title: "Run every test", Run: scope("all")},
+		{ID: "test.failed.run", Title: "Run the tests that failed last time", Run: scope("failed")},
+		{ID: "test.last.run", Title: "Run the last run again", Run: func(registry.Ctx, registry.Args) error {
 			x.mu.Lock()
 			last := x.last
 			x.mu.Unlock()
@@ -214,7 +214,7 @@ func (x *Tests) runCommands() []registry.Command {
 // controlCommands toggle coverage and watching, stop a run and step through failures.
 func (x *Tests) controlCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "test.coverage", Title: "Run this file's tests with coverage", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.coverage.run", Title: "Run this file's tests with coverage", Run: func(registry.Ctx, registry.Args) error {
 			return x.runScope("file", "", testrun.ModeCoverage)
 		}},
 		{ID: "test.coverage.toggle", Title: "Show or hide the coverage gutter", Run: func(registry.Ctx, registry.Args) error {
@@ -234,22 +234,22 @@ func (x *Tests) controlCommands() []registry.Command {
 			}
 			return nil
 		}},
-		{ID: "test.next_failure", Title: "Go to the next failure", Run: func(registry.Ctx, registry.Args) error { return x.nextFailure() }},
+		{ID: "test.failure.next", Title: "Go to the next failure", Run: func(registry.Ctx, registry.Args) error { return x.nextFailure() }},
 	}
 }
 
 // debugCommands debug and explain tests, and show the panel.
 func (x *Tests) debugCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "debug.test", Title: "Debug a test: {key} as found in {file}, as ⇧ on the gutter's ▶ does; {line} sets a breakpoint to stop at",
+		{ID: "test.debug", Title: "Debug a test: {key} as found in {file}, as ⇧ on the gutter's ▶ does; {line} sets a breakpoint to stop at",
 			Available: x.debugAvailable, Run: x.debugTest},
-		{ID: "test.debug.nearest", Title: "Debug the test at the cursor", Available: func(registry.Args) bool { return x.h.Available("debug.test", nil) },
+		{ID: "test.nearest.debug", Title: "Debug the test at the cursor", Available: func(registry.Args) bool { return x.h.Available("test.debug", nil) },
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				it, ok := x.nearest()
 				if !ok {
 					return fmt.Errorf("no test at the cursor")
 				}
-				return x.h.Run(ctx, "debug.test", registry.Args{"key": it.Key(), "file": it.File})
+				return x.h.Run(ctx, "test.debug", registry.Args{"key": it.Key(), "file": it.File})
 			}},
 		{ID: "test.explain", Title: "Ask to explain a failure: {key}; the answer shows under it", Available: func(registry.Args) bool { return x.h.Available(registry.ExplainCommand, nil) },
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -288,37 +288,37 @@ func (x *Tests) keymaps() []registry.Keymap {
 	var ks []registry.Keymap
 	for _, k := range []registry.Keymap{
 		{Keys: "<Leader>t", Desc: "+tests"},
-		{Keys: "<Leader>tt", Command: "test.run.file", Desc: "Run file"},
-		{Keys: "<Leader>tr", Command: "test.run.nearest", Desc: "Run nearest"},
-		{Keys: "<Leader>td", Command: "test.debug.nearest", Desc: "Debug nearest"},
-		{Keys: "<Leader>tT", Command: "test.run.all", Desc: "Run all"},
-		{Keys: "<Leader>tl", Command: "test.run.last", Desc: "Run last"},
+		{Keys: "<Leader>tt", Command: "test.file.run", Desc: "Run file"},
+		{Keys: "<Leader>tr", Command: "test.nearest.run", Desc: "Run nearest"},
+		{Keys: "<Leader>td", Command: "test.nearest.debug", Desc: "Debug nearest"},
+		{Keys: "<Leader>tT", Command: "test.all.run", Desc: "Run all"},
+		{Keys: "<Leader>tl", Command: "test.last.run", Desc: "Run last"},
 		{Keys: "<Leader>ts", Command: "tests.toggle", Desc: "Toggle summary"},
-		{Keys: "<Leader>to", Command: "test.output", Desc: "Show output"},
-		{Keys: "<Leader>tO", Command: "tests.output", Desc: "Toggle output panel"},
+		{Keys: "<Leader>to", Command: "test.output.open", Desc: "Show output"},
+		{Keys: "<Leader>tO", Command: "tests.output.open", Desc: "Toggle output panel"},
 		{Keys: "<Leader>tS", Command: "test.cancel", Desc: "Stop"},
 		{Keys: "<Leader>tw", Command: "test.watch", Desc: "Toggle watch"},
 		{Keys: "<Leader>ta", Command: "test.attach", Desc: "Attach to test"},
-		{Keys: "<Leader>tf", Command: "test.run.file", Desc: "Run file"},
-		{Keys: "<Leader>tF", Command: "test.run.failed", Desc: "Run failed"},
-		{Keys: "<Leader>tp", Command: "test.run.package", Desc: "Run package"},
-		{Keys: "<Leader>tc", Command: "test.coverage", Desc: "Run with coverage"},
-		{Keys: "]t", Command: "test.next_failure", Desc: "Next failure"},
+		{Keys: "<Leader>tf", Command: "test.file.run", Desc: "Run file"},
+		{Keys: "<Leader>tF", Command: "test.failed.run", Desc: "Run failed"},
+		{Keys: "<Leader>tp", Command: "test.package.run", Desc: "Run package"},
+		{Keys: "<Leader>tc", Command: "test.coverage.run", Desc: "Run with coverage"},
+		{Keys: "]t", Command: "test.failure.next", Desc: "Next failure"},
 	} {
 		k.Mode = "n"
 		ks = append(ks, k)
 	}
-	return append(ks, registry.Keymap{Mode: "global", Keys: "<M-r>", Command: "test.run.file", Desc: "Run this file's tests"})
+	return append(ks, registry.Keymap{Mode: "global", Keys: "<M-r>", Command: "test.file.run", Desc: "Run this file's tests"})
 }
 
 func (x *Tests) editorActions() []registry.EditorAction {
 	isTest := func(path string) bool { return x.hasTests(path) }
 	return []registry.EditorAction{
-		{Name: "tests.file", Icon: "▶", Label: "file", Command: "test.run.file", When: isTest, Order: 10, Help: "editor/pane#tests"},
-		{Name: "tests.failed", Label: "failed", Command: "test.run.failed", When: isTest, Order: 20, Help: "editor/pane#tests"},
+		{Name: "tests.file", Icon: "▶", Label: "file", Command: "test.file.run", When: isTest, Order: 10, Help: "editor/pane#tests"},
+		{Name: "tests.failed", Label: "failed", Command: "test.failed.run", When: isTest, Order: 20, Help: "editor/pane#tests"},
 		{Name: "tests.watch", Icon: "●", Label: "watch", Command: "test.watch", When: isTest, On: func(registry.EditorWindow) bool { return x.watch }, Order: 30,
 			Help: "editor/pane#tests"},
-		{Name: "tests.coverage", Label: "coverage", Command: "test.coverage", On: func(registry.EditorWindow) bool { return x.showCov }, Order: 40,
+		{Name: "tests.coverage", Label: "coverage", Command: "test.coverage.run", On: func(registry.EditorWindow) bool { return x.showCov }, Order: 40,
 			When: func(path string) bool { return isTest(path) || len(x.h.CoverageFor(path)) > 0 },
 			Help: "editor/pane#tests"},
 	}
@@ -490,12 +490,12 @@ func testSign(it testrun.Item, file, style string, debug bool) uireg.Decoration 
 	d := uireg.Decoration{Kind: uireg.Sign, Line: it.Line, Text: "▶", Style: style, Command: "test.run", Args: args,
 		Tooltip: "Run · right-click for more", Priority: 20, Menu: []uireg.SignItem{
 			{Label: "Run test", Command: "test.run", Args: args},
-			{Label: "Debug test", Command: "debug.test", Args: args},
+			{Label: "Debug test", Command: "test.debug", Args: args},
 			{Label: "Run with coverage", Command: "test.run", Args: registry.Args{"key": it.Key(), "file": file, "coverage": true}},
-			{Label: "Run file", Command: "test.run.file", Args: registry.Args{"file": file}},
+			{Label: "Run file", Command: "test.file.run", Args: registry.Args{"file": file}},
 		}}
 	if debug {
-		d.Modified, d.Tooltip = map[string]string{"shift": "debug.test"}, "Run · ⇧ debug · right-click for more"
+		d.Modified, d.Tooltip = map[string]string{"shift": "test.debug"}, "Run · ⇧ debug · right-click for more"
 	}
 	return d
 }

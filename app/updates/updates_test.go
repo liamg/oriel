@@ -36,7 +36,7 @@ func TestUpdateCardUpdatesAndRestarts(t *testing.T) {
 	updatesOf(s).WaitStartup() // up to date as it started: the release comes out after, for the check asked for
 	r.Publish("2.0.0", "## Highlights\n\n- Faster session start\n- **Rollback** on a failed health check")
 
-	s.Run("UpdateCheck", nil)
+	s.Run("update.check", nil)
 	s.Frame()
 	s.Until("the card with the release", func() bool { return strings.Contains(s.Text(), "Oriel 2.0.0") })
 	s.WantFrame("WHAT'S NEW", "you have 1.0.0 · stable channel", "Highlights", "Faster session start", "Rollback", "Later", "Update")

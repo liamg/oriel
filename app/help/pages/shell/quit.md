@@ -1,6 +1,6 @@
 ---
 id: shell/quit
-covers: [quit, quit.now]
+covers: [app.quit, app.quit.confirm]
 related: [agent/console, agent/jobs, shell/start]
 ---
 
