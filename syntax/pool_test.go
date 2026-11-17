@@ -47,9 +47,9 @@ func TestBorrowedParserMatchesNew(t *testing.T) {
 	}
 }
 
-// Languages made again, as a language set is when a plugin adds one, don't keep idle parsers without end: past
-// maxIdleLangs, the language released longest ago closes its.
-func TestIdleParsersAreBounded(t *testing.T) {
+// A set's idle parsers are its own: closing it closes them, and a parser given back after closes rather than
+// staying idle. A language in no set keeps none.
+func TestIdleParsersAreTheSets(t *testing.T) {
 	var base *Language
 	for _, l := range Builtin().Languages() {
 		if l.Grammar != nil {
@@ -57,25 +57,40 @@ func TestIdleParsersAreBounded(t *testing.T) {
 			break
 		}
 	}
-	var made []*Language
-	for range maxIdleLangs + 5 {
-		l := &Language{Name: base.Name, Extensions: base.Extensions, Grammar: base.Grammar, Queries: base.Queries}
-		made = append(made, l)
-		p, err := Borrow(l)
-		if err != nil {
-			t.Fatal(err)
-		}
-		p.Release()
+	made := func() *Language {
+		return &Language{Name: base.Name, Extensions: base.Extensions, Grammar: base.Grammar, Queries: base.Queries}
 	}
-	idle.Lock()
-	defer idle.Unlock()
-	if len(idle.order) > maxIdleLangs || len(idle.by) > maxIdleLangs {
-		t.Errorf("%d languages keep idle parsers, %d in order", len(idle.by), len(idle.order))
+	l := made()
+	s := NewSet(l)
+	held, err := Borrow(l)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, ok := idle.by[made[0]]; ok {
-		t.Error("the language released longest ago still keeps its parsers")
+	p, err := Borrow(l)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, ok := idle.by[made[len(made)-1]]; !ok {
-		t.Error("the language released last lost its parser")
+	p.Release()
+	if n := len(s.idle.by[l]); n != 1 {
+		t.Fatalf("%d idle after a release", n)
+	}
+	s.Close()
+	if len(s.idle.by) != 0 {
+		t.Errorf("a closed set keeps %d languages' parsers", len(s.idle.by))
+	}
+	held.Release()
+	if len(s.idle.by) != 0 {
+		t.Error("a parser given back to a closed set was kept")
+	}
+	alone := made()
+	q, err := Borrow(alone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q.Release()
+	if again, _ := Borrow(alone); again == q {
+		t.Error("a language in no set kept a parser")
+	} else {
+		again.Close()
 	}
 }

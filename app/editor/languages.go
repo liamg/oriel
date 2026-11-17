@@ -30,7 +30,9 @@ func (x *Languages) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lan
 
 func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.packs = h, map[string]registry.Disposable{}
-	x.Add(h.Contribute(registry.Service{Name: kit.LanguagesService, Impl: &languageSet{r: h}}))
+	set := &languageSet{r: h}
+	x.Add(h.Contribute(registry.Service{Name: kit.LanguagesService, Impl: set}))
+	x.Add(registry.DisposeFunc(set.close))
 	x.Add(registry.DisposeFunc(func() { x.packs = nil }))
 	x.Add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
 		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
@@ -85,7 +87,8 @@ func (x *Languages) install(path string) error {
 	return x.load(name)
 }
 
-// languageSet is the window's languages as one syntax.Set, made again when the registry's change (kit.LanguageSet).
+// languageSet is the window's languages as one syntax.Set, made again when the registry's change (kit.LanguageSet);
+// the set it replaces closes.
 type languageSet struct {
 	r   registry.Registry
 	mu  sync.Mutex
@@ -98,7 +101,20 @@ func (l *languageSet) Set() *syntax.Set {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.set == nil || l.gen != gen {
+		if l.set != nil {
+			l.set.Close()
+		}
 		l.set, l.gen = kit.LanguageSetFrom(l.r), gen
 	}
 	return l.set
+}
+
+// close closes the set it keeps, with its idle parsers.
+func (l *languageSet) close() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.set != nil {
+		l.set.Close()
+		l.set = nil
+	}
 }

@@ -1,42 +1,54 @@
 package syntax
 
-import (
-	"slices"
-	"sync"
-)
+import "sync"
 
-const (
-	maxIdle      = 4  // idle parsers a language keeps for Borrow
-	maxIdleLangs = 16 // languages that keep any: past it, the one released longest ago closes its
-)
+const maxIdle = 4 // idle parsers a language keeps for Borrow
 
-var idle = struct {
-	sync.Mutex
-	by    map[*Language][]*Parser
-	order []*Language // languages with idle parsers, released longest ago first
-}{by: map[*Language][]*Parser{}}
+// pool is a set's idle parsers, by language. A closed one keeps none.
+type pool struct {
+	mu     sync.Mutex
+	by     map[*Language][]*Parser
+	closed bool
+}
+
+// Close closes the set's idle parsers; from then on a parser of its languages given back closes. A set made again
+// (a plugin adds a language) closes the one it replaces.
+func (s *Set) Close() {
+	s.idle.mu.Lock()
+	var stale []*Parser
+	for _, ps := range s.idle.by {
+		stale = append(stale, ps...)
+	}
+	s.idle.by, s.idle.closed = nil, true
+	s.idle.mu.Unlock()
+	for _, p := range stale {
+		p.Close()
+	}
+}
 
 // Borrow is a parser for l, idle since a Release or new: one-off work (a diff's highlights, a file's outline) reuses
-// one, with its queries already compiled, rather than starting and compiling its own. Parse before use.
+// one, with its queries already compiled, rather than starting and compiling its own. Parse before use. The idle
+// parsers are l's set's.
 func Borrow(l *Language) (*Parser, error) {
-	idle.Lock()
-	if ps := idle.by[l]; len(ps) > 0 {
-		p := ps[len(ps)-1]
-		if ps = ps[:len(ps)-1]; len(ps) == 0 {
-			delete(idle.by, l)
-			idle.order = slices.DeleteFunc(idle.order, func(x *Language) bool { return x == l })
-		} else {
-			idle.by[l] = ps
+	if s := l.set; s != nil {
+		s.idle.mu.Lock()
+		if ps := s.idle.by[l]; len(ps) > 0 {
+			p := ps[len(ps)-1]
+			if ps = ps[:len(ps)-1]; len(ps) == 0 {
+				delete(s.idle.by, l)
+			} else {
+				s.idle.by[l] = ps
+			}
+			s.idle.mu.Unlock()
+			return p, nil
 		}
-		idle.Unlock()
-		return p, nil
+		s.idle.mu.Unlock()
 	}
-	idle.Unlock()
 	return NewParser(l)
 }
 
-// Release gives a borrowed parser back, its trees and text dropped, or closes it when its language has enough idle.
-// A language set made again (a plugin adds one) leaves the old languages' parsers to close as newer ones are released.
+// Release gives a borrowed parser back to its language's set, its trees and text dropped, or closes it: when the
+// language has enough idle, has no set, or its set is closed.
 func (p *Parser) Release() {
 	for _, t := range []*uint32{&p.tree, &p.prev} {
 		if *t != 0 {
@@ -45,24 +57,20 @@ func (p *Parser) Release() {
 		}
 	}
 	p.src, p.version, p.synced, p.whole = nil, 0, false, false
-	var stale []*Parser
-	idle.Lock()
-	ps := idle.by[p.lang]
-	if len(ps) >= maxIdle {
-		idle.Unlock()
+	s := p.lang.set
+	if s == nil {
 		p.Close()
 		return
 	}
-	idle.by[p.lang] = append(ps, p)
-	idle.order = append(slices.DeleteFunc(idle.order, func(x *Language) bool { return x == p.lang }), p.lang)
-	for len(idle.order) > maxIdleLangs {
-		old := idle.order[0]
-		idle.order = idle.order[1:]
-		stale = append(stale, idle.by[old]...)
-		delete(idle.by, old)
+	s.idle.mu.Lock()
+	if ps := s.idle.by[p.lang]; !s.idle.closed && len(ps) < maxIdle {
+		if s.idle.by == nil {
+			s.idle.by = map[*Language][]*Parser{}
+		}
+		s.idle.by[p.lang] = append(ps, p)
+		s.idle.mu.Unlock()
+		return
 	}
-	idle.Unlock()
-	for _, s := range stale {
-		s.Close()
-	}
+	s.idle.mu.Unlock()
+	p.Close()
 }
