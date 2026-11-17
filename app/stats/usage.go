@@ -563,10 +563,25 @@ func projected(c *ui.Ctx, used, at float64, tone, out render.Color, runsOut bool
 	})
 }
 
-// weekChart is the provider's windows over the last 7 days, hour by hour: the 5-hour window's peak in each as
-// bars, the weekly ones as lines, dashed on to the reset at their burn.
-func (x *Stats) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
-	th := c.Theme()
+// weekData is the week chart's data: hour by hour from start, its series, marks, 5-hour reset ticks and day labels.
+type weekData struct {
+	start  time.Time
+	series []widget.ChartSeries
+	marks  []widget.ChartMark
+	ticks  []float64
+	labels []string
+}
+
+// weekHours is the chart's hours: from 6½ days back to the next hour, or to a weekly window's reset within 3 days.
+type weekHours struct {
+	start, now time.Time
+	n          int
+}
+
+func (h weekHours) at(t time.Time) float64 { return t.Sub(h.start).Hours() }
+func (h weekHours) hour(i int) time.Time   { return h.start.Add(time.Duration(i) * time.Hour) }
+
+func newWeekHours(u core.ProviderUsage, now time.Time) weekHours {
 	start := now.Truncate(time.Hour).Add(-6*24*time.Hour - 12*time.Hour)
 	end := now.Truncate(time.Hour).Add(time.Hour)
 	for _, w := range u.Windows {
@@ -574,112 +589,136 @@ func (x *Stats) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderU
 			end = w.Resets.Truncate(time.Hour).Add(time.Hour)
 		}
 	}
-	n := int(end.Sub(start).Hours()) + 1
-	at := func(t time.Time) float64 { return t.Sub(start).Hours() }
-	nowAt := at(now)
-	var series []widget.ChartSeries
-	var marks []widget.ChartMark
-	var ticks []float64
+	return weekHours{start: start, now: now, n: int(end.Sub(start).Hours()) + 1}
+}
+
+// weekSeries is the provider's windows over the week: the 5-hour window's peak in each of its periods as bars, the
+// weekly ones as lines, dashed on to the reset at their burn.
+func weekSeries(th *theme.Resolved, loc *time.Location, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) weekData {
+	h := newWeekHours(u, now)
+	d := weekData{start: h.start}
 	for _, w := range u.Windows {
-		name := strings.ToLower(windowLabel(w))
-		tone := windowTone(th, w)
-		vals := make([]float64, n)
 		if fiveHour(w) {
-			type period struct {
-				resets time.Time
-				peak   float64
-			}
-			var ps []period
-			for _, h := range hist {
-				for _, v := range h.Windows {
-					if v.Name != w.Name {
-						continue
-					}
-					if len(ps) == 0 || absDur(ps[len(ps)-1].resets.Sub(v.Resets)) > 2*time.Minute {
-						ps = append(ps, period{resets: v.Resets})
-					}
-					ps[len(ps)-1].peak = max(ps[len(ps)-1].peak, v.Used)
-				}
-			}
-			for _, p := range ps {
-				o := p.resets.Add(-max(w.Length, 5*time.Hour))
-				for i := max(int(at(o)), 0); i < min(int(at(p.resets)), n); i++ {
-					if float64(i) <= nowAt {
-						vals[i] = p.peak * 100
-					}
-				}
-				if r := at(p.resets); r >= 0 && r < float64(n) {
-					ticks = append(ticks, r)
-				}
-			}
-			series = append(series, widget.ChartSeries{Name: "5-hour, peak per window", Values: vals, Tone: th.C(tUsageFive), Kind: widget.ChartBars})
+			vals, ticks := fivePeaks(h, w, hist)
+			d.ticks = append(d.ticks, ticks...)
+			d.series = append(d.series, widget.ChartSeries{Name: "5-hour, peak per window", Values: vals, Tone: th.C(tUsageFive), Kind: widget.ChartBars})
 			continue
 		}
-		var prev []reading
-		for _, h := range hist {
-			for _, v := range h.Windows {
-				if v.Name == w.Name {
-					prev = append(prev, reading{h.Sampled, v.Used})
-				}
-			}
-		}
-		for i := range vals {
-			t := start.Add(time.Duration(i) * time.Hour)
-			if t.After(now) || len(prev) == 0 || t.Before(prev[0].at) {
-				vals[i] = math.NaN()
-				continue
-			}
-			vals[i] = usedAt(prev, t) * 100
-		}
-		if i := int(nowAt); i >= 0 && i < n {
-			vals[i] = w.Used * 100
-		}
-		series = append(series, widget.ChartSeries{Name: name, Values: vals, Tone: tone, Kind: widget.ChartLine})
+		name := strings.ToLower(windowLabel(w))
+		tone := windowTone(th, w)
 		r := readWindow(now, w, hist)
-		proj := make([]float64, n)
-		for i := range proj {
-			proj[i] = math.NaN()
+		proj, from := projection(h, w, r)
+		d.series = append(d.series, widget.ChartSeries{Name: name, Values: usedLine(h, w, hist), Tone: tone, Kind: widget.ChartLine},
+			widget.ChartSeries{Name: name + " at this rate", Values: proj, Tone: tone, Kind: widget.ChartLine, Dashed: true, From: from})
+		if qualifier(w) != "" {
+			continue
 		}
-		from := int(nowAt)
-		for i := from; i < n; i++ {
-			t := start.Add(time.Duration(i) * time.Hour)
-			if !w.Resets.IsZero() && t.After(w.Resets) {
-				break
-			}
-			proj[i] = min(100, (w.Used+r.burn*max(0, t.Sub(now).Hours()))*100)
-		}
-		series = append(series, widget.ChartSeries{Name: name + " at this rate", Values: proj, Tone: tone, Kind: widget.ChartLine, Dashed: true, From: from})
-		if !w.Resets.IsZero() && qualifier(w) == "" {
-			o := w.Opened()
-			if a := at(o); !o.IsZero() && a >= 0 && a < float64(n) {
-				marks = append(marks, widget.ChartMark{At: a, Label: "↺ weekly · " + o.In(x.Loc).Format("Mon 15:04"), Tone: th.C(tStatsHours), Dashed: true})
+		if o := w.Opened(); !w.Resets.IsZero() && !o.IsZero() {
+			if a := h.at(o); a >= 0 && a < float64(h.n) {
+				d.marks = append(d.marks, widget.ChartMark{At: a, Label: "↺ weekly · " + o.In(loc).Format("Mon 15:04"), Tone: th.C(tStatsHours), Dashed: true})
 			}
 		}
-		if !r.runsOut.IsZero() && qualifier(w) == "" {
-			marks = append(marks, widget.ChartMark{At: at(r.runsOut), Label: "full " + r.runsOut.In(x.Loc).Format("Mon 15:04"), Tone: th.C(tUsageOut),
+		if !r.runsOut.IsZero() {
+			d.marks = append(d.marks, widget.ChartMark{At: h.at(r.runsOut), Label: "full " + r.runsOut.In(loc).Format("Mon 15:04"), Tone: th.C(tUsageOut),
 				Dashed: true})
 		}
 	}
-	marks = append(marks, widget.ChartMark{At: nowAt, Label: "now"})
-	labels := make([]string, n)
-	for i := range labels {
-		t := start.Add(time.Duration(i) * time.Hour).In(x.Loc)
-		if t.Hour() == 12 {
-			labels[i] = t.Format("Mon 2")
+	d.marks = append(d.marks, widget.ChartMark{At: h.at(now), Label: "now"})
+	d.labels = make([]string, h.n)
+	for i := range d.labels {
+		if t := h.hour(i).In(loc); t.Hour() == 12 {
+			d.labels[i] = t.Format("Mon 2")
 		}
 	}
-	legend := series[:0:0]
-	for _, s := range series {
+	return d
+}
+
+// fivePeaks is a 5-hour window's peak over each of its periods, across the hours it covered up to now, and the
+// hours it reset at.
+func fivePeaks(h weekHours, w core.UsageWindow, hist []core.ProviderUsage) ([]float64, []float64) {
+	type period struct {
+		resets time.Time
+		peak   float64
+	}
+	var ps []period
+	for _, s := range hist {
+		for _, v := range s.Windows {
+			if v.Name != w.Name {
+				continue
+			}
+			if len(ps) == 0 || absDur(ps[len(ps)-1].resets.Sub(v.Resets)) > 2*time.Minute {
+				ps = append(ps, period{resets: v.Resets})
+			}
+			ps[len(ps)-1].peak = max(ps[len(ps)-1].peak, v.Used)
+		}
+	}
+	vals := make([]float64, h.n)
+	var ticks []float64
+	nowAt := h.at(h.now)
+	for _, p := range ps {
+		o := p.resets.Add(-max(w.Length, 5*time.Hour))
+		for i := max(int(h.at(o)), 0); i < min(int(h.at(p.resets)), h.n); i++ {
+			if float64(i) <= nowAt {
+				vals[i] = p.peak * 100
+			}
+		}
+		if r := h.at(p.resets); r >= 0 && r < float64(h.n) {
+			ticks = append(ticks, r)
+		}
+	}
+	return vals, ticks
+}
+
+// usedLine is a window's share used at each hour up to now, from its readings of any period; none before the first.
+func usedLine(h weekHours, w core.UsageWindow, hist []core.ProviderUsage) []float64 {
+	prev := samples(core.UsageWindow{Name: w.Name}, hist)
+	vals := make([]float64, h.n)
+	for i := range vals {
+		t := h.hour(i)
+		if t.After(h.now) || len(prev) == 0 || t.Before(prev[0].at) {
+			vals[i] = math.NaN()
+			continue
+		}
+		vals[i] = usedAt(prev, t) * 100
+	}
+	if i := int(h.at(h.now)); i >= 0 && i < h.n {
+		vals[i] = w.Used * 100
+	}
+	return vals
+}
+
+// projection is a window's share from now to its reset at its burn, and the hour it starts at.
+func projection(h weekHours, w core.UsageWindow, r windowRead) ([]float64, int) {
+	proj := make([]float64, h.n)
+	for i := range proj {
+		proj[i] = math.NaN()
+	}
+	from := int(h.at(h.now))
+	for i := from; i < h.n; i++ {
+		t := h.hour(i)
+		if !w.Resets.IsZero() && t.After(w.Resets) {
+			break
+		}
+		proj[i] = min(100, (w.Used+r.burn*max(0, t.Sub(h.now).Hours()))*100)
+	}
+	return proj, from
+}
+
+// weekChart is the provider's windows over the last 7 days, hour by hour (weekSeries).
+func (x *Stats) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.ProviderUsage, now time.Time) {
+	d := weekSeries(c.Theme(), x.Loc, u, hist, now)
+	legend := d.series[:0:0]
+	for _, s := range d.series {
 		if !s.Dashed {
 			legend = append(legend, s)
 		}
 	}
 	widget.DataCard(c, "week", ui.Flex(2), "WINDOW USAGE · LAST 7 DAYS", "↺ resets · dashed: at this rate", func(c *ui.Ctx) { x.legend(c, legend, 0) },
 		func(c *ui.Ctx) {
-			widget.Chart(c, "c", series, widget.ChartOpts{Height: 170, Max: 100, Labels: labels, LabelEvery: 1, YTicks: 2,
+			widget.Chart(c, "c", d.series, widget.ChartOpts{Height: 170, Max: 100, Labels: d.labels, LabelEvery: 1, YTicks: 2,
 				YFormat: func(v float64) string { return fmt.Sprintf("%.0f%%", v) }, Format: func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
-				Hover: true, Highlight: -1, Marks: marks, Ticks: ticks, TicksLabel: "5h ↺", Title: func(i int) string {
-					return start.Add(time.Duration(i) * time.Hour).In(x.Loc).Format("Mon Jan 2 15:04")
+				Hover: true, Highlight: -1, Marks: d.marks, Ticks: d.ticks, TicksLabel: "5h ↺", Title: func(i int) string {
+					return d.start.Add(time.Duration(i) * time.Hour).In(x.Loc).Format("Mon Jan 2 15:04")
 				}, Label: "Window usage over the last 7 days", Help: "agent/usage#history"})
 		})
 }
