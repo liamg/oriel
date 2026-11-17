@@ -12,8 +12,6 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-const hudGrab = "⌥ RELEASE TO HIDE · CLICK TO PIN"
-
 func hud(s *apptest.Scene) *stats.HUD { return apptest.PluginOf[*stats.HUD](s, "hud") }
 
 func hudDown(s *apptest.Scene) bool {

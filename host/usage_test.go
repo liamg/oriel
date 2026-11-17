@@ -43,12 +43,6 @@ func (s *usageStub) set(u core.ProviderUsage) {
 	s.u = u
 }
 
-func (s *usageStub) count() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.reads
-}
-
 func usedNow(w *Host, provider string) float64 {
 	for _, u := range w.store.State().Usage {
 		if u.Provider == provider && len(u.Windows) > 0 {

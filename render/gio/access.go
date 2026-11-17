@@ -182,12 +182,6 @@ func (t *accessTree) get(id uint64) (accessEntry, bool) {
 	return out, true
 }
 
-func (t *accessTree) focused() uint64 {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.focus
-}
-
 // hit is the deepest node under p, in app units from the window's top left, the topmost first; the root if none.
 func (t *accessTree) hit(p render.Point) uint64 {
 	t.mu.Lock()

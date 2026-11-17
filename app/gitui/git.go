@@ -443,32 +443,11 @@ func (g *Git) reading() bool {
 	return false
 }
 
-func (g *Git) state() *gitx.State {
-	if g == nil {
-		return nil
-	}
-	return g.State()
-}
-
-func (g *Git) load() widget.LoadState {
-	if g == nil {
-		return widget.LoadState{Phase: widget.Ready}
-	}
-	return g.gitTree.load()
-}
-
 func (g *Git) root() string {
 	if g == nil {
 		return ""
 	}
 	return g.Root()
-}
-
-func (g *Git) rel(p string) string {
-	if g == nil {
-		return p
-	}
-	return g.Rel(p)
 }
 
 func (g *Git) now() time.Time { return kit.WindowNow(g.h) }

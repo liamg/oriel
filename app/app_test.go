@@ -509,31 +509,6 @@ func TestPointerMovesOverNothingDrawNothing(t *testing.T) {
 	}
 }
 
-// menuView is a plugin view showing a menu at the root view's corner.
-type menuView struct{}
-
-func (menuView) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.menu"} }
-func (menuView) Activate(_ context.Context, h plugin.Host) error {
-	items := []widget.MenuItem{{Label: "Close"}, {Label: "Close Others"}, {Label: "Close to the Right"}, {Label: "Close All"}}
-	h.View(kit.RootView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
-		return &ui.Func{Key: "menu", Fn: func(c *ui.Ctx) { widget.Menu(c, "menu", items, widget.MenuOpts{}) }}
-	}))
-	return nil
-}
-func (menuView) Deactivate(context.Context) error { return nil }
-
-// fillAt is the colour of the last rect drawn under p that isn't fill, or zero.
-func fillAt(f headless.Frame, p render.Point, not render.Color) render.Color {
-	var got render.Color
-	for _, op := range f.Ops {
-		r := op.Rect
-		if op.Kind == render.OpRect && op.Style.Fill.A > 0 && op.Style.Fill != not && p.X >= r.Min.X && p.X < r.Max.X && p.Y >= r.Min.Y && p.Y < r.Max.Y {
-			got = op.Style.Fill
-		}
-	}
-	return got
-}
-
 // With no screen reader reading the window, no accessibility tree is built; once one starts, the tree it gets is
 // the screen's as it is now.
 func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {

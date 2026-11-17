@@ -147,9 +147,3 @@ func tint(dst *image.RGBA, p image.Point, cov *image.Alpha, col color.NRGBA, g *
 		}
 	}
 }
-
-// premul writes an NRGBA image's pixel as premultiplied RGBA.
-func premul(c color.NRGBA) (r, g, b, a uint8) {
-	al := uint32(c.A)
-	return uint8(uint32(c.R) * al / 255), uint8(uint32(c.G) * al / 255), uint8(uint32(c.B) * al / 255), c.A
-}

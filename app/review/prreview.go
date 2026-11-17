@@ -228,8 +228,6 @@ func (x *PRReview) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
-func (x *PRReview) wait() { x.busy.Wait() }
-
 func (x *PRReview) session(a registry.Args) (core.SessionState, error) {
 	return sessionkit.SessionFrom(x.h, a)
 }

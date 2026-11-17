@@ -261,12 +261,6 @@ func mdImagesOut(bs []mdBlock) []mdBlock {
 	return out
 }
 
-// markdownText draws markdown in body's style: headings, paragraphs and list items with inline code and bold,
-// fenced code in mono, rules, and images (relative ones only as chips: markdownTextIn knows their folder).
-func markdownText(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle) {
-	markdownTextIn(c, key, src, width, body, mdOpts{})
-}
-
 type mdOpts = kit.MarkdownOpts
 
 // markdownTextIn is markdownText with its images found from o.Dir.

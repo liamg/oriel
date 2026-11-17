@@ -460,7 +460,6 @@ type node struct {
 	held      bool // watched and holding its deps: active, or within grace
 	paused    bool // subscribed, but no one wants reads now
 	need      Need // the tightest active need
-	every     time.Duration
 	deps      []*sub    // its holds on the sources it reads from
 	watching  []string  // its paths registered with the file watcher
 	fallback  bool      // its files couldn't be watched: polled at Timing.Fallback

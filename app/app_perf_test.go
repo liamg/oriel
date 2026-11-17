@@ -9,8 +9,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
+	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // Sweeping down a menu, each row's highlight eases in while the pointer goes on moving over it: moves that change
@@ -61,3 +65,28 @@ func TestMenuHoverWhileThePointerMovesBudget(t *testing.T) {
 	}
 	b.close(t)
 }
+
+// fillAt is the colour of the last rect drawn under p that isn't fill, or zero.
+func fillAt(f headless.Frame, p render.Point, not render.Color) render.Color {
+	var got render.Color
+	for _, op := range f.Ops {
+		r := op.Rect
+		if op.Kind == render.OpRect && op.Style.Fill.A > 0 && op.Style.Fill != not && p.X >= r.Min.X && p.X < r.Max.X && p.Y >= r.Min.Y && p.Y < r.Max.Y {
+			got = op.Style.Fill
+		}
+	}
+	return got
+}
+
+// menuView is a plugin view showing a menu at the root view's corner.
+type menuView struct{}
+
+func (menuView) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.menu"} }
+func (menuView) Activate(_ context.Context, h plugin.Host) error {
+	items := []widget.MenuItem{{Label: "Close"}, {Label: "Close Others"}, {Label: "Close to the Right"}, {Label: "Close All"}}
+	h.View(kit.RootView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+		return &ui.Func{Key: "menu", Fn: func(c *ui.Ctx) { widget.Menu(c, "menu", items, widget.MenuOpts{}) }}
+	}))
+	return nil
+}
+func (menuView) Deactivate(context.Context) error { return nil }

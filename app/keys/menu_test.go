@@ -15,17 +15,6 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// rightClick right-clicks at p and draws the menu.
-func rightClick(s *apptest.Scene, p render.Point) string {
-	s.Frame()
-	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
-	s.UI().Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonSecondary})
-	s.UI().Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
-	s.Frame()
-	s.Frame()
-	return s.Text()
-}
-
 // menuScene has a Go file and a Markdown file open side by side, Problems docked, and a Lua plugin's entry for Go
 // files.
 func menuScene(t *testing.T) (*apptest.Scene, map[string]render.Rect) {

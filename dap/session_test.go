@@ -110,7 +110,6 @@ type result struct {
 	exited      *dap.Exited
 	terminated  bool
 	stopErr     error
-	unsupported []string
 }
 
 type stop struct {

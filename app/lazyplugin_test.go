@@ -11,7 +11,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/plugins"
-	"github.com/liamg/oriel/app/updates"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -206,12 +205,4 @@ end)`})
 	if noticed(s, "mine") != 1 {
 		t.Errorf("MineNow didn't load and run; notices: %v", noticeTexts(s.Store().State().Notifications))
 	}
-}
-
-func consent(s *apptest.Scene) *plugins.Consent {
-	return apptest.PluginOf[*plugins.Consent](s, "consent")
-}
-
-func updatesOf(s *apptest.Scene) *updates.Update {
-	return apptest.PluginOf[*updates.Update](s, "update")
 }

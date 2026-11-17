@@ -13,11 +13,6 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// cursorIs is a frame whose status line shows the cursor at line:col.
-func cursorIs(pos string) func(string) bool {
-	return func(s string) bool { return strings.Contains("\n"+s+"\n", "\n"+pos+"\n") }
-}
-
 // gg goes to the top at once, as in vim: the first g is a prefix of IDE maps (gd, grr…) and of the engine's own,
 // and the second must reach the engine with it, however long after it comes on the window's clock.
 func TestGGGoesToTheTop(t *testing.T) {

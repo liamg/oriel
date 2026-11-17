@@ -63,12 +63,3 @@ func editorFile(s *apptest.Scene, instance string) (string, bool) {
 	}
 	return l.Location(instance)
 }
-
-func githubCode(t *testing.T, r registry.Registry) *registry.CodeHost {
-	t.Helper()
-	h, ok := registry.HostByName(r, "github")
-	if !ok {
-		t.Fatal("GitHub isn't a code host")
-	}
-	return &h
-}

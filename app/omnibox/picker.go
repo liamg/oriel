@@ -35,7 +35,6 @@ type Picker struct {
 	query   string
 	sel     int
 	picked  map[string]bool // multi-selected, by item id
-	resumed bool
 	hovered string // the source and item last given to Hover
 	wait    sourceWait
 	ranks   *rankings

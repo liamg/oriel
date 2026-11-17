@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -37,20 +36,6 @@ func TestBytesRoundTrip(t *testing.T) {
 			t.Errorf("%s: Bytes() differs from the source", name)
 		}
 	}
-}
-
-func equalValue(a, b any) bool {
-	if fa, ok := a.(float64); ok {
-		if fb, ok := b.(float64); ok && math.IsNaN(fa) && math.IsNaN(fb) {
-			return true
-		}
-	}
-	if ta, ok := a.(time.Time); ok {
-		if tb, ok := b.(time.Time); ok {
-			return ta.Equal(tb)
-		}
-	}
-	return reflect.DeepEqual(a, b)
 }
 
 // Setting an existing key changes only its value's bytes, and deleting one removes only its line.

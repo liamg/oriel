@@ -75,7 +75,6 @@ type formatPart struct {
 	op        string
 	ifText    string
 	elseText  string
-	hasIfElse bool
 }
 
 type parser struct {

@@ -29,10 +29,6 @@ func (w *Host) statsSessions(only core.SessionID, since time.Time) []stats.Sessi
 	return w.Sessions(only, since)
 }
 
-func (w *Host) addRule(id core.SessionID, rule string) error {
-	return w.emit(core.RuleAdded{Session: id, Rule: rule})
-}
-
 // boxOf is session id's sandbox while its agent runs in one.
 func (w *Host) boxOf(id core.SessionID) *sandboxhost.Box {
 	return sandboxhost.Of(w.Sandbox(id))

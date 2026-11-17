@@ -11,8 +11,6 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 )
 
-const navHelp = "shell/navigate"
-
 // navStop is somewhere the window's been: the session in front ("" for none) and the place showing ("" for none).
 type navStop struct {
 	session core.SessionID

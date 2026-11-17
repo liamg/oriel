@@ -64,9 +64,8 @@ func xterm256(i uint8) color.NRGBA {
 type termRun struct {
 	from      int
 	text      strings.Builder
-	fg, bg    color.NRGBA
+	fg        color.NRGBA
 	attrs     term.Attrs
-	hasBg     bool
 	cells     int
 	underline term.Underline
 }

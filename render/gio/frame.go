@@ -175,8 +175,6 @@ func (c *Frame) irect(r render.Rect) image.Rectangle {
 	return image.Rect(c.px(r.Min.X), c.px(r.Min.Y), c.px(r.Max.X), c.px(r.Max.Y))
 }
 
-func (c *Frame) pt(p render.Point) f32.Point { return f32.Pt(p.X*c.scale, p.Y*c.scale) }
-
 func (c *Frame) Rect(r render.Rect, s render.Style) {
 	edge := 1
 	if s.Width > 0 {
