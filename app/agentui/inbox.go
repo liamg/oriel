@@ -63,7 +63,6 @@ type Inbox struct {
 	rows      map[string]*inboxRow // by card key
 	order     []string             // card keys, as first seen
 	dismissed map[string]bool      // taken off the stack; they wait on in the panel
-	inline    map[string]bool      // shown by a surface of their own, so not stacked
 	filter    int
 	sel       string // the panel's selected row, its card open under it
 	list      widget.Scroll
@@ -233,7 +232,7 @@ func (x *Inbox) gather() []*inboxRow {
 func (x *Inbox) stacked() []*inboxRow {
 	var out []*inboxRow
 	for _, r := range x.gather() {
-		if r.waiting() && !r.card.Prompt && (r.card.Interrupt || r.card.Banner) && !x.isDismissed(r.card.Key()) && (r.card.Banner || !x.isInline(r.card.Key())) {
+		if r.waiting() && !r.card.Prompt && (r.card.Interrupt || r.card.Banner) && !x.isDismissed(r.card.Key()) {
 			out = append(out, r)
 		}
 	}
@@ -253,31 +252,6 @@ func (x *Inbox) isDismissed(k string) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.dismissed[k]
-}
-
-func (x *Inbox) isInline(k string) bool {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	return x.inline[k]
-}
-
-// showInline keeps the cards keyed in keys off the stack while a surface draws them itself;
-// nil gives them back. A banner card stays at the top whatever shows it.
-func (x *Inbox) showInline(keys map[string]bool) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	x.inline = keys
-}
-
-// waiting are the cards waiting on you, in the order they came.
-func (x *Inbox) waiting() []*inboxRow {
-	var out []*inboxRow
-	for _, r := range x.gather() {
-		if r.waiting() {
-			out = append(out, r)
-		}
-	}
-	return out
 }
 
 // dismiss takes a card off the stack, and tells its source.
@@ -301,21 +275,9 @@ func (x *Inbox) dismiss(k string) error {
 // inboxService is the inbox as kit.Inbox.
 type inboxService struct{ x *Inbox }
 
-func (s inboxService) Waiting() []kit.WaitingCard {
-	var out []kit.WaitingCard
-	for _, r := range s.x.waiting() {
-		out = append(out, kit.WaitingCard{Card: r.card, At: r.when()})
-	}
-	return out
-}
-
 func (s inboxService) Count(session string) (int, string) { return s.x.Count(session) }
 func (s inboxService) Calling(session string) (string, string, bool) {
 	return s.x.Calling(session)
-}
-func (s inboxService) ShowInline(keys map[string]bool) { s.x.showInline(keys) }
-func (s inboxService) Card(c *ui.Ctx, card uireg.InboxCard) {
-	s.x.card(c, &inboxRow{card: card}, false)
 }
 
 // Count is how many cards wait in session, and the tone of the first: its tab's badge.
