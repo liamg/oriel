@@ -307,6 +307,9 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 			c.Text("l", span, widget.MonoFont(11, th.C(theme.FgGhost)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
+			if widget.Link(c, "open", "open in editor ↗", "agent/requests#request") {
+				x.run("request.anchor", registry.Args{"line": at + 1})
+			}
 		})
 		widget.RuleTone(c, "rule", tBlockLine)
 		c.Column("code", ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 4, B: 4}}, func(c *ui.Ctx) {
@@ -317,7 +320,8 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 				if on {
 					fill = th.C(tReqAnchorOn)
 				}
-				c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(20), Fill: fill, Cross: ui.Center}, func(c *ui.Ctx) {
+				if widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(20), Fill: fill, Cross: ui.Center, Label: fmt.Sprintf("Open line %d in the editor", n+1),
+					Help: "agent/requests#request"}, func(c *ui.Ctx) {
 					edge := render.Color{}
 					if on {
 						edge = th.C(theme.Accent)
@@ -327,7 +331,9 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 						c.Text("t", fmt.Sprint(n+1), widget.MonoFont(11.5, th.C(theme.FgGhost)))
 					})
 					c.Text("t", strings.ReplaceAll(l, "\t", "    "), widget.MonoFont(12, th.C(theme.Fg)))
-				})
+				}).Clicked {
+					x.run("request.anchor", registry.Args{"line": n + 1})
+				}
 			}
 		})
 	})

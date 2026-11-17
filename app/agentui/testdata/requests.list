@@ -195,7 +195,9 @@ clip 364,50 1236x924 r 0
         rect 424,163.5 9x9 fill #4cc9f0 radius 2
         text "internal/pricing/round.go" @441,172.14 #b3ab99 JetBrains Mono 11.5
         text ":43-46" @629.0781,171.96 #4f4a40 JetBrains Mono 11
-        text "anchored · follows edits" @1095,171.59999 #4f4a40 JetBrains Mono 10
+        text "anchored · follows edits" @995.40625,171.59999 #4f4a40 JetBrains Mono 10
+        text "open in editor ↗" @1147.4062,171.36523 #ffd23f Inter 12
+        rect 1147.4062,175.25977 91.59375x1 fill #ffd23fb3
         rect 412,182 839x1 fill #24221d
         text "43" @424,201.14 #4f4a40 JetBrains Mono 11.5
         text "    switch diff.Cmp(half) {" @458,201.32 #ece6d8 JetBrains Mono 12

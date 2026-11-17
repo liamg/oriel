@@ -29,7 +29,8 @@ Starts a request that isn't anchored to a line (`⌘N` in the list). It goes to 
 Its tab carries its name; the header shows only its state. Right-click the tab for **Rename…**, which edits the name
 in the header. A session started from a request is named by a small model
 (Claude's Haiku), and its first request shares the name; `sessions.auto_name` turns that off. The anchored code at the top, where it is now (it follows edits), then the conversation: your prompt as markdown with
-what you pasted, and the agent's replies. **Open in editor** goes to the anchor; **Resolve** closes the request and
+what you pasted, and the agent's replies. **Open in editor**, in the header or on the code, goes to the anchor, and a
+click on one of the code's lines goes to that line; **Resolve** closes the request and
 completes the tasks it asked for. At the right: where it is and who has it, the files it changed, the tasks and
 requests it spawned, and other requests about the same file.
 
