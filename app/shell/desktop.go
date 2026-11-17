@@ -149,7 +149,7 @@ func (sh *shell) dropped(ev render.DropEvent) {
 	}
 	for _, p := range ev.Paths {
 		if err := sh.cfg.Registry.Run(context.Background(), "editor.open", registry.Args{"path": p}); err != nil {
-			sh.store.Apply(core.Notified{Notice: core.Notice{ID: "drop.open", Severity: core.SevWarning, Source: "core", Text: err.Error(), Time: sh.now()}})
+			_ = sh.store.Apply(core.Notified{Notice: core.Notice{ID: "drop.open", Severity: core.SevWarning, Source: "core", Text: err.Error(), Time: sh.now()}})
 		}
 	}
 }

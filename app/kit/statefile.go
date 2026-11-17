@@ -64,7 +64,7 @@ func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
 	f.mu.Unlock()
 	if sub.Valid() {
 		ctx, cancel := context.WithTimeout(context.Background(), firstReadLongest)
-		sub.Fresh(ctx)
+		_, _ = sub.Fresh(ctx)
 		cancel()
 		f.reading(gen)
 	}

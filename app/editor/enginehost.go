@@ -140,13 +140,13 @@ func (l *editorLayout) Split(at, w vim.WindowID, vertical bool) {
 	}
 	at0 := windowRef(at)
 	if l.root().Find(at0) == nil {
-		l.root().Open(at0, layout.Tab, layout.Opts{})
+		_ = l.root().Open(at0, layout.Tab, layout.Opts{})
 	}
-	l.root().Open(windowRef(w), layout.Split, layout.Opts{Beside: &at0, Side: side})
+	_ = l.root().Open(windowRef(w), layout.Split, layout.Opts{Beside: &at0, Side: side})
 }
 
 func (l *editorLayout) Bottom(w vim.WindowID) {
-	l.root().Open(windowRef(w), layout.Docked, layout.Opts{Edge: layout.Bottom})
+	_ = l.root().Open(windowRef(w), layout.Docked, layout.Opts{Edge: layout.Bottom})
 }
 
 func (l *editorLayout) Close(w vim.WindowID) vim.WindowID {

@@ -267,7 +267,7 @@ func (x *Terminals) leave() []byte {
 func (x *Terminals) loadSaved(b []byte) {
 	saved := map[string][]byte{}
 	if b != nil {
-		json.Unmarshal(b, &saved)
+		_ = json.Unmarshal(b, &saved)
 	}
 	x.saved = saved
 }
@@ -432,7 +432,7 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 	t := &terminal{id: id, cmd: cmdline, cols: 100, rows: 24, own: src == nil, sandboxed: sandboxed}
 	emu, err := ghostty.New(t.cols, t.rows, ghostty.Options{Reply: func(p []byte) {
 		if t.src != nil {
-			t.src.Write(p)
+			_, _ = t.src.Write(p)
 		}
 	}})
 	if err != nil {
@@ -454,12 +454,12 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 		cmd.Env = append(cmd.Env, strList(a["env"])...)
 		p, err := pty.Start(cmd, t.cols, t.rows)
 		if err != nil {
-			emu.Close()
+			_ = emu.Close()
 			return "", fmt.Errorf("terminal: %w", err)
 		}
 		src = p
 	} else {
-		src.Resize(t.cols, t.rows)
+		_ = src.Resize(t.cols, t.rows)
 	}
 	t.src = src
 	x.mu.Lock()
@@ -475,11 +475,11 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 
 // stop ends t's source, and its program if it started one, so its reader returns.
 func (t *terminal) stop() {
-	t.src.Close()
+	_ = t.src.Close()
 	if p, ok := t.src.(*pty.PTY); ok && p.Cmd().Process != nil {
-		p.Cmd().Process.Kill()
+		_ = p.Cmd().Process.Kill()
 	}
-	t.emu.Close()
+	_ = t.emu.Close()
 }
 
 // read feeds the program's output to the VT until it exits.
@@ -493,7 +493,7 @@ func (x *Terminals) read(t *terminal) {
 		}
 		if err != nil {
 			if p, ok := t.src.(*pty.PTY); ok {
-				p.Cmd().Wait()
+				_ = p.Cmd().Wait()
 			}
 			x.h.Do(func() {
 				if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) && !errors.Is(err, io.ErrClosedPipe) {

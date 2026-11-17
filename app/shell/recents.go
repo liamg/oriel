@@ -53,7 +53,7 @@ func (r *recents) list() []recentDir {
 	}
 	var f recentFile
 	if b, err := os.ReadFile(r.path); err == nil {
-		json.Unmarshal(b, &f)
+		_ = json.Unmarshal(b, &f)
 	}
 	r.read = &recentRead{dirs: f.Directories, size: st.Size(), mod: st.ModTime()}
 	return slices.Clone(f.Directories)

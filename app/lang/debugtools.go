@@ -296,7 +296,7 @@ func (x *Debug) toolEval(ctx registry.Ctx, p registry.Args) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	kit.OnLoop(ctx, x.h, func() { x.print("agent", expr) })
+	_ = kit.OnLoop(ctx, x.h, func() { x.print("agent", expr) })
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	v, err := c.Evaluate(ctx, f.ID, expr, dap.ContextREPL)

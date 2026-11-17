@@ -494,7 +494,7 @@ func (x *Catalog) load(st catalog.Status) {
 		x.wait(st)
 		return
 	}
-	x.start(st)
+	_ = x.start(st)
 }
 
 func (x *Catalog) start(st catalog.Status) error {

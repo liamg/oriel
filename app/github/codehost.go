@@ -98,7 +98,7 @@ func (x *Host) probe(ctx context.Context, hostname string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	var meta struct {
 		Installed *bool `json:"verifiable_password_authentication"`
 	}

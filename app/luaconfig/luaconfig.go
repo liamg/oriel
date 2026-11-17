@@ -153,7 +153,7 @@ func (x *Lua) sources() [32]byte {
 	if b, err := os.ReadFile(x.initLua()); err == nil {
 		h.Write(b)
 	}
-	filepath.WalkDir(filepath.Join(x.Dir, "lua"), func(p string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(filepath.Join(x.Dir, "lua"), func(p string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".lua") {
 			if b, err := os.ReadFile(p); err == nil {
 				h.Write([]byte(p))

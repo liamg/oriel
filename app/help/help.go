@@ -193,7 +193,7 @@ func Load(sources []Source) (*Index, []error) {
 	ix := &Index{pages: map[string]*Page{}}
 	var errs []error
 	for _, s := range sources {
-		fs.WalkDir(s.FS, ".", func(name string, d fs.DirEntry, err error) error {
+		_ = fs.WalkDir(s.FS, ".", func(name string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || path.Ext(name) != ".md" {
 				return nil
 			}

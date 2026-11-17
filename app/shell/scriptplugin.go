@@ -85,7 +85,7 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return nil
 	}
 	if err != nil {
-		p.Deactivate(context.Background())
+		_ = p.Deactivate(context.Background())
 		p.failed(h, err)
 		return nil
 	}
@@ -105,7 +105,7 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 	if err := vm.Load(script.Chunk{Name: p.m.ID + "/" + plugin.EntryFile, Source: src}); err != nil {
 		apis.Dispose()
 		vm.Close()
-		p.Deactivate(context.Background())
+		_ = p.Deactivate(context.Background())
 		p.failed(h, err)
 		return nil
 	}

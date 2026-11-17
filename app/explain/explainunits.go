@@ -633,7 +633,7 @@ func (x *Explain) openRow(id string) {
 	}
 	path := strings.Join(parts[:len(parts)-2], ":")
 	var line int
-	fmt.Sscan(parts[len(parts)-2], &line)
+	_, _ = fmt.Sscan(parts[len(parts)-2], &line)
 	ctx := context.Background()
 	if err := x.h.Run(ctx, "editor.open", registry.Args{"path": path, "line": line}); err != nil {
 		x.notify(err)

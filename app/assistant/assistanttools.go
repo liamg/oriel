@@ -95,7 +95,7 @@ func (x *Assistant) tools() []registry.AgentTool {
 // run runs a command on the app's loop, as a key would, and waits until it has finished.
 func (x *Assistant) run(ctx context.Context, id string, args registry.Args) error {
 	return plugin.Await(ctx, func(rctx registry.Ctx) error {
-		return kit.OnLoop(ctx, x.h, func() { x.h.Run(rctx, id, args) })
+		return kit.OnLoop(ctx, x.h, func() { _ = x.h.Run(rctx, id, args) })
 	})
 }
 

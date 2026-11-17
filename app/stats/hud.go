@@ -243,7 +243,7 @@ func (x *HUD) panels(c *ui.Ctx) {
 				taken += span
 				note := ""
 				if ind.Note != nil {
-					registry.Call(func() error { note = ind.Note(); return nil })
+					registry.Try(func() { note = ind.Note() })
 				}
 				n := x.Node(c, ind)
 				widget.Panel(c, ind.Name, widget.PanelOpts{Title: cmp.Or(ind.Title, ind.Name), Note: note, Help: cmp.Or(ind.Help, kit.HUDHelp+"#panels"),

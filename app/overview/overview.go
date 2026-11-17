@@ -296,7 +296,7 @@ func readReadme(dir string) readme {
 			continue
 		}
 		b, err := io.ReadAll(io.LimitReader(f, readmeMax))
-		f.Close()
+		_ = f.Close()
 		if err == nil && len(bytes.TrimSpace(b)) > 0 {
 			return readme{name: name, text: string(b)}
 		}
@@ -423,7 +423,7 @@ func scanDir(ctx context.Context, dir string, langOf func(string) string) ([]sca
 		}
 		names = fs
 	} else {
-		filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -484,7 +484,7 @@ func countLines(path string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	r := bufio.NewReaderSize(f, 32<<10)
 	head, _ := r.Peek(8 << 10)
 	if bytes.IndexByte(head, 0) >= 0 {

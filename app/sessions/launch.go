@@ -48,7 +48,7 @@ func landAtLaunch(h plugin.Host) {
 			return
 		}
 		se, _ := st.Session(id)
-		h.Apply(core.SessionFocused{ID: id})
+		_ = h.Apply(core.SessionFocused{ID: id})
 		if !kit.WindowMovesFor(h, id) {
 			log.Info("launch: the session in front has no directory to open", "session", id, "dir", kit.SessionDir(se.Snapshot()))
 			return

@@ -393,6 +393,6 @@ func trimTrailing(buf *text.Buffer) {
 		off += len(l) + 1
 	}
 	if len(rs) > 0 {
-		buf.Apply(text.Edit{Ranges: rs, Author: text.Author{Kind: text.User}})
+		_, _ = buf.Apply(text.Edit{Ranges: rs, Author: text.Author{Kind: text.User}})
 	}
 }
