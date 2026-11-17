@@ -59,9 +59,8 @@ var stateAllowed = map[string]string{
 	"core.eventsMu":         "guards the event types, registered from init",
 	"core.eventTypes":       "event types, registered from init",
 	"core.eventNames":       "event types, registered from init",
-	"agent/packs.builtin":   "the embedded packs, parsed at init",
-	"agent/packs.sources":   "the embedded packs, parsed at init",
-	"agent/prompts.builtin": "the embedded prompts, parsed at init",
+	"agent/packs.loaded":    "the embedded packs, parsed once on first use",
+	"agent/prompts.builtin": "the embedded prompts, parsed once on first use",
 	"text.boundaryCache":    "a test's memo of a pure function",
 }
 

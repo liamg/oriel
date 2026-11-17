@@ -34,13 +34,17 @@ var GatewayTools = []string{
 //go:embed text
 var files embed.FS
 
-var builtin, sources = loadBuiltin()
+// loaded is the built-in packs and their sources, parsed from text/ on first use.
+var loaded = sync.OnceValues(loadBuiltin)
+
+func builtin() map[string]agent.Pack { p, _ := loaded(); return p }
+func sources() map[string]string     { _, s := loaded(); return s }
 
 type entry struct{ p agent.Pack }
 
 // Get returns the built-in pack for a session kind.
 func Get(kind string) (agent.Pack, bool) {
-	p, ok := builtin[kind]
+	p, ok := builtin()[kind]
 	return clone(p), ok
 }
 
@@ -72,7 +76,7 @@ func (s *Set) All() []agent.Pack {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var names []string
-	for n := range builtin {
+	for n := range builtin() {
 		names = append(names, n)
 	}
 	for _, e := range s.overrides {
@@ -203,8 +207,8 @@ func FromTextWith(src, name string, part func(name string) (string, bool)) (agen
 
 // Builtins are the names of the built-in packs, sorted.
 func Builtins() []string {
-	out := make([]string, 0, len(sources))
-	for n := range sources {
+	out := make([]string, 0, len(sources()))
+	for n := range sources() {
 		out = append(out, n)
 	}
 	slices.Sort(out)
@@ -213,7 +217,7 @@ func Builtins() []string {
 
 // Source is a built-in pack's markdown as written, its include lines not yet expanded.
 func Source(name string) (string, bool) {
-	s, ok := sources[name]
+	s, ok := sources()[name]
 	return s, ok
 }
 

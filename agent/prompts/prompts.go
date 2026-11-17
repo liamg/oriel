@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/packs"
@@ -59,7 +60,8 @@ type Var struct {
 //go:embed defaults/*.md
 var defaultFiles embed.FS
 
-var builtin = mustLoad()
+// builtin is the default prompts, parsed on first use.
+var builtin = sync.OnceValue(mustLoad)
 
 func mustLoad() []Def {
 	out, err := loadDefaults()
@@ -72,7 +74,7 @@ func mustLoad() []Def {
 // Defs is every prompt, in the page's order: the defaults, the packs, their parts, then those registered (a
 // window's contributions).
 func Defs(registered ...Def) []Def {
-	out := slices.Clone(builtin)
+	out := slices.Clone(builtin())
 	out = append(out, packDefs()...)
 	for _, d := range registered {
 		if !slices.ContainsFunc(out, func(o Def) bool { return o.ID == d.ID }) {
