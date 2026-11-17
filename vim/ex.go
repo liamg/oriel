@@ -152,8 +152,7 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 		}
 		return e.exec1(v, cmd)
 	case "sp", "split", "vs", "vsplit":
-		e.split(name[0] == 'v', nil)
-		return nil
+		return e.splitFile(name[0] == 'v', strings.TrimSpace(args))
 	case "new", "vne", "vnew":
 		e.newBufferWindow(name[0] == 'v')
 		return nil
