@@ -95,13 +95,9 @@ func (g *Go) Discover(src Source) []Item {
 	funcs := byCapture(ms, "test.func")
 	runs := byCapture(ms, "test.run")
 	tableRuns := byCapture(ms, "run.table")
-	loops := byCapture(ms, "loop")
-	tables := byCapture(ms, "table.literal")
-	rows := byCapture(ms, "row")
-	elems := byCapture(ms, "row.element")
-	fields := byCapture(ms, "struct.field")
-	keyed := byCapture(ms, "field.value")
-	appended := byCapture(ms, "append.row")
+	caps := goCaptures{loops: byCapture(ms, "loop"), tables: byCapture(ms, "table.literal"), rows: byCapture(ms, "row"),
+		elems: byCapture(ms, "row.element"), fields: byCapture(ms, "struct.field"), keyed: byCapture(ms, "field.value"),
+		appended: byCapture(ms, "append.row")}
 
 	// Each test and static subtest's full name, by the range of its node; a dynamic t.Run's parent name too.
 	type found struct {
@@ -168,7 +164,7 @@ func (g *Go) Discover(src Source) []Item {
 			add(cl.n, c, name, append(append([]string(nil), pathOf(pname)...), sub), KindSubtest)
 			continue
 		}
-		for _, row := range goTableRows(cl.n, parent, loops, tables, rows, appended, elems, fields, keyed) {
+		for _, row := range caps.tableRows(cl.n, parent) {
 			name := namer.name(pname, row.name)
 			items = append(items, Item{Package: pkg, Name: name, Path: append(append([]string(nil), pathOf(pname)...), row.name), File: src.Path, Line: row.line, Kind: KindRow})
 		}
@@ -182,44 +178,25 @@ type goRow struct {
 	line int
 }
 
-// goTableRows are the rows of the table a t.Run(tc.field, …) or t.Run(key, …) call ranges over, with the names
+// goCaptures are the test query's captures over one file that table rows are read from.
+type goCaptures struct {
+	loops, tables, rows, appended, elems, fields, keyed []node
+}
+
+// tableRows are the rows of the table a t.Run(tc.field, …) or t.Run(key, …) call ranges over, with the names
 // it gives them, for rows whose name is a string literal: the table's literal's, then those appended to it in fn
 // before the loop.
-func goTableRows(run, fn node, loops, tables, rows, appended, elems, fields, keyed []node) []goRow {
+func (g goCaptures) tableRows(run, fn node) []goRow {
 	v, _ := run.m.Get("run.var")
 	field, byField := run.m.Get("run.field")
-	var loop node
-	found := false
-	for _, l := range loops {
-		key, _ := l.m.Get("loop.key")
-		val, hasVal := l.m.Get("loop.value")
-		if l.contains(run) && (!found || loop.contains(l)) && (byField && hasVal && val.Text == v.Text || !byField && key.Text == v.Text) {
-			loop, found = l, true
-		}
-	}
+	loop, found := g.rangeLoop(run, v.Text, byField)
 	if !found {
 		return nil
 	}
 	source, _ := loop.m.Get("loop.source")
-	var lit node
-	ok := false
-	for _, t := range tables {
-		name, hasName := t.m.Get("table.name")
-		if t.Range == source.Range || hasName && name.Text == source.Text && t.Range.End <= loop.Range.Start {
-			lit, ok = t, true // the last such table before the loop wins
-		}
-	}
-	if !ok {
-		// Ranging straight over a literal: the source is the table.
-		for _, r := range rows {
-			if source.Range.Start <= r.Range.Start && r.Range.End <= source.Range.End {
-				lit, ok = node{Capture: source}, true
-				break
-			}
-		}
-	}
+	lit, ok := g.tableLiteral(source, loop)
 	var mine []node
-	for _, r := range rows {
+	for _, r := range g.rows {
 		if ok && lit.Range.Start <= r.Range.Start && r.Range.End <= lit.Range.End {
 			if len(mine) > 0 && mine[len(mine)-1].contains(r) {
 				continue
@@ -237,34 +214,70 @@ func goTableRows(run, fn node, loops, tables, rows, appended, elems, fields, key
 			}
 			continue
 		}
-		if name, line, ok := goRowField(r, field.Text, lit, mine, elems, fields, keyed); ok {
+		if name, line, ok := g.rowField(r, field.Text, lit, mine); ok {
 			out = append(out, goRow{name, line})
 		}
 	}
 	if byField {
-		out = append(out, goAppendedRows(field.Text, source.Text, fn, loop, lit, ok, appended, elems, fields, keyed)...)
+		out = append(out, g.appendedRows(field.Text, source.Text, fn, loop, lit, ok)...)
 	}
 	return out
 }
 
-// goAppendedRows are the rows appended to the table named table in fn, after its literal (if found) and before loop.
-func goAppendedRows(field, table string, fn, loop, lit node, hasLit bool, appended, elems, fields, keyed []node) []goRow {
+// rangeLoop is the innermost range loop around run whose value (by field) or key binds name.
+func (g goCaptures) rangeLoop(run node, name string, byField bool) (node, bool) {
+	var loop node
+	found := false
+	for _, l := range g.loops {
+		key, _ := l.m.Get("loop.key")
+		val, hasVal := l.m.Get("loop.value")
+		if l.contains(run) && (!found || loop.contains(l)) && (byField && hasVal && val.Text == name || !byField && key.Text == name) {
+			loop, found = l, true
+		}
+	}
+	return loop, found
+}
+
+// tableLiteral is the literal a loop ranges over: the last one named as its source before it, or the source itself.
+func (g goCaptures) tableLiteral(source syntax.Capture, loop node) (node, bool) {
+	var lit node
+	ok := false
+	for _, t := range g.tables {
+		name, hasName := t.m.Get("table.name")
+		if t.Range == source.Range || hasName && name.Text == source.Text && t.Range.End <= loop.Range.Start {
+			lit, ok = t, true // the last such table before the loop wins
+		}
+	}
+	if ok {
+		return lit, true
+	}
+	// Ranging straight over a literal: the source is the table.
+	for _, r := range g.rows {
+		if source.Range.Start <= r.Range.Start && r.Range.End <= source.Range.End {
+			return node{Capture: source}, true
+		}
+	}
+	return node{}, false
+}
+
+// appendedRows are the rows appended to the table named table in fn, after its literal (if found) and before loop.
+func (g goCaptures) appendedRows(field, table string, fn, loop, lit node, hasLit bool) []goRow {
 	var out []goRow
-	for _, r := range appended {
+	for _, r := range g.appended {
 		into, _ := r.m.Get("append.into")
 		if into.Text != table || !fn.contains(r) || r.Range.End > loop.Range.Start || hasLit && r.Range.Start < lit.Range.End {
 			continue
 		}
 		al, _ := r.m.Get("append.literal")
-		if name, line, ok := goRowField(r, field, node{Capture: al}, []node{r}, elems, fields, keyed); ok {
+		if name, line, ok := g.rowField(r, field, node{Capture: al}, []node{r}); ok {
 			out = append(out, goRow{name, line})
 		}
 	}
 	return out
 }
 
-// goRowField is the string literal a row gives a field: keyed (name: "x"), or by position against the struct's fields.
-func goRowField(row node, field string, lit node, rows, elems, fields, keyed []node) (string, int, bool) {
+// rowField is the string literal a row gives a field: keyed (name: "x"), or by position against the struct's fields.
+func (g goCaptures) rowField(row node, field string, lit node, rows []node) (string, int, bool) {
 	inRow := func(n node) bool {
 		if !row.contains(n) {
 			return false
@@ -276,7 +289,7 @@ func goRowField(row node, field string, lit node, rows, elems, fields, keyed []n
 		}
 		return true
 	}
-	for _, kv := range keyed {
+	for _, kv := range g.keyed {
 		k, _ := kv.m.Get("field.key")
 		if k.Text == field && inRow(kv) {
 			if s, err := strconv.Unquote(kv.Text); err == nil {
@@ -286,13 +299,13 @@ func goRowField(row node, field string, lit node, rows, elems, fields, keyed []n
 		}
 	}
 	var mine []node
-	for _, e := range elems {
+	for _, e := range g.elems {
 		if inRow(e) && (len(mine) == 0 || !mine[len(mine)-1].contains(e)) {
 			mine = append(mine, e)
 		}
 	}
 	var names []string
-	for _, f := range fields {
+	for _, f := range g.fields {
 		if lit.contains(f) && (len(rows) == 0 || f.Range.End <= rows[0].Range.Start) {
 			names = append(names, f.Text)
 		}
