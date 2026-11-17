@@ -125,7 +125,7 @@ func (x *Launcher) reposSection(c *ui.Ctx, k core.KindSpec) {
 	if k.Worktrees == core.WorktreesNow || k.Worktrees == core.WorktreesStartWork {
 		c.Row("branch", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("l", "Branch", widget.UIFont(12.5, th.C(theme.FgMuted)))
-			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1), 1)
+			x.field(c, "branch", &x.branch, "Branch", fieldOpts{Placeholder: "named from the ticket and prompt"})
 		})
 	}
 }
