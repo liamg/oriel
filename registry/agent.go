@@ -175,8 +175,8 @@ func OwnerOf(r Contributions, agent string) (AgentOwner, bool) {
 // ErrNotConfirmed is an act the user didn't say yes to: nothing was done.
 var ErrNotConfirmed = errors.New("the user did not confirm, so nothing was done")
 
-// Granted is what an AgentTool's Confirm returns when this call needs no yes: the user has already granted it.
-var Granted = errors.New("granted")
+// ErrGranted is what an AgentTool's Confirm returns when this call needs no yes: the user has already granted it.
+var ErrGranted = errors.New("granted")
 
 func ownerOf(ctx Ctx, r Registry) (AgentOwner, bool) {
 	if o, ok := ctx.Value(ownerKey{}).(AgentOwner); ok {
@@ -186,7 +186,7 @@ func ownerOf(ctx Ctx, r Registry) (AgentOwner, bool) {
 }
 
 // CallAgentTool runs a tool for the agent named in ctx (WithAgent): an act asks the agent's owner (WithOwner, else
-// the registered one) first and runs only on a yes, unless its Confirm says Granted; what the tool did goes to the
+// the registered one) first and runs only on a yes, unless its Confirm says ErrGranted; what the tool did goes to the
 // owner. The answer is what the agent reads: a string as it is, anything else as JSON.
 func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (string, error) {
 	if t.Run == nil {
@@ -196,7 +196,7 @@ func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (str
 	if t.Confirm != nil {
 		var c Confirmation
 		err := Call(func() (err error) { c, err = t.Confirm(ctx, params); return })
-		if err != nil && !errors.Is(err, Granted) {
+		if err != nil && !errors.Is(err, ErrGranted) {
 			return "", err
 		}
 		if err == nil {

@@ -93,7 +93,7 @@ func findOrbStack() (container.Engine, error) {
 func findColima() (container.Engine, error) {
 	sock := container.Socket(colimaSockets...)
 	if sock == "" {
-		return container.Engine{}, fmt.Errorf("Colima %w", container.ErrNotInstalled)
+		return container.Engine{}, fmt.Errorf("Colima %w", container.ErrNotInstalled) //nolint:staticcheck // ST1005: it starts with a name
 	}
 	e := container.Engine{Bin: "docker", Host: sock, VM: true}
 	if !e.Installed() {

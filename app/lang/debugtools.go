@@ -88,7 +88,7 @@ func (x *Debug) gate(action string, line func(p registry.Args) string) func(regi
 		a := debugAccesses[slices.IndexFunc(debugAccesses, func(a debugAccess) bool { return a.Action == action })]
 		switch x.level(action) {
 		case "allow":
-			return registry.Confirmation{}, registry.Granted
+			return registry.Confirmation{}, registry.ErrGranted
 		case "ask":
 			l := line(p)
 			return registry.Confirmation{Title: "The agent wants to " + l, Lead: "In the debugger: " + a.Label + " is set to ask.", Line: l}, nil

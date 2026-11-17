@@ -11,7 +11,7 @@ import (
 )
 
 // ErrRunning is a second Oriel on the same home: its sessions are the first's.
-var ErrRunning = errors.New("Oriel is already running")
+var ErrRunning = errors.New("Oriel is already running") //nolint:staticcheck // ST1005: it starts with a name
 
 // held is the lock lock took, kept for the life of the process.
 var held *os.File

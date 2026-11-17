@@ -85,7 +85,7 @@ func (s ServerSpec) InstallDir(installed string) string { return filepath.Join(i
 // out. It fails when the spec has no Install or the tool isn't on this machine.
 func (s ServerSpec) InstallInto(ctx context.Context, installed string, out *strings.Builder) error {
 	if s.Install == nil {
-		return fmt.Errorf("Oriel can't install %s itself", s.Name)
+		return fmt.Errorf("Oriel can't install %s itself", s.Name) //nolint:staticcheck // ST1005: it starts with a name
 	}
 	if !s.Install.Can() {
 		return fmt.Errorf("installing %s needs %s, which isn't on this machine: %s", s.Name, s.Install.Tool, s.Install)

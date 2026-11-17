@@ -125,7 +125,7 @@ func TestConfirmGrantsRefusesOrAsksTheCallsOwner(t *testing.T) {
 		Confirm: func(registry.Ctx, registry.Args) (registry.Confirmation, error) {
 			switch level {
 			case "allow":
-				return registry.Confirmation{}, registry.Granted
+				return registry.Confirmation{}, registry.ErrGranted
 			case "off":
 				return registry.Confirmation{}, errors.New("not granted")
 			}

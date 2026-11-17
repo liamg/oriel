@@ -403,7 +403,7 @@ func (vm *VM) Callable(ns string, fn GoFunc) {
 	}
 	full := "oriel." + ns
 	mt.RawSetString("__call", vm.L.NewFunction(func(L *lua.LState) int {
-		out, err, stack := callGo(fn, &Args{vm: vm, L: L, name: full, base: 1})
+		out, stack, err := callGo(fn, &Args{vm: vm, L: L, name: full, base: 1})
 		if err != nil {
 			vm.raised = raised{name: full, stack: stack}
 			L.RaiseError("%s: %s", full, err.Error())
@@ -423,7 +423,7 @@ func (vm *VM) wrap(ns, name string, fn GoFunc) lua.LGFunction {
 	}
 	return func(L *lua.LState) int {
 		a := &Args{vm: vm, L: L, name: full}
-		out, err, stack := callGo(fn, a)
+		out, stack, err := callGo(fn, a)
 		if err != nil {
 			vm.raised = raised{name: full, stack: stack}
 			L.RaiseError("%s: %s", full, err.Error())
@@ -437,17 +437,17 @@ func (vm *VM) wrap(ns, name string, fn GoFunc) lua.LGFunction {
 }
 
 // callGo runs a Go function for Lua, a panic in it as an error; a failure comes with the Go stack.
-func callGo(fn GoFunc, a *Args) (out []any, err error, stack string) {
+func callGo(fn GoFunc, a *Args) (out []any, stack string, err error) {
 	defer func() {
 		if v := recover(); v != nil {
-			out, err, stack = nil, fmt.Errorf("panic: %v", v), string(debug.Stack())
+			out, stack, err = nil, string(debug.Stack()), fmt.Errorf("panic: %v", v)
 		}
 	}()
 	out, err = fn(a)
 	if err != nil {
 		stack = string(debug.Stack())
 	}
-	return out, err, stack
+	return out, stack, err
 }
 
 // Args are a Go function's arguments from Lua, read by position (0 is the first).
@@ -666,7 +666,7 @@ func (vm *VM) State(key string, initial any) any {
 
 // Keys are the names in oriel.<ns>, for the REPL's completion.
 func (vm *VM) Keys(path string) []string {
-	var t lua.LValue = vm.L.GetGlobal("oriel")
+	t := vm.L.GetGlobal("oriel")
 	if path != "" {
 		for _, p := range strings.Split(path, ".") {
 			tt, ok := t.(*lua.LTable)

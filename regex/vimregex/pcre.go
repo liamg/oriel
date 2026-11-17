@@ -649,7 +649,7 @@ func pcreClass(c byte) (*charSet, bool, bool) {
 		}
 		s.nl = true
 	case 'h', 'H':
-		for _, r := range "\t   ᠎  　" {
+		for _, r := range "\t \u00a0\u1680\u180e\u202f\u205f\u3000" {
 			s.add(r)
 		}
 		s.addRange(0x2000, 0x200a)
@@ -1290,7 +1290,7 @@ func ExpandPCRE(repl string, group func(i int) (string, bool), name func(string)
 			}
 			j++
 		}
-		num := -1
+		var num int
 		if isDigit(ref[0]) {
 			n, err := strconv.Atoi(ref)
 			if err != nil {
