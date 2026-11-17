@@ -6,8 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strings"
 
 	"github.com/liamg/oriel/tools/layout"
 	"github.com/liamg/oriel/tools/notices"
@@ -28,7 +29,11 @@ func run(check bool) error {
 	if err != nil {
 		return err
 	}
-	parts, err := notices.Parts(root, runtime.GOROOT())
+	goroot, err := exec.Command("go", "env", "GOROOT").Output()
+	if err != nil {
+		return fmt.Errorf("go env GOROOT: %w", err)
+	}
+	parts, err := notices.Parts(root, strings.TrimSpace(string(goroot)))
 	if err != nil {
 		return err
 	}
