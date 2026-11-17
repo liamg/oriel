@@ -60,10 +60,10 @@ type settingsFile struct {
 	untrusted bool
 }
 
-// Plugin is settings.toml storage (docs/configuration.md) and the settings page (:Settings, ⌘,): every option from
+// Settings is settings.toml storage (docs/configuration.md) and the settings page (:Settings, ⌘,): every option from
 // the registry by section, with typed controls, where each value comes from, modified markers and reset. Edits write
 // the one line they change.
-type Plugin struct {
+type Settings struct {
 	kit.Disposer
 	ConfigDir string // the user's config directory
 	h         plugin.Host
@@ -98,9 +98,9 @@ type settingsUndo struct {
 
 var scopeNames = []string{"USER", "PROJECT", "SESSION"}
 
-func (s *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "settings"} }
+func (s *Settings) Manifest() plugin.Manifest { return plugin.Manifest{ID: "settings"} }
 
-func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
+func (s *Settings) Activate(_ context.Context, h plugin.Host) error {
 	s.Add(h.Contribute(registry.Busy{Name: "settings", Busy: s.work.Busy}))
 	s.h = h
 	conf := s.ConfigDir
@@ -147,13 +147,13 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // track subscribes to f's contents: each new reading loads the files again.
-func (s *Plugin) track(f *settingsFile) *settingsFile {
+func (s *Settings) track(f *settingsFile) *settingsFile {
 	f.sub = watch.SubscribeFunc(s.files, watch.File(f.path), watch.Need{}, "settings", s.kick)
 	return f
 }
 
 // untrack ends the files' subscriptions, once the loads under way are done.
-func (s *Plugin) untrack() {
+func (s *Settings) untrack() {
 	s.work.Stop()
 	for _, f := range s.allFiles() {
 		f.sub.Close()
@@ -162,7 +162,7 @@ func (s *Plugin) untrack() {
 }
 
 // kick loads the files again off the loop, redrawing when a value changed.
-func (s *Plugin) kick() {
+func (s *Settings) kick() {
 	s.work.Go(func(context.Context) {
 		if s.loadAll() {
 			s.h.Redraw()
@@ -174,7 +174,7 @@ func (s *Plugin) kick() {
 const fileReadLongest = time.Second
 
 // fresh waits for a reading of each of files begun now.
-func (s *Plugin) fresh(ctx context.Context, files ...*settingsFile) {
+func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 	ctx, cancel := context.WithTimeout(ctx, fileReadLongest)
 	defer cancel()
 	var wg sync.WaitGroup
@@ -184,7 +184,7 @@ func (s *Plugin) fresh(ctx context.Context, files ...*settingsFile) {
 	wg.Wait()
 }
 
-func (s *Plugin) commands() []registry.Command {
+func (s *Settings) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	return []registry.Command{
 		{ID: "Settings", Title: "The settings page; :Settings {section or search}", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -225,7 +225,7 @@ func (s *Plugin) commands() []registry.Command {
 	}
 }
 
-func (s *Plugin) allFiles() []*settingsFile {
+func (s *Settings) allFiles() []*settingsFile {
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
 	out := []*settingsFile{s.user}
@@ -239,13 +239,13 @@ func (s *Plugin) allFiles() []*settingsFile {
 }
 
 // projectFile is a project's settings file, for the roots of this machine's sessions besides the window's own.
-func (s *Plugin) projectFile(root string) *settingsFile {
+func (s *Settings) projectFile(root string) *settingsFile {
 	return s.track(&settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject, at: registry.At{Project: root}, trust: true})
 }
 
 // follow makes the window's new directory's project file the project layer the page edits: the one it left stays
 // with the other projects', its values still applying to it.
-func (s *Plugin) follow(ctx context.Context) {
+func (s *Settings) follow(ctx context.Context) {
 	root := kit.WindowDir(s.h)
 	s.loadMu.Lock()
 	s.othersMu.Lock()
@@ -277,7 +277,7 @@ func (s *Plugin) follow(ctx context.Context) {
 }
 
 // addOthers reads the project files of repos sessions here work in, so their project values apply to them.
-func (s *Plugin) addOthers() {
+func (s *Settings) addOthers() {
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
 	dir := kit.WindowDir(s.h)
@@ -293,14 +293,14 @@ func (s *Plugin) addOthers() {
 }
 
 // Reload reads the settings files again, as a change to one does; it says whether any value changed.
-func (s *Plugin) Reload() bool {
+func (s *Settings) Reload() bool {
 	s.addOthers()
 	s.fresh(context.Background(), s.allFiles()...)
 	return s.loadAll()
 }
 
 // loadAll reads each file that changed since it was last read, and reports whether any did.
-func (s *Plugin) loadAll() bool {
+func (s *Settings) loadAll() bool {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()
 	s.addOthers()
@@ -331,7 +331,7 @@ func fileKeys(o registry.Options, m map[string]any) []settingsfile.Key {
 }
 
 // load applies f's latest reading, unless it's the one applied already; it says whether it applied one.
-func (s *Plugin) load(f *settingsFile) bool {
+func (s *Settings) load(f *settingsFile) bool {
 	f.mu.Lock()
 	since := f.wrote
 	f.mu.Unlock()
@@ -343,7 +343,7 @@ func (s *Plugin) load(f *settingsFile) bool {
 }
 
 // written applies src, just written to f by the page, without waiting for f's reading of it.
-func (s *Plugin) written(f *settingsFile, src []byte) {
+func (s *Settings) written(f *settingsFile, src []byte) {
 	f.mu.Lock()
 	f.wrote = time.Now()
 	f.mu.Unlock()
@@ -351,7 +351,7 @@ func (s *Plugin) written(f *settingsFile, src []byte) {
 }
 
 // loadSrc applies src as f's contents, unless they're what it applied already.
-func (s *Plugin) loadSrc(f *settingsFile, src []byte) bool {
+func (s *Settings) loadSrc(f *settingsFile, src []byte) bool {
 	h := sha256.Sum256(src)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -406,7 +406,7 @@ func (s *Plugin) loadSrc(f *settingsFile, src []byte) bool {
 }
 
 // apply sets vals at f's layer and unsets what f set before and no longer does.
-func (s *Plugin) apply(f *settingsFile, vals map[string]any) (errs []string) {
+func (s *Settings) apply(f *settingsFile, vals map[string]any) (errs []string) {
 	o := s.h.Options()
 	next := map[string]bool{}
 	for _, name := range slices.Sorted(maps.Keys(vals)) {
@@ -474,9 +474,9 @@ func typeName(sp registry.OptionSpec) string {
 
 // --- trust ---
 
-func (s *Plugin) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.trustPath} }
+func (s *Settings) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.trustPath} }
 
-func (s *Plugin) trustFile(path string) error {
+func (s *Settings) trustFile(path string) error {
 	var f *settingsFile
 	for _, x := range s.allFiles() {
 		if x.trust && x.path == path {
@@ -502,7 +502,7 @@ func (s *Plugin) trustFile(path string) error {
 
 // --- writing ---
 
-func (s *Plugin) scopeArg(name string) int {
+func (s *Settings) scopeArg(name string) int {
 	switch name {
 	case "user":
 		return 0
@@ -515,7 +515,7 @@ func (s *Plugin) scopeArg(name string) int {
 }
 
 // fileFor is the file a scope writes, or nil for the session, which is never written.
-func (s *Plugin) fileFor(scope int) (*settingsFile, error) {
+func (s *Settings) fileFor(scope int) (*settingsFile, error) {
 	switch scope {
 	case 0:
 		return s.user, nil
@@ -531,12 +531,12 @@ func (s *Plugin) fileFor(scope int) (*settingsFile, error) {
 	return nil, nil
 }
 
-func (s *Plugin) sessionAt() registry.At {
+func (s *Settings) sessionAt() registry.At {
 	return registry.At{Session: s.h.Here().Session}
 }
 
 // shadow is the layer above scope's that decides name here, and where it was set: a change at scope wouldn't show.
-func (s *Plugin) shadow(name string, scope int) (registry.Layer, string, bool) {
+func (s *Settings) shadow(name string, scope int) (registry.Layer, string, bool) {
 	at := s.atFor(scope)
 	_, l, err := s.h.Options().Get(name, at)
 	if err != nil || l <= s.layerFor(scope) {
@@ -547,14 +547,14 @@ func (s *Plugin) shadow(name string, scope int) (registry.Layer, string, bool) {
 
 // readOnly says why the page can't change name at scope: init.lua sets it, and wins over the user file. The
 // project file and the session come after init.lua, so they can.
-func (s *Plugin) readOnly(name string, scope int) error {
+func (s *Settings) readOnly(name string, scope int) error {
 	if l, src, ok := s.shadow(name, scope); ok && l == registry.LayerLua {
 		return fmt.Errorf("%s is set in %s, and init.lua wins over settings.toml; change it there, or set it for this project or session", name, src)
 	}
 	return nil
 }
 
-func (s *Plugin) set(name string, v any, scope int) error {
+func (s *Settings) set(name string, v any, scope int) error {
 	o := s.h.Options()
 	sp, ok := o.Spec(name)
 	if !ok {
@@ -595,7 +595,7 @@ func (s *Plugin) set(name string, v any, scope int) error {
 }
 
 // setKey sets one key of a table option in the user or project file, or removes it when v is nil: one line.
-func (s *Plugin) setKey(name, key string, v any, scope int) error {
+func (s *Settings) setKey(name, key string, v any, scope int) error {
 	o := s.h.Options()
 	sp, ok := o.Spec(name)
 	if !ok {
@@ -635,7 +635,7 @@ func checkValue(o registry.Options, sp registry.OptionSpec, f *settingsFile, v a
 	return nil
 }
 
-func (s *Plugin) reset(name string, scope int) error {
+func (s *Settings) reset(name string, scope int) error {
 	o := s.h.Options()
 	sp, ok := o.Spec(name)
 	if !ok {
@@ -652,7 +652,7 @@ func (s *Plugin) reset(name string, scope int) error {
 	return s.write(f, sp, func(doc *toml.Document, p []string) error { return doc.Delete(p...) })
 }
 
-func (s *Plugin) resetWhere(keep func(registry.OptionSpec) bool, scope int) error {
+func (s *Settings) resetWhere(keep func(registry.OptionSpec) bool, scope int) error {
 	var errs []error
 	for _, sp := range s.h.Options().Specs() {
 		// A table is a list its owner manages ([plugins]): resetting settings doesn't empty it.
@@ -667,7 +667,7 @@ func (s *Plugin) resetWhere(keep func(registry.OptionSpec) bool, scope int) erro
 
 // write changes the line for sp in f with fn, at the key the file already spells it with (an alias, a dotted key)
 // or as its name's tables.
-func (s *Plugin) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *toml.Document, p []string) error) error {
+func (s *Settings) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *toml.Document, p []string) error) error {
 	o := s.h.Options()
 	src, err := s.edit(f.path, true, func(doc *toml.Document) error {
 		p := strings.Split(sp.Name, ".")
@@ -693,7 +693,7 @@ func (s *Plugin) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *tom
 
 // edit rewrites the TOML file at path with fn, refusing one that doesn't parse, and gives what the file holds
 // after. With undo, the old file is kept.
-func (s *Plugin) edit(path string, undo bool, fn func(doc *toml.Document) error) ([]byte, error) {
+func (s *Settings) edit(path string, undo bool, fn func(doc *toml.Document) error) ([]byte, error) {
 	src, err := os.ReadFile(path)
 	had := err == nil
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -719,7 +719,7 @@ func (s *Plugin) edit(path string, undo bool, fn func(doc *toml.Document) error)
 	return out, atomicfile.Write(path, out, 0o644) // a crash, or a read, mid-write never finds the settings empty
 }
 
-func (s *Plugin) undoLast() error {
+func (s *Settings) undoLast() error {
 	n := len(s.undo)
 	if n == 0 {
 		return nil
@@ -749,12 +749,12 @@ func (s *Plugin) undoLast() error {
 	return nil
 }
 
-func (s *Plugin) layerFor(scope int) registry.Layer {
+func (s *Settings) layerFor(scope int) registry.Layer {
 	return [...]registry.Layer{registry.LayerUser, registry.LayerProject, registry.LayerSession}[scope]
 }
 
 // atFor is where the page reads: where the user is, so a buffer's :set shows too.
-func (s *Plugin) atFor(int) registry.At { return s.h.Here() }
+func (s *Settings) atFor(int) registry.At { return s.h.Here() }
 
 // --- the page ---
 
@@ -767,7 +767,7 @@ func sectionOf(sp registry.OptionSpec) string {
 	return sec
 }
 
-func (s *Plugin) show(arg string) {
+func (s *Settings) show(arg string) {
 	s.open = true
 	if arg == "" {
 		return
@@ -845,7 +845,7 @@ func luaKey(k string) string {
 }
 
 // matches is the page's search: words of the name, help, aliases or value; @modified, @project and @plugin:id filter.
-func (s *Plugin) matches(sp registry.OptionSpec, at registry.At) bool {
+func (s *Settings) matches(sp registry.OptionSpec, at registry.At) bool {
 	o := s.h.Options()
 	v, l, _ := o.Get(sp.Name, at)
 	for _, w := range strings.Fields(strings.ToLower(s.query)) {

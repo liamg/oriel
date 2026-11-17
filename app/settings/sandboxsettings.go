@@ -246,7 +246,7 @@ type SandboxSettings struct {
 	queued   atomic.Bool // a send is queued and hasn't started
 }
 
-func (x *SandboxSettings) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sandbox.settings"} }
+func (x *SandboxSettings) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sandbox-settings"} }
 
 func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
@@ -256,7 +256,7 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(o.Watch(sp.Name, x.send))
 	}
 	x.Add(registry.DisposeFunc(x.sends.Stop))
-	x.Add(h.Contribute(registry.Busy{Name: "sandbox.settings", Busy: x.sends.Busy}))
+	x.Add(h.Contribute(registry.Busy{Name: "sandbox-settings", Busy: x.sends.Busy}))
 	if kit.HasSessions(h) {
 		x.send()
 		x.Add(kit.OnDirChanged(h, "the sandbox's rules for the directory's project", func(kit.DirChanged) { x.send() }))

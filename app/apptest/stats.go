@@ -14,14 +14,14 @@ import (
 
 // StatsClock has the stats plugin read the time from c, in loc: a scene's fixed clock.
 func (s *Scene) StatsClock(c clock.Clock, loc *time.Location) {
-	x := PluginOf[*stats.Plugin](s, "stats")
+	x := PluginOf[*stats.Stats](s, "stats")
 	x.Clock, x.Loc = c, loc
 }
 
 // SettleStats frames until the stats plugin has read what it was asked for.
 func (s *Scene) SettleStats() {
 	s.T.Helper()
-	x := PluginOf[*stats.Plugin](s, "stats")
+	x := PluginOf[*stats.Stats](s, "stats")
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		s.Frame()
@@ -40,7 +40,7 @@ func (s *Scene) SettleStats() {
 
 // StatsScene is the app on the stats rig's session host, on the rig's clock, with pricing-rounding in front: the
 // stats plugin reads the scene's clock, in UTC.
-func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Plugin) {
+func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Stats) {
 	t.Helper()
 	r := rig.NewStats(t)
 	r.Build()
@@ -51,7 +51,7 @@ func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Plugin) {
 	}
 	s := New(t, Options{Config: func(cfg *Config) { Connect(r.W, r.Claude, r.Codex)(cfg); cfg.WorkDir = work }})
 	s.Now = rig.StatsNow
-	x := PluginOf[*stats.Plugin](s, "stats")
+	x := PluginOf[*stats.Stats](s, "stats")
 	x.Clock, x.Loc = s.Clock(), time.UTC
 	rig.WaitState(t, s.Store(), "the sessions and readings", func(st core.State) bool {
 		return !st.Machine.Sampled.IsZero() && len(st.Sessions) == len(rig.FxSessions) && len(st.Usage) == 2 &&

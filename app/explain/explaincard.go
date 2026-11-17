@@ -16,7 +16,7 @@ import (
 
 // decorationKey is what the decorations of ctx are made from: the buffer's units as worked out last, the base they
 // were worked out against, what each unit's status reads, the card, and the units held back that have come due.
-func (x *Plugin) decorationKey(ctx uireg.DecorationCtx) any {
+func (x *Explain) decorationKey(ctx uireg.DecorationCtx) any {
 	type made struct {
 		units  *fileUnits
 		base   int
@@ -38,7 +38,7 @@ func (x *Plugin) decorationKey(ctx uireg.DecorationCtx) any {
 
 // decorations put a ? beside every unit, brighter on those the branch changed, and the card between the lines under
 // what it explains, with those lines marked.
-func (x *Plugin) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
+func (x *Explain) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	if ctx.Buffer == nil {
 		return nil
 	}
@@ -91,7 +91,7 @@ func (x *Plugin) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 
 // cardView is the card: EXPLAIN and the breadcrumb, wider and narrower; the answer; the depths, who answered, Ask a
 // follow-up and Pin as note (25-explain-unit).
-func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
+func (x *Explain) cardView(c *ui.Ctx, cd *explainCard) {
 	if x.card != cd {
 		return
 	}

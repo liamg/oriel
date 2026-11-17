@@ -62,7 +62,7 @@ func unitHash(kind string, content []byte) string {
 }
 
 // parseUnits are src's explain units, in the language for path; none when it has no units query.
-func (x *Plugin) parseUnits(path string, src []byte) []text.Unit {
+func (x *Explain) parseUnits(path string, src []byte) []text.Unit {
 	lang, ok := kit.LanguageFor(x.h, path, src)
 	if !ok {
 		return nil
@@ -120,7 +120,7 @@ func changedRanges(src []byte, hunks []gitx.Hunk) []text.Range {
 }
 
 // computeUnits are src's units and the ones base→file touches: file is src as it would be written.
-func (x *Plugin) computeUnits(path string, src, file, base []byte, haveBase bool) *fileUnits {
+func (x *Explain) computeUnits(path string, src, file, base []byte, haveBase bool) *fileUnits {
 	fu := &fileUnits{src: src, units: x.parseUnits(path, src)}
 	line, at := 0, 0
 	for _, u := range fu.units {
@@ -142,7 +142,7 @@ func (x *Plugin) computeUnits(path string, src, file, base []byte, haveBase bool
 }
 
 // baseOf is the branch's base's version of a file, loaded off the loop: ok is false until it's read, or outside a repo.
-func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
+func (x *Explain) baseOf(abs string) (data []byte, gen int, ok bool) {
 	g := kit.Git(x.h).Tree("")
 	if g.Status() == nil || abs == "" {
 		return nil, 0, false
@@ -200,7 +200,7 @@ type seenVersion struct {
 
 // bufferUnits are a buffer's units and changed units, worked out off the loop for each version; until then, the
 // last version's.
-func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []byte) *fileUnits {
+func (x *Explain) bufferUnits(path string, buf *text.Buffer, fileBytes func() []byte) *fileUnits {
 	snap := buf.Snapshot()
 	base, gen, haveBase := x.baseOf(path)
 	x.mu.Lock()
@@ -251,7 +251,7 @@ func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []b
 }
 
 // unitsNow are a buffer's units as it is now, parsed here if they haven't been yet.
-func (x *Plugin) unitsNow(path string, buf *text.Buffer) []text.Unit {
+func (x *Explain) unitsNow(path string, buf *text.Buffer) []text.Unit {
 	snap := buf.Snapshot()
 	x.mu.Lock()
 	fu := x.bufs[buf]
@@ -302,7 +302,7 @@ type panelState struct {
 }
 
 // openChanged hashes the paths and versions of the open buffers holding files st lists as changed.
-func (x *Plugin) openChanged(st *gitx.State) uint64 {
+func (x *Explain) openChanged(st *gitx.State) uint64 {
 	h := fnv.New64a()
 	var v [8]byte
 	for _, f := range kit.Buffers(x.h) {
@@ -318,7 +318,7 @@ func (x *Plugin) openChanged(st *gitx.State) uint64 {
 
 // restatPanel checks, off the loop and at most every kit.StatFresh, whether the files the panel read from disk have
 // changed since; the panel is worked out again when one has. x.mu is held.
-func (x *Plugin) restatPanel() {
+func (x *Explain) restatPanel() {
 	p := &x.panel
 	if p.statting || p.loading || len(p.stats) == 0 || time.Since(p.statted) < kit.StatFresh {
 		return
@@ -349,7 +349,7 @@ func (x *Plugin) restatPanel() {
 
 // changedFiles are the branch's changed files' units, worked out off the loop when the status, an open buffer or a
 // file on disk changes.
-func (x *Plugin) changedFiles() ([]changedFile, bool) {
+func (x *Explain) changedFiles() ([]changedFile, bool) {
 	g := kit.Git(x.h).Tree("")
 	st := g.State()
 	if st == nil {
@@ -440,7 +440,7 @@ func lineAt(src []byte, off int) int { return strings.Count(string(src[:min(off,
 
 // unitStatus is what the panel and the ? marks say of a unit: "open" while its card is, "explained", "changed" once
 // an edit inside it has made its explanation stale, else "".
-func (x *Plugin) unitStatus(path string, u text.Unit, hash string) string {
+func (x *Explain) unitStatus(path string, u text.Unit, hash string) string {
 	if cd := x.card; cd != nil && filepath.Clean(cd.path) == filepath.Clean(path) {
 		if r, ok := cd.rangeOf(cd.sel); ok && r.Start == u.Range.Start && !cd.crumbs[cd.sel].selection {
 			return "open"
@@ -483,7 +483,7 @@ func unitStatusWord(s string) (string, theme.TokenID) {
 	return "–", theme.FgGhost
 }
 
-type changedUnitsView struct{ x *Plugin }
+type changedUnitsView struct{ x *Explain }
 
 func (v changedUnitsView) Title(string) string { return "Changed units" }
 func (v changedUnitsView) EdgeToEdge()         {}
@@ -493,7 +493,7 @@ func (v changedUnitsView) Build(uireg.ViewCtx) ui.Node {
 
 // panelView lists every unit the branch touched by file, nested as the code is, with each one's explain status;
 // opening one goes to it and explains it (25-explain-unit).
-func (x *Plugin) panelView(c *ui.Ctx) {
+func (x *Explain) panelView(c *ui.Ctx) {
 	th := c.Theme()
 	files, loading := x.changedFiles()
 	x.mu.Lock()
@@ -571,7 +571,7 @@ type panelItems struct {
 
 // statusPrint hashes what unitStatus reads: the card's unit, the units explained, and where the explained ones are
 // now. x.mu is held.
-func (x *Plugin) statusPrint() uint64 {
+func (x *Explain) statusPrint() uint64 {
 	h := fnv.New64a()
 	var v [8]byte
 	num := func(n int) {
@@ -626,7 +626,7 @@ func monoCaps(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {
 }
 
 // openRow goes to a panel row's unit and explains it.
-func (x *Plugin) openRow(id string) {
+func (x *Explain) openRow(id string) {
 	parts := strings.Split(id, ":")
 	if len(parts) < 3 {
 		return

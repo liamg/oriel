@@ -11,7 +11,7 @@ func MarkBranch() string    { return tExplainMark.Name() }
 func MarkUnchanged() string { return tExplainMarkQuiet.Name() }
 
 // ChangedRows are the labels of the Changed units panel's rows, as it last worked them out.
-func (x *Plugin) ChangedRows() []string {
+func (x *Explain) ChangedRows() []string {
 	files, _ := x.changedFiles()
 	var rows []string
 	for _, f := range files {

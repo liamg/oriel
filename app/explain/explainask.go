@@ -25,7 +25,7 @@ import (
 )
 
 // fix is agent.fix: a request with the trouble attached, about its file and line.
-func (x *Plugin) fix(ctx registry.Ctx, a registry.Args) error {
+func (x *Explain) fix(ctx registry.Ctx, a registry.Args) error {
 	t := registry.TroubleOf(a)
 	args := registry.Args{"text": t.FixText(), "context": strings.TrimSpace(t.Subject + "\n\n" + t.Context)}
 	if t.File != "" {
@@ -35,7 +35,7 @@ func (x *Plugin) fix(ctx registry.Ctx, a registry.Args) error {
 }
 
 // keep asks about req off the loop, its answer kept under key for Kept to show where it was asked.
-func (x *Plugin) keep(key string, req registry.ExplainRequest) {
+func (x *Explain) keep(key string, req registry.ExplainRequest) {
 	a := &answer{loading: true, since: kit.WindowNow(x.h)}
 	x.mu.Lock()
 	x.kept[key] = a
@@ -60,7 +60,7 @@ func (x *Plugin) keep(key string, req registry.ExplainRequest) {
 }
 
 // keptAnswer is the answer asked for under key, if one was.
-func (x *Plugin) keptAnswer(key string) (answer, bool) {
+func (x *Explain) keptAnswer(key string) (answer, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	a, ok := x.kept[key]
@@ -71,7 +71,7 @@ func (x *Plugin) keptAnswer(key string) (answer, bool) {
 }
 
 // Kept is the answer kit.AskTwins asked for under key, once it was: an explain card that changes nothing.
-func (x *Plugin) Kept(c *ui.Ctx, key, help string) {
+func (x *Explain) Kept(c *ui.Ctx, key, help string) {
 	a, ok := x.keptAnswer(key)
 	if !ok {
 		return
@@ -102,7 +102,7 @@ func (x *Plugin) Kept(c *ui.Ctx, key, help string) {
 }
 
 // request asks the first explainer about a step of the card, off the loop; the answer goes in the cache.
-func (x *Plugin) request(cd *explainCard, i int) {
+func (x *Explain) request(cd *explainCard, i int) {
 	cr := cd.crumbs[i]
 	depth := explainDepths[cd.depth]
 	key := answerKey{cr.hash, depth}
@@ -178,7 +178,7 @@ func crumbLabels(cs []explainCrumb) []string {
 }
 
 // history is why · history's context: the commits that last touched the lines (blame), and the session's PR.
-func (x *Plugin) history(ctx context.Context, path string, snap text.Snapshot, r text.Range) string {
+func (x *Explain) history(ctx context.Context, path string, snap text.Snapshot, r text.Range) string {
 	var b strings.Builder
 	if g := kit.Git(x.h).Tree(""); g.Status() != nil {
 		if blame, err := g.Status().Repo().Blame(ctx, g.Rel(path), snap.Bytes()); err == nil {
@@ -209,7 +209,7 @@ func (x *Plugin) history(ctx context.Context, path string, snap text.Snapshot, r
 }
 
 // threadsOn is the session's threads on lines [a, z] of path, and its PR, for why · history.
-func (x *Plugin) threadsOn(path string, a, z int) string {
+func (x *Explain) threadsOn(path string, a, z int) string {
 	st := x.h.State()
 	s, ok := st.Session(st.Focus)
 	if !ok {
@@ -244,7 +244,7 @@ func (x *Plugin) threadsOn(path string, a, z int) string {
 // explainAsking is the notice explain.ask shows while it waits for an answer.
 const explainAsking = "explain.asking"
 
-func (x *Plugin) ask(a registry.Args) error {
+func (x *Explain) ask(a registry.Args) error {
 	depth := cmp.Or(registry.ExplainDepth(a.String("depth")), registry.ExplainBrief)
 	if !slices.Contains(explainDepths, depth) {
 		return fmt.Errorf("no depth %q: brief, detailed or why", depth)
@@ -310,7 +310,7 @@ func (x *Plugin) ask(a registry.Args) error {
 }
 
 // followUp opens a new request with the explanation and the code attached.
-func (x *Plugin) followUp(ctx registry.Ctx) error {
+func (x *Explain) followUp(ctx registry.Ctx) error {
 	cd := x.card
 	r, ok := cd.rangeOf(cd.sel)
 	if !ok {
@@ -325,7 +325,7 @@ func (x *Plugin) followUp(ctx registry.Ctx) error {
 }
 
 // pin makes the explanation a resolved thread on the lines it's about: a note that doesn't go to the agent.
-func (x *Plugin) pin(ctx registry.Ctx) error {
+func (x *Explain) pin(ctx registry.Ctx) error {
 	cd := x.card
 	a := x.shown(cd)
 	if a == nil || a.text == "" {
@@ -347,7 +347,7 @@ func (x *Plugin) pin(ctx registry.Ctx) error {
 }
 
 // requestThis writes a request about the selection, the unit at the cursor, or the cursor's place.
-func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
+func (x *Explain) requestThis(ctx registry.Ctx, what string) error {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")

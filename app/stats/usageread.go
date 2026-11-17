@@ -17,7 +17,7 @@ import (
 
 // pageAccounts are the accounts the Usage page offers, by provider: each one read, and a provider being read or
 // failed with none read yet, as an account with no windows.
-func (x *Plugin) pageAccounts() []core.ProviderUsage {
+func (x *Stats) pageAccounts() []core.ProviderUsage {
 	st := x.h.State()
 	us := slices.Clone(st.Usage)
 	pending := slices.Clone(st.UsageReading)
@@ -34,7 +34,7 @@ func (x *Plugin) pageAccounts() []core.ProviderUsage {
 }
 
 // sessionUsage is the one of us the session in front runs on: its provider's, its account's when known.
-func (x *Plugin) sessionUsage(us []core.ProviderUsage) (core.ProviderUsage, bool) {
+func (x *Stats) sessionUsage(us []core.ProviderUsage) (core.ProviderUsage, bool) {
 	st := x.h.State()
 	se, ok := st.Session(st.Focus)
 	if !ok {
@@ -54,7 +54,7 @@ func (x *Plugin) sessionUsage(us []core.ProviderUsage) (core.ProviderUsage, bool
 }
 
 // unread is a provider's section with no windows read yet: being read, or why the read failed.
-func (x *Plugin) unread(c *ui.Ctx, u core.ProviderUsage) {
+func (x *Stats) unread(c *ui.Ctx, u core.ProviderUsage) {
 	th := c.Theme()
 	st := x.h.State()
 	name := services.ProviderTitle(x.h, u.Provider)

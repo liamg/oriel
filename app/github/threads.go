@@ -27,7 +27,7 @@ type trust struct {
 }
 
 // threads are the PR's review threads and its conversation.
-func (x *GitHubHost) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.ReviewThread, error) {
+func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.ReviewThread, error) {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (x *GitHubHost) threads(ctx context.Context, r registry.CodeRepo, pr regist
 }
 
 // reply posts body on a review thread, or in the conversation for t.ID "", as the user, and answers its id.
-func (x *GitHubHost) reply(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, body string) (string, error) {
+func (x *Host) reply(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, body string) (string, error) {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return "", err
@@ -144,7 +144,7 @@ func (x *GitHubHost) reply(ctx context.Context, r registry.CodeRepo, pr registry
 }
 
 // resolve resolves a review thread on GitHub, or reopens it.
-func (x *GitHubHost) resolve(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, resolved bool) error {
+func (x *Host) resolve(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, resolved bool) error {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func rootOf(t registry.ReviewThread) (int64, error) {
 }
 
 // me is who the user is on the site, asked once.
-func (x *GitHubHost) me(ctx context.Context, c gh.Client, s registry.Site) string {
+func (x *Host) me(ctx context.Context, c gh.Client, s registry.Site) string {
 	x.trust.mu.Lock()
 	defer x.trust.mu.Unlock()
 	if x.trust.me == nil {
@@ -188,7 +188,7 @@ func (x *GitHubHost) me(ctx context.Context, c gh.Client, s registry.Site) strin
 
 // truster says whose text the agent may read: a trusted user, or a member of a trusted org (the repo's owner when
 // none is set).
-func (x *GitHubHost) truster(ctx context.Context, c gh.Client, repo gh.Repo) func(user, assoc string) bool {
+func (x *Host) truster(ctx context.Context, c gh.Client, repo gh.Repo) func(user, assoc string) bool {
 	list := func(name string) []string {
 		l, _ := registry.Option[[]string](x.h.Options(), name, registry.At{})
 		return l
@@ -214,7 +214,7 @@ func (x *GitHubHost) truster(ctx context.Context, c gh.Client, repo gh.Repo) fun
 }
 
 // member says user belongs to org, asked once; not known is no.
-func (x *GitHubHost) member(ctx context.Context, c gh.Client, org, user string) bool {
+func (x *Host) member(ctx context.Context, c gh.Client, org, user string) bool {
 	key := strings.ToLower(org + "/" + user)
 	x.trust.mu.Lock()
 	in, ok := x.trust.members[key]

@@ -14,9 +14,9 @@ import (
 // test has queued itself, a move for one, it leaves to the test.
 func (s *Scene) SettleDrawn() {
 	s.T.Helper()
-	var e *explain.Plugin
+	var e *explain.Explain
 	if p, ok := s.Plugin("explain"); ok {
-		e, _ = p.(*explain.Plugin)
+		e, _ = p.(*explain.Explain)
 	}
 	// A frame takes on what came back, and may start more: a base read in lets a buffer's units be worked out again.
 	for deadline := time.Now().Add(Timeout); ; {

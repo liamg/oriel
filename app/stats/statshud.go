@@ -51,7 +51,7 @@ func hudDivider(c *ui.Ctx, key any) {
 }
 
 // usagePanel is every account's windows, the account in front first, each with where its burn takes it by the reset.
-func (x *Plugin) usagePanel(c *ui.Ctx) {
+func (x *Stats) usagePanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.now()
 	us, failed := x.hudUsage()
@@ -130,7 +130,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 }
 
 // headed is where a window's burn takes it, shortly: "→59% at reset", "→97% Thu", "idle", "full Thu 14:38".
-func (x *Plugin) headed(r windowRead, now time.Time) string {
+func (x *Stats) headed(r windowRead, now time.Time) string {
 	switch {
 	case !r.runsOut.IsZero():
 		return "full " + r.runsOut.In(x.Loc).Format("Mon 15:04")
@@ -145,7 +145,7 @@ func (x *Plugin) headed(r windowRead, now time.Time) string {
 }
 
 // usageNote is the panel's note: how many accounts, and how long ago they were read.
-func (x *Plugin) usageNote() string {
+func (x *Stats) usageNote() string {
 	us := x.h.State().Usage
 	var read time.Time
 	for _, u := range us {
@@ -161,7 +161,7 @@ func (x *Plugin) usageNote() string {
 
 // todayPanel is today's totals: tokens, cost, the cache's share and the requests opened today; then the hud.today
 // slot's indicators.
-func (x *Plugin) todayPanel(c *ui.Ctx) {
+func (x *Stats) todayPanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.now().In(x.Loc)
 	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc)
@@ -211,7 +211,7 @@ const usedWithin = 14 * 24 * time.Hour
 // hudUsage are the plans the HUD shows, the account in front first: those of the providers
 // sessions have run on lately, when any have; every plan read, when none have. failed are the providers in use whose
 // plan couldn't be read, so one that didn't read isn't simply missing.
-func (x *Plugin) hudUsage() (us []core.ProviderUsage, failed []core.UsageFailure) {
+func (x *Stats) hudUsage() (us []core.ProviderUsage, failed []core.UsageFailure) {
 	st := x.h.State()
 	front, _ := x.frontUsage()
 	used := usedProviders(st, x.now())

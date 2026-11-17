@@ -46,11 +46,11 @@ var (
 // explainDepths are the card's depths, in its strip's order.
 var explainDepths = []registry.ExplainDepth{registry.ExplainBrief, registry.ExplainDetailed, registry.ExplainWhy}
 
-// Plugin is explain by code unit: ? marks on the units the branch changed, the explain card between
+// Explain is explain by code unit: ? marks on the units the branch changed, the explain card between
 // the lines with its breadcrumb, [ and ] to widen and narrow, depths, a cache by the unit's content, Explain this on a
 // selection and the right-click requests, and the Changed units panel. The answers come from the first
 // registry.Explainer.
-type Plugin struct {
+type Explain struct {
 	kit.Disposer
 	h plugin.Host
 
@@ -151,9 +151,9 @@ func (cd *explainCard) breadcrumb() string {
 	return strings.Join(out, " › ")
 }
 
-func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain"} }
+func (x *Explain) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain"} }
 
-func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
+func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "explain", Busy: x.Busy}))
 	x.h = h
 	x.parsers, x.bufs, x.computing = map[string]*syntax.Parser{}, map[*text.Buffer]*fileUnits{}, map[*text.Buffer]bool{}
@@ -243,7 +243,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-func (x *Plugin) Deactivate(ctx context.Context) error {
+func (x *Explain) Deactivate(ctx context.Context) error {
 	x.mu.Lock()
 	for _, l := range x.later {
 		l.timer.Stop()
@@ -264,13 +264,13 @@ func (x *Plugin) Deactivate(ctx context.Context) error {
 }
 
 // Wait waits for the units, bases and answers being worked out off the loop.
-func (x *Plugin) Wait() { x.busy.Wait() }
+func (x *Explain) Wait() { x.busy.Wait() }
 
 // Busy says a buffer's units or a file's base are being worked out, or units are held back to be worked out soon. A
 // frame asking for the gutter's marks may start either, so Wait alone can't tell they're done. Units due a second ago
 // and still not taken up are a buffer no longer drawn. Whatever else runs off the loop (the panel's files, answers) is
 // counted too.
-func (x *Plugin) Busy() bool {
+func (x *Explain) Busy() bool {
 	if x.busy.Busy() {
 		return true
 	}
@@ -292,12 +292,12 @@ func (x *Plugin) Busy() bool {
 	return false
 }
 
-func (x *Plugin) notify(err error) {
+func (x *Explain) notify(err error) {
 	x.h.Notify(core.Notice{ID: "explain", Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
 }
 
 // changedIn is how many hunks and changed units an open file has.
-func (x *Plugin) changedIn(path string) (hunks, units int) {
+func (x *Explain) changedIn(path string) (hunks, units int) {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return 0, 0
@@ -315,7 +315,7 @@ func (x *Plugin) changedIn(path string) (hunks, units int) {
 }
 
 // focused is whether the card has the keys: it's open, and the editor's cursor is in normal mode inside what it explains.
-func (x *Plugin) focused() bool {
+func (x *Explain) focused() bool {
 	cd := x.card
 	ed, ok := services.EditorsOf(x.h)
 	if cd == nil || !ok || ed.Mode() != "normal" {
@@ -346,7 +346,7 @@ func firstNonBlank(snap text.Snapshot, line int) int {
 }
 
 // explainUnit explains the unit at {file}'s {line}, or at the cursor; at the cursor, again on the unit shown widens.
-func (x *Plugin) explainUnit(a registry.Args) error {
+func (x *Explain) explainUnit(a registry.Args) error {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
@@ -405,7 +405,7 @@ func unitOnLine(units []text.Unit, snap text.Snapshot, line, at int) int {
 }
 
 // current is the editor's current window's buffer.
-func (x *Plugin) current() (services.EditorBuffer, bool) {
+func (x *Explain) current() (services.EditorBuffer, bool) {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return services.EditorBuffer{}, false
@@ -414,7 +414,7 @@ func (x *Plugin) current() (services.EditorBuffer, bool) {
 }
 
 // explainSelection explains the Visual selection, inside the units around it, and leaves Visual mode.
-func (x *Plugin) explainSelection() error {
+func (x *Explain) explainSelection() error {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
@@ -429,12 +429,12 @@ func (x *Plugin) explainSelection() error {
 }
 
 // leaveVisual takes the editor out of Visual mode, as <Esc> does.
-func (x *Plugin) leaveVisual() {
+func (x *Explain) leaveVisual() {
 	kit.RunOrNotify(x.h, "explain", "editor.keys", registry.Args{"keys": "<Esc>", "noremap": true})
 }
 
 // explainRange opens a card on a range of a buffer, under the units around it; kind is what it is, a selection if "".
-func (x *Plugin) explainRange(path string, buf *text.Buffer, r text.Range, kind, subject, more string) error {
+func (x *Explain) explainRange(path string, buf *text.Buffer, r text.Range, kind, subject, more string) error {
 	units := x.unitsNow(path, buf)
 	var around []int
 	if i := text.Innermost(units, r); i >= 0 {
@@ -454,7 +454,7 @@ func (x *Plugin) explainRange(path string, buf *text.Buffer, r text.Range, kind,
 }
 
 // openCard opens the card on units (a chain of indexes into all), then the selection if there's one, showing the last.
-func (x *Plugin) openCard(path string, buf *text.Buffer, all []text.Unit, chain []int, sel *text.Range, subject string) {
+func (x *Explain) openCard(path string, buf *text.Buffer, all []text.Unit, chain []int, sel *text.Range, subject string) {
 	x.closeCard()
 	src := buf.Snapshot().Bytes()
 	cd := &explainCard{path: path, buf: buf, reveal: true}
@@ -475,7 +475,7 @@ func (x *Plugin) openCard(path string, buf *text.Buffer, all []text.Unit, chain 
 	}
 }
 
-func (x *Plugin) closeCard() {
+func (x *Explain) closeCard() {
 	if x.card != nil {
 		x.card.release()
 		x.card = nil
@@ -484,7 +484,7 @@ func (x *Plugin) closeCard() {
 
 // step moves the card out (-1) or in (+1) along the syntax tree. In from the innermost unit it has, it goes into the
 // unit inside that holds the cursor, else the first.
-func (x *Plugin) step(d int) {
+func (x *Explain) step(d int) {
 	cd := x.card
 	if cd == nil {
 		return
@@ -531,7 +531,7 @@ func (x *Plugin) step(d int) {
 	x.ensure()
 }
 
-func (x *Plugin) setDepth(name string) error {
+func (x *Explain) setDepth(name string) error {
 	i := slices.Index(explainDepths, registry.ExplainDepth(name))
 	if i < 0 {
 		return fmt.Errorf("no depth %q: brief, detailed or why", name)
@@ -544,7 +544,7 @@ func (x *Plugin) setDepth(name string) error {
 }
 
 // contentHash is the hash of a crumb's text now.
-func (x *Plugin) contentHash(cd *explainCard, i int) (string, bool) {
+func (x *Explain) contentHash(cd *explainCard, i int) (string, bool) {
 	r, ok := cd.rangeOf(i)
 	if !ok {
 		return "", false
@@ -553,13 +553,13 @@ func (x *Plugin) contentHash(cd *explainCard, i int) (string, bool) {
 }
 
 // changed is whether the step shown has changed since it was explained.
-func (x *Plugin) changed(cd *explainCard) bool {
+func (x *Explain) changed(cd *explainCard) bool {
 	h, ok := x.contentHash(cd, cd.sel)
 	return ok && cd.crumbs[cd.sel].hash != "" && h != cd.crumbs[cd.sel].hash
 }
 
 // shown is the answer for the step and depth shown.
-func (x *Plugin) shown(cd *explainCard) *answer {
+func (x *Explain) shown(cd *explainCard) *answer {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.answers[answerKey{cd.crumbs[cd.sel].hash, explainDepths[cd.depth]}]
@@ -567,7 +567,7 @@ func (x *Plugin) shown(cd *explainCard) *answer {
 
 // ensure asks about the step shown at its depth, unless the cache has it: an answer for the same text at the
 // same depth.
-func (x *Plugin) ensure() {
+func (x *Explain) ensure() {
 	cd := x.card
 	if cd == nil {
 		return
@@ -595,7 +595,7 @@ func (x *Plugin) ensure() {
 }
 
 // markedAs is the text hash a unit starting at off was last explained as.
-func (x *Plugin) markedAs(buf *text.Buffer, kind string, off int) string {
+func (x *Explain) markedAs(buf *text.Buffer, kind string, off int) string {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	for _, m := range x.marks {
@@ -606,7 +606,7 @@ func (x *Plugin) markedAs(buf *text.Buffer, kind string, off int) string {
 	return ""
 }
 
-func (x *Plugin) refresh() error {
+func (x *Explain) refresh() error {
 	if cd := x.card; cd != nil {
 		h, _ := x.contentHash(cd, cd.sel)
 		cd.crumbs[cd.sel].hash = h
@@ -636,7 +636,7 @@ func codeOf(snap text.Snapshot, r text.Range) string {
 }
 
 // relName is a path as the work tree names it.
-func (x *Plugin) relName(path string) string {
+func (x *Explain) relName(path string) string {
 	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return path

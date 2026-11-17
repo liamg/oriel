@@ -38,7 +38,7 @@ type WhichKey struct {
 	h plugin.Host
 }
 
-func (w *WhichKey) Manifest() plugin.Manifest { return plugin.Manifest{ID: "whichkey"} }
+func (w *WhichKey) Manifest() plugin.Manifest { return plugin.Manifest{ID: "which-key"} }
 
 func (w *WhichKey) Activate(_ context.Context, h plugin.Host) error {
 	w.h = h

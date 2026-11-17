@@ -265,7 +265,7 @@ clip 760,50 640x835.48 r 0
       pop
       text "OBSERVE" @1110,574.82 #b98aff JetBrains Mono 9.5
       clip 1198,564.14 200x14.52002 r 0
-        text "builtin:explain.change" @1198,575.36 #ffd23f JetBrains Mono 11
+        text "builtin:walkthrough" @1198,575.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,575.36 #4f4a40 JetBrains Mono 11
       text "DirChanged" @784,605.54 #ece6d8 JetBrains Mono 11.5
@@ -328,7 +328,7 @@ clip 760,50 640x835.48 r 0
       pop
       text "OBSERVE" @1110,784.82 #b98aff JetBrains Mono 9.5
       clip 1198,774.14 200x14.52002 r 0
-        text "builtin:sessionend" @1198,785.36 #ffd23f JetBrains Mono 11
+        text "builtin:session-end" @1198,785.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,785.36 #4f4a40 JetBrains Mono 11
       text "PrPushed" @784,815.54 #ece6d8 JetBrains Mono 11.5

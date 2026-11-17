@@ -22,7 +22,7 @@ func (Engine) Attach(ed *edit.Editor) input.State { return &state{ed: ed, want: 
 // Plugin registers the engine, so the input option can pick "emacs".
 type Plugin struct{ d interface{ Dispose() } }
 
-func (p *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sample.emacs"} }
+func (p *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sample-emacs"} }
 
 func (p *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	p.d = h.Input(Engine{})

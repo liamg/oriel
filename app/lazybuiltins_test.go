@@ -23,7 +23,7 @@ import (
 
 // The built-ins not needed at start, lazy through their manifests as any plugin's: stats' page, the theme editor,
 // voice, debug and tests.
-var lazyBuiltins = []string{"stats.page", "theme", "voice", "debug", "tests"}
+var lazyBuiltins = []string{"stats-page", "theme", "voice", "debug", "tests"}
 
 func loaded(s *apptest.Scene, id string) bool {
 	return slices.ContainsFunc(s.Host().Plugins(), func(m plugin.Manifest) bool { return m.ID == id })
@@ -55,8 +55,8 @@ func TestLazyBuiltinsLoadOnTheirTriggers(t *testing.T) {
 		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
 		s.Press("<D-S>")
 		s.Frame()
-		if !loaded(s, "stats.page") || !placeShown(s, "stats") {
-			t.Errorf("loaded %v; the page isn't open", loaded(s, "stats.page"))
+		if !loaded(s, "stats-page") || !placeShown(s, "stats") {
+			t.Errorf("loaded %v; the page isn't open", loaded(s, "stats-page"))
 		}
 	})
 	t.Run("theme editor by its command", func(t *testing.T) {

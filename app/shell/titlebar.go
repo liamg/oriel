@@ -65,7 +65,7 @@ type sessionTabs struct {
 	rename   widget.Rename
 }
 
-func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessiontabs"} }
+func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "session-tabs"} }
 
 func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	focus := func(id core.SessionID, then ...kit.Call) error { return kit.Focus(h, id, then) }
@@ -268,7 +268,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 	if d := in.Dropped; d != nil {
 		if id, ok := d.Data.(core.SessionID); ok && id != s.ID() {
 			if err := h.Run(context.Background(), "session.tab.move", registry.Args{"id": string(id), "index": i + 1}); err != nil {
-				h.Log().Error("sessiontabs", "move", id, "err", err)
+				h.Log().Error("session-tabs", "move", id, "err", err)
 			}
 		}
 	}
