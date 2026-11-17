@@ -726,13 +726,13 @@ func (x *Debug) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		}
 		out = append(out, uireg.Decoration{Kind: uireg.Sign, Line: b.Line, Text: b.glyph(), Style: style, Priority: 30})
 		if note != "" {
-			out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: b.Line, Text: note, Style: "debug.note", Priority: 30})
+			out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: b.Line, Text: note, Style: tDebugNote.Name(), Priority: 30})
 		}
 	}
 	if f, ok := x.sess.top(); ok && f.Path == ctx.Path && f.Line >= ctx.Top && f.Line < ctx.Bottom {
 		out = append(out,
-			uireg.Decoration{Kind: uireg.Sign, Line: f.Line, Text: "➜", Style: "debug.frame", Priority: 40},
-			uireg.Decoration{Kind: uireg.LineBg, Line: f.Line, Style: "debug.frame.bg", Edge: "debug.frame", Priority: 40})
+			uireg.Decoration{Kind: uireg.Sign, Line: f.Line, Text: "➜", Style: tDebugFrame.Name(), Priority: 40},
+			uireg.Decoration{Kind: uireg.LineBg, Line: f.Line, Style: tDebugFrameBg.Name(), Edge: tDebugFrame.Name(), Priority: 40})
 	}
 	return append(out, x.inlineValues(ctx)...)
 }

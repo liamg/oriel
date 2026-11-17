@@ -27,7 +27,6 @@ var (
 	tStatsOther   = theme.DeclareOn("stats.other", "alpha(fg, 30%)", "bg.surface")
 	tStatsTrack   = theme.Declare("stats.track", "bg.overlay")
 	tStatsBad     = theme.Declare("stats.bad", "red")
-	tStatsGood    = theme.Declare("stats.good", "green")
 	tStatsBarFill = theme.DeclareOn("stats.bar", "alpha(fg, 45%)", "bg.surface")
 )
 

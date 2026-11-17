@@ -26,7 +26,6 @@ var (
 	tDrop       = theme.DeclareOn("drop.target.bg", "alpha(accent, 12%)", "bg.base")
 	tDropEdge   = theme.Declare("drop.target.edge", "accent")
 	tFloatEdge  = theme.Declare("float.border", "line.strong")
-	tFocusEdge  = theme.Declare("pane.focus.edge", "accent")
 	tDropDownBg = theme.Declare("dropdown.bg", "bg.surface")
 )
 

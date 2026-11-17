@@ -56,7 +56,7 @@ func (x *Debug) inlineValues(ctx uireg.DecorationCtx) []uireg.Decoration {
 	var out []uireg.Decoration
 	for line, t := range c.lines {
 		if line >= ctx.Top && line < ctx.Bottom {
-			out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: t, Style: "debug.value", Bg: "debug.value.bg",
+			out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: t, Style: tDebugValue.Name(), Bg: tDebugValueBg.Name(),
 				Priority: 35})
 		}
 	}
