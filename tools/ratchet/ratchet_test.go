@@ -33,14 +33,14 @@ var ceilings = map[string]int{
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 21,
+	"time.Sleep in tests": 16,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
 	// plugin.Load, work.Busy or work.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,
 	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
 	"wall-clock measures in tests": 3,
 	// A timer in a test either guards a hang or guesses how long work takes; a test waits for the work instead.
-	"timers in tests": 80,
+	"timers in tests": 78,
 	// A test frames and runs the loop's queue through apptest's waits (Until, Quiet), not a loop of its own.
 	"RunQueued in tests outside apptest": 2,
 }

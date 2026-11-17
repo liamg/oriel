@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/leaktest"
+	"github.com/liamg/oriel/internal/waitfor"
 )
 
 var quick = Timing{Settle: 20 * time.Millisecond, Most: 200 * time.Millisecond, Grace: 300 * time.Millisecond, Fallback: 100 * time.Millisecond}
@@ -36,17 +37,7 @@ func counted(key string, poll bool, files ...Files) (Source[int], *atomic.Int32)
 // until waits for a reading of s's that ok accepts, as each new one arrives.
 func until[T any](t *testing.T, s Sub[T], what string, ok func(v T) bool) {
 	t.Helper()
-	deadline := time.After(10 * time.Second)
-	for {
-		if v, _, has := s.Get(); has && ok(v) {
-			return
-		}
-		select {
-		case <-s.Changed():
-		case <-deadline:
-			t.Fatalf("never: %s", what)
-		}
-	}
+	waitfor.Change(t, what, func() bool { v, _, has := s.Get(); return has && ok(v) }, s.Changed)
 }
 
 func write(t *testing.T, p, s string) {

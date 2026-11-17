@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/internal/waitfor"
 	"github.com/liamg/oriel/update"
 )
 
@@ -123,16 +123,7 @@ func TestBootRunsOnlyUnderTheLock(t *testing.T) {
 	}
 	defer func() { _ = held.Close() }()
 	cfg.Started()
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		if _, ok := in.Pending(); !ok {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("the start holding the lock never confirmed the update")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	waitfor.Poll(t, "the start holding the lock to confirm the update", func() bool { _, ok := in.Pending(); return !ok })
 	if b, _ := os.ReadFile(in.Target); string(b) != "new" {
 		t.Errorf("Target = %q", b)
 	}
