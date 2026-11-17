@@ -36,9 +36,9 @@ func TestNoRawTerminalWithoutOne(t *testing.T) {
 	if strings.Contains(s, "Raw terminal") {
 		t.Error("the console offers a raw terminal the agent hasn't got")
 	}
-	err := r.Do(func() error { return r.Host.Run(context.Background(), "agent.terminal", nil) })
+	err := r.Do(func() error { return r.Host.Run(context.Background(), "agent.terminal.open", nil) })
 	if err == nil {
-		t.Error("agent.terminal ran for an agent with no terminal")
+		t.Error("agent.terminal.open ran for an agent with no terminal")
 	}
 }
 

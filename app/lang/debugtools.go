@@ -48,7 +48,7 @@ func debugAccessOption(action string) string { return "debug.agent." + action }
 
 // toolCommands set what the agent tools may do.
 func (x *Debug) toolCommands() []registry.Command {
-	return []registry.Command{{ID: "debug.agent.access",
+	return []registry.Command{{ID: "debug.agent_access.set",
 		Title: "Set what agents may do in the debugger: {action} read, eval, breakpoints or step, to {level} allow, ask or off (the next by default)",
 		Run:   func(_ registry.Ctx, a registry.Args) error { return x.setLevel(a.String("action"), a.String("level")) }}}
 }

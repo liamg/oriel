@@ -199,7 +199,7 @@ func TestNextPRAfterMergingIntoMainHereWaitsForMainToBePushed(t *testing.T) {
 	s, _, _, se, _ := raisedScene(t)
 	x := shipOf(s)
 	first, _ := x.ShipOf(se.ID, "search-api")
-	s.Run("ship.merge-default", registry.Args{"project": "search-api", "confirm": true})
+	s.Run("ship.default_branch.merge", registry.Args{"project": "search-api", "confirm": true})
 	shipSettle(s, t, "the next PR", func() bool {
 		sh, _ := x.ShipOf(se.ID, "search-api")
 		return sh.Branch != first.Branch && sh.Branch != ""
@@ -214,7 +214,7 @@ func TestNextPRAfterMergingIntoMainHereWaitsForMainToBePushed(t *testing.T) {
 	s.Run("ship.refresh", nil)
 	shipSettle(s, t, "main unpushed", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.BaseAhead == 1 })
 	s.Run("project.open", registry.Args{"project": "search-api"})
-	s.Run("project.panel", registry.Args{"name": "pull-request"})
+	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	s.Frame()
 	s.WantFrame("main pushed", "1 to push")
 	err := s.Registry().Run(context.Background(), "ship.raise", registry.Args{"project": "search-api", "title": "feat: y"})

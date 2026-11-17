@@ -63,6 +63,6 @@ just run. Asked ones show a permission card on the session, where your rules and
 first, and **Allow for this session** allows that tool for the rest of the session. Actions that are off are refused, and the agent
 is told why. By default reading and eval are allowed, breakpoints ask and stepping is off. The options are
 `debug.agent.read`, `debug.agent.eval`, `debug.agent.breakpoints` and `debug.agent.step`, and
-`debug.agent.access {action, level}` sets one. What the agent evaluates shows in the console as `agent ›`.
+`debug.agent_access.set {action, level}` sets one. What the agent evaluates shows in the console as `agent ›`.
 
 {{keys "debug.*"}}

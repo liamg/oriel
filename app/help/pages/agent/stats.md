@@ -1,6 +1,6 @@
 ---
 id: agent/stats
-covers: [stats.open, stats.session, stats.origin]
+covers: [stats.open, stats.session.open, stats.origin.set]
 related: [agent/usage, agent/console]
 ---
 

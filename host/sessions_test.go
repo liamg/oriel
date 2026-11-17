@@ -598,20 +598,20 @@ func TestDismissedNoticeStaysDismissedOnRestore(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	store := r.w.Store()
-	if err := store.Apply(core.Notified{Notice: core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Source: "builtin:ship",
+	if err := store.Apply(core.Notified{Notice: core.Notice{ID: "ship.default_branch.merge", Severity: core.SevQuestion, Source: "builtin:ship",
 		Session: id, Text: "Merge into main?", Time: r.now()}}); err != nil {
 		t.Fatal(err)
 	}
 	dismissed := func() (bool, bool) {
 		for _, n := range r.w.Store().State().Notifications {
-			if n.ID == "ship.merge-default" && n.Session == id {
+			if n.ID == "ship.default_branch.merge" && n.Session == id {
 				return n.Dismissed, true
 			}
 		}
 		return false, false
 	}
 	for _, n := range store.State().Notifications {
-		if n.ID == "ship.merge-default" {
+		if n.ID == "ship.default_branch.merge" {
 			if err := store.Apply(core.Dismissal(n)); err != nil {
 				t.Fatal(err)
 			}
@@ -628,7 +628,7 @@ func TestQuestionIsNotAskedAgainOnRestore(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	for _, n := range []core.Notice{
-		{ID: "ship.merge-default", Severity: core.SevQuestion, Source: "builtin:ship", Session: id, Text: "Merge into main?", Time: r.now()},
+		{ID: "ship.default_branch.merge", Severity: core.SevQuestion, Source: "builtin:ship", Session: id, Text: "Merge into main?", Time: r.now()},
 		{ID: "hook.failed", Severity: core.SevError, Source: "builtin:ship", Session: id, Text: "a hook failed", Time: r.now()},
 	} {
 		if err := r.w.Store().Apply(core.Notified{Notice: n}); err != nil {
@@ -640,7 +640,7 @@ func TestQuestionIsNotAskedAgainOnRestore(t *testing.T) {
 	for _, n := range r.w.Store().State().Notifications {
 		got[n.ID] = n.Dismissed
 	}
-	if d, ok := got["ship.merge-default"]; !ok || !d {
+	if d, ok := got["ship.default_branch.merge"]; !ok || !d {
 		t.Errorf("the question after a restart: there %v, dismissed %v; want there and dismissed", ok, d)
 	}
 	if d, ok := got["hook.failed"]; !ok || d {

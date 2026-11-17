@@ -112,7 +112,7 @@ func TestSessionTabCloses(t *testing.T) {
 		t.Errorf("tabs %v, focus %s; want s1's tab gone and s2 in front", st.Tabs, st.Focus)
 	}
 	for _, id := range []string{"s2", "s3"} {
-		if err := s.Host().Run(context.Background(), "session.close-tab", registry.Args{"id": id}); err != nil {
+		if err := s.Host().Run(context.Background(), "session.tab.close", registry.Args{"id": id}); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -65,7 +65,7 @@ func TestSessionStatsFailureRetries(t *testing.T) {
 	}
 	f := &failingStats{StatsCalls: w, id: id}
 	s.Registry().Contribute(registry.Service{Name: hostapi.HostStatsService, Impl: hostapi.StatsCalls(f), Source: "test"})
-	s.Run("stats.session", registry.Args{"id": string(id)})
+	s.Run("stats.session.open", registry.Args{"id": string(id)})
 	settle(s, x)
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()

@@ -180,7 +180,7 @@ func TestDiffHunkKeysAndReviewed(t *testing.T) {
 	})
 }
 
-// "?" explains the selected line's code unit through explain.unit, dimmed until it's registered.
+// "?" explains the selected line's code unit through explain.unit.ask, dimmed until it's registered.
 func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	r := rig.DiffRepo(t)
 	got := make(chan registry.Args, 1)
@@ -193,8 +193,8 @@ func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	app.TypeKeys("]h")
 	app.TypeKeys("jjjjjj")
 	app.TypeKeys("?")
-	if a := apptest.Recv(t, "? to run explain.unit", got); a.String("file") != filepath.Join(r.Dir, "internal/pricing/round.go") || a.Int("line") != 8 {
-		t.Errorf("explain.unit got %v, want round.go's line 8", a)
+	if a := apptest.Recv(t, "? to run explain.unit.ask", got); a.String("file") != filepath.Join(r.Dir, "internal/pricing/round.go") || a.Int("line") != 8 {
+		t.Errorf("explain.unit.ask got %v, want round.go's line 8", a)
 	}
 }
 

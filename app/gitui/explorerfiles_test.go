@@ -23,7 +23,7 @@ func explorerAll(t *testing.T, readOnly bool) (*apptest.Scene, *gittest.Repo) {
 	se := core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Dir: r.Dir,
 		Projects: []core.Project{{Name: "p", Dir: r.Dir, Primary: true, ReadOnly: readOnly}}}
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
-	s.Run("explorer.scope", registry.Args{"scope": "all"})
+	s.Run("explorer.scope.set", registry.Args{"scope": "all"})
 	s.Frame()
 	s.Until("the tree", func() bool { s.Frame(); return strings.Contains(s.Text(), "currency.go") })
 	return s, r
@@ -75,7 +75,7 @@ func TestExplorerDeleteAsksThenTrashes(t *testing.T) {
 func TestExplorerNewDuplicateAndCopyPath(t *testing.T) {
 	s, r := explorerAll(t, false)
 	dir := filepath.Join(r.Dir, "internal/pricing")
-	s.Run("explorer.new-file", registry.Args{"path": dir})
+	s.Run("explorer.file.new", registry.Args{"path": dir})
 	s.Until("the new file dialog", func() bool { return strings.Contains(s.Text(), "New file") })
 	s.TypeText("tax.go")
 	s.Type("CR")

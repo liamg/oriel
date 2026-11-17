@@ -22,7 +22,7 @@ func codeEnd(s *apptest.Scene, x, top, bottom float32) float32 {
 // On a wide window the notes sit beside the code they're about, not at the far side of the window.
 func TestExplainNotesSitBesideTheCode(t *testing.T) {
 	s, _, _, _ := apptest.WalkSceneAt(t, render.Point{X: 2560, Y: 1000})
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	walkKeys(s, "<Right>")
 	walkSettle(s)
@@ -48,7 +48,7 @@ func TestExplainStepOpensOnItsNote(t *testing.T) {
  {"title": "Rounding is one function", "project": "pricing", "file": "round.go", "lines": [3, 4], "prose": "Everything goes through it.",
   "notes": [{"title": "Currencies it can't round", "lines": [22, 24], "text": "An unknown currency fails."}]},
  {"title": "Summary", "prose": "One place rounds."}]}` + "\n```\n")
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	if !strings.Contains(s.Text(), "CURRENCIES IT CAN'T ROUND") {
 		t.Errorf("the step opened without its note in view:\n%s", s.Text())
@@ -66,7 +66,7 @@ func TestExplainSummaryDrawsItsDiagram(t *testing.T) {
  {"title": "Ties round to even", "project": "pricing", "file": "round.go", "lines": [4, 18], "prose": "Once."},
  {"title": "Summary", "prose": "Lines round once, half to even, and remember how.",
   "diagram": "flowchart LR\n  M[Meter] --> L[NewLine]\n  L -->|RoundMinor| R[roundHalfEven]\n  L --> I[Invoice]"}]}` + "\n```\n")
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	walkKeys(s, "<Right>")
 	walkSettle(s)
@@ -80,7 +80,7 @@ func TestExplainSummaryDrawsItsDiagram(t *testing.T) {
 
 	f.SetAnswer("```json\n" + `{"steps": [{"title": "Summary", "prose": "p", "diagram": "pie\n  \"a\": 1"}]}` + "\n```\n")
 	s.Run("explain.change.discard", nil)
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	if !strings.Contains(s.Text(), "This step is about the change as a whole.") {
 		t.Errorf("a diagram it can't draw didn't leave the message:\n%s", s.Text())

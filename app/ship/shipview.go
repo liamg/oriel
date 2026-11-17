@@ -153,10 +153,10 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 		}
 		waiting := widget.Waiting(reads...).Pending()
 		if widget.Button(c, "sync", "Sync all", widget.ButtonOpts{Help: "git/ship#sync", Disabled: waiting}) {
-			x.run("ship.sync-all", nil)
+			x.run("ship.all.sync", nil)
 		}
 		if widget.Button(c, "commit", "Commit all", widget.ButtonOpts{Help: "git/ship#commit", Disabled: waiting}) {
-			x.run("ship.commit-all", nil)
+			x.run("ship.all.commit", nil)
 		}
 		label := "Push + raise " + w.Short
 		switch {
@@ -171,11 +171,11 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			}
 		} else if raisable > 0 {
 			if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: waiting, Why: stillReading}) {
-				x.run("ship.raise-all", nil)
+				x.run("ship.all.raise", nil)
 			}
 		} else if pushable > 0 {
 			if widget.Button(c, "push", "Push all", widget.ButtonOpts{Primary: true, Help: "git/ship#push", Disabled: waiting, Why: stillReading}) {
-				x.run("ship.push-all", nil)
+				x.run("ship.all.push", nil)
 			}
 		}
 	})

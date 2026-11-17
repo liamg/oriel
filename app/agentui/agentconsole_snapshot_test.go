@@ -159,7 +159,7 @@ func TestLongTranscriptDrawsWhatShows(t *testing.T) {
 	if err := s.Store().Apply(core.SessionFocused{ID: "w"}); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("agent.console", nil)
+	s.Run("agent.console.toggle", nil)
 	s.Frame()
 	s.Frame()
 	text := s.Text()

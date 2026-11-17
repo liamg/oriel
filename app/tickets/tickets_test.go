@@ -425,7 +425,7 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 	s.Run("ship.refresh", nil)
 	asked := func() (core.Notification, bool) {
 		for _, n := range s.Store().State().Notifications {
-			if n.ID == "tickets.done:OPS-12" {
+			if n.ID == "tickets.done.set:OPS-12" {
 				return n, true
 			}
 		}
@@ -453,7 +453,7 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 	}
 
 	// Asked again (another merge, say), Mark done moves it, once.
-	s.Run("tickets.ask-done", registry.Args{"ticket": "OPS-12", "session": string(se.ID())})
+	s.Run("tickets.done.ask", registry.Args{"ticket": "OPS-12", "session": string(se.ID())})
 	s.Until("the question again", func() bool { n, _ := asked(); return !n.Dismissed && n.Count == 2 })
 	s.Until("its card", func() bool { return strings.Contains(s.FullText(), "Mark done") })
 	s.ClickOn("Mark done")
@@ -526,7 +526,7 @@ func TestTicketsPagePlanAndContinue(t *testing.T) {
 	other := startTicketSession(t, s, lw, "Something else.", "")
 
 	sessions := len(s.Store().State().Sessions)
-	s.Run("Tickets", registry.Args{"args": "linear"})
+	s.Run("tickets.open", registry.Args{"tracker": "linear"})
 	label := "Continue · " + se.Name()
 	s.Until("Continue", func() bool { return strings.Contains(s.Text(), label) })
 	s.ClickText("Search API returns stale results after a reindex")
@@ -549,7 +549,7 @@ func TestTicketsPageCloses(t *testing.T) {
 		for _, how := range []string{"Esc", "✕"} {
 			switch over {
 			case "Settings":
-				s.Run("Settings", nil)
+				s.Run("settings.open", nil)
 			case "omnibox":
 				s.Run("omnibox.open", nil)
 			}

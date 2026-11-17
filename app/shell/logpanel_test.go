@@ -11,7 +11,7 @@ import (
 // A record written while the log panel shows is listed in it.
 func TestLogPanelShowsNewRecords(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Frame()
 	s.Frame()
 	s.Logs.Logger("core").Info("written while it shows")
@@ -31,7 +31,7 @@ func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
 	if s.Poked() {
 		t.Error("records asked for a frame with the log panel closed")
 	}
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.WantFrame("written while the panel is closed")
 	s.Frame()
 	log.Info("written while it shows")
@@ -48,7 +48,7 @@ const longErr = "claude: /usage typed but no plan windows came: context deadline
 // An expanded record wraps its message and attributes to the panel's width, so all of them show.
 func TestLogRowExpandedWraps(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Logs.Logger("core").Warn("usage", "err", longErr)
 	s.Frame()
 	s.Frame()
@@ -62,7 +62,7 @@ func TestLogRowExpandedWraps(t *testing.T) {
 // Copy on a record's context menu copies the record.
 func TestLogRowCopiesFromItsMenu(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Logs.Logger("core").Warn("usage", "err", longErr)
 	s.Frame()
 	s.Frame()

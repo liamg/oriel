@@ -52,7 +52,7 @@ const (
 const diffPresenter = "diff"
 
 // ExplainUnit is the command the diff's ? runs, {file, line}: explain the code unit there.
-const ExplainUnit = "explain.unit"
+const ExplainUnit = "explain.unit.ask"
 
 // Diff is the diff view, its commands and keys, and the review marks it keeps.
 type Diff struct {
@@ -166,14 +166,14 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "gc", Command: "diff.comment", Desc: "Comment"},
 		{Keys: "ga", Command: "diff.comment", Args: registry.Args{"to": "agent"}, Desc: "Ask the agent"},
 		{Keys: "?", Command: "diff.explain", Desc: "Explain"},
-		{Keys: "o", Command: "diff.source", Desc: "Open in the editor"},
+		{Keys: "o", Command: "diff.source.open", Desc: "Open in the editor"},
 		{Keys: "<CR>", Command: "diff.expand", Desc: "Show or fold the file"},
-		{Keys: "zo", Command: "diff.context.more", Desc: "Show hidden lines around the hunk"},
-		{Keys: "zR", Command: "diff.context.more", Args: registry.Args{"all": true}, Desc: "Show every hidden line of the file"},
-		{Keys: "zl", Command: "diff.scroll", Args: registry.Args{"columns": 1}, Desc: "Scroll right"},
-		{Keys: "zh", Command: "diff.scroll", Args: registry.Args{"columns": -1}, Desc: "Scroll left"},
-		{Keys: "zL", Command: "diff.scroll", Args: registry.Args{"halves": 1}, Desc: "Scroll right half a screen"},
-		{Keys: "zH", Command: "diff.scroll", Args: registry.Args{"halves": -1}, Desc: "Scroll left half a screen"},
+		{Keys: "zo", Command: "diff.context.expand", Desc: "Show hidden lines around the hunk"},
+		{Keys: "zR", Command: "diff.context.expand", Args: registry.Args{"all": true}, Desc: "Show every hidden line of the file"},
+		{Keys: "zl", Command: "diff.lines.scroll", Args: registry.Args{"columns": 1}, Desc: "Scroll right"},
+		{Keys: "zh", Command: "diff.lines.scroll", Args: registry.Args{"columns": -1}, Desc: "Scroll left"},
+		{Keys: "zL", Command: "diff.lines.scroll", Args: registry.Args{"halves": 1}, Desc: "Scroll right half a screen"},
+		{Keys: "zH", Command: "diff.lines.scroll", Args: registry.Args{"halves": -1}, Desc: "Scroll left half a screen"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
 	} {
 		k.Mode = DiffKeyMode
@@ -206,7 +206,7 @@ func (x *Diff) commands() []registry.Command {
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.open(ctx, a.String("path"), a.Int("line"), a.String("side") == "old", a.String("against") == "head")
 			}},
-		{ID: "diff.layout", Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "diff.layout.toggle", Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
 			if l == "" {
 				l = map[string]string{"split": "unified", "unified": "split"}[x.layout()]
@@ -219,7 +219,7 @@ func (x *Diff) commands() []registry.Command {
 		{ID: "diff.line.prev", Title: "Diff: the line before", Available: has, Run: move(x.moveLine, -1)},
 		{ID: "diff.review", Title: "Mark the selected hunk reviewed, or not again; or {path}'s hunk {hunk} (0-based)", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error { return x.reviewHunk(st, hunkArg(st, a)) })},
-		{ID: "diff.review.file", Title: "Mark every hunk of {path} (the selected file if none) reviewed, or {reviewed}", Available: has,
+		{ID: "diff.file.review", Title: "Mark every hunk of {path} (the selected file if none) reviewed, or {reviewed}", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				var want *bool
 				if v, ok := a["reviewed"].(bool); ok {
@@ -229,17 +229,17 @@ func (x *Diff) commands() []registry.Command {
 			})},
 		{ID: "diff.comment", Title: "Open a thread on the selected line of the diff, or its hunk's lines: {to} the agent or the author, as thread.new", Available: has, Run: on(x.comment)},
 		{ID: "diff.explain", Title: "Explain the code unit of the selected line (" + ExplainUnit + ")", Available: has, Run: on(x.explain)},
-		{ID: "diff.source", Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
-		{ID: "diff.wrap", Title: "Wrap the diff's long lines, or stop wrapping them: {wrap}, or the other way (the editor's 'wrap')", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "diff.source.open", Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
+		{ID: "diff.wrap.toggle", Title: "Wrap the diff's long lines, or stop wrapping them: {wrap}, or the other way (the editor's 'wrap')", Run: func(_ registry.Ctx, a registry.Args) error {
 			on, ok := a["wrap"].(bool)
 			if !ok {
 				on = !x.wraps()
 			}
 			return x.setWrap(on)
 		}},
-		{ID: "diff.context.more", Title: "Show unchanged lines the diff hides: {path}'s (the selected file's) gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines} (20); without a gap, both ways around the selected hunk, or with {all} every one",
+		{ID: "diff.context.expand", Title: "Show unchanged lines the diff hides: {path}'s (the selected file's) gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines} (20); without a gap, both ways around the selected hunk, or with {all} every one",
 			Available: has, Run: on(x.moreContext)},
-		{ID: "diff.scroll", Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
+		{ID: "diff.lines.scroll", Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				st.pan = append(st.pan, diffPan{file: st.sel.file, columns: a.Int("columns"), halves: a.Int("halves")})
 				return nil

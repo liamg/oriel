@@ -140,7 +140,7 @@ func (x *Reviews) menuItems() []registry.MenuItem {
 	return []registry.MenuItem{
 		{Name: "reviews.start", Label: "Start review", Key: "↵", Group: "review", Order: 10, When: when, Source: "builtin:reviews",
 			Run: onRow(func(_ registry.Ctx, r reviewRow) error { x.act(r); return nil })},
-		{Name: "reviews.start-background", Label: "Start review in background", Group: "review", Order: 20, When: when, Disabled: reviewing,
+		{Name: "reviews.background.start", Label: "Start review in background", Group: "review", Order: 20, When: when, Disabled: reviewing,
 			Source: "builtin:reviews", Run: onRow(func(ctx registry.Ctx, r reviewRow) error { return x.startBehind(ctx, r.req.URL) })},
 	}
 }
@@ -164,10 +164,7 @@ func (x *Reviews) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "Reviews", Title: "The Reviews page: pull requests waiting on your review; :Reviews github for one source's", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.openPage(a.String("args"))
-		}},
-		{ID: "reviews.open", Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "reviews.open", Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: "Reviews", ExArg: "source", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("source"))
 		}},
 		{ID: "reviews.refresh", Title: "Ask every review source for the pull requests waiting on you again now", Run: func(registry.Ctx, registry.Args) error {
@@ -176,14 +173,14 @@ func (x *Reviews) commands() []registry.Command {
 		}},
 		{ID: "reviews.start", Title: "Start a review of the pull request selected on the Reviews page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("start") }},
-		{ID: "reviews.start-background", Title: "Start a review of pull request {url} behind the session in front, on the default agent",
+		{ID: "reviews.background.start", Title: "Start a review of pull request {url} behind the session in front, on the default agent",
 			Available: func(registry.Args) bool { return sessionkit.HasSessions(x.h) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.startBehind(ctx, a.String("url")) }},
 		{ID: "reviews.browse", Title: "Open the pull request selected on the Reviews page in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
 		{ID: "reviews.filter", Title: "Filter the Reviews page's list", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
-		{ID: "reviews.scope", Title: "Narrow the Reviews page to {scope}: all, me (asked of you) or teams (asked of a team of yours); with none, the next", Available: open,
+		{ID: "reviews.scope.set", Title: "Narrow the Reviews page to {scope}: all, me (asked of you) or teams (asked of a team of yours); with none, the next", Available: open,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.setScope(a.String("scope")) }},
 	}
 	for i := range out {
@@ -203,7 +200,7 @@ func (x *Reviews) keymaps() []registry.Keymap {
 		{Keys: "o", Command: "reviews.browse", Desc: "Open in the browser"},
 		{Keys: "r", Command: "reviews.refresh", Desc: "Refresh"},
 		{Keys: "/", Command: "reviews.filter", Desc: "Filter"},
-		{Keys: "t", Command: "reviews.scope", Desc: "All, to me, my teams"},
+		{Keys: "t", Command: "reviews.scope.set", Desc: "All, to me, my teams"},
 	}
 	for i := range out {
 		out[i].Mode = ReviewsKeyMode
@@ -372,7 +369,7 @@ func (x *Reviews) notifyNew(s registry.HostSite, before, now []registry.ReviewRe
 		id := "reviews.asked:" + r.URL
 		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r),
 			Actions: []core.Action{
-				{Title: "Start review in background", Command: "reviews.start-background", Args: map[string]any{"url": r.URL}},
+				{Title: "Start review in background", Command: "reviews.background.start", Args: map[string]any{"url": r.URL}},
 				{Title: "Ignore", Command: "notice.dismiss", Args: map[string]any{"id": id}},
 			}})
 	}
@@ -574,7 +571,7 @@ func reviewNote(r registry.ReviewRequest) string {
 func (x *Reviews) start(ctx context.Context, r reviewRow) error {
 	switch r.action {
 	case "key":
-		return x.h.Run(ctx, "code.setup", registry.Args{"code_host": r.src.Name, "hostname": r.src.Site.Host})
+		return x.h.Run(ctx, "code.setup.open", registry.Args{"code_host": r.src.Name, "hostname": r.src.Site.Host})
 	case "refresh":
 		x.stale(r.src.Key())
 		x.fresh(r.src, 0)
@@ -653,7 +650,7 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 			Actions: open(se)})
 		return nil
 	}
-	if x.cloneFirst(ctx, row, "reviews.start-background", map[string]any{"url": url}) {
+	if x.cloneFirst(ctx, row, "reviews.background.start", map[string]any{"url": url}) {
 		return nil
 	}
 	h, st := x.h, x.h.State()

@@ -180,7 +180,7 @@ func TestSettingsSandboxSection(t *testing.T) {
 	rig.WriteFile(t, path, "[sandbox]\nmemory = \"4g\"\negress = [\"allow proxy.golang.org\", \"allow *.github.com:443\"]\n"+
 		"servers = { docs = \"https://docs.example.com/mcp\", linear = \"npx -y linear-mcp\" }\n")
 	settingsOf(s).Reload()
-	s.Run("Settings", registry.Args{"args": "sandbox"})
+	s.Run("settings.open", registry.Args{"query": "sandbox"})
 	s.Golden("settings-sandbox")
 	text := s.Text()
 	for _, want := range []string{"sandbox.egress", "sandbox.go_cache_max", "sandbox.egress_proxy", "sandbox.default", "sandbox.backend", "sandbox.loopback",

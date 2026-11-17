@@ -134,7 +134,7 @@ func (x *Sessions) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "session.start", Grant: string(plugin.CapSessionControl), Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} opens its tab behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: x.startCommand},
-		{ID: "session.opens", Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) its first time in front, however it got there, when the window shows nothing in its main area",
+		{ID: "session.opens.run", Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) its first time in front, however it got there, when the window shows nothing in its main area",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, ok := x.h.Session(core.SessionID(a.String("id")))
 				if !ok || len(x.h.Layout().Shown()) > 0 {
@@ -169,7 +169,7 @@ func (x *Sessions) commands() []registry.Command {
 				}
 				return x.open(ctx, core.SessionID(a.String("id")), then)
 			}},
-		{ID: "session.open-dir", Title: "Bring the direct session on {dir} to the front: its own, with no agent, started if it hasn't one", Available: has,
+		{ID: "session.dir.open", Title: "Bring the direct session on {dir} to the front: its own, with no agent, started if it hasn't one", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.openDirect(ctx, a.String("dir")) }},
 		{ID: "session.resume", Grant: string(plugin.CapSessionControl), Title: "Resume a session: pick one", Available: has,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -179,17 +179,17 @@ func (x *Sessions) commands() []registry.Command {
 			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Grant: string(plugin.CapSessionControl), Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
 			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
-		{ID: "session.start-work", Grant: string(plugin.CapSessionControl), Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
+		{ID: "session.work.start", Grant: string(plugin.CapSessionControl), Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
+				return x.slowSession("session.work.start", "Starting work on", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
-		{ID: "session.configure", Grant: string(plugin.CapSessionControl), Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
+		{ID: "session.model.set", Grant: string(plugin.CapSessionControl), Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
+				return x.slowSession("session.model.set", "Switching the agent of", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.Configure(ctx, hostapi.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
@@ -201,9 +201,9 @@ func (x *Sessions) commands() []registry.Command {
 					return w.Rename(id, a.String("name"))
 				})(ctx, a)
 			}},
-		{ID: "session.add-repo", Grant: string(plugin.CapSessionControl), Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
+		{ID: "session.repo.add", Grant: string(plugin.CapSessionControl), Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
+				return x.slowSession("session.repo.add", "Adding "+a.String("repo")+" to", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
 				})(ctx, a)
 			}},
@@ -228,7 +228,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 	const source = "login"
 	if len(signedOut) == 0 {
 		for _, n := range x.h.State().Notifications {
-			if n.ID == "agent.login" && strings.HasPrefix(n.Source, source) && !n.Dismissed {
+			if n.ID == "agent.login.start" && strings.HasPrefix(n.Source, source) && !n.Dismissed {
 				_ = x.h.Apply(core.Dismissal(n))
 			}
 		}
@@ -238,15 +238,15 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 		if slices.ContainsFunc(was, l.Same) {
 			continue
 		}
-		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out",
+		n := core.Notice{ID: "agent.login.start", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out",
 			Text: services.ProviderTitle(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
 		switch {
 		case l.Browser:
 			n.Text += " Log in opens its sign-in in your browser."
-			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider}}}
+			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login.start", Args: map[string]any{"provider": l.Provider}}}
 		case l.Terminal != "":
 			n.Text += " Log in opens its terminal with " + l.Terminal + " typed."
-			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider}}}
+			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login.start", Args: map[string]any{"provider": l.Provider}}}
 		case l.Shell != "":
 			n.Text += " Run " + l.Shell + " in a terminal."
 		}
@@ -304,7 +304,7 @@ func (x *Sessions) label(id core.SessionID) string {
 const addNewRepo = "\x00repos.new"
 
 // addSource is the picker + in the sidebar opens: the registered repos the session hasn't got, and the
-// path typed. Choosing one adds it with session.add-repo, then opens it.
+// path typed. Choosing one adds it with session.repo.add, then opens it.
 func (x *Sessions) addSource(h plugin.Host) uireg.PickerSource {
 	return uireg.PickerSource{ID: "projects.add", Title: "Add a project", PickerOnly: true, Unlisted: true, Live: true, Source: "builtin:sessions",
 		Items: func(_ registry.Ctx, query string) []uireg.PickerItem {
@@ -336,7 +336,7 @@ func (x *Sessions) addSource(h plugin.Host) uireg.PickerSource {
 				return errors.New("no session is in front")
 			}
 			if it.ID == addNewRepo {
-				return h.Run(ctx, "repos.new", registry.Args{"then": kit.Then(kit.Call{Command: "session.add-repo"})})
+				return h.Run(ctx, "repos.new", registry.Args{"then": kit.Then(kit.Call{Command: "session.repo.add"})})
 			}
 			before := se.Projects()
 			repo := it.ID
@@ -378,7 +378,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 		})
 		defer stop.Dispose()
 		err := plugin.Await(x.ctx, func(ctx registry.Ctx) error {
-			return h.Run(ctx, "session.add-repo", registry.Args{"id": string(id), "repo": repo})
+			return h.Run(ctx, "session.repo.add", registry.Args{"id": string(id), "repo": repo})
 		})
 		name, ok := added()
 		for timeout := time.After(30 * time.Second); err == nil && !ok; name, ok = added() {
@@ -761,7 +761,7 @@ func (x *Sessions) forker(id string) string {
 	return cmp.Or(p, "the agent") + " · fork, no tools"
 }
 
-// startWorkReq is session.start-work's args as the host's request: {clear} and {fresh} (both on unless false),
+// startWorkReq is session.work.start's args as the host's request: {clear} and {fresh} (both on unless false),
 // {branches} by project name, {sandbox}, {network}, {model} and {effort}, each the session's own when absent.
 func startWorkReq(id core.SessionID, a registry.Args) hostapi.StartWorkReq {
 	r := hostapi.StartWorkReq{Session: id, KeepThreads: a["clear"] == false, KeepConversation: a["fresh"] == false,

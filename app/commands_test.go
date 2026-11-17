@@ -168,6 +168,7 @@ var commandVerbs = []string{
 	"filter", "browse", "search", "preview", "reveal", "zoom", "equalize", "launch", "resume", "end", "archive", "interrupt",
 	"attach", "anchor", "compose", "enter", "drill", "split", "speak", "download", "eval", "watch", "continue", "pause",
 	"step", "trust", "consent", "fix", "rework", "submit", "recheck", "include", "summarize", "housekeep", "follow",
+	"debug", "complete", "scroll", "rebuild", "quit",
 }
 
 // commandShape is a command id as the convention writes it: lower-case dotted words, a word's parts joined by _.
@@ -181,14 +182,9 @@ func conventional(id string) bool {
 	return slices.Contains(commandVerbs, id[strings.LastIndex(id, ".")+1:])
 }
 
-// commandNamesCeiling is how many built-in commands aren't yet named as the convention says (docs/architecture.md,
-// "Command names"). It may only fall: lower it as commands are renamed.
-const commandNamesCeiling = 177
-
 // Built-in commands are named by one convention, so a command reads the same everywhere and a new one is named like
 // the rest: lower-case dotted words, the thing first and what's done to it last, from a fixed set of verbs
-// (term.host.open, not term.host). An ex command's capitalised name (:Settings) is its alias, not its id. The ones
-// named before the convention count against a ceiling that only falls.
+// (term.host.open, not term.host). An ex command's name (:Settings, :term) is its Ex, an alias, not its id.
 func TestCommandNamesFollowTheConvention(t *testing.T) {
 	s, _ := commandScene(t)
 	var off []string
@@ -198,11 +194,8 @@ func TestCommandNamesFollowTheConvention(t *testing.T) {
 		}
 		off = append(off, c.ID)
 	}
-	switch {
-	case len(off) > commandNamesCeiling:
-		t.Errorf("%d built-in commands aren't named by the convention, over its ceiling of %d. Name a new one as "+
-			"noun[.noun].verb, lower-case, its verb from commandVerbs. Those off it:\n  %s", len(off), commandNamesCeiling, strings.Join(off, "\n  "))
-	case len(off) < commandNamesCeiling:
-		t.Errorf("only %d built-in commands are off the convention now: lower commandNamesCeiling to %d", len(off), len(off))
+	if len(off) > 0 {
+		t.Errorf("%d built-in commands aren't named by the convention. Name one as noun[.noun].verb, lower-case, its "+
+			"verb from commandVerbs, and give it an Ex for its ex name. Those off it:\n  %s", len(off), strings.Join(off, "\n  "))
 	}
 }

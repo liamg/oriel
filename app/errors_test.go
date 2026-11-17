@@ -107,7 +107,7 @@ func TestPanickingCommandAndViewTurnOff(t *testing.T) {
 	if n.Severity != core.SevError || n.Source != "test.buggy" || !strings.Contains(n.Detail, "errors_test.go") || !strings.Contains(n.Location, "errors_test.go:") {
 		t.Errorf("notice = %+v", n)
 	}
-	if len(n.Actions) != 1 || n.Actions[0].Command != "contribution.turn_on" {
+	if len(n.Actions) != 1 || n.Actions[0].Command != "contribution.enable" {
 		t.Errorf("actions = %+v", n.Actions)
 	}
 	b.waitText(t, "is turned off")
@@ -254,7 +254,7 @@ func TestSecretsAreRedacted(t *testing.T) {
 	cfg := app.Config{Window: app.Window{Plugins: []plugin.Plugin{&counter{tab: true}}}}
 	cfg.Logs = app.NewLogs(app.LogOpts{File: filepath.Join(dir, "oriel.log")})
 	cfg.Logs.Redact.Add("ghp_supersecrettoken")
-	b, h := bootGrab(t, cfg, registry.Keymap{Keys: "L", Command: "Log"}, registry.Keymap{Keys: "R", Command: "log.copy_report"})
+	b, h := bootGrab(t, cfg, registry.Keymap{Keys: "L", Command: "log.open"}, registry.Keymap{Keys: "R", Command: "log.report.copy"})
 	b.waitText(t, "count 0")
 	h.Notify(core.Notice{ID: "push.failed", Severity: core.SevError, Text: "push to https://x:ghp_supersecrettoken@github.com failed",
 		Detail: "GET https://api.github.com/user?access_token=abc123"})
@@ -296,11 +296,11 @@ func TestLogLevelCommand(t *testing.T) {
 	cfg.Logs = app.NewLogs(app.LogOpts{})
 	b, h := bootGrab(t, cfg)
 	h.Log().Debug("hidden")
-	if err := h.Run(context.Background(), "Log", registry.Args{"args": "level debug"}); err != nil {
+	if err := h.Run(context.Background(), "log.open", registry.Args{"args": "level debug"}); err != nil {
 		t.Fatal(err)
 	}
 	h.Log().Debug("shown")
-	if err := h.Run(context.Background(), "Log", registry.Args{"level": "loud"}); err == nil {
+	if err := h.Run(context.Background(), "log.open", registry.Args{"level": "loud"}); err == nil {
 		t.Error("set a level that doesn't exist")
 	}
 	var msgs []string

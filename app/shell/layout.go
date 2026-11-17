@@ -98,8 +98,8 @@ func (l *layoutPlugin) arrive() {
 	if l.sh != nil && l.sh.openedFor != "" {
 		f = l.sh.openedFor // the session it moved for, though another may be in front by now
 	}
-	if f != "" && slices.ContainsFunc(h.Commands(), func(c registry.Command) bool { return c.ID == "session.opens" }) {
-		kit.RunCalls(h, []kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(f)}}})
+	if f != "" && slices.ContainsFunc(h.Commands(), func(c registry.Command) bool { return c.ID == "session.opens.run" }) {
+		kit.RunCalls(h, []kit.Call{{Command: "session.opens.run", Args: registry.Args{"id": string(f)}}})
 	}
 	if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == f {
 		calls := l.sh.afterOpen.calls
@@ -268,7 +268,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			l.root.FocusDir(layout.Dir(a.String("dir")), l.rects)
 			return nil
 		}},
-		{ID: "layout.dock", Title: "Toggle a dock", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.dock.toggle", Title: "Toggle a dock", Run: func(_ registry.Ctx, a registry.Args) error {
 			l.root.ToggleDock(layout.Edge(a.String("edge")))
 			return nil
 		}},
@@ -280,14 +280,14 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			l.snaps[a.String("name")] = l.root.Save()
 			return nil
 		}},
-		{ID: "layout.restore", Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.load", Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
 			s, ok := l.snaps[a.String("name")]
 			if !ok {
 				return fmt.Errorf("no layout %q", a.String("name"))
 			}
 			return l.root.Load(s)
 		}},
-		{ID: "layout.menu", Title: "Move the focused view…", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "layout.menu.open", Title: "Move the focused view…", Run: func(registry.Ctx, registry.Args) error {
 			l.menu, l.asked = !l.menu, false
 			return nil
 		}},
@@ -304,12 +304,12 @@ func layoutKeys() []registry.Keymap {
 		{Keys: "<C-w>F", Command: "layout.move", Args: registry.Args{"place": "float"}},
 		{Keys: "<C-w>Z", Command: "layout.zoom"},
 		{Keys: "<C-w>=", Command: "layout.equalize"},
-		{Keys: "<C-w>M", Command: "layout.menu"},
+		{Keys: "<C-w>M", Command: "layout.menu.open"},
 		{Keys: "<C-w>h", Command: "layout.focus", Args: registry.Args{"dir": "h"}},
 		{Keys: "<C-w>j", Command: "layout.focus", Args: registry.Args{"dir": "j"}},
 		{Keys: "<C-w>k", Command: "layout.focus", Args: registry.Args{"dir": "k"}},
 		{Keys: "<C-w>l", Command: "layout.focus", Args: registry.Args{"dir": "l"}},
-		{Keys: "<C-j>", Command: "layout.dock", Args: registry.Args{"edge": "bottom"}},
+		{Keys: "<C-j>", Command: "layout.dock.toggle", Args: registry.Args{"edge": "bottom"}},
 		{Keys: "<C-`>", Command: "layout.move", Args: registry.Args{"place": "dropdown"}},
 		{Keys: "<D-w>", Command: "view.close", Desc: "Close the tab in front"},
 	} {

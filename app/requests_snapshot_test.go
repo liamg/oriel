@@ -18,7 +18,7 @@ func TestIDEThreadSnapshot(t *testing.T) {
 	s.Frame()
 	s.EditorKeys("46Gzt38zt46G$")
 	s.WaitHighlights()
-	s.Run("requests.summary", nil)
+	s.Run("requests.summary.toggle", nil)
 	s.Frame()
 	s.Lint("the editor with a thread and the summary")
 	s.Golden("ide-thread")

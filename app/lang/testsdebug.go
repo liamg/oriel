@@ -33,7 +33,7 @@ func (x *Tests) debugTest(ctx registry.Ctx, a registry.Args) error {
 	return x.h.Run(ctx, "debug.launch", launchArgs(cmd.Launch))
 }
 
-// debugAvailable is whether debug.test can debug {key} in {file}: its adapter can launch it under a debugger.
+// debugAvailable is whether test.debug can debug {key} in {file}: its adapter can launch it under a debugger.
 func (x *Tests) debugAvailable(a registry.Args) bool {
 	if a.String("key") == "" {
 		return x.h.Available("debug.launch", nil)

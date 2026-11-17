@@ -106,7 +106,7 @@ func (x *PRReview) askSummary(ctx registry.Ctx, a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "review.pr.summary." + string(se.ID), Doing: "Asking the agent for a summary"},
+	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "review.pr.summary.ask." + string(se.ID), Doing: "Asking the agent for a summary"},
 		func(ctx context.Context) (core.ThreadID, error) {
 			return w.Comment(ctx, hostapi.CommentReq{Session: se.ID, Title: "Draft the review summary", Body: body})
 		},

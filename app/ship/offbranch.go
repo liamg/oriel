@@ -27,12 +27,12 @@ func (x *Ship) offBranch(c *ui.Ctx, se core.SessionState, s shipRead, width floa
 		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Wrap: true}, func(c *ui.Ctx) {
 			if widget.Button(c, "back", "Switch back to "+off.Session, x.stepOpts(se.ID, s.Project, "Switching back",
 				widget.ButtonOpts{Primary: off.Refused != "", Help: "git/ship#branch"})) {
-				x.run("ship.switch-back", registry.Args{"project": s.Project})
+				x.run("ship.branch.back", registry.Args{"project": s.Project})
 			}
 			label := "Make " + cmp.Or(off.Current, "it") + " this session's branch"
 			if widget.Button(c, "adopt", label, x.stepOpts(se.ID, s.Project, "Adopting", widget.ButtonOpts{Help: "git/ship#branch",
 				Disabled: off.Refused != "", Why: off.Refused})) {
-				x.run("ship.adopt-branch", registry.Args{"project": s.Project})
+				x.run("ship.branch.adopt", registry.Args{"project": s.Project})
 			}
 		})
 		if off.Refused != "" {

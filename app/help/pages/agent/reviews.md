@@ -1,6 +1,6 @@
 ---
 id: agent/reviews
-covers: [Reviews, reviews.open, reviews.refresh, reviews.start, reviews.browse, reviews.filter, reviews.scope, app.overlay.reviews, review.pr.fetch, review.pr.recheck, review.pr.include, review.pr.submit, review.pr.pick, review.pr.severity, review.pr.edit, review.pr.rework, review.pr.rework.use, review.pr.rework.drop, review.pr.summary, review.pr.next, review.pr.show, review.pr.preview, review.severity_badges, review.auto_rereview]
+covers: [Reviews, reviews.open, reviews.refresh, reviews.start, reviews.browse, reviews.filter, reviews.scope.set, app.overlay.reviews, review.pr.fetch, review.pr.recheck, review.pr.include, review.pr.submit, review.pr.pick, review.pr.severity.set, review.pr.edit, review.pr.rework, review.pr.rework.accept, review.pr.rework.discard, review.pr.summary.ask, review.pr.next, review.pr.item.reveal, review.pr.preview, review.severity_badges, review.auto_rereview]
 related: [agent/launcher, plugins/secrets]
 ---
 
@@ -92,11 +92,11 @@ along the bottom of the tab, and `F1` on a row opens this page; with a row selec
 |-----|------|
 | `j` `k` | the next or the comment before |
 | `y` `x` `u` | keep it (and on to the next undecided), drop it, undecide it (`review.pr.pick`) |
-| `1`–`5` | rate it critical, high, medium, low or nit (`review.pr.severity`) |
+| `1`–`5` | rate it critical, high, medium, low or nit (`review.pr.severity.set`) |
 | `e` | edit what the author gets (`review.pr.edit`) |
 | `r` | ask the agent to make it shorter (`review.pr.rework`); the menu has friendlier, a suggestion block, more detail, or your own words |
-| `⏎` `o` | show it at its line in the diff (`review.pr.show`) |
-| `S` | ask the agent to draft the summary (`review.pr.summary`) |
+| `⏎` `o` | show it at its line in the diff (`review.pr.item.reveal`) |
+| `S` | ask the agent to draft the summary (`review.pr.summary.ask`) |
 
 You can triage as you read, too: every comment's card in the diff and in Requests (and every AI review finding's)
 ends with **YOUR REVIEW**: its severity, whether it goes to the author, **Keep**, **Drop** and **In the review ↗**, and,

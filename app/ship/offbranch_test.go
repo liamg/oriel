@@ -37,7 +37,7 @@ func checkout(t *testing.T, s *apptest.Scene, dir string, args ...string) {
 func TestGitPanelAdoptsTheAgentsBranch(t *testing.T) {
 	s, _, _, se, _ := shipScene(t)
 	dir := shipDir(se, "search-api")
-	s.Run("project.panel", registry.Args{"name": "git", "project": "search-api"})
+	s.Run("project.panel.toggle", registry.Args{"name": "git", "project": "search-api"})
 	shipSettle(s, t, "the panel", func() bool { return strings.Contains(s.Text(), "→ main") })
 	checkout(t, s, dir, "-b", "agent/own")
 	writeFiles(t, dir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() { _ = 1 }\n"})
@@ -60,7 +60,7 @@ func TestGitPanelSwitchesBackToTheSessionsBranch(t *testing.T) {
 	s, _, _, se, _ := shipScene(t)
 	dir := shipDir(se, "search-api")
 	own := branchOfProject(s, se.ID, "search-api")
-	s.Run("project.panel", registry.Args{"name": "git", "project": "search-api"})
+	s.Run("project.panel.toggle", registry.Args{"name": "git", "project": "search-api"})
 	shipSettle(s, t, "the panel", func() bool { return strings.Contains(s.Text(), "→ main") })
 	checkout(t, s, dir, "-b", "agent/own")
 
@@ -90,7 +90,7 @@ func TestShipPageWontAdoptADetachedHead(t *testing.T) {
 		t.Error("a detached HEAD can be adopted")
 	}
 	s.WantFrame("detached")
-	s.Run("ship.adopt-branch", registry.Args{"project": "web-dashboard"})
+	s.Run("ship.branch.adopt", registry.Args{"project": "web-dashboard"})
 	shipSettle(s, t, "the refusal", func() bool { return strings.Contains(s.Text(), "can't take its branch") })
 	if strings.TrimSpace(git(t, dir, "rev-parse", "--abbrev-ref", "HEAD")) != "HEAD" {
 		t.Error("the worktree moved")

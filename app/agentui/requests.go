@@ -62,7 +62,7 @@ var groupTokens = []theme.TokenID{theme.StatusWorking, theme.StatusNeedsYou, the
 // Requests is the Requests view, a request's conversation and composer, threads between the editor's lines,
 // the threads picker, the summary at the IDE's right, and the request.* commands they all run.
 type Requests struct {
-	md mdViewer // comment.markdown's dialog
+	md mdViewer // comment.markdown.open's dialog
 	kit.Disposer
 	h  plugin.Host
 	by map[core.SessionID]*requestsState
@@ -210,11 +210,11 @@ func (x *Requests) commands() []registry.Command {
 				st.rename.Start(t.Heading())
 				return x.h.Run(ctx, "view.open", registry.Args{"id": RequestView, "place": "tab"})
 			}},
-		{ID: "request.edit-queued", Grant: string(plugin.CapAgentPrompt), Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}, {urgent} interrupting the turn, {btw} asking a fork on the side instead; with no {body}, edit it in the composer",
+		{ID: "request.queued.edit", Grant: string(plugin.CapAgentPrompt), Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}, {urgent} interrupting the turn, {btw} asking a fork on the side instead; with no {body}, edit it in the composer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, false) }},
-		{ID: "request.delete-queued", Grant: string(plugin.CapAgentPrompt), Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
+		{ID: "request.queued.delete", Grant: string(plugin.CapAgentPrompt), Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, true) }},
-		{ID: "comment.markdown", Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "comment.markdown.open", Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.md = mdViewer{title: a.String("title"), body: a.String("body"), open: true}
 			return nil
 		}},
@@ -264,9 +264,9 @@ func (x *Requests) commands() []registry.Command {
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
 		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
-		{ID: "threads.show", Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
+		{ID: "threads.open", Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.showThreads(a) }},
-		{ID: "requests.summary", Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "requests.summary.toggle", Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", registry.Args{"id": SummaryView, "place": "dock", "edge": "right", "size": 380, "title": "Session"})
 		}},
 	}
@@ -294,7 +294,7 @@ func (x *Requests) keymaps() []registry.Keymap {
 		{Mode: "n", Keys: "ga", Command: "thread.new", Args: registry.Args{"to": "agent"}, Desc: "Ask the agent about this line"},
 		{Mode: "n", Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
 		{Mode: kit.PresentKeyMode, Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
-		{Mode: ThreadsHiddenKeyMode, Keys: "<CR>", Command: "threads.show", Desc: "Show the line's threads"},
+		{Mode: ThreadsHiddenKeyMode, Keys: "<CR>", Command: "threads.open", Desc: "Show the line's threads"},
 	}...)
 }
 
@@ -516,7 +516,7 @@ func (x *Requests) send(ctx context.Context, st *requestsState, id core.ThreadID
 		return nil
 	}
 	if d.editing != "" {
-		if err := x.h.Run(ctx, "request.edit-queued", registry.Args{"thread": string(id), "comment": d.editing, "body": body,
+		if err := x.h.Run(ctx, "request.queued.edit", registry.Args{"thread": string(id), "comment": d.editing, "body": body,
 			"urgent": urgent || d.urgent, "btw": d.btw}); err != nil {
 			return err
 		}

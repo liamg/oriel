@@ -134,7 +134,7 @@ func TestDiffShowsHiddenLinesAroundHunks(t *testing.T) {
 	}
 
 	// Shown lines stay shown across frames that draw the diff again, split as well as unified.
-	s.Run("diff.layout", registry.Args{"layout": "split"})
+	s.Run("diff.layout.toggle", registry.Args{"layout": "split"})
 	s.Quiet()
 	wantKeeps(t, s, "split", [2]int{1, 9}, [2]int{11, 49}, [2]int{51, 60})
 }

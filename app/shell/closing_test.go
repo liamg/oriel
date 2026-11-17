@@ -14,7 +14,7 @@ import (
 
 func TestLogPanelCloses(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Frame()
 	s.Frame()
 	if !s.Showing("log") {
@@ -28,7 +28,7 @@ func TestLogPanelCloses(t *testing.T) {
 		t.Error("the header's ✕ didn't close the log")
 	}
 
-	s.Run("Log", nil)
+	s.Run("log.open", nil)
 	s.Frame()
 	k, _ := s.Registry().Lookup([]string{shell.ViewKeyMode, "global"}, keymap.Parse("<Esc>"))
 	if k == nil {

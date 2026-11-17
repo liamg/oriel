@@ -178,10 +178,7 @@ func (x *Jobs) commands() []registry.Command {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	formOpen := func(registry.Args) bool { return x.form != nil }
 	return []registry.Command{
-		{ID: "Jobs", Title: "The Jobs page; :Jobs {job}", Run: func(_ registry.Ctx, a registry.Args) error {
-			return x.openPage(strings.TrimSpace(a.String("args")))
-		}},
-		{ID: "jobs.open", Title: "Open the Jobs page, at a {job} by name", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "jobs.open", Title: "Open the Jobs page, at a {job} by name", Ex: "Jobs", ExArg: "job", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("job"))
 		}},
 		{ID: "jobs.new", Title: "New job: the dialog, with {title}, {prompt}, {sandbox}, {provider}, {model}, {effort} or {schedule} filled in",

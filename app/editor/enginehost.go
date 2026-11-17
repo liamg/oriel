@@ -65,10 +65,10 @@ func (h *editorHost) Exists(name string) bool { return h.disk.Exists(name) }
 // mapModes are the keymap modes the editor's keys go through for each of vim's mapping modes.
 var mapModes = map[byte]string{'n': "n", 'v': "x", 'o': "o", 'i': "i", 'c': "c"}
 
-// Map puts a :map in the registry keymap: its keys run editor.keys, which types the right-hand side.
+// Map puts a :map in the registry keymap: its keys run editor.keys.send, which types the right-hand side.
 func (h *editorHost) Map(mode byte, lhs, rhs []string, noremap bool) {
 	h.Unmap(mode, lhs)
-	k := registry.Keymap{Mode: mapModes[mode], Keys: keymap.Format(lhs), Command: "editor.keys", Source: ":map",
+	k := registry.Keymap{Mode: mapModes[mode], Keys: keymap.Format(lhs), Command: "editor.keys.send", Source: ":map",
 		Args: registry.Args{"keys": keymap.Format(rhs), "noremap": noremap}, Desc: keymap.Format(rhs)}
 	h.x.maps[mapID(mode, lhs)] = h.x.h.Keymap(k)
 }
@@ -111,13 +111,16 @@ func (h *editorHost) Command(name, args string, bang bool) bool {
 	}
 	switch name {
 	case "ls", "buffers", "files":
-		return run("buffers.switch", nil)
+		return run("buffers.pick", nil)
 	case "copen", "cwindow", "lopen", "lwindow":
 		return run("quickfix.open", nil)
 	case "messages":
-		return run("messages", nil)
+		return run("log.open", nil)
 	}
-	err := h.x.h.Run(ctx, name, registry.Args{"args": args, "bang": bang})
+	err := h.x.h.RunEx(ctx, name, args, bang)
+	if registry.IsNoCommand(err, name) { // a command whose id is the word: a plugin's :Hello
+		err = h.x.h.Run(ctx, name, registry.Args{"args": args, "bang": bang})
+	}
 	if registry.IsNoCommand(err, name) {
 		return false
 	}

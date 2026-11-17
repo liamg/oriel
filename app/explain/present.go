@@ -188,7 +188,7 @@ func (x *Presenter) commands() []registry.Command {
 		{ID: "present.prev", Title: "Presentation: the block before", Available: has, Run: on(func(f *presentFocus) { f.move(-1) })},
 		{ID: "present.comment", Title: "Presentation: open a thread on the selected block's lines", Available: has,
 			Run: on(func(f *presentFocus) { f.comment(max(f.st.sel, 0), f.st.part) })},
-		{ID: "present.source", Title: "Presentation: go to the selected block's source", Available: has, Run: on(func(f *presentFocus) {
+		{ID: "present.source.open", Title: "Presentation: go to the selected block's source", Available: has, Run: on(func(f *presentFocus) {
 			if f.p.Source == nil || len(f.st.blocks) == 0 {
 				return
 			}
@@ -213,7 +213,7 @@ func presentKeys() []registry.Keymap {
 		{Keys: "<Up>", Command: "present.prev", Desc: "Block before"},
 		{Keys: "c", Command: "present.comment", Desc: "Comment on it"},
 		{Keys: "<CR>", Command: "present.comment", Desc: "Comment on it"},
-		{Keys: "o", Command: "present.source", Desc: "Go to its source"},
+		{Keys: "o", Command: "present.source.open", Desc: "Go to its source"},
 	} {
 		k.Mode = kit.PresentKeyMode
 		out = append(out, k)

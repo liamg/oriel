@@ -73,7 +73,7 @@ func (x *LSP) navigation(h plugin.Host) {
 			}
 			if d == nil || d.client == nil {
 				if vimKeys != "" {
-					return h.Run(ctx, "editor.keys", registry.Args{"keys": vimKeys, "noremap": true})
+					return h.Run(ctx, "editor.keys.send", registry.Args{"keys": vimKeys, "noremap": true})
 				}
 				return fmt.Errorf("no language server for this file")
 			}
@@ -97,11 +97,11 @@ func (x *LSP) navigation(h plugin.Host) {
 		return run
 	}
 	for _, c := range []registry.Command{
-		{ID: "lsp.definition", Title: "Go to the definition", Run: goTo("definition", (*lsp.Client).Definition, "gd")},
-		{ID: "lsp.declaration", Title: "Go to the declaration", Run: goTo("declaration", (*lsp.Client).Declaration, "gD")},
-		{ID: "lsp.type_definition", Title: "Go to the type's definition", Run: goTo("type definition", (*lsp.Client).TypeDefinition, "")},
-		{ID: "lsp.implementation", Title: "Go to the implementations", Run: goTo("implementation", (*lsp.Client).Implementation, "")},
-		{ID: "lsp.references", Title: "Peek at the references to the symbol under the cursor", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lsp.definition.open", Title: "Go to the definition", Run: goTo("definition", (*lsp.Client).Definition, "gd")},
+		{ID: "lsp.declaration.open", Title: "Go to the declaration", Run: goTo("declaration", (*lsp.Client).Declaration, "gD")},
+		{ID: "lsp.type_definition.open", Title: "Go to the type's definition", Run: goTo("type definition", (*lsp.Client).TypeDefinition, "")},
+		{ID: "lsp.implementation.open", Title: "Go to the implementations", Run: goTo("implementation", (*lsp.Client).Implementation, "")},
+		{ID: "lsp.references.open", Title: "Peek at the references to the symbol under the cursor", Run: func(registry.Ctx, registry.Args) error {
 			return x.references()
 		}},
 		{ID: "peek.next", Title: "Highlight the next reference", Run: func(registry.Ctx, registry.Args) error { x.peekMove(1); return nil }},
@@ -118,26 +118,26 @@ func (x *LSP) navigation(h plugin.Host) {
 		{ID: "lsp.rename", Title: "Rename the symbol under the cursor everywhere, after a preview", Run: func(registry.Ctx, registry.Args) error {
 			return x.startRename()
 		}},
-		{ID: "lsp.calls.incoming", Title: "List what calls the function under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.callers.open", Title: "List what calls the function under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.calls(ctx, true)
 		}},
-		{ID: "lsp.calls.outgoing", Title: "List what the function under the cursor calls", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.callees.open", Title: "List what the function under the cursor calls", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.calls(ctx, false)
 		}},
 	} {
 		x.Add(h.Command(c))
 	}
 	for _, k := range []registry.Keymap{
-		{Mode: "n", Keys: "gd", Command: "lsp.definition", Desc: "Definition"},
-		{Mode: "n", Keys: "gD", Command: "lsp.declaration", Desc: "Declaration"},
-		{Mode: "n", Keys: "gy", Command: "lsp.type_definition", Desc: "Type definition"},
-		{Mode: "n", Keys: "gri", Command: "lsp.implementation", Desc: "Implementations"},
-		{Mode: "n", Keys: "grr", Command: "lsp.references", Desc: "References"},
+		{Mode: "n", Keys: "gd", Command: "lsp.definition.open", Desc: "Definition"},
+		{Mode: "n", Keys: "gD", Command: "lsp.declaration.open", Desc: "Declaration"},
+		{Mode: "n", Keys: "gy", Command: "lsp.type_definition.open", Desc: "Type definition"},
+		{Mode: "n", Keys: "gri", Command: "lsp.implementation.open", Desc: "Implementations"},
+		{Mode: "n", Keys: "grr", Command: "lsp.references.open", Desc: "References"},
 		{Mode: "n", Keys: "grn", Command: "lsp.rename", Desc: "Rename"},
-		{Mode: "n", Keys: "gra", Command: "lsp.code_actions", Desc: "Code actions"},
+		{Mode: "n", Keys: "gra", Command: "lsp.code_actions.open", Desc: "Code actions"},
 		{Mode: "n", Keys: "gO", Command: "picker.open", Args: registry.Args{"source": "symbols.file"}, Desc: "Symbols here"},
-		{Mode: "n", Keys: "<Leader>ci", Command: "lsp.calls.incoming", Desc: "Incoming calls"},
-		{Mode: "n", Keys: "<Leader>co", Command: "lsp.calls.outgoing", Desc: "Outgoing calls"},
+		{Mode: "n", Keys: "<Leader>ci", Command: "lsp.callers.open", Desc: "Incoming calls"},
+		{Mode: "n", Keys: "<Leader>co", Command: "lsp.callees.open", Desc: "Outgoing calls"},
 		{Mode: PeekKeyMode, Keys: "j", Command: "peek.next", Desc: "Next"},
 		{Mode: PeekKeyMode, Keys: "<Down>", Command: "peek.next", Desc: "Next"},
 		{Mode: PeekKeyMode, Keys: "k", Command: "peek.prev", Desc: "Previous"},
@@ -253,7 +253,7 @@ func (x *LSP) references() error {
 			if err != nil {
 				text = err.Error()
 			}
-			x.h.Notify(core.Notice{ID: "lsp.references", Severity: core.SevInfo, AutoClear: true, Text: text})
+			x.h.Notify(core.Notice{ID: "lsp.references.open", Severity: core.SevInfo, AutoClear: true, Text: text})
 			return
 		}
 		slices.SortStableFunc(ls, func(a, b lsp.Location) int {
@@ -680,14 +680,14 @@ func (x *LSP) substituteHints(h plugin.Host) {
 		return fmt.Sprintf("%d %s · ⇥ use LSP rename", n, words.Plural(n, "match", "matches"))
 	}}))
 	x.Add(h.Contribute(registry.KeyLayer{Name: "lsp.substitute", Mode: "lsp.substitute", Active: func() bool { _, _, ok := x.substitution(); return ok }}))
-	x.Add(h.Keymap(registry.Keymap{Mode: "lsp.substitute", Keys: "<Tab>", Command: "lsp.rename.substitute", Desc: "Use LSP rename"}))
-	x.Add(h.Command(registry.Command{ID: "lsp.rename.substitute", Title: "Rename the word the :s on the command line replaces, with the language server",
+	x.Add(h.Keymap(registry.Keymap{Mode: "lsp.substitute", Keys: "<Tab>", Command: "lsp.substitute.rename", Desc: "Use LSP rename"}))
+	x.Add(h.Command(registry.Command{ID: "lsp.substitute.rename", Title: "Rename the word the :s on the command line replaces, with the language server",
 		Run: func(ctx registry.Ctx, _ registry.Args) error {
 			old, nw, ok := x.substitution()
 			if !ok {
 				return fmt.Errorf("the command line isn't a :s of a whole word")
 			}
-			if err := x.h.Run(ctx, "editor.keys", registry.Args{"keys": "<Esc>", "noremap": true}); err != nil {
+			if err := x.h.Run(ctx, "editor.keys.send", registry.Args{"keys": "<Esc>", "noremap": true}); err != nil {
 				return err
 			}
 			p, path, d := x.current()

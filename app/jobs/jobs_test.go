@@ -216,7 +216,7 @@ func TestJobsEntryPoints(t *testing.T) {
 		t.Error("the start view's Jobs link didn't open the page")
 	}
 	x.Close()
-	s.Run("Jobs", nil)
+	s.Run("jobs.open", nil)
 	if !x.Open() {
 		t.Error(":Jobs didn't open the page")
 	}

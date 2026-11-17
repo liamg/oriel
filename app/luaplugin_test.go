@@ -80,13 +80,13 @@ func TestPluginRunNeedsTheCommandsCapability(t *testing.T) {
 	g := plugin.NewGrants()
 	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
 	for src, capability := range map[string]string{
-		`oriel.run("ask.answer", { decision = "always" })`:                                    `"gate"`,
-		`oriel.run("rules.add", { rule = "Bash(*)" })`:                                        `"gate"`,
-		`oriel.run("session.stop")`:                                                           `"session.control"`,
-		`oriel.run("agent.send", { text = "hi" })`:                                            `"agent.prompt"`,
-		`oriel.run("permissions.tool", { id = "s", tool = "aws__x", action = "allow" })`:      `"gate"`,
-		`oriel.run("permissions.net", { id = "s", host = "evil.example", action = "allow" })`: `"gate"`,
-		`oriel.run("jobs.run", { name = "nightly" })`:                                         `"session.control"`,
+		`oriel.run("ask.answer", { decision = "always" })`:                                        `"gate"`,
+		`oriel.run("rules.add", { rule = "Bash(*)" })`:                                            `"gate"`,
+		`oriel.run("session.stop")`:                                                               `"session.control"`,
+		`oriel.run("agent.send", { text = "hi" })`:                                                `"agent.prompt"`,
+		`oriel.run("permissions.tool.set", { id = "s", tool = "aws__x", action = "allow" })`:      `"gate"`,
+		`oriel.run("permissions.net.set", { id = "s", host = "evil.example", action = "allow" })`: `"gate"`,
+		`oriel.run("jobs.run", { name = "nightly" })`:                                             `"session.control"`,
 	} {
 		if err := luaErr(t, vm, src); !strings.Contains(err, capability+" capability isn't declared") {
 			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
@@ -117,7 +117,7 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
 	own := s.PluginVM(plugin.Caller{ID: "init.lua"})
 	for _, id := range []string{"plugins.install", "plugins.uninstall", "plugins.accept", "plugins.enable", "plugins.disable",
-		"plugins.consent.accept", "settings.set", "settings.trust", "settings.reset_all", "secrets.set", "secrets.delete", "update.install"} {
+		"plugins.consent.accept", "settings.set", "settings.trust", "settings.all.reset", "secrets.set", "secrets.delete", "update.install"} {
 		src := `oriel.run("` + id + `", {})`
 		if err := luaErr(t, vm, src); !strings.Contains(err, "only you can run "+id) {
 			t.Errorf("a plugin ran %s: %q", id, err)
@@ -127,7 +127,7 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 		}
 	}
 	harmless := map[string]bool{"plugins.open": true, "plugins.refresh": true, "plugins.review": true, "plugins.consent.cancel": true,
-		"settings.open": true, "settings.reload": true, "update.check": true, "update.notes": true, "update.progress": true,
+		"settings.open": true, "settings.reload": true, "update.check": true, "update.notes.open": true, "update.progress.open": true,
 		"jobs.open": true, "jobs.new": true, "jobs.edit": true, "jobs.duplicate": true}
 	for _, c := range s.Registry().Commands() {
 		family, _, _ := strings.Cut(c.ID, ".")

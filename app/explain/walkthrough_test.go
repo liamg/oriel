@@ -19,7 +19,7 @@ import (
 // answer a step at a time.
 func TestExplainChangeWalkthrough(t *testing.T) {
 	s, f, _, _ := walkScene(t)
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	reqs := f.Asked()
 	if len(reqs) != 1 {
@@ -68,7 +68,7 @@ func TestExplainChangeWalkthrough(t *testing.T) {
 	if s.Showing(explain.ExplainChangeView) {
 		t.Fatal("q didn't close the walkthrough")
 	}
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	wantText(t, s, "reopened where it was", "billing-ui / Total.tsx", "step 3/4")
 	if n := len(f.Asked()); n != 1 {
@@ -81,7 +81,7 @@ func TestExplainChangeWalkthrough(t *testing.T) {
 func TestExplainChangeIsThrowaway(t *testing.T) {
 	s, f, pricing, billing := walkScene(t)
 	s.Run("editor.open", registry.Args{"path": filepath.Join(pricing, "round.go")})
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	wantText(t, s, "the walkthrough", "Ties round to even")
 	s.ClickTop("Discard")
@@ -89,12 +89,12 @@ func TestExplainChangeIsThrowaway(t *testing.T) {
 	if walker(s).Held() || s.Showing(explain.ExplainChangeView) {
 		t.Fatal("Discard kept the walkthrough")
 	}
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 
 	cursorTo(s, 27)
 	s.EditorKeys("A // still one<Esc>")
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	if !walker(s).Held() || !s.Showing(explain.ExplainChangeView) {
 		t.Fatal("an edit outside every step threw the walkthrough away")
@@ -102,10 +102,10 @@ func TestExplainChangeIsThrowaway(t *testing.T) {
 
 	cursorTo(s, 13)
 	s.EditorKeys("A // even<Esc>")
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	if n := len(f.Asked()); n != 3 {
-		t.Fatalf("after an edit inside step 1, explain.change asked %d times in all, want 3: a new walkthrough", n)
+		t.Fatalf("after an edit inside step 1, explain.change.open asked %d times in all, want 3: a new walkthrough", n)
 	}
 	if !strings.Contains(s.FullText(), "discarded: round.go changed") {
 		t.Errorf("no notice of the discard:\n%s", s.FullText())
@@ -129,7 +129,7 @@ func TestExplainChangeFromTheOmniboxAndKeys(t *testing.T) {
 	s.Run("omnibox.open", registry.Args{"query": "explain this change"})
 	s.Frame()
 	s.Frame()
-	wantText(t, s, "the omnibox", "COMMANDS", "explain.change", "Explain this change: a walkthrough")
+	wantText(t, s, "the omnibox", "COMMANDS", "explain.change.open", "Explain this change: a walkthrough")
 	walkKeys(s, "<CR>")
 	walkSettle(s)
 	wantText(t, s, "an answer with no steps", "Try again")
@@ -167,7 +167,7 @@ func TestExplainChangeAskAndComment(t *testing.T) {
 			return nil
 		}})
 	}
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	s.ClickTop("Ask about this step")
 	walkSettle(s)
@@ -188,7 +188,7 @@ func TestExplainChangeAskAndComment(t *testing.T) {
 // The walkthrough against a golden.
 func TestExplainChangeSnapshot(t *testing.T) {
 	s, _, _, _ := walkScene(t)
-	s.Run("explain.change", nil)
+	s.Run("explain.change.open", nil)
 	walkSettle(s)
 	walkKeys(s, "<Right>")
 	walkSettle(s)
@@ -204,7 +204,7 @@ func TestExplainChangeAskedOfTheSessionsFork(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "round.go"), []byte(rig.ExplainWork), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	r.Run("explain.change", nil)
+	r.Run("explain.change.open", nil)
 	// The fake fork echoes the end of its prompt, which is the format, and that isn't a walkthrough.
 	r.WaitFrame("the fork's answer", func(s string) bool {
 		return apptest.HasAll(s, "EXPLAIN THIS CHANGE", "fork says:", walkFormatText()[len(walkFormatText())-25:], "Try again")
@@ -216,7 +216,7 @@ func TestExplainChangeAskedOfTheSessionsFork(t *testing.T) {
 func TestExplainChangeFromChangedUnits(t *testing.T) {
 	s, f, pricing, _ := walkScene(t)
 	s.Run("editor.open", registry.Args{"path": filepath.Join(pricing, "round.go")})
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	settle(s)
 	settle(s)
 	s.ClickTop("Explain this change, step by step")
@@ -227,7 +227,7 @@ func TestExplainChangeFromChangedUnits(t *testing.T) {
 	}
 }
 
-// The diff view's header has Explain this change, a button that runs explain.change.
+// The diff view's header has Explain this change, a button that runs explain.change.open.
 func TestExplainChangeFromTheDiff(t *testing.T) {
 	s, f, pricing, _ := walkScene(t)
 	s.Run("diff.open", registry.Args{"path": pricing})

@@ -438,11 +438,11 @@ func (x *LSP) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 // lspCommands are the LSP's commands and keys.
 func (x *LSP) lspCommands(h plugin.Host) {
 	for _, c := range []registry.Command{
-		{ID: "lsp.hover", Title: "Show what the language server knows about the symbol under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.hover.open", Title: "Show what the language server knows about the symbol under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.startHover(ctx)
 		}},
 		{ID: "lsp.hover.close", Title: "Close the hover card", Run: func(registry.Ctx, registry.Args) error { x.hover = nil; return nil }},
-		{ID: "lsp.complete", Title: "Complete the word before the cursor", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lsp.word.complete", Title: "Complete the word before the cursor", Run: func(registry.Ctx, registry.Args) error {
 			_, _, d := x.current()
 			if d == nil || d.client == nil {
 				return fmt.Errorf("no language server for this file")
@@ -454,7 +454,7 @@ func (x *LSP) lspCommands(h plugin.Host) {
 		{ID: "completion.prev", Title: "Highlight the previous completion", Run: func(registry.Ctx, registry.Args) error { x.comp.move(-1); return nil }},
 		{ID: "completion.accept", Title: "Take the highlighted completion", Run: func(registry.Ctx, registry.Args) error { return x.accept() }},
 		{ID: "completion.cancel", Title: "Close the completion menu", Run: func(registry.Ctx, registry.Args) error { x.comp.close(); return nil }},
-		{ID: "lsp.code_actions", Title: "Show the code actions at the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.code_actions.open", Title: "Show the code actions at the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.codeActions(ctx)
 		}},
 		{ID: "lsp.restart", Title: "Restart the language servers", Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -469,10 +469,10 @@ func (x *LSP) lspCommands(h plugin.Host) {
 		x.Add(h.Command(c))
 	}
 	for _, k := range []registry.Keymap{
-		{Mode: "n", Keys: "K", Command: "lsp.hover", Desc: "Hover"},
-		{Mode: "n", Keys: "<Leader>ca", Command: "lsp.code_actions", Desc: "Code actions"},
-		{Mode: "x", Keys: "<Leader>ca", Command: "lsp.code_actions", Desc: "Code actions"},
-		{Mode: "i", Keys: "<C-Space>", Command: "lsp.complete", Desc: "Complete"},
+		{Mode: "n", Keys: "K", Command: "lsp.hover.open", Desc: "Hover"},
+		{Mode: "n", Keys: "<Leader>ca", Command: "lsp.code_actions.open", Desc: "Code actions"},
+		{Mode: "x", Keys: "<Leader>ca", Command: "lsp.code_actions.open", Desc: "Code actions"},
+		{Mode: "i", Keys: "<C-Space>", Command: "lsp.word.complete", Desc: "Complete"},
 		{Mode: CompletionKeyMode, Keys: "<C-n>", Command: "completion.next", Desc: "Next"},
 		{Mode: CompletionKeyMode, Keys: "<Down>", Command: "completion.next", Desc: "Next"},
 		{Mode: CompletionKeyMode, Keys: "<C-p>", Command: "completion.prev", Desc: "Previous"},
@@ -703,7 +703,7 @@ type hoverCard struct {
 func (x *LSP) startHover(ctx registry.Ctx) error {
 	p, path, d := x.current()
 	if d == nil || d.client == nil {
-		return x.h.Run(ctx, "editor.keys", registry.Args{"keys": "K", "noremap": true})
+		return x.h.Run(ctx, "editor.keys.send", registry.Args{"keys": "K", "noremap": true})
 	}
 	pos := p.Cursor
 	c := d.client
@@ -711,11 +711,11 @@ func (x *LSP) startHover(ctx registry.Ctx) error {
 		return c.Hover(ctx, lsp.Loc{Path: path, Pos: text.Pos{Line: pos.Line, Col: pos.Col}})
 	}, func(hv *lsp.Hover, err error) {
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
+			x.h.Notify(core.Notice{ID: "lsp.hover.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 			return
 		}
 		if hv == nil || strings.TrimSpace(hv.Contents.Text) == "" {
-			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevInfo, AutoClear: true, Text: "Nothing to show here"})
+			x.h.Notify(core.Notice{ID: "lsp.hover.open", Severity: core.SevInfo, AutoClear: true, Text: "Nothing to show here"})
 			return
 		}
 		x.hover = &hoverCard{at: text.Pos{Line: pos.Line, Col: pos.Col}, path: path, md: hv.Contents}
@@ -780,12 +780,12 @@ func (x *LSP) codeActions(ctx registry.Ctx) error {
 		func(as []lsp.Action, err error) {
 			answered()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "lsp.code_actions.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 				as = nil
 			}
 			if len(as) == 0 && len(agent) == 0 {
 				if err == nil {
-					x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevInfo, AutoClear: true, Text: "No code actions here"})
+					x.h.Notify(core.Notice{ID: "lsp.code_actions.open", Severity: core.SevInfo, AutoClear: true, Text: "No code actions here"})
 				}
 				return
 			}

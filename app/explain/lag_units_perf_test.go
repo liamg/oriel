@@ -16,7 +16,7 @@ import (
 func unitsPanelScene(t *testing.T, dir string, n int) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.WaitGit()
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	s.Until(fmt.Sprintf("the Changed units panel to read %d changed files", n), func() bool {
 		return strings.Contains(s.Text(), "The branch changes no code units.")
 	})

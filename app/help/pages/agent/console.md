@@ -1,6 +1,6 @@
 ---
 id: agent/console
-covers: [agent.console]
+covers: [agent.console.toggle]
 related: [agent/asks, terminal, layout/panes]
 ---
 

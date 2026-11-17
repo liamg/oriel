@@ -183,7 +183,7 @@ func TestShipFlow(t *testing.T) {
 
 	// The dock's Pull request checklist, for web-dashboard.
 	s.Run("project.open", registry.Args{"project": "web-dashboard"})
-	s.Run("project.panel", registry.Args{"name": "pull-request"})
+	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	s.Frame()
 	s.WantFrame("feat(web): show the wait", "OPEN", "CHECKS", "1 of 3 failing", "unit (shard 1/2)", "e2e · chromium", "checked", "REVIEWS",
 		"BRANCH", "Committed", "clean", "Up to date", "with main", "Pushed", "yes", "git read", "View PR")
@@ -354,7 +354,7 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	s.Follow()
 	x := shipOf(s)
 
-	s.Run("project.panel", registry.Args{"name": "git"})
+	s.Run("project.panel.toggle", registry.Args{"name": "git"})
 	shipSettle(s, t, "the Git panel", func() bool { return strings.Contains(s.Text(), "Nothing uncommitted.") })
 	s.WantFrame("main", "→ main", "Rebase on main", "Push", "Rename…")
 

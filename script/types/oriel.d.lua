@@ -45,7 +45,7 @@ oriel = {}
 ---@return string?,string?
 function oriel.asset(path) end
 
---- Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
+--- Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang.
 ---@param name string
 ---@param fn function
 ---@param opts? table
@@ -228,7 +228,7 @@ function oriel.editor.action(spec) end
 ---@param name string
 function oriel.editor.present(name) end
 
---- Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text.
+--- Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.presenter.open { name } shows the focused window with it, and again shows the text.
 ---@param spec table
 function oriel.editor.presenter(spec) end
 

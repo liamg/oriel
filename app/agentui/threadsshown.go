@@ -130,7 +130,7 @@ func (x *Requests) hiddenLayer() registry.KeyLayer {
 // bubble is a line's speech bubble while its threads are hidden: in the colour of the first, with their count when
 // there are several; hovering it shows them, a click shows them in the window.
 func (x *Requests) bubble(se core.SessionState, window string, line int, ts []core.Thread) uireg.Decoration {
-	d := uireg.Decoration{Kind: uireg.Sign, Line: line, Icon: "comment", Style: groupTone(x.h, se, ts[0]).Name(), Priority: 20, Command: "threads.show",
+	d := uireg.Decoration{Kind: uireg.Sign, Line: line, Icon: "comment", Style: groupTone(x.h, se, ts[0]).Name(), Priority: 20, Command: "threads.open",
 		Args: registry.Args{"window": window, "thread": string(ts[0].ID)}, Tooltip: fmt.Sprintf("%d %s", len(ts), words.Plural(len(ts), "thread", "threads"))}
 	if len(ts) > 1 {
 		d.Text = strconv.Itoa(len(ts))

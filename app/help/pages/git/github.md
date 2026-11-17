@@ -45,7 +45,7 @@ agent** here, so a stranger's comment can't steer it; you can still read it, and
 Oriel calls GitHub's API itself; `gh` needn't be installed. It uses the first token it finds for the server
 (github.com or an Enterprise one), once per run:
 
-1. the server's token from **Set up…** (`code.setup`), kept as a secret;
+1. the server's token from **Set up…** (`code.setup.open`), kept as a secret;
 2. `GH_TOKEN` or `GITHUB_TOKEN` (`GH_ENTERPRISE_TOKEN` or `GITHUB_ENTERPRISE_TOKEN` for an Enterprise server);
 3. `gh auth token`, when gh is installed and signed in;
 4. git's credential helper for `https://<server>`, the one you clone with, asked without prompting.

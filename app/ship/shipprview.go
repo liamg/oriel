@@ -36,7 +36,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 		shipCard(c, false, func(c *ui.Ctx) {
 			stepTitle(c, sentence(w.Long), note)
 			if (s.Unkeyed || s.UnknownHost != "") && widget.Button(c, "setup", "Set up…", widget.ButtonOpts{Help: codeSetupHelp}) {
-				x.run("code.setup", setupArgs(s))
+				x.run("code.setup.open", setupArgs(s))
 			}
 		}, nil)
 		return
@@ -113,7 +113,7 @@ func (x *Ship) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary b
 	switch {
 	case movesOn(s) && registry.Can(x.h, se.Kind, core.NextPR):
 		if widget.Button(c, "next", "Start next "+w.Short, x.stepOpts(se.ID, s.Project, nextPRStep, widget.ButtonOpts{Primary: primary, Help: "git/ship#next"})) {
-			x.run("ship.next-pr", registry.Args{"project": s.Project})
+			x.run("ship.next_pr.start", registry.Args{"project": s.Project})
 		}
 	case s.CodeHost == nil:
 	case s.PR == nil:

@@ -23,12 +23,12 @@ import (
 //oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
-//oriel:api doc="Add a command: name is what :Name and the omnibox run, fn gets the command's arguments." optional=opts
+//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang." optional=opts
 func (r Root) Command(name string, fn *script.Fn, opts script.Table, where string) error {
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
 	}
-	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Source: where,
+	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: str(opts, "ex"), ExArg: str(opts, "ex_arg"), Source: where,
 		Run: func(_ registry.Ctx, args registry.Args) error {
 			_, err := r.a.VM.Call(fn, map[string]any(args))
 			return err

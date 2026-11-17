@@ -109,7 +109,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Log", "size": 360})
 	}
 	for _, c := range []registry.Command{
-		{ID: "Log", Title: "Open the log, or set its level (:Log level debug)", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "log.open", Title: "Open the log at an entry, or set its {level} (:Log level debug)", Ex: "Log", Run: func(ctx registry.Ctx, a registry.Args) error {
 			lv := a.String("level")
 			if f := strings.Fields(a.String("args")); len(f) == 2 && f[0] == "level" {
 				lv = f[1]
@@ -124,17 +124,15 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			n.sh.cfg.Logs.Level.Set(l)
 			return nil
 		}},
-		{ID: "messages", Title: "Open the log", Run: openLog},
-		{ID: "log.open", Title: "Open the log at an entry", Run: openLog},
 		{ID: "log.copy", Title: "Copy the open log entry, or what the log shows", Run: func(registry.Ctx, registry.Args) error {
 			kit.CopyText(n.h, n.panel.copyText())
 			return nil
 		}},
-		{ID: "log.copy_report", Title: "Copy a report for a bug", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "log.report.copy", Title: "Copy a report for a bug", Run: func(registry.Ctx, registry.Args) error {
 			kit.CopyText(n.h, n.sh.report(""))
 			return nil
 		}},
-		{ID: "Events", Title: "Show the live core event stream", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "events.open", Title: "Show the live core event stream", Ex: "Events", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": "events", "place": "dock", "edge": "bottom", "title": "Events"})
 		}},
 		{ID: "notice.dismiss", Title: "Dismiss a notice's toast, by {seq} or every one with {id}", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -153,7 +151,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return fmt.Errorf("no notification %d", seq)
 		}},
-		{ID: "contribution.turn_on", Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "contribution.enable", Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
 			kind, id := a.String("kind"), a.String("id")
 			h.TurnOn(kind, id)
 			h.Notify(core.Notice{ID: "turned-on." + kind + "." + id, Severity: core.SevInfo, Source: "core", Text: fmt.Sprintf("%s %s is back on", kind, id)})

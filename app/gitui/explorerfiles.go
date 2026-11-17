@@ -117,9 +117,9 @@ func (e *Explorer) fileCommands() []registry.Command {
 		}
 	}
 	return []registry.Command{
-		{ID: "explorer.new-file", Title: "New file {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
+		{ID: "explorer.file.new", Title: "New file {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
 			Run: newEntry("file")},
-		{ID: "explorer.new-folder", Title: "New folder {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
+		{ID: "explorer.folder.new", Title: "New folder {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
 			Run: newEntry("folder")},
 		{ID: "explorer.rename", Title: "Rename the file or folder {path} to {name}, in the same folder; with no {name}, ask for it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
@@ -149,7 +149,7 @@ func (e *Explorer) fileCommands() []registry.Command {
 				}
 				return e.remove(p, a.Bool("confirm"), a.Bool("permanent"))
 			}},
-		{ID: "explorer.copy-path", Title: "Copy the path of {path}: absolute, or with {relative} from its repo's root", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "explorer.path.copy", Title: "Copy the path of {path}: absolute, or with {relative} from its repo's root", Run: func(_ registry.Ctx, a registry.Args) error {
 			p, err := e.absPath(a)
 			if err != nil {
 				return err
@@ -184,13 +184,13 @@ func (e *Explorer) fileMenu() []registry.MenuItem {
 		reveal = "Reveal in Finder"
 	}
 	return []registry.MenuItem{
-		item("explorer.new-file", "New file…", "files.new", 1, "explorer.new-file", nil, ro),
-		item("explorer.new-folder", "New folder…", "files.new", 2, "explorer.new-folder", nil, ro),
+		item("explorer.file.new", "New file…", "files.new", 1, "explorer.file.new", nil, ro),
+		item("explorer.folder.new", "New folder…", "files.new", 2, "explorer.folder.new", nil, ro),
 		item("explorer.rename", "Rename…", "files.edit", 3, "explorer.rename", nil, ro),
 		item("explorer.duplicate", "Duplicate", "files.edit", 4, "explorer.duplicate", nil, ro),
 		item("explorer.delete", "Delete…", "files.edit", 5, "explorer.delete", nil, ro),
-		item("explorer.copy-path", "Copy path", "files.path", 6, "explorer.copy-path", nil, nil),
-		item("explorer.copy-relative-path", "Copy relative path", "files.path", 7, "explorer.copy-path", registry.Args{"relative": true}, nil),
+		item("explorer.path.copy", "Copy path", "files.path", 6, "explorer.path.copy", nil, nil),
+		item("explorer.copy-relative-path", "Copy relative path", "files.path", 7, "explorer.path.copy", registry.Args{"relative": true}, nil),
 		item("explorer.reveal", reveal, "files.path", 8, "system.reveal", nil, nil),
 	}
 }

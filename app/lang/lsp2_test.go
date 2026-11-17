@@ -199,7 +199,7 @@ func TestPickingAServersSymbolOpensIt(t *testing.T) {
 func TestLSPCallHierarchy(t *testing.T) {
 	s, _ := lspScene(t, "go", "gopls", "lib.go")
 	cursorAt(s, 5, 6)
-	s.Run("lsp.calls.incoming", nil)
+	s.Run("lsp.callers.open", nil)
 	lspSettle(s)
 	src := pickerSource(t, s, "lsp.calls")
 	var labels []string

@@ -43,7 +43,7 @@ func gitPanelScene(t *testing.T, prepare func(dir string)) (s *apptest.Scene, x 
 	id = st.Focus
 	s.Follow()
 	x = shipOf(s)
-	s.Run("project.panel", registry.Args{"name": "git"})
+	s.Run("project.panel.toggle", registry.Args{"name": "git"})
 	shipSettle(s, t, "the Git panel", func() bool { return strings.Contains(s.Text(), "→ main") })
 	return s, x, id, blog, upstream
 }
@@ -147,7 +147,7 @@ func TestGitPanelMergesIntoTheDefaultBranch(t *testing.T) {
 	s.ClickNode("Merge into main…")
 	var ask core.Notification
 	for _, n := range s.Store().State().Notifications {
-		if n.ID == "ship.merge-default" && !n.Dismissed {
+		if n.ID == "ship.default_branch.merge" && !n.Dismissed {
 			ask = n
 		}
 	}
@@ -168,7 +168,7 @@ func TestGitPanelMergesIntoTheDefaultBranch(t *testing.T) {
 		t.Error("the merge was pushed")
 	}
 
-	s.Run("ship.merge-default", registry.Args{"confirm": true})
+	s.Run("ship.default_branch.merge", registry.Args{"confirm": true})
 	shipSettle(s, t, "the second merge's answer", func() bool { return strings.Contains(s.Text(), "nothing to merge") })
 }
 
@@ -245,7 +245,7 @@ func TestAWorkSessionsCommitIsPushable(t *testing.T) {
 	s, _, _, se, _ := shipScene(t)
 	dir := shipDir(se, "search-api")
 	writeFiles(t, dir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() { _ = 1 }\n"})
-	s.Run("project.panel", registry.Args{"name": "git", "project": "search-api"})
+	s.Run("project.panel.toggle", registry.Args{"name": "git", "project": "search-api"})
 	shipSettle(s, t, "the change", func() bool { return strings.Contains(s.Text(), "CHANGES · 1") })
 	s.TypeInto("Commit message", "feat: one")
 	s.ClickOn("Commit")

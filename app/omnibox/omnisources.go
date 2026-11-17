@@ -38,6 +38,9 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 					continue
 				}
 				it := uireg.PickerItem{ID: c.ID, Label: c.ID, Desc: c.Title, Icon: "›", Data: c}
+				if c.Ex != "" {
+					it.Detail = ":" + c.Ex
+				}
 				it.Key = keys[c.ID]
 				out = append(out, it)
 			}

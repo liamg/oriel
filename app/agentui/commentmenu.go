@@ -33,15 +33,15 @@ func commentMenu(c *ui.Ctx, h plugin.Host, t core.Thread, cm core.Comment, shown
 	switch widget.MenuButton(c, "more", items, widget.MenuButtonOpts{Label: "Comment actions", Glyph: "⋯", Size: 18, Width: 200,
 		Help: "agent/requests#comments", Hidden: !shown}) {
 	case 3:
-		runOrSay(h, "request.edit-queued", ref)
+		runOrSay(h, "request.queued.edit", ref)
 	case 4:
-		runOrSay(h, "request.delete-queued", ref)
+		runOrSay(h, "request.queued.delete", ref)
 	case 0:
 		kit.CopyText(h, kit.PlainText(cm.Body))
 	case 1:
 		kit.CopyText(h, cm.Body)
 	case 2:
-		runOrSay(h, "comment.markdown", registry.Args{"title": cmTitle(h, cm), "body": cm.Body})
+		runOrSay(h, "comment.markdown.open", registry.Args{"title": cmTitle(h, cm), "body": cm.Body})
 	}
 }
 
@@ -59,7 +59,7 @@ func cmTitle(h plugin.Host, cm core.Comment) string {
 	return "you"
 }
 
-// mdViewer is the dialog comment.markdown opens: a comment's markdown as written.
+// mdViewer is the dialog comment.markdown.open opens: a comment's markdown as written.
 type mdViewer struct {
 	title, body string
 	open        bool

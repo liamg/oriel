@@ -224,7 +224,7 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	// The notice comes through Notify, not with the frame that shows the card.
 	st := r.UntilState("the login notice", func(st core.State) bool {
 		n := st.Notifications
-		return len(n) > 0 && n[len(n)-1].ID == "agent.login"
+		return len(n) > 0 && n[len(n)-1].ID == "agent.login.start"
 	})
 	if n := st.Notifications[len(st.Notifications)-1]; n.Session != "" || !strings.Contains(n.Text, "/login") {
 		t.Errorf("notice = %+v", n)

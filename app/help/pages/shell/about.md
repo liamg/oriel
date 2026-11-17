@@ -1,6 +1,6 @@
 ---
 id: shell/about
-covers: [about.toggle, about.close, about.website, hud.indicator.about]
+covers: [about.toggle, about.close, about.website.open, hud.indicator.about]
 related: [shell/update, errors]
 ---
 

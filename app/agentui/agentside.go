@@ -178,7 +178,7 @@ func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 			})
 		}
 		if se.Agent.Sandboxed && widget.Link(c, "permissions", "Permissions and connections ›", "agent/permissions") {
-			x.run(context.Background(), "agent.permissions", nil)
+			x.run(context.Background(), "agent.permissions.open", nil)
 		}
 	})
 }
@@ -320,7 +320,7 @@ func statsLink(c *ui.Ctx, h plugin.Host, id core.SessionID, text string, size fl
 	if widget.Clickable(c, "statslink", ui.Style{Label: "Open the session's stats", Help: "agent/stats#session", NoHover: true}, func(c *ui.Ctx) {
 		c.Text("t", text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size, Weight: typeset.Medium}, Color: th.C(theme.Accent)})
 	}).Clicked {
-		if err := h.Run(context.Background(), "stats.session", registry.Args{"id": string(id)}); err != nil {
+		if err := h.Run(context.Background(), "stats.session.open", registry.Args{"id": string(id)}); err != nil {
 			h.Log().Error("stats", "session", id, "err", err)
 		}
 	}

@@ -134,10 +134,10 @@ func After(h plugin.Host, id core.SessionID, then []Call) {
 	h.Do(func() { RunCalls(h, then) })
 }
 
-// Focus brings session id to the front: its kind's opening commands (session.opens), then then, run once the window
+// Focus brings session id to the front: its kind's opening commands (session.opens.run), then then, run once the window
 // is on it.
 func Focus(h plugin.Host, id core.SessionID, then []Call) error {
-	After(h, id, append([]Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
+	After(h, id, append([]Call{{Command: "session.opens.run", Args: registry.Args{"id": string(id)}}}, then...))
 	return h.Apply(core.SessionFocused{ID: id})
 }
 

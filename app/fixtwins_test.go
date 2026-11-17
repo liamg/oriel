@@ -62,7 +62,7 @@ type fixEntry struct {
 var fixEntries = []fixEntry{
 	{"the failure block", "test-failure", func(t *testing.T) *apptest.Scene {
 		s, _ := apptest.TestsScene(t)
-		s.Run("test.run.file", nil)
+		s.Run("test.file.run", nil)
 		s.RunDone()
 		s.EditorKeys("20Gzt")
 		s.Frame()
@@ -227,7 +227,7 @@ func TestFixesGoThroughAgentFix(t *testing.T) {
 	allowed := map[string]bool{
 		"agentui/requests.go":     true, // request.new itself
 		"agentui/requestsview.go": true,
-		"explain/explain.go":      true, // Ask a follow-up and request.this: not fixes
+		"explain/explain.go":      true, // Ask a follow-up and request.this.compose: not fixes
 		"explain/explaincard.go":  true, // Ask a follow-up
 		"explain/explainask.go":   true, // agent.fix
 		"explain/walkthrough.go":  true, // Ask about this step: not a fix

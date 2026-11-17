@@ -13,7 +13,7 @@ The work tree, in three scopes. `⌥1` `⌥2` `⌥3` switch between them, and ea
 - **Changed**: every file the branch changes against its base (the merge-base with origin's default branch, or
   main), uncommitted work and new untracked files included. `⏎` opens a file's diff.
 - **Uncommitted**: the work tree against HEAD, in Staged, Unstaged and Untracked. A file's diff from here
-  (`explorer.diff`) is against HEAD too, and the editor's gutter marks what isn't committed while it shows.
+  (`explorer.diff.open`) is against HEAD too, and the editor's gutter marks what isn't committed while it shows.
 - **All**: every file, marked as Changed marks it. Ignored directories are dimmed and not opened.
 
 ## Changed {#changed}
@@ -56,9 +56,9 @@ Right-click a file or folder for what you can do with it:
 In a project the session only reads (a review's checkout), the items that change files are greyed, with why. If a
 renamed or deleted file is open in the editor, a notice says so: its tab keeps what it held.
 
-They're commands too, each taking a `{path}`: `explorer.new-file` and `explorer.new-folder` (with `{name}`, no
+They're commands too, each taking a `{path}`: `explorer.file.new` and `explorer.folder.new` (with `{name}`, no
 dialog), `explorer.rename` (`{name}`), `explorer.duplicate`, `explorer.delete` (`{confirm}`, `{permanent}`),
-`explorer.copy-path` (`{relative}`) and `system.reveal`.
+`explorer.path.copy` (`{relative}`) and `system.reveal`.
 
 ## Keys {#keys}
 

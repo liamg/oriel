@@ -88,7 +88,7 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	r.WaitText("queued · agent starting")
 
 	err := r.Do(func() error {
-		return r.Host.Run(context.Background(), "agent.terminal", registry.Args{"id": string(id)})
+		return r.Host.Run(context.Background(), "agent.terminal.open", registry.Args{"id": string(id)})
 	})
 	if err == nil || !strings.Contains(err.Error(), "still starting") {
 		t.Errorf("the raw terminal of a starting agent: %v", err)

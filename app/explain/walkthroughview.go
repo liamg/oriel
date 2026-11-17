@@ -83,7 +83,7 @@ func (x *Walkthrough) message(c *ui.Ctx, msg string, failed bool) {
 		c.Text("t", msg, widget.UIFont(13, th.C(tok)))
 		if failed && widget.Button(c, "again", "Try again", widget.ButtonOpts{Help: walkHelp}) {
 			x.w = nil
-			x.run("explain.change", nil)
+			x.run("explain.change.open", nil)
 		}
 	})
 }

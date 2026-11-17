@@ -117,8 +117,8 @@ func TestSampleInitLua(t *testing.T) {
 	}
 
 	// :Hooks, :Keys and :Commands list them.
-	for _, view := range []struct{ cmd, query, want string }{{"Hooks", "", "staging"}, {"Hooks", "", "Permission"}, {"Keys", "agent.review", "␣ r r"},
-		{"Commands", "Ship", "Ship"}} {
+	for _, view := range []struct{ cmd, query, want string }{{"hooks.open", "", "staging"}, {"hooks.open", "", "Permission"}, {"keymaps.browse", "agent.review", "␣ r r"},
+		{"commands.browse", "Ship", "Ship"}} {
 		s.Run(view.cmd, nil)
 		s.Frame()
 		for _, r := range view.query {
@@ -152,7 +152,7 @@ func TestSampleHooksFire(t *testing.T) {
 // :Inspect shows what's under the cursor: the tree-sitter path, the highlight, keymaps and views.
 func TestInspect(t *testing.T) {
 	s := apptest.EditorScene(t)
-	s.Run("Inspect", nil)
+	s.Run("inspect.open", nil)
 	s.Frame()
 	s.Frame()
 	text := strings.ReplaceAll(s.Text(), "\n", " ")
@@ -179,6 +179,6 @@ func configHooks(s *apptest.Scene) []registry.HookInfo {
 // :Inspect over the editor, against a golden.
 func TestInspectSnapshot(t *testing.T) {
 	e := apptest.EditorScene(t)
-	e.Run("Inspect", nil)
+	e.Run("inspect.open", nil)
 	e.Golden("inspect")
 }

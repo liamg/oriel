@@ -142,13 +142,13 @@ place clicked. A right-click moves the cursor to where it's clicked, unless that
 
 ## Changed units {#changed-units}
 
-The Changed units panel (`explain.units`, or **explain by unit** above the editor) lists every unit the branch
+The Changed units panel (`explain.units.toggle`, or **explain by unit** above the editor) lists every unit the branch
 touched, by file and nested as the code is, with whether it's been explained, is open, has changed since, or not
 (`–`). Opening one goes to it and explains it, so explaining by unit doubles as a review checklist.
 
 ## Explain this change {#explain-change}
 
-**Explain this change** (`explain.change`, `␣E`, or the omnibox) asks the session's agent, forked without tools, for
+**Explain this change** (`explain.change.open`, `␣E`, or the omnibox) asks the session's agent, forked without tools, for
 a walkthrough of the branch's whole change: every changed file in every project, against where the branch left its
 base. It answers in steps, each about some lines of a file, with notes pinned to parts of them, and ends with a
 summary. The step's file is shown with the lines its notes are on lit in their colours and the rest dimmed, each note
@@ -166,7 +166,7 @@ Explain this change asks for a new one. **Discard** throws it away now.
 ## Presentations {#present}
 
 A file can be shown as something other than its text: a markdown file as a document (its **Preview** button,
-`:MarkdownPreview`, or `␣cp`), or as a plugin's presenter draws it (`editor.present`; `␣cp` takes the first that
+`:MarkdownPreview`, or `␣cp`), or as a plugin's presenter draws it (`editor.presenter.open`; `␣cp` takes the first that
 takes the file). The file stays open and editable, and
 the presentation follows its text, so two windows on one file can show it both ways at once. The file's threads sit
 in the margin beside the blocks they're about. `j`/`k` move between blocks, `c` or `⏎` (or a click) opens a thread on a

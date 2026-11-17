@@ -218,7 +218,7 @@ func TestSettingsSnapshot(t *testing.T) {
 	if err := s.Registry().Options().SetFrom("ui.reduced_motion", registry.LayerLua, registry.At{}, true, "init.lua:12"); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("Settings", registry.Args{"args": "ui"})
+	s.Run("settings.open", registry.Args{"query": "ui"})
 	s.Golden("settings")
 }
 

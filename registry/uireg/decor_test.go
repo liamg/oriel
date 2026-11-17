@@ -62,7 +62,7 @@ func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 // A line with room for one sign shows the one with the highest priority, and its menu offers each of the others'
 // commands and menus.
 func TestTopSignKeepsTheOthersInItsMenu(t *testing.T) {
-	q := uireg.Decoration{Kind: uireg.Sign, Text: "?", Priority: 15, Command: "explain.unit", Tooltip: "Explain f"}
+	q := uireg.Decoration{Kind: uireg.Sign, Text: "?", Priority: 15, Command: "explain.unit.ask", Tooltip: "Explain f"}
 	run := uireg.Decoration{Kind: uireg.Sign, Text: "▶", Priority: 20, Command: "test.run", Menu: []uireg.SignItem{{Label: "Debug", Command: "test.debug"}}}
 	bp := uireg.Decoration{Kind: uireg.Sign, Text: "●", Priority: 10, Menu: []uireg.SignItem{{Label: "Remove", Command: "debug.remove"}}}
 	d, ok := uireg.TopSign([]uireg.Decoration{q, run, bp})
@@ -73,7 +73,7 @@ func TestTopSignKeepsTheOthersInItsMenu(t *testing.T) {
 	for _, it := range d.Menu {
 		got = append(got, it.Label+"="+it.Command)
 	}
-	want := []string{"Debug=test.debug", "Remove=debug.remove", "Explain f=explain.unit"}
+	want := []string{"Debug=test.debug", "Remove=debug.remove", "Explain f=explain.unit.ask"}
 	if !slices.Equal(got, want) {
 		t.Errorf("menu %v, want %v", got, want)
 	}

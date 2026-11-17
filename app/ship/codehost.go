@@ -387,7 +387,7 @@ func (x *Ship) setupFirst(ctx registry.Ctx, s shipRead) (bool, error) {
 	if !s.Unkeyed && s.UnknownHost == "" {
 		return false, nil
 	}
-	if err := x.h.Run(ctx, "code.setup", setupArgs(s)); err != nil {
+	if err := x.h.Run(ctx, "code.setup.open", setupArgs(s)); err != nil {
 		return true, fmt.Errorf("%s's code host isn't set up: %w", s.Project, err)
 	}
 	return true, nil

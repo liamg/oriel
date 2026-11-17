@@ -125,12 +125,11 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "term.open", Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "term.open", Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Ex: "term", Run: func(ctx registry.Ctx, a registry.Args) error {
 			place := cmp.Or(a.String("place"), "dock")
 			return open(place, a.String("side"))(ctx, a)
 		}},
-		{ID: "term", Title: "Open a terminal; term! in the main area", Run: open("dock", "")},
-		{ID: "term.host", Title: "Open a terminal on this machine, outside the session's sandbox, in {dir} (the window's directory by default)",
+		{ID: "term.host.open", Title: "Open a terminal on this machine, outside the session's sandbox, in {dir} (the window's directory by default)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				b := registry.Args{"host": true}
 				for k, v := range a {
@@ -138,15 +137,15 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return open(cmp.Or(a.String("place"), "dock"), a.String("side"))(ctx, b)
 			}},
-		{ID: "vterm", Title: "Open a terminal in a split to the right", Run: open("split", "right")},
-		{ID: "sterm", Title: "Open a terminal in a split below", Run: open("split", "down")},
-		{ID: "term.normal", Title: "Terminal-normal mode: vim's motions over the scrollback", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "term.right.open", Title: "Open a terminal in a split to the right", Ex: "vterm", Run: open("split", "right")},
+		{ID: "term.below.open", Title: "Open a terminal in a split below", Ex: "sterm", Run: open("split", "down")},
+		{ID: "term.normal.enter", Title: "Terminal-normal mode: vim's motions over the scrollback", Run: func(registry.Ctx, registry.Args) error {
 			if t := x.focused(); t != nil {
 				x.enterNormal(t)
 			}
 			return nil
 		}},
-		{ID: "term.copy_last_output", Title: "Copy the last command's output", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "term.last_output.copy", Title: "Copy the last command's output", Run: func(registry.Ctx, registry.Args) error {
 			t := x.focusedOrLast()
 			if t == nil {
 				return fmt.Errorf("no terminal")
@@ -158,7 +157,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 			kit.CopyText(x.h, out)
 			return nil
 		}},
-		{ID: "term.send_last_output", Title: "Send the last command's output to a request",
+		{ID: "term.last_output.send", Title: "Send the last command's output to a request",
 			Available: func(registry.Args) bool { return h.Available("request.attach", nil) },
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				t := x.focusedOrLast()
@@ -167,7 +166,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return h.Run(ctx, "request.attach", registry.Args{"text": term.LastOutput(t.emu), "title": "terminal output"})
 			}},
-		{ID: "term.rerun_last", Title: "Run the last command again, in a new split", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "term.last_command.run", Title: "Run the last command again, in a new split", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			t := x.focusedOrLast()
 			if t == nil {
 				return fmt.Errorf("no terminal")
@@ -188,8 +187,8 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<C-'>", Command: "term.open", Desc: "Terminal"}))
 	x.Add(h.Keymap(registry.Keymap{Mode: TerminalNormalKeyMode, Keys: "q", Command: "view.close", Desc: "Close"}))
-	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: "<C-Esc>", Command: "term.normal", Desc: "Terminal-normal mode"}))
-	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: `<C-\><C-n>`, Command: "term.normal", Desc: "Terminal-normal mode"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: "<C-Esc>", Command: "term.normal.enter", Desc: "Terminal-normal mode"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: `<C-\><C-n>`, Command: "term.normal.enter", Desc: "Terminal-normal mode"}))
 	x.Add(h.Contribute(registry.RawKeys{Mode: TerminalKeyMode}))
 	x.renaming(h)
 	x.Add(h.Contribute(registry.MenuItem{Name: "term.fix", Label: "Ask the agent to fix the failed command", Group: "agent", Order: 10,
@@ -368,7 +367,7 @@ func (x *Terminals) open(ctx registry.Ctx, a registry.Args, place, side string) 
 			func(ctx context.Context) (sandbox.Command, error) {
 				c, err := w.SandboxShell(ctx, se, dir)
 				if err != nil {
-					return c, fmt.Errorf("%w; term.host opens a terminal on this machine instead", err)
+					return c, fmt.Errorf("%w; term.host.open opens a terminal on this machine instead", err)
 				}
 				return c, nil
 			},

@@ -20,7 +20,7 @@ func TestChangedUnitsFollowTheDisk(t *testing.T) {
 	r.Write(map[string]string{"a.go": "package p\n\nfunc B() {}\n"})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.WaitGit()
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	s.ExplainSettle()
 	s.WantFrame("func B")
 	path := filepath.Join(r.Dir, "a.go")
@@ -40,7 +40,7 @@ func TestChangedUnitsFollowTheDisk(t *testing.T) {
 // Changed units outside a repo says so, not that it's reading.
 func TestChangedUnitsOutsideARepo(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
 	s.Frame()

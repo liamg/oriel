@@ -69,7 +69,7 @@ func (x *Ship) shipCommands() []registry.Command {
 			}},
 		{ID: "ship.commit", Title: "Commit a project's changes: {project}, {message} (its draft by default), {files} (all by default)",
 			Available: inFront, Run: run(x.commit)},
-		{ID: "ship.commit-all", Title: "Commit every project's changes, each with its message", Available: inFront,
+		{ID: "ship.all.commit", Title: "Commit every project's changes, each with its message", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -86,7 +86,7 @@ func (x *Ship) shipCommands() []registry.Command {
 					return c.ShipPush(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.push-all", Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
+		{ID: "ship.all.push", Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -104,7 +104,7 @@ func (x *Ship) shipCommands() []registry.Command {
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.sync(se, p)
 			})},
-		{ID: "ship.sync-all", Title: "Rebase every project that's behind its base", Available: inFront,
+		{ID: "ship.all.sync", Title: "Rebase every project that's behind its base", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -117,7 +117,7 @@ func (x *Ship) shipCommands() []registry.Command {
 			}},
 		{ID: "ship.raise", Title: "Push a project and raise its PR, or update the open one: {project}, {title}, {body}, {draft}, {reviewers}",
 			Available: inFront, Run: run(x.raise)},
-		{ID: "ship.raise-all", Title: "Push and raise every project's PR, in merge order", Available: inFront,
+		{ID: "ship.all.raise", Title: "Push and raise every project's PR, in merge order", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				return x.raiseAll(ctx, se)
@@ -145,21 +145,21 @@ func (x *Ship) branchCommands() []registry.Command {
 					return c.ShipRename(ctx, hostapi.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
-		{ID: "ship.switch-back", Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
+		{ID: "ship.branch.back", Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Switching back", func(ctx context.Context, c hostapi.ShipCalls) error {
 					return c.ShipSwitchBack(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.adopt-branch", Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
+		{ID: "ship.branch.adopt", Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
 			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Adopting", func(ctx context.Context, c hostapi.ShipCalls) error {
 					return c.ShipAdopt(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.merge-default", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
+		{ID: "ship.default_branch.merge", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
 			Available: inFront, Run: run(x.mergeDefault)},
-		{ID: "ship.next-pr", Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",
+		{ID: "ship.next_pr.start", Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",
 			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.nextPR(se, p, nil)
 			})},
@@ -180,7 +180,7 @@ func (x *Ship) branchCommands() []registry.Command {
 				}
 				return x.h.Run(ctx, "view.open", registry.Args{"id": prui.PRView, "instance": p, "place": "tab"})
 			})},
-		{ID: "ship.fix-ci", Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
+		{ID: "ship.ci.fix", Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				t, ok := ciTrouble(s)
@@ -258,7 +258,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				}
 				return kit.OpenURL(x.h, s.PR.URL)
 			})},
-		{ID: "ship.copy-link", Title: "Copy the link to a project's PR to the clipboard: {project}", Available: inFront,
+		{ID: "ship.link.copy", Title: "Copy the link to a project's PR to the clipboard: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				if s.PR == nil || s.PR.URL == "" {

@@ -58,7 +58,7 @@ func populate(s *apptest.Scene) {
 			Location: "init.lua:7",
 			Actions: []core.Action{
 				{Title: "Open at line", Command: "editor.open", Args: map[string]any{"path": "init.lua", "line": 7}},
-				{Title: "Turn hook back on", Command: "contribution.turn_on", Args: map[string]any{"kind": "hook", "id": "init.lua:6"}},
+				{Title: "Turn hook back on", Command: "contribution.enable", Args: map[string]any{"kind": "hook", "id": "init.lua:6"}},
 			},
 			Time: apptest.At(14, 7, 1+i)})
 	}
@@ -165,7 +165,7 @@ func TestEditNoticeMapsOntoCore(t *testing.T) {
 func TestEventsView(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	populate(s)
-	s.Run("Events", nil)
+	s.Run("events.open", nil)
 	s.Frame()
 	s.Frame()
 	text := s.Text()

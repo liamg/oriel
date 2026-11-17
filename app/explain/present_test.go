@@ -99,33 +99,33 @@ func TestMarkdownPreview(t *testing.T) {
 	s.Frames(2)
 	s.EditorKeys("27Gzt")
 	top := pane(t, s, dir, "notes.md").Top
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	intro, _ := s.TextStart("Intro paragraph.")
 	item, _ := s.TextStart("item 21")
 	if intro.Y > 90 || item.Y < 90 || item.Y > s.Size().Y {
 		t.Errorf("the preview doesn't open where the window was (line %d): the intro at %v, item 21 at %v", top+1, intro, item)
 	}
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(2)
 	if got := pane(t, s, dir, "notes.md").Top; got != top {
 		t.Errorf("Edit came back with line %d at the top, not %d", got+1, top+1)
 	}
 	// Scrolling the preview moves the window: Edit comes back where the preview was.
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(4)
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("item 21")})
 	s.Frame()
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: s.TextPoint("item 21"), Scroll: render.Point{Y: -5000}})
 	s.Frames(3)
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(2)
 	if got := pane(t, s, dir, "notes.md").Top; got != 0 {
 		t.Errorf("after scrolling the preview to its start, Edit came back with line %d at the top", got+1)
 	}
 
 	// j/k move between blocks; o goes to the selected one's source.
-	s.Run("MarkdownPreview", nil)
+	s.Run("markdown.preview", nil)
 	s.Frames(3)
 	for range 3 {
 		s.Press("j")
@@ -147,7 +147,7 @@ func TestMarkdownPreview(t *testing.T) {
 			preview = w.ID
 		}
 	}
-	s.Run("editor.present", registry.Args{"name": "markdown", "window": preview})
+	s.Run("editor.presenter.open", registry.Args{"name": "markdown", "window": preview})
 	s.Frames(3)
 	s.Host().Layout().Show(layout.ViewRef{ID: kit.EditorView, Instance: other})
 	s.Frame()
@@ -185,7 +185,7 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 	if err := os.WriteFile(path, []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\nE-5,50\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	r.Run("lua", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
+	r.Run("lua.eval", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
 		`when = function(p) return p:match("%.csv$") ~= nil end, ` +
 		`build = function(ctx) for i, l in ipairs(ctx.lines) do if l ~= "" then ` +
 		`ctx.block(i, i, function() return oriel.ui.text("row " .. i .. ": " .. (l:gsub(",", " | "))) end) end end end }`})
@@ -196,7 +196,7 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 	a.Emit(agent.TurnEnd{})
 	r.Run("editor.open", registry.Args{"path": path})
 	r.WaitText("C-3,30")
-	r.Run("editor.present", registry.Args{"name": "csv"})
+	r.Run("editor.presenter.open", registry.Args{"name": "csv"})
 	r.Latest("the thread beside row 4", func(f headless.Frame) bool {
 		row, ok1 := opStarting(f, "row 4: C-3 | 30")
 		card, ok2 := opStarting(f, "Is C-3 right?")
@@ -215,7 +215,7 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 		}
 	}
 	threadWith(t, r, "Raise D-4")
-	r.Run("editor.present", registry.Args{"name": "csv"})
+	r.Run("editor.presenter.open", registry.Args{"name": "csv"})
 	r.WaitFrame("the new thread between the lines in Edit", func(s string) bool {
 		return apptest.HasAll(s, "D-4,40", "· L5 ·", "Raise D-4") && !strings.Contains(s, "row 5:")
 	})
@@ -229,7 +229,7 @@ func TestPresentationComesBackAfterARestart(t *testing.T) {
 	}
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r.Run("editor.open", registry.Args{"path": filepath.Join(dir, "notes.md")})
-	r.Run("editor.present", registry.Args{"name": "markdown"})
+	r.Run("editor.presenter.open", registry.Args{"name": "markdown"})
 	r.WaitFrame("the preview", func(s string) bool {
 		return apptest.HasAll(s, "Intro paragraph.", "Edit") && !strings.Contains(s, "Preview")
 	})
@@ -250,7 +250,7 @@ func TestLuaEditorAction(t *testing.T) {
       ctx.block(i, i, function() return oriel.ui.text((line:gsub(",", "  │  "))) end)
     end
   end }
-oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", command = "editor.present", args = { name = "csv" },
+oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", command = "editor.presenter.open", args = { name = "csv" },
   when = function(path) return path:match("%.csv$") ~= nil end,
   on = function(window) return window.presenter == "csv" end,
   note = function(window) return "#" .. window.id end }`)

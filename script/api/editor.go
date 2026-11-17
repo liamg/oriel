@@ -67,7 +67,7 @@ func (a *APIs) truthy(kind, id string, fn *script.Fn, args ...any) bool {
 	return out[0] != nil && (!isBool || b)
 }
 
-//oriel:api doc="Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text."
+//oriel:api doc="Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.presenter.open { name } shows the focused window with it, and again shows the text."
 func (e Editor) Presenter(spec script.Table, where string) error {
 	builder, _ := spec["build"].(*script.Fn)
 	p := uireg.BufferPresenter{Name: str(spec, "name"), Label: str(spec, "label"), Order: 50, Source: where}
@@ -141,5 +141,5 @@ func (e Editor) Viewer(spec script.Table, where string) error {
 
 //oriel:api doc="Show the focused editor window with the presenter name (the first that takes its file when name is empty), or as text again when it shows it already."
 func (e Editor) Present(name string) error {
-	return e.a.Host.Run(context.Background(), "editor.present", registry.Args{"name": name})
+	return e.a.Host.Run(context.Background(), "editor.presenter.open", registry.Args{"name": name})
 }

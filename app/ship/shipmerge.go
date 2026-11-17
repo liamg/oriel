@@ -11,7 +11,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// mergeStep is ship.merge-default's step.
+// mergeStep is ship.default_branch.merge's step.
 const mergeStep = "Merging"
 
 // mergeDefault asks first, naming both branches; confirmed, it merges the project's branch into the default branch.
@@ -21,16 +21,16 @@ func (x *Ship) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a re
 		return fmt.Errorf("%s has no local default branch to merge into", p)
 	}
 	if !a.Bool("confirm") {
-		x.h.Notify(core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Confirm: true, Session: se.ID, Title: "Merge into " + s.Default + "?",
+		x.h.Notify(core.Notice{ID: "ship.default_branch.merge", Severity: core.SevQuestion, Confirm: true, Session: se.ID, Title: "Merge into " + s.Default + "?",
 			Text: fmt.Sprintf("Merge %s's commits into %s in %s, here, without a PR? %s isn't pushed; uncommitted changes stay on %s.",
 				s.Branch, s.Default, p, s.Default, s.Branch),
 			Actions: []core.Action{
-				{Title: "Merge into " + s.Default, Command: "ship.merge-default", Args: map[string]any{"id": string(se.ID), "project": p, "confirm": true}},
-				{Title: "Cancel", Command: "notice.dismiss", Args: map[string]any{"id": "ship.merge-default"}},
+				{Title: "Merge into " + s.Default, Command: "ship.default_branch.merge", Args: map[string]any{"id": string(se.ID), "project": p, "confirm": true}},
+				{Title: "Cancel", Command: "notice.dismiss", Args: map[string]any{"id": "ship.default_branch.merge"}},
 			}})
 		return nil
 	}
-	x.h.Dismiss("ship.merge-default")
+	x.h.Dismiss("ship.default_branch.merge")
 	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c hostapi.ShipCalls) error {
 		m, err := c.ShipMergeDefault(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 		if err != nil {
@@ -54,7 +54,7 @@ func (x *Ship) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a re
 	})
 }
 
-// nextPRStep is ship.next-pr's step.
+// nextPRStep is ship.next_pr.start's step.
 const nextPRStep = "Starting the next PR"
 
 // nextPR moves a project onto a fresh branch from its updated base, keeping the PR it leaves in the session's past:
@@ -132,7 +132,7 @@ func (x *Ship) askNextPR(id core.SessionID, s shipRead, done *registry.PR) {
 	x.h.Notify(core.Notice{ID: nextPRAsk(s.Project), Severity: core.SevQuestion, Session: id, Title: title,
 		Text: fmt.Sprintf("Start the next %s in %s, on a fresh branch from %s?%s", w.Short, s.Project, cmp.Or(s.Base, "its base"), why),
 		Actions: []core.Action{
-			{Title: "Start next " + w.Short, Command: "ship.next-pr", Args: map[string]any{"id": string(id), "project": s.Project}},
+			{Title: "Start next " + w.Short, Command: "ship.next_pr.start", Args: map[string]any{"id": string(id), "project": s.Project}},
 			{Title: "Not now", Command: "notice.dismiss", Args: map[string]any{"id": nextPRAsk(s.Project)}},
 		}})
 }
@@ -143,4 +143,4 @@ func movesOn(s shipRead) bool {
 }
 
 // nextPRAsk is the id of the notice asking whether to start a project's next PR.
-func nextPRAsk(project string) string { return "ship.next-pr." + project }
+func nextPRAsk(project string) string { return "ship.next_pr.start." + project }

@@ -43,7 +43,7 @@ func TestRaisePRSnapshot(t *testing.T) {
 	s.Run("ship.open", nil)
 	s.SettleGit()
 	s.Run("view.close", registry.Args{"id": prui.ShipView})
-	s.Run("project.panel", registry.Args{"name": "pull-request"})
+	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.Golden("ship-raise-pr")
 	s.WantFrame("DRAFTING", "2 commits", "rethink/search-endpoint → main", "BRANCH", "Committed", "3 files left", "4 behind main", "2 to push",
@@ -100,7 +100,7 @@ func TestPRPanelSnapshots(t *testing.T) {
 			s.SettleGit()
 			s.Run("view.close", registry.Args{"id": prui.ShipView})
 			s.Run("project.open", registry.Args{"project": tc.project})
-			s.Run("project.panel", registry.Args{"name": "pull-request"})
+			s.Run("project.panel.toggle", registry.Args{"name": "pull-request"})
 			s.Golden("ship-pr-panel-" + tc.name)
 			s.WantFrame(tc.want...)
 			s.Lint("the Pull request panel")

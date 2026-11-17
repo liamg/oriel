@@ -528,7 +528,7 @@ func (x *Explain) panelView(c *ui.Ctx) {
 		if n > 0 {
 			c.Row("walk", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 6}}, func(c *ui.Ctx) {
 				if widget.Link(c, "explain", "Explain this change, step by step", "editor/pane#explain-change") {
-					if err := x.h.Run(context.Background(), "explain.change", nil); err != nil {
+					if err := x.h.Run(context.Background(), "explain.change.open", nil); err != nil {
 						x.notify(err)
 					}
 				}
@@ -639,7 +639,7 @@ func (x *Explain) openRow(id string) {
 		x.notify(err)
 		return
 	}
-	if err := x.h.Run(ctx, "explain.unit", registry.Args{"file": path, "line": line}); err != nil {
+	if err := x.h.Run(ctx, "explain.unit.ask", registry.Args{"file": path, "line": line}); err != nil {
 		x.notify(err)
 	}
 }

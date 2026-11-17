@@ -125,7 +125,7 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 					return nil
 				}
 			}
-			return h.Run(ctx, "project.panel", registry.Args{"name": "search"})
+			return h.Run(ctx, "project.panel.toggle", registry.Args{"name": "search"})
 		}},
 		{ID: "search.replace.preview", Title: "Show the diff the replace would make", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return p.preview(ctx)
@@ -141,7 +141,7 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return p.show(ctx, &editPlan{title: a.String("title"), detail: a.String("detail"), edits: edits})
 			}},
-		{ID: "search.quickfix", Title: "Send the search's matches to the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "search.quickfix.send", Title: "Send the search's matches to the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			var items []map[string]any
 			for _, m := range p.results() {
 				col := 1
@@ -160,7 +160,7 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 	}
 	p.Add(h.View(SearchView, searchView{p}))
 	p.Add(h.View(ReplaceView, replaceView{p}))
-	p.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "project.panel", Args: registry.Args{"name": "search"}, Desc: "Search the project"}))
+	p.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "project.panel.toggle", Args: registry.Args{"name": "search"}, Desc: "Search the project"}))
 	return nil
 }
 
@@ -430,7 +430,7 @@ func (p *Search) build(c *ui.Ctx) {
 				}
 			}
 			if widget.Button(c, "qf", "→ quickfix", widget.ButtonOpts{Ghost: true, Disabled: n == 0, Help: "files/search"}) {
-				kit.RunOrNotify(p.h, "editor", "search.quickfix", nil)
+				kit.RunOrNotify(p.h, "editor", "search.quickfix.send", nil)
 			}
 		})
 	})

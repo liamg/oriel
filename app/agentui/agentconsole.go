@@ -116,7 +116,7 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	}
 	if sessionkit.HasSessions(x.h) {
 		// The rail offers the console where there are agents.
-		x.Add(h.Contribute(uireg.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console", Order: 70,
+		x.Add(h.Contribute(uireg.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console.toggle", Order: 70,
 			Active: func(string) bool { return x.shown() }, Badge: func() int {
 				se, _ := x.front()
 				return len(se.Asks)
@@ -139,10 +139,10 @@ func (x *Console) commands() []registry.Command {
 	}
 	inFront := func(registry.Args) bool { return h.State().Focus != "" }
 	return []registry.Command{
-		{ID: "agent.console", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "agent.console.toggle", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", open)
 		}},
-		{ID: "agent.unqueue", Grant: string(plugin.CapAgentPrompt), Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
+		{ID: "agent.queue.remove", Grant: string(plugin.CapAgentPrompt), Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				c, err := x.client(session(a))
 				if err != nil {
@@ -150,7 +150,7 @@ func (x *Console) commands() []registry.Command {
 				}
 				return c.Unqueue(hostapi.UnqueueReq{Session: session(a), Index: a.Int("index"), Text: a.String("text")})
 			}},
-		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
+		{ID: "agent.console.open", Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
 					"then": kit.Then(kit.Call{Command: "view.open", Args: open})})
@@ -169,7 +169,7 @@ func (x *Console) commands() []registry.Command {
 			}
 			return nil
 		}},
-		{ID: "agent.console.escape", Title: "Agent console: interrupt the turn, or close the console when the agent is idle",
+		{ID: "agent.console.cancel", Title: "Agent console: interrupt the turn, or close the console when the agent is idle",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				if se, ok := x.front(); ok && se.Agent.Working {
 					return h.Run(ctx, "session.interrupt", nil)
@@ -202,7 +202,7 @@ func (x *Console) commands() []registry.Command {
 				st.draft = ""
 				return nil
 			}},
-		{ID: "agent.fork", Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent of the session in front a side question: {prompt}, answered from its context outside the conversation",
+		{ID: "agent.aside.ask", Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent of the session in front a side question: {prompt}, answered from its context outside the conversation",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 				prompt := strings.TrimSpace(a.String("prompt"))
 				if prompt == "" {
@@ -213,10 +213,10 @@ func (x *Console) commands() []registry.Command {
 				}
 				return x.fork(session(a), prompt)
 			}},
-		{ID: "agent.terminal", Title: "Show the raw terminal of {id}'s agent, or the session in front's",
+		{ID: "agent.terminal.open", Title: "Show the raw terminal of {id}'s agent, or the session in front's",
 			Available: func(a registry.Args) bool { return inFront(a) && x.hasTerminal(session(a)) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
-		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
+		{ID: "agent.login.start", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
 		{ID: "ask.answer", Grant: string(plugin.CapGate), Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope} (a network rule's host pattern), {for} (\"all\": an always for every session, else for this one), {answers}",
@@ -228,7 +228,7 @@ func (x *Console) commands() []registry.Command {
 				}
 				return x.answer(ctx, id, ask, a)
 			}},
-		{ID: "ask.deny-note", Grant: string(plugin.CapGate), Title: "Deny an ask with a note for the agent: {ask} of {id}, the first of the session in front by default",
+		{ID: "ask.deny_note.send", Grant: string(plugin.CapGate), Title: "Deny an ask with a note for the agent: {ask} of {id}, the first of the session in front by default",
 			Available: inFront, Run: func(registry.Ctx, registry.Args) error {
 				id := h.State().Focus
 				ask, ok := x.ask(id, "")
@@ -250,12 +250,12 @@ func (x *Console) keymaps() []registry.Keymap {
 		{Keys: "<Up>", Command: "agent.console.prev", Desc: "Block before"},
 		{Keys: "<CR>", Command: "agent.console.fold", Desc: "Fold or unfold"},
 		{Keys: "i", Command: "agent.console.compose", Desc: "Write to the agent"},
-		{Keys: "<Esc>", Command: "agent.console.escape", Desc: "Interrupt, or close"},
+		{Keys: "<Esc>", Command: "agent.console.cancel", Desc: "Interrupt, or close"},
 		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAllow)}, Desc: "Allow once"},
 		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAlways)}, Desc: "Allow for this session"},
 		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAlways), "for": forAll}, Desc: "Allow for all sessions"},
 		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionDeny)}, Desc: "Deny"},
-		{Keys: "N", Command: "ask.deny-note", Desc: "Deny with a note"},
+		{Keys: "N", Command: "ask.deny_note.send", Desc: "Deny with a note"},
 	} {
 		k.Mode = AgentKeyMode
 		out = append(out, k)
@@ -263,7 +263,7 @@ func (x *Console) keymaps() []registry.Keymap {
 	return append(out,
 		registry.Keymap{Mode: ComposerKeyMode, Keys: "<D-CR>", Command: "agent.console.send", Args: registry.Args{"urgent": true},
 			Desc: "Send now, interrupting the turn"},
-		registry.Keymap{Mode: "global", Keys: "<D-A>", Command: "agent.console", Desc: "Agent console"})
+		registry.Keymap{Mode: "global", Keys: "<D-A>", Command: "agent.console.toggle", Desc: "Agent console"})
 }
 
 type consoleView struct{ x *Console }
@@ -308,7 +308,7 @@ func (x *Console) shown() bool {
 	return false
 }
 
-// agentChips are the composer's model and effort menus, which switch the agent (session.configure) while it's
+// agentChips are the composer's model and effort menus, which switch the agent (session.model.set) while it's
 // idle, and where it runs: the gate's policy outside a sandbox, the sandbox and its network inside one.
 func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
@@ -316,7 +316,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	const help = "agent/console#composer"
 	if p, ok := x.provider(se.ID, a.Provider); ok && len(p.Models) > 0 {
 		if m, e, picked := agentkit.ModelSelects(c, p, cmp.Or(a.Model, kit.DefaultModel(p)), a.Effort, a.Working, help); picked {
-			x.run(context.Background(), "session.configure", registry.Args{"id": string(se.ID), "model": m, "effort": e})
+			x.run(context.Background(), "session.model.set", registry.Args{"id": string(se.ID), "model": m, "effort": e})
 		}
 		if a.Working {
 			c.Text("idle", "switch when the agent is idle", widget.MonoFont(10, th.C(theme.FgGhost)))
@@ -588,13 +588,13 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		ctx := context.Background()
 		if widget.Button(c, "fork", "Fork", widget.ButtonOpts{Help: "agent/console#fork"}) {
-			x.run(ctx, "agent.fork", nil)
+			x.run(ctx, "agent.aside.ask", nil)
 		}
 		if widget.Button(c, "interrupt", "Interrupt", widget.ButtonOpts{Key: "esc", Disabled: !a.Working, Help: "agent/console#interrupt"}) {
 			x.run(ctx, "session.interrupt", nil)
 		}
 		if x.hasTerminal(se.ID) && widget.Button(c, "raw", "Raw terminal", widget.ButtonOpts{Help: "agent/console#raw-terminal"}) {
-			x.run(ctx, "agent.terminal", nil)
+			x.run(ctx, "agent.terminal.open", nil)
 		}
 	})
 }
@@ -602,7 +602,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Console) run(ctx context.Context, id string, a registry.Args) {
 	if err := x.h.Run(ctx, id, a); err != nil {
-		kit.NotifyError(x.h, "agent.console", err, true)
+		kit.NotifyError(x.h, "agent.console.toggle", err, true)
 	}
 }
 
@@ -711,14 +711,14 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 				})
 				// Edit takes it out of the queue into the composer, to send again once changed.
 				if widget.Link(c, "edit", "edit", "agent/console#composer") {
-					if err := x.h.Run(context.Background(), "agent.unqueue", registry.Args{"id": string(se.ID), "index": i, "text": q}); err == nil {
+					if err := x.h.Run(context.Background(), "agent.queue.remove", registry.Args{"id": string(se.ID), "index": i, "text": q}); err == nil {
 						st.draft, st.compose = strings.TrimSpace(q+"\n"+st.draft), true
 					} else {
-						kit.NotifyError(x.h, "agent.console", err, true)
+						kit.NotifyError(x.h, "agent.console.toggle", err, true)
 					}
 				}
 				if widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Cancel queued: " + kit.FirstLine(q), Help: "agent/console#composer", Size: 18}) {
-					x.run(context.Background(), "agent.unqueue", registry.Args{"id": string(se.ID), "index": i, "text": q})
+					x.run(context.Background(), "agent.queue.remove", registry.Args{"id": string(se.ID), "index": i, "text": q})
 				}
 			})
 		}
@@ -732,7 +732,7 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 				Help: "agent/console#fork"})
 			switch {
 			case r.Submitted && strings.TrimSpace(st.forkQ) != "":
-				x.run(context.Background(), "agent.fork", registry.Args{"prompt": st.forkQ})
+				x.run(context.Background(), "agent.aside.ask", registry.Args{"prompt": st.forkQ})
 				st.forkQ, st.forking, st.focus = "", false, true
 			case r.Cancelled:
 				st.forking, st.focus = false, true

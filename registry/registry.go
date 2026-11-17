@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"github.com/liamg/oriel/internal/clock"
@@ -45,6 +46,9 @@ type Registry interface {
 type Commands interface {
 	Command(c Command) Disposable
 	Run(ctx Ctx, id string, args Args) error
+	// RunEx runs the command whose Ex is name, as the command line's :name {line} does, loading what holds it first;
+	// a *NoCommandError when none has it.
+	RunEx(ctx Ctx, name, line string, bang bool) error
 	// Available says whether id would run with args: it's registered, not turned off, and its Available agrees.
 	// The rail and the start view dim what isn't; the omnibox leaves it out.
 	Available(id string, args Args) bool
@@ -256,7 +260,12 @@ type Command struct {
 	// UserOnly is a command no plugin may run, whatever it holds: what changes who may do what (installing plugins
 	// and accepting their consent, settings, secrets, updates). The user's own keys, clicks and config still run it.
 	UserOnly bool
-	Source   string // who registered it: "builtin:git", "init.lua:14", a plugin's id
+	// Ex is the ex command that runs it too, an alias of its id: ":Settings" runs the command whose Ex is
+	// "Settings". What's typed after the name comes as the argument ExArg names ("args" when ExArg is ""), and a ! as
+	// "bang".
+	Ex     string
+	ExArg  string
+	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
 // Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the
@@ -524,6 +533,40 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
 	}
 	return err
+}
+
+func (r *reg) RunEx(ctx Ctx, name, line string, bang bool) error {
+	c, ok := r.exCommand(name)
+	if !ok {
+		ph := r.commandHolder(name)
+		if ph == nil {
+			return &NoCommandError{ID: name}
+		}
+		if err := r.provide(ph); err != nil {
+			return err
+		}
+		if c, ok = r.exCommand(name); !ok {
+			return &NoCommandError{ID: name}
+		}
+	}
+	args := Args{"bang": bang}
+	if line = strings.TrimSpace(line); line != "" {
+		args[cmp.Or(c.ExArg, "args")] = line
+	}
+	return r.Run(ctx, c.ID, args)
+}
+
+// exCommand is the command whose Ex is name.
+func (r *reg) exCommand(name string) (Command, bool) {
+	if name == "" {
+		return Command{}, false
+	}
+	for _, c := range r.Commands() {
+		if c.Ex == name {
+			return c, true
+		}
+	}
+	return Command{}, false
 }
 
 func (r *reg) Available(id string, args Args) bool {

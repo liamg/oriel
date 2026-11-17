@@ -112,7 +112,7 @@ func (x *Workspace) commands() []registry.Command {
 				x.open = true
 				return nil
 			}},
-		{ID: "workspace.rebuild", Title: "Build the sandbox image of {id}, the session in front by default, again without the cache, then restart its agent on it",
+		{ID: "workspace.image.rebuild", Title: "Build the sandbox image of {id}, the session in front by default, again without the cache, then restart its agent on it",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.rebuild(session(a)) }},
 		{ID: "workspace.restart", Title: "Restart the agent of {id}, the session in front by default, in a new sandbox once its turn ends",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
@@ -208,7 +208,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 			st.load.Reload()
 			st.log.Reload()
 			if err != nil {
-				kit.NotifyError(x.h, "workspace.rebuild", err, false)
+				kit.NotifyError(x.h, "workspace.image.rebuild", err, false)
 			}
 		})
 	})
@@ -426,7 +426,7 @@ func (x *Workspace) actions(c *ui.Ctx, s core.SessionState, st *wsState, ws host
 		if ws.Rebuild && ws.Dockerfile != "" && widget.Button(c, "rebuild", "Rebuild image", widget.ButtonOpts{Busy: st.rebuilding, BusyLabel: "Rebuilding",
 			Help: workspaceHelp}) {
 			x.tab = wsLog
-			x.run("workspace.rebuild", registry.Args{"id": string(s.ID)})
+			x.run("workspace.image.rebuild", registry.Args{"id": string(s.ID)})
 		}
 		if widget.Button(c, "restart", "Restart sandbox", widget.ButtonOpts{Disabled: !ws.Running, Help: workspaceHelp}) {
 			x.run("workspace.restart", registry.Args{"id": string(s.ID)})
@@ -438,7 +438,7 @@ func (x *Workspace) actions(c *ui.Ctx, s core.SessionState, st *wsState, ws host
 		}
 		if widget.Button(c, "hostterm", "Host terminal", widget.ButtonOpts{Help: workspaceHelp}) {
 			x.open = false
-			x.run("term.host", registry.Args{"dir": ws.Root})
+			x.run("term.host.open", registry.Args{"dir": ws.Root})
 		}
 	})
 }

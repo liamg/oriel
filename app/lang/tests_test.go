@@ -62,10 +62,10 @@ func wantSignBesideNumber(t *testing.T, s *apptest.Scene, num, sign string) {
 func TestRunNearest(t *testing.T) {
 	s, _ := testsScene(t)
 	s.EditorKeys("10G")
-	if k, _ := s.Registry().Lookup([]string{"n"}, []string{" ", "t", "r"}); k == nil || k.Command != "test.run.nearest" {
+	if k, _ := s.Registry().Lookup([]string{"n"}, []string{" ", "t", "r"}); k == nil || k.Command != "test.nearest.run" {
 		t.Fatalf("␣tr is %+v", k)
 	}
-	s.Run("test.run.nearest", nil)
+	s.Run("test.nearest.run", nil)
 	runDone(t, s)
 	if ds := testDecor(s, 8); !hasDecor(ds, uireg.VirtualText, "✓") {
 		t.Errorf("no ✓ on TestRoundMinor's line: %+v", ds)
@@ -81,7 +81,7 @@ func TestRunNearest(t *testing.T) {
 // and its four actions; the failing row says what it got.
 func TestFailureBlock(t *testing.T) {
 	s, dir := testsScene(t)
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	runDone(t, s)
 	if ds := testDecor(s, 17); !hasDecor(ds, uireg.VirtualText, "got -3") {
 		t.Errorf("the failing row doesn't say what it got: %+v", ds)
@@ -151,12 +151,12 @@ func TestTestsPanel(t *testing.T) {
 	if err := os.WriteFile(rig.FlipFile(dir), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	runDone(t, s)
 	if err := os.Remove(rig.FlipFile(dir)); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("test.run.last", nil)
+	s.Run("test.last.run", nil)
 	runDone(t, s)
 	s.Run("view.open", registry.Args{"id": lang.TestsView, "place": "dock", "edge": "bottom", "size": 320})
 	s.Frame()
@@ -192,7 +192,7 @@ func TestTestsPanelFindsTests(t *testing.T) {
 	if got := rows(); got != "example.com/pricing TestFlaky○ TestRoundHalfEven○ -3.5○ 2.5○ TestRoundMinor○ example.com/pricing/other TestOther○" {
 		t.Fatalf("rows before a run: %q", got)
 	}
-	s.Run("test.run.all", nil)
+	s.Run("test.all.run", nil)
 	runDone(t, s)
 	if got := rows(); !strings.Contains(got, "TestOther✕") {
 		t.Fatalf("rows after the run: %q", got)
@@ -244,7 +244,7 @@ func TestWatchRunsAffected(t *testing.T) {
 // A coverage run marks covered and uncovered lines in the gutter.
 func TestCoverageGutter(t *testing.T) {
 	s, dir := testsScene(t)
-	s.Run("test.coverage", nil)
+	s.Run("test.coverage.run", nil)
 	runDone(t, s)
 	s.Run("editor.open", registry.Args{"path": filepath.Join(dir, "round.go")})
 	s.Frame()
@@ -359,24 +359,24 @@ func TestTestSignMenuWithoutDebug(t *testing.T) {
 func TestTestKeys(t *testing.T) {
 	s, _ := testsScene(t)
 	for _, k := range []struct{ keys, command string }{
-		{"<Space>tt", "test.run.file"},
-		{"<Space>tr", "test.run.nearest"},
-		{"<Space>td", "test.debug.nearest"},
-		{"<Space>tT", "test.run.all"},
-		{"<Space>tl", "test.run.last"},
+		{"<Space>tt", "test.file.run"},
+		{"<Space>tr", "test.nearest.run"},
+		{"<Space>td", "test.nearest.debug"},
+		{"<Space>tT", "test.all.run"},
+		{"<Space>tl", "test.last.run"},
 		{"<Space>ts", "tests.toggle"},
-		{"<Space>to", "test.output"},
-		{"<Space>tO", "tests.output"},
+		{"<Space>to", "test.output.open"},
+		{"<Space>tO", "tests.output.open"},
 		{"<Space>tS", "test.cancel"},
 		{"<Space>tw", "test.watch"},
 		{"<Space>ta", "test.attach"},
-		{"<Space>tf", "test.run.file"},
-		{"<Space>tF", "test.run.failed"},
-		{"<Space>tp", "test.run.package"},
-		{"<Space>tc", "test.coverage"},
-		{"]t", "test.next_failure"},
+		{"<Space>tf", "test.file.run"},
+		{"<Space>tF", "test.failed.run"},
+		{"<Space>tp", "test.package.run"},
+		{"<Space>tc", "test.coverage.run"},
+		{"]t", "test.failure.next"},
 	} {
-		if !s.Registry().Available(k.command, nil) && k.command != "test.debug.nearest" {
+		if !s.Registry().Available(k.command, nil) && k.command != "test.nearest.debug" {
 			t.Errorf("%s: no command %s", k.keys, k.command)
 			continue
 		}
@@ -394,7 +394,7 @@ func TestTestKeys(t *testing.T) {
 // ␣to shows the nearest test's output in the Tests panel, ␣tO the whole run's; ␣ta with nothing running says so.
 func TestTestOutputKeys(t *testing.T) {
 	s, _ := testsScene(t)
-	s.Run("test.run.file", nil)
+	s.Run("test.file.run", nil)
 	runDone(t, s)
 	s.EditorKeys("17G")
 	s.Press("<Space>to")

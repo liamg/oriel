@@ -78,8 +78,9 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   over other overlays), not by setting the state it would set; a test that turns off a timeout or opens one view
   alone misses the bugs people hit.
 - **Command ids are `noun[.noun].verb`**, lower-case, the verb from a fixed set (`docs/architecture.md`, "Command
-  names"): `term.host.open`, not `term.host`. `TestCommandNamesFollowTheConvention` counts those named before against a
-  ceiling that only falls, and `TestNamedCommandsAreRegistered` fails on a command named anywhere that isn't registered.
+  names"): `term.host.open`, not `term.host`; an ex name (`:Settings`) is the command's `Ex`, not its id.
+  `TestCommandNamesFollowTheConvention` fails on a built-in that's off it, and `TestNamedCommandsAreRegistered` fails
+  on a command named anywhere that isn't registered.
 - **Names are plain words.** Public API (Lua, commands, options) says what it is: `oriel.option`, not `oriel.o`; a
   user who wants it short aliases it (`local o = oriel.option`).
 - **Dependencies.** Stdlib, `golang.org/x/*` and `github.com/liamg/*` are free to use. Anything else must be approved

@@ -192,7 +192,7 @@ func TestChangedUnitsPanel(t *testing.T) {
 	settle(s)
 	cursorTo(s, 24)
 	explainKeys(s, "<Space>e")
-	s.Run("explain.units", nil)
+	s.Run("explain.units.toggle", nil)
 	settle(s)
 	settle(s)
 	wantText(t, s, "the panel", "CHANGED UNITS", "5 units", "round.go", "func roundHalfEven", "switch diff.Cmp(half)", "case 0",
@@ -256,13 +256,13 @@ func TestRequestThisNamesTheSelection(t *testing.T) {
 	}})
 	cursorTo(s, 21)
 	s.EditorKeys("0fcvt(")
-	s.Run("request.this", registry.Args{"what": "review"})
+	s.Run("request.this.compose", registry.Args{"what": "review"})
 	if len(args) != 1 || !strings.Contains(args[0].String("text"), "Review the selection (round.go:21:11-21:28)") ||
 		!strings.Contains(args[0].String("context"), "the selection:\n```\ncurrency.Precision\n```") {
 		t.Fatalf("Review this on a selection: %v", args)
 	}
 	cursorTo(s, 2)
-	s.Run("request.this", registry.Args{"what": "review"})
+	s.Run("request.this.compose", registry.Args{"what": "review"})
 	if len(args) != 2 || !strings.Contains(args[1].String("text"), "Review the code at the cursor (round.go:2:1)") {
 		t.Fatalf("Review this outside a unit: %v", args)
 	}

@@ -115,7 +115,7 @@ func TestCostTileSaysWhereThePricesCameFrom(t *testing.T) {
 // One session's stats as a main tab, from the session stats box's cost.
 func TestSessionStatsSnapshot(t *testing.T) {
 	s, r, x := statsScene(t)
-	s.Run("agent.console", nil)
+	s.Run("agent.console.toggle", nil)
 	s.Frame()
 	s.Frame()
 	s.Click(apptest.Centre(s.Node("Open the session's stats").Bounds), 0)
@@ -193,15 +193,15 @@ func TestStatsEntryPoints(t *testing.T) {
 	if s.Shown("usage") {
 		t.Error("Escape didn't close Usage")
 	}
-	s.Run("Stats", registry.Args{"args": "repo=api 7d"})
+	s.Run("stats.open", registry.Args{"args": "repo=api 7d"})
 	if !s.Shown("stats") || x.Range() != 0 || x.Filters()["repo"][0] != "api" {
 		t.Errorf(":Stats repo=api 7d: open %v, range %d, filters %v", s.Shown("stats"), x.Range(), x.Filters())
 	}
-	s.Run("Usage", nil)
+	s.Run("usage.open", nil)
 	if !s.Shown("usage") || s.Shown("stats") {
 		t.Error(":Usage didn't open Usage in Stats' place")
 	}
-	s.Run("Stats", registry.Args{"args": "session"})
+	s.Run("stats.open", registry.Args{"args": "session"})
 	s.Frame()
 	if !s.Showing(stats.StatsSessionView) {
 		t.Error(":Stats session didn't open the session's tab")
@@ -514,7 +514,7 @@ func TestStatsCustomRange(t *testing.T) {
 	if !s.Shown("stats") || s.Count("Custom range, calendar") != 0 {
 		t.Errorf("Escape: page open %v, picker open %v", s.Shown("stats"), s.Count("Custom range, calendar") != 0)
 	}
-	s.Run("Stats", registry.Args{"args": "2026-09-01..2026-09-30"})
+	s.Run("stats.open", registry.Args{"args": "2026-09-01..2026-09-30"})
 	if q := x.Query(); !q.From.Equal(time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)) || !q.To.Equal(time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf(":Stats 2026-09-01..2026-09-30 = %v – %v", q.From, q.To)
 	}

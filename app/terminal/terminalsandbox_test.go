@@ -37,12 +37,12 @@ func (b imageBackend) Rebuild(context.Context, string, sandbox.Config) error {
 	return os.WriteFile(b.log, []byte("#1 [internal] load build definition\n#5 DONE 2.1s\n"), 0o600)
 }
 
-// While the session in front is sandboxed, a terminal runs in its sandbox; term.host opens one on this machine.
+// While the session in front is sandboxed, a terminal runs in its sandbox; term.host.open opens one on this machine.
 func TestTerminalsRunInTheSandbox(t *testing.T) {
 	s, _, _ := apptest.SandboxedScene(t, imageBackend{log: filepath.Join(t.TempDir(), "build.log")})
 	s.Run("term.open", nil)
 	s.Until("the sandbox's shell", func() bool { return s.Has("shell-in-the-sandbox", "sandbox") })
-	s.Run("term.host", registry.Args{"cmd": []string{"sh", "-c", "echo on-the-host; exec cat"}})
+	s.Run("term.host.open", registry.Args{"cmd": []string{"sh", "-c", "echo on-the-host; exec cat"}})
 	s.Until("the host's shell", func() bool { return s.Has("on-the-host") })
 }
 

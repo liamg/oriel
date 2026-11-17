@@ -15,7 +15,7 @@ func TestThemePickSyntax(t *testing.T) {
 	s := apptest.EditorScene(t)
 	probeTh := theme.Probe(s.UI().Theme()) // what pick mode draws the window in, to read back
 	probe := s.Host().Shot(probeTh)
-	s.Run("Theme", registry.Args{"args": "pick"})
+	s.Run("theme.edit", registry.Args{"args": "pick"})
 	var at render.Point
 	found := false
 	for y := probe.Rect.Min.Y; y < probe.Rect.Max.Y && !found; y++ {

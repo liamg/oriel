@@ -106,7 +106,7 @@ func (fc *fileContext) show(g hiddenGap, dir string, n int) {
 	fc.gaps[g.i] = s
 }
 
-// moreContext is diff.context.more: {path}'s gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines};
+// moreContext is diff.context.expand: {path}'s gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines};
 // without a gap, the selected hunk's both ways, or with {all} every hidden line of the file.
 func (x *Diff) moreContext(st *diffState, a registry.Args) error {
 	file := a.String("path")

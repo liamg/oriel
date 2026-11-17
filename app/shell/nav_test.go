@@ -100,7 +100,7 @@ func TestSideButtonsInTheEditorJumpFirst(t *testing.T) {
 	}
 	s.Run("editor.open", registry.Args{"path": "a.txt"})
 	s.Frame()
-	s.Run("editor.keys", registry.Args{"keys": "G", "noremap": true})
+	s.Run("editor.keys.send", registry.Args{"keys": "G", "noremap": true})
 	s.Press("<X1Mouse>")
 	if c := s.EditorWindow().Cursor; c != (text.Pos{}) {
 		t.Errorf("back in the editor went to %+v, not the jump before", c)

@@ -37,7 +37,7 @@ func faultNotice(f registry.Fault, l *diag.Logs, dir string, now time.Time) core
 		n.ID, n.Title = "failed."+f.Kind+"."+f.ID, contribTitle(f.Kind)
 		n.Text = fmt.Sprintf("%v · %s turned off after %d errors", f.Err, contribName(f.Kind, f.ID), f.Errors)
 	}
-	n.Actions = []core.Action{{Title: "Turn back on", Command: "contribution.turn_on", Args: map[string]any{"kind": f.Kind, "id": f.ID}}}
+	n.Actions = []core.Action{{Title: "Turn back on", Command: "contribution.enable", Args: map[string]any{"kind": f.Kind, "id": f.ID}}}
 	if p, ok := f.Err.(*registry.Panic); ok {
 		n.Detail = string(p.Stack)
 		if fr, ok := failingFrame(script.ParseTrace(n.Detail)); ok {

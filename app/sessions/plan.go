@@ -84,7 +84,7 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	x.Add(h.Keymap(registry.Keymap{Mode: StartWorkKeyMode, Keys: "<D-CR>", Command: "plan.start-work.run", Desc: "Start work"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: StartWorkKeyMode, Keys: "<D-CR>", Command: "plan.work.confirm", Desc: "Start work"}))
 	for id, v := range x.views() {
 		x.Add(h.View(id, v))
 	}
@@ -109,17 +109,17 @@ func (x *Plan) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "plan.open", Title: "Open the plan of the session in front: its docs ({doc}, PLAN.md first), threads and readiness", Available: hasPlan,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, a.String("doc")) }},
-		{ID: "plan.start-work", Title: "Start work on the plan in front: a dialog of how, which runs session.start-work",
+		{ID: "plan.work.start", Title: "Start work on the plan in front: a dialog of how, which runs session.work.start",
 			Available: func(registry.Args) bool { se, ok := x.front(); return ok && se.Planning() },
 			Run:       func(registry.Ctx, registry.Args) error { return x.openStartWork() }},
-		{ID: "plan.start-work.run", Title: "Start work as the Start work dialog says", Available: func(registry.Args) bool { return x.dialog != nil },
+		{ID: "plan.work.confirm", Title: "Start work as the Start work dialog says", Available: func(registry.Args) bool { return x.dialog != nil },
 			Run: func(registry.Ctx, registry.Args) error { return x.runStartWork() }},
 	}
 }
 
 func (x *Plan) views() map[string]uireg.View {
 	return map[string]uireg.View{
-		kit.OverlayPrefix + "plan.start-work": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+		kit.OverlayPrefix + "plan.work.start": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 			return &ui.Func{Key: "startwork", Fn: x.startWorkView}
 		}),
 		PlanView:     planView{x},
@@ -558,9 +558,9 @@ func (x *Plan) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc,
 			return
 		}
 		open, _ := readiness(se)
-		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Disabled: open > 0 || !x.h.Available("session.start-work", nil),
+		if widget.Button(c, "start", "Start work", widget.ButtonOpts{Primary: true, Disabled: open > 0 || !x.h.Available("session.work.start", nil),
 			Help: "agent/plan#start-work"}) {
-			x.run("plan.start-work", nil)
+			x.run("plan.work.start", nil)
 		}
 	})
 }

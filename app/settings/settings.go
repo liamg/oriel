@@ -187,17 +187,16 @@ func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 func (s *Settings) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	return []registry.Command{
-		{ID: "Settings", Title: "The settings page; :Settings {section or search}", Run: func(_ registry.Ctx, a registry.Args) error {
-			s.show(str(a, "args"))
-			return nil
-		}},
-		{ID: "settings.open", Title: "Open the settings page at a {section}, or a {query}", Run: func(_ registry.Ctx, a registry.Args) error {
-			s.open, s.query = true, str(a, "query")
-			if sec := str(a, "section"); sec != "" {
-				s.section = sec
-			}
-			return nil
-		}},
+		{ID: "settings.open", Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: "Settings", ExArg: "query",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				if sec := str(a, "section"); sec != "" {
+					s.open, s.section, s.query = true, sec, str(a, "query")
+					return nil
+				}
+				s.query = ""
+				s.show(str(a, "query"))
+				return nil
+			}},
 		{ID: "settings.set", UserOnly: true, Title: "Set an option: {name} = {value}, at {scope}: user, project or session; with {key}, that key of a table option alone",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if k := str(a, "key"); k != "" {
@@ -212,10 +211,10 @@ func (s *Settings) commands() []registry.Command {
 				}
 				return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
 			}},
-		{ID: "settings.reset_section", UserOnly: true, Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "settings.section.reset", UserOnly: true, Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return s.resetWhere(func(sp registry.OptionSpec) bool { return sectionOf(sp) == str(a, "section") }, s.scope)
 		}},
-		{ID: "settings.reset_all", UserOnly: true, Title: "Reset every option", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "settings.all.reset", UserOnly: true, Title: "Reset every option", Run: func(registry.Ctx, registry.Args) error {
 			return s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope)
 		}},
 		{ID: "settings.undo", UserOnly: true, Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
