@@ -15,9 +15,7 @@ func TestPanickingCommandIsTurnedOff(t *testing.T) {
 	var faults []Fault
 	r.OnFault(func(f Fault) { faults = append(faults, f) })
 	r.Command(Command{ID: "boom", Source: "plugin:x", Run: func(Ctx, Args) error {
-		var m map[string]int
-		m["x"] = 1
-		return nil
+		panic("boom")
 	}})
 
 	err := r.Run(context.Background(), "boom", nil)

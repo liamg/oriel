@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -178,7 +179,7 @@ func TestPluginGateHooks(t *testing.T) {
 	if err := luaErr(t, vm, `oriel.on("Commit", function(ev) seen = true; return false, "no" end)`); err != "" {
 		t.Fatal(err)
 	}
-	v, errs := s.Registry().Fire(nil, "Commit", "", &struct{ Project string }{"p"})
+	v, errs := s.Registry().Fire(context.Background(), "Commit", "", &struct{ Project string }{"p"})
 	if v.Veto || len(errs) == 0 || !strings.Contains(errs[0].Error(), `"gate"`) {
 		t.Errorf("a veto without gate: %+v, %v", v, errs)
 	}
@@ -186,7 +187,7 @@ func TestPluginGateHooks(t *testing.T) {
 		t.Error("the hook didn't run")
 	}
 	g.Grant("acme/gate", []plugin.Grant{{Cap: plugin.CapGate}})
-	if v, _ := s.Registry().Fire(nil, "Commit", "", &struct{ Project string }{"p"}); !v.Veto {
+	if v, _ := s.Registry().Fire(context.Background(), "Commit", "", &struct{ Project string }{"p"}); !v.Veto {
 		t.Error("with gate, no veto")
 	}
 }
