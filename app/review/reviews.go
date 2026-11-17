@@ -217,7 +217,7 @@ func (x *Reviews) Deactivate(ctx context.Context) error {
 }
 
 // reviewsCheck is how often the sources' lists are checked for being older than reviews.poll; behind another app,
-// every kit.UnfocusedPoll.
+// every work.UnfocusedPoll.
 const reviewsCheck = 15 * time.Second
 
 // poll keeps the sources' lists fresh: a subscription to the app's manager whose read asks each source again once
@@ -227,7 +227,7 @@ func (x *Reviews) poll() {
 	if m == nil {
 		return
 	}
-	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: work.UnfocusedPoll}
 	x.subs.Hold("reviews", m, need, func() kit.Closer {
 		src := kit.Every("reviews.requested", func(ctx context.Context) error {
 			for _, s := range kit.Sites(x.h).ReviewSources() {

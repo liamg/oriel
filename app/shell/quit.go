@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -131,7 +132,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 	expired := make(chan struct{})
 	wait := windowClock{sh}.AfterFunc(r.deadline.Sub(sh.now()), func() { close(expired) })
 	defer wait.Stop()
-	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
+	tick := work.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
 	// A quit as the window opens waits for the host plugin to bring the host's calls.
 	jobs, err := kit.JobCalls(sh.cfg.Registry)
