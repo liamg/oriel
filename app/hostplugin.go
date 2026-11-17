@@ -28,6 +28,7 @@ func (x *hostPlugin) Activate(_ context.Context, h plugin.Host) error {
 		hostapi.HostSessionsService: hostapi.SessionCalls(w), hostapi.HostSandboxesService: hostapi.SandboxCalls(w),
 		hostapi.HostShipsService: hostapi.ShipCalls(w), hostapi.HostCodeHostsService: hostapi.CodeHostCalls(w),
 		hostapi.HostReposService: hostapi.RepoCalls(w), hostapi.HostJobsService: hostapi.JobCalls(w), hostapi.HostStatsService: hostapi.StatsCalls(w),
+		hostapi.HostWiringService: hostapi.Wiring(w),
 	} {
 		x.Add(h.Contribute(registry.Service{Name: name, Impl: impl}))
 	}

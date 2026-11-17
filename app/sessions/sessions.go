@@ -48,16 +48,8 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	ctx, cancel := context.WithCancel(context.Background())
 	x.ctx, x.cancel = ctx, cancel
-	if w, err := kit.SessionCalls(h); err == nil {
-		w.SetApp(hostapi.App{
-			Tools:        func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
-			CallTool:     func(ctx context.Context, call hostapi.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
-			Decide:       func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
-			GatewayTools: func() []hostapi.GatewayTool { return gatewayTools(h) },
-		})
-		x.Add(registry.DisposeFunc(func() { w.SetApp(hostapi.App{}) }))
-	}
 	x.contributeKinds(h)
+	x.connect(h)
 	landAtLaunch(h)
 	x.Add(keepATabInFront(h))
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,

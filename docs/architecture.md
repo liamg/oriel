@@ -182,7 +182,8 @@ line, and only they may name it.
 An agent provider (Claude, Codex, or a plugin's) is an `agent.Provider`, registered by its plugin as a
 `services.AgentProvider` (`registry/services`): its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
 so a plugin registering a provider under the same name replaces one. The sessions plugin gives the session host the
-registry's providers (`host.SetProviders`); a session handed over when Oriel quit resumes once its provider is back.
+registry's providers with its tools and kinds, all at once (`hostapi.Wiring.Connect`, the `host.wiring` service only it uses);
+a session handed over when Oriel quit resumes once its provider is back.
 A plugin's provider that isn't Go is an `rpcagent.Client`: the whole provider, sessions and all, over the Oriel agent
 protocol ([agent-protocol.md](agent-protocol.md)) to the plugin's process, whose agent's processes run through the
 session's own exec, in its sandbox when it has one.

@@ -36,6 +36,9 @@ func RepoCalls(r registry.Registry) (hostapi.RepoCalls, error) {
 func JobCalls(r registry.Registry) (hostapi.JobCalls, error) {
 	return hostPart[hostapi.JobCalls](r, hostapi.HostJobsService)
 }
+func HostWiring(r registry.Registry) (hostapi.Wiring, error) {
+	return hostPart[hostapi.Wiring](r, hostapi.HostWiringService)
+}
 func StatsCalls(r registry.Registry) (hostapi.StatsCalls, error) {
 	return hostPart[hostapi.StatsCalls](r, hostapi.HostStatsService)
 }

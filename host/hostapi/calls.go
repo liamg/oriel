@@ -21,6 +21,8 @@ const (
 	HostReposService     = "host.repos"
 	HostJobsService      = "host.jobs"
 	HostStatsService     = "host.stats"
+	// HostWiringService connects the host to the app: only the sessions plugin, which answers for the app, uses it.
+	HostWiringService = "host.wiring"
 )
 
 // SessionCalls start, steer and end sessions: the registry's "host.sessions" service.
@@ -54,12 +56,21 @@ type SessionCalls interface {
 	Attach(r AttachReq) (string, error)
 	SetPrompts(o prompts.Overrides) error
 	SetRestartOnExit(on bool)
-	// SetApp, SetKinds and SetProviders wire the host to the app: its tools and permission answers, the kinds of
-	// session its registry has, and the agents it offers.
-	SetApp(a App)
-	SetKinds(src KindSource)
-	SetProviders(src func() []agent.Provider)
-	HandOver()
+}
+
+// Wiring connects the session host to the app: the registry's "host.wiring" service.
+type Wiring interface {
+	// Connect gives the host all of what it asks the app at once, then resumes the agents handed over at the last
+	// quit; an empty Connection takes it all back.
+	Connect(c Connection)
+}
+
+// Connection is what the host asks the app: its tools and permission answers, the kinds of session its registry
+// has, and the agents it offers beside the host's own.
+type Connection struct {
+	App       App
+	Kinds     KindSource
+	Providers func() []agent.Provider
 }
 
 // ToolAction is a session's own rule for a gateway tool; "" drops it.

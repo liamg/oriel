@@ -133,8 +133,8 @@ func (sh *shell) handOver(r *quitDrain) error {
 	defer wait.Stop()
 	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
-	// A quit as the window opens waits for the sessions plugin to bring the host's calls.
-	w, err := kit.SessionCalls(sh.cfg.Registry)
+	// A quit as the window opens waits for the host plugin to bring the host's calls.
+	jobs, err := kit.JobCalls(sh.cfg.Registry)
 	for err != nil && sh.holdsClose {
 		select {
 		case <-r.now:
@@ -145,12 +145,8 @@ func (sh *shell) handOver(r *quitDrain) error {
 			return nil
 		case <-tick.C:
 		}
-		w, err = kit.SessionCalls(sh.cfg.Registry)
+		jobs, err = kit.JobCalls(sh.cfg.Registry)
 	}
-	if err != nil {
-		return nil
-	}
-	jobs, err := kit.JobCalls(sh.cfg.Registry)
 	if err != nil {
 		return nil
 	}
@@ -199,7 +195,9 @@ waiting:
 			}
 		}
 	}()
-	w.HandOver()
+	if sh.hostHandOver != nil {
+		sh.hostHandOver()
+	}
 	close(done)
 	return nil
 }
