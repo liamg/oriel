@@ -153,6 +153,10 @@ function oriel.agent.fork(req, fn) end
 ---@param spec table
 function oriel.agent.forker(spec) end
 
+--- Add a tool to a sandboxed agent's gateway, run on this machine with your credentials: { name (called oriel__ and name), desc, schema = its arguments' JSON Schema, read_only, run = fn(call, done) }. call is { session, project, dir = the project's checkout, args }: the project its project argument names, in a workspace with more than one. done(text) answers, a table as its JSON, or done(nil, err) refuses. The gateway's rules decide each call: asked by default, and a read_only tool allowed unless a rule says otherwise.
+---@param spec table
+function oriel.agent.gateway_tool(spec) end
+
 --- A prompt pack: { name, prompt, tools }, for sessions to start with.
 ---@param spec table
 function oriel.agent.pack(spec) end

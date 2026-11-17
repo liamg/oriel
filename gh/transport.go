@@ -118,6 +118,24 @@ func CLIError(err error, stdout []byte, stderr string) error {
 	return &Error{Status: status, Message: msg}
 }
 
+// Run runs gh in dir with env added (a sandbox's git guard) and answers what it printed, with the colours left out.
+// Its error is CLIError's, so a 404 says HTTP 404.
+func Run(ctx context.Context, dir string, env []string, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "gh", args...)
+	cmd.Dir = dir
+	if env != nil {
+		cmd.Env = append(os.Environ(), env...)
+	}
+	var out, errb bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errb
+	if err := cmd.Run(); err != nil {
+		return out.String(), fmt.Errorf("gh %s: %w", strings.Join(args, " "), CLIError(err, out.Bytes(), errb.String()))
+	}
+	return out.String(), nil
+}
+
 func (c CLI) Do(ctx context.Context, method, path string, in, out any) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()

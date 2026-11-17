@@ -27,6 +27,15 @@ func (x *Runner) appFuncs() App {
 	return x.app
 }
 
+// GatewayTools are the tools the app's plugins add to a sandboxed agent's gateway.
+func (x *Runner) GatewayTools() []hostapi.GatewayTool {
+	defer x.env.Recover("the app's gateway tools", nil)
+	if a := x.appFuncs(); a.GatewayTools != nil {
+		return a.GatewayTools()
+	}
+	return nil
+}
+
 // AppTools are the tools the app offers an agent, each called back in the app.
 func (x *Runner) AppTools(r hostcore.ToolsReq) (list []agent.Tool) {
 	defer x.env.Recover("the app's tools", nil)

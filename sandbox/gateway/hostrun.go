@@ -1,37 +1,16 @@
 package gateway
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"github.com/liamg/oriel/gh"
 	"os"
 	"os/exec"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/liamg/oriel/sandbox/mcp"
 )
-
-// RunGH runs gh in dir with env added (the sandbox's git guard), for a
-// Host's GH. The error carries gh's stderr, so a 404 says "HTTP 404".
-func RunGH(ctx context.Context, dir string, env []string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	cmd.Dir = dir
-	if env != nil {
-		cmd.Env = append(os.Environ(), env...)
-	}
-	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	if err := cmd.Run(); err != nil {
-		return out.String(), fmt.Errorf("gh %s: %w", strings.Join(args, " "), gh.CLIError(err, out.Bytes(), errb.String()))
-	}
-	return out.String(), nil
-}
 
 // ansi matches terminal escape sequences, stripped from output the agent reads.
 var ansi = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|\x1b[()][A-Z0-9]`)

@@ -196,12 +196,6 @@ func Builtins(h Host) map[string]Builtin {
 			return mcp.TextResult(fmt.Sprintf("The ssh-agent is available until %s, at $SSH_AUTH_SOCK. Run what needs it now; after that it is closed again.",
 				until.Format("15:04:05")), false), nil
 		})
-	ghBuiltins(h, func(name, desc string, sch json.RawMessage, readOnly bool, run func(context.Context, json.RawMessage) (mcp.CallResult, error)) {
-		add(name, desc, sch, false, run)
-		if readOnly {
-			looks(name)
-		}
-	})
 	for _, name := range []string{"fetch", "ci", "repos"} {
 		looks(name)
 	}

@@ -201,7 +201,9 @@ A sandbox knows no provider: each backend asks the session's provider what its a
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
 Every sandbox's gateway carries the same servers whatever its agent (`gateway.Found`, which the settings page lists
 too): `sandbox.servers`, then those installed for each registered provider, the first of a name winning and
-`sandbox.hidden_servers` left out; the gateway, on the host, never reads a repository's `.mcp.json`. Inside the
+`sandbox.hidden_servers` left out; the gateway, on the host, never reads a repository's `.mcp.json`. Beside its own tools
+(commit, push, pr_create…) it carries those plugins contribute (`registry.GatewayTool`, `oriel.agent.gateway_tool`;
+GitHub's `gh_*` among them), each run on the host in the project its call names, under the same rules. Inside the
 sandbox, Claude isn't held to the gateway's servers (no `--strict-mcp-config`): the user's claude.ai connectors load,
 and a repository's own servers run in the sandbox, approved ahead since nobody is at its terminal; every call to any of
 them asks Oriel (`guard.Check`). Each sandbox has its own connections,

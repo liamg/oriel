@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -60,7 +61,7 @@ func (f *fakeHost) GH(ctx context.Context, project string, args ...string) (stri
 	if err := f.project(project); err != nil {
 		return "", err
 	}
-	return RunGH(ctx, f.dir, nil, args...)
+	return gh.Run(ctx, f.dir, nil, args...)
 }
 
 func (f *fakeHost) Repos(context.Context) ([]Repo, error) { return nil, nil }

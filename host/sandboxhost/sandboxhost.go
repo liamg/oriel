@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -39,6 +40,8 @@ type Deps struct {
 	Note func(id core.SessionID, it core.Item)
 	// SetAgent changes a running session's agent state.
 	SetAgent func(id core.SessionID, fn func(a *core.AgentState))
+	// GatewayTools are the tools plugins add to each sandbox's gateway.
+	GatewayTools func() []hostapi.GatewayTool
 	// RestartWhenIdle restarts session id's agent, resumed, once its turn ends, if it still runs in sb.
 	RestartWhenIdle func(id core.SessionID, sb hostcore.Sandbox, why string)
 }
