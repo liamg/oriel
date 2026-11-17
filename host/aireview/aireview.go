@@ -19,15 +19,11 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-const AIReviewPack = hostapi.AIReviewPack
-
 // AIReviewTimeout bounds one AI review.
 var AIReviewTimeout = 20 * time.Minute
 
 // aiReviewDiffMax is how much of the change goes into the reviewer's prompt; it reads the files for the rest.
 const aiReviewDiffMax = 120_000
-
-type AIReviewReq = hostapi.AIReviewReq
 
 // Reviews runs AI reviews.
 type Reviews struct {
@@ -70,7 +66,7 @@ func (x *Reviews) Settle(se core.SessionState) {
 // AIReview reviews a session's change on the session agent's provider and model unless the request picks one. The
 // reviewer is a short-lived session of the provider on the ai-review pack, which reads but changes nothing, and reports each finding
 // with its finding tool. It runs in the background; its findings are session events as they come.
-func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (_ string, err error) {
+func (x *Reviews) AIReview(ctx context.Context, r hostapi.AIReviewReq) (_ string, err error) {
 	defer x.env.Recover("AIReview", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -100,9 +96,9 @@ func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (_ string, err er
 	}
 	pack, ok := agent.Pack{}, false
 	if r.Pack != "" {
-		pack, ok = agent.Pack{Name: AIReviewPack, Skill: AIReviewPack, Text: r.Pack, Tools: []string{"finding", "projects"}}, true
+		pack, ok = agent.Pack{Name: hostapi.AIReviewPack, Skill: hostapi.AIReviewPack, Text: r.Pack, Tools: []string{"finding", "projects"}}, true
 	} else {
-		pack, ok = x.deps.Pack(AIReviewPack)
+		pack, ok = x.deps.Pack(hostapi.AIReviewPack)
 	}
 	if !ok {
 		return "", errors.New("there is no ai-review prompt pack")
@@ -187,7 +183,7 @@ func changeOf(ctx context.Context, se core.SessionState, rv *core.AIReview, last
 
 // reviewer is the provider and model that review a session's change: the request's, else the session agent's.
 // A session with no agent is reviewed by the first signed-in provider at its default model.
-func (x *Reviews) reviewer(ctx context.Context, se core.SessionState, r AIReviewReq) (agent.Provider, string, error) {
+func (x *Reviews) reviewer(ctx context.Context, se core.SessionState, r hostapi.AIReviewReq) (agent.Provider, string, error) {
 	if r.Provider != "" {
 		p, ok := x.deps.Providers.Get(r.Provider)
 		if !ok {

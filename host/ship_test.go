@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // githubRepo is a fixture checkout whose origin is https://github.com/acme/<name>.git, answered by a bare repo on
@@ -36,13 +37,13 @@ func githubRepo(t *testing.T, name string, files map[string]string) (checkout, u
 	return checkout, upstream
 }
 
-func (r *rig) ship(id core.SessionID, fresh bool) map[string]Ship {
+func (r *rig) ship(id core.SessionID, fresh bool) map[string]hostapi.Ship {
 	r.t.Helper()
-	ss, err := r.w.ShipRead(context.Background(), ShipReq{Session: id, Fresh: fresh})
+	ss, err := r.w.ShipRead(context.Background(), hostapi.ShipReq{Session: id, Fresh: fresh})
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	out := map[string]Ship{}
+	out := map[string]hostapi.Ship{}
 	for _, s := range ss {
 		out[s.Project] = s
 	}
@@ -96,7 +97,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if fs := s["api"].Files; len(fs) != 2 || fs[0].Path != "limiter.go" || fs[0].Add != 1 || fs[0].Del != 1 || fs[1].Code != "?" {
 		t.Fatalf("uncommitted %+v", fs)
 	}
-	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "api", Message: "feat(api): back off on 429", Files: []string{"limiter.go"}}); err != nil {
+	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: "api", Message: "feat(api): back off on 429", Files: []string{"limiter.go"}}); err != nil {
 		t.Fatal(err)
 	}
 	s = r.ship(id, false)
@@ -107,7 +108,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if !slices.Equal(a.Changed, []string{"limiter.go"}) {
 		t.Errorf("the branch's change: %q", a.Changed)
 	}
-	r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "api", Message: "test(api): retry"})
+	r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: "api", Message: "test(api): retry"})
 
 	// Behind its base: a fresh read fetches, and Sync rebases.
 	apiUp.Write(map[string]string{"README": "docs\n"})
@@ -116,7 +117,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if a = r.ship(id, true)["api"]; a.Behind != 1 || len(a.Conflicts) != 0 {
 		t.Fatalf("behind main: %d, conflicts %q", a.Behind, a.Conflicts)
 	}
-	if err := r.w.ShipSync(ctx, ShipRef{Session: id, Project: "api"}); err != nil {
+	if err := r.w.ShipSync(ctx, hostapi.ShipRef{Session: id, Project: "api"}); err != nil {
 		t.Fatal(err)
 	}
 	if a = r.ship(id, false)["api"]; a.Behind != 0 || a.Commits != 2 || !a.Synced.Equal(r.now()) {
@@ -124,7 +125,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	}
 
 	// Push, then raise as a draft with the reviewers CODEOWNERS names.
-	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: "api"}); err != nil {
+	if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: "api"}); err != nil {
 		t.Fatal(err)
 	}
 	if a = r.ship(id, false)["api"]; !a.Pushed || len(a.Unpushed) != 0 {
@@ -134,21 +135,21 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 		t.Fatalf("origin hasn't got %s: %q", se.Branch, out)
 	}
 	// A PR is raised from the session's branch, which the host names for every code host.
-	if b, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: "api"}); err != nil || b != se.Branch {
+	if b, err := r.w.ShipBranch(ctx, hostapi.ShipRef{Session: id, Project: "api"}); err != nil || b != se.Branch {
 		t.Fatalf("api raises from %q, %v; want %s", b, err, se.Branch)
 	}
 
 	// Only the session's branch is pushed.
 	(&gittest.Repo{T: t, Dir: dirs["web"]}).Git("checkout", "-q", "-b", "elsewhere")
-	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "only pushes") {
+	if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "only pushes") {
 		t.Errorf("pushing another branch: %v", err)
 	}
-	if _, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "raises PRs") {
+	if _, err := r.w.ShipBranch(ctx, hostapi.ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "raises PRs") {
 		t.Errorf("raising from another branch: %v", err)
 	}
 
 	// A draft the user writes is theirs.
-	if err := r.w.ShipDraft(ctx, DraftReq{Session: id, Project: "web", Kind: "commit", Body: "fix(web): mine"}); err != nil {
+	if err := r.w.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: "web", Kind: "commit", Body: "fix(web): mine"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := r.ship(id, false)["web"].CommitDraft; d.Body != "fix(web): mine" || d.By != "you" {
@@ -164,14 +165,14 @@ func TestShipSyncConflicts(t *testing.T) {
 	p, _ := r.session(id).Primary()
 	os.WriteFile(filepath.Join(p.Dir, "limiter.go"), []byte("package limiter\n\nvar n = 2\n"), 0o644)
 	ctx := context.Background()
-	r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+	r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 	up.Write(map[string]string{"limiter.go": "package limiter\n\nvar n = 3\n"})
 	up.Commit("Bo", "three")
 	up.Git("push", "-q", "origin", "main")
 	if a := r.ship(id, true)[p.Name]; a.Behind != 1 || !slices.Equal(a.Conflicts, []string{"limiter.go"}) {
 		t.Fatalf("predicted %+v", a)
 	}
-	err := r.w.ShipSync(ctx, ShipRef{Session: id, Project: p.Name})
+	err := r.w.ShipSync(ctx, hostapi.ShipRef{Session: id, Project: p.Name})
 	if err == nil || !strings.Contains(err.Error(), "conflicts in limiter.go") {
 		t.Fatalf("sync = %v", err)
 	}
@@ -192,23 +193,23 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 	blog.Git("switch", "-q", "-c", "two")
 	os.WriteFile(filepath.Join(blog.Dir, "post.md"), []byte("# Two\n"), 0o644)
 	ctx := context.Background()
-	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "docs: two"}); err != nil {
+	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "docs: two"}); err != nil {
 		t.Fatal(err)
 	}
 	if s := r.ship(id, false)[p.Name]; s.Branch != "two" || s.Base != "main" || s.Commits != 1 {
 		t.Fatalf("after switching: %+v", s)
 	}
-	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: p.Name}); err != nil {
+	if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
 	if out := up.Git("ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
 		t.Fatalf("origin hasn't got two: %q", out)
 	}
-	if b, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: p.Name}); err != nil || b != "two" {
+	if b, err := r.w.ShipBranch(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil || b != "two" {
 		t.Errorf("raises its PR from %q, %v; want two", b, err)
 	}
 	blog.Git("switch", "-q", "--detach")
-	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: p.Name}); err == nil {
+	if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err == nil {
 		t.Error("pushed a detached HEAD")
 	}
 }

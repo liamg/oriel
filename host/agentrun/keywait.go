@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // KeyWait is how long a git operation that signs, or reaches a remote over ssh, runs before it's taken to be waiting
@@ -44,7 +45,7 @@ func (x *Runner) Keyed(ctx context.Context, id core.SessionID, what, project str
 			stop()
 		}()
 		a, ok := x.sessionOf(id).askUser(askCtx, core.Ask{Kind: core.AskKey, Summary: what, Detail: project})
-		if ok && a.Decision == DecisionDeny {
+		if ok && a.Decision == hostapi.DecisionDeny {
 			cancel(ErrKeyCancelled)
 		}
 	}()

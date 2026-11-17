@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // cloneAt clones src into dir.
@@ -34,7 +35,7 @@ func (r *rig) cloned() (core.Repo, *gittest.Repo) {
 	return repo, g
 }
 
-func names(p HousekeepPlan) map[string]string {
+func names(p hostapi.HousekeepPlan) map[string]string {
 	out := map[string]string{}
 	for _, b := range p.Branches {
 		out[b.Name] = b.Why
@@ -71,12 +72,12 @@ func TestHousekeeping(t *testing.T) {
 	g.Git("worktree", "add", "-q", "-b", "stale-wt", stale)
 	os.RemoveAll(stale)
 
-	plan, err := r.w.Housekeeping(ctx, HousekeepReq{Repo: repo.ID, Fetch: true})
+	plan, err := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID, Fetch: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := names(plan)
-	want := map[string]string{"done": WhyMerged, "squashed": WhyGone, "dirty": WhyMerged, "stale-wt": WhyMerged}
+	want := map[string]string{"done": hostapi.WhyMerged, "squashed": hostapi.WhyGone, "dirty": hostapi.WhyMerged, "stale-wt": hostapi.WhyMerged}
 	for k, v := range want {
 		if got[k] != v {
 			t.Errorf("%s: %q, want %q (plan %v)", k, got[k], v, got)
@@ -91,12 +92,12 @@ func TestHousekeeping(t *testing.T) {
 	if len(plan.Stale) != 1 {
 		t.Errorf("stale = %v", plan.Stale)
 	}
-	i := slices.IndexFunc(plan.Branches, func(b StaleBranch) bool { return b.Name == "dirty" })
+	i := slices.IndexFunc(plan.Branches, func(b hostapi.StaleBranch) bool { return b.Name == "dirty" })
 	if !plan.Branches[i].Dirty || plan.Branches[i].Worktree == "" {
 		t.Errorf("dirty = %+v", plan.Branches[i])
 	}
 
-	res, err := r.w.Housekeep(ctx, HousekeepReq{Repo: repo.ID, Apply: []string{"done", "squashed", "dirty", "live"}, Prune: true})
+	res, err := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"done", "squashed", "dirty", "live"}, Prune: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,10 +117,10 @@ func TestHousekeeping(t *testing.T) {
 	if !strings.Contains(branches, "live\n") || !strings.Contains(branches, "dirty\n") {
 		t.Errorf("kept branches went: %s", branches)
 	}
-	if again, _ := r.w.Housekeeping(ctx, HousekeepReq{Repo: repo.ID}); len(again.Stale) != 0 {
+	if again, _ := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID}); len(again.Stale) != 0 {
 		t.Errorf("stale after prune = %v", again.Stale)
 	}
-	if res, _ := r.w.Housekeep(ctx, HousekeepReq{Repo: repo.ID, Apply: []string{"dirty"}, Force: []string{"dirty"}}); res[0].Error != "" {
+	if res, _ := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"dirty"}, Force: []string{"dirty"}}); res[0].Error != "" {
 		t.Errorf("forcing a dirty worktree: %v", res)
 	}
 	if _, err := os.Stat(wt); err == nil {
@@ -133,15 +134,15 @@ func TestHousekeepingKeepsSessionBranches(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := r.cloned()
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "x", Branch: "eng-1", Repos: []core.RepoID{repo.ID}})
-	plan, err := r.w.Housekeeping(ctx, HousekeepReq{Repo: repo.ID})
+	plan, err := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	i := slices.IndexFunc(plan.Branches, func(b StaleBranch) bool { return b.Name == "eng-1" })
+	i := slices.IndexFunc(plan.Branches, func(b hostapi.StaleBranch) bool { return b.Name == "eng-1" })
 	if i < 0 || plan.Branches[i].Session != string(id) {
 		t.Fatalf("plan = %+v", plan)
 	}
-	res, _ := r.w.Housekeep(ctx, HousekeepReq{Repo: repo.ID, Apply: []string{"eng-1"}})
+	res, _ := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"eng-1"}})
 	if len(res) != 1 || !strings.Contains(res[0].Error, "session") {
 		t.Errorf("cleaning a session's branch: %v", res)
 	}
@@ -170,7 +171,7 @@ func TestTagPullsAndPushes(t *testing.T) {
 	if err != nil || p.Latest != "v0.4.2" || p.Default != "main" || !p.Remote {
 		t.Fatalf("preview = %+v, %v", p, err)
 	}
-	tg, err := r.w.Tag(ctx, TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "v0.4.3", Pull: true, Push: true})
+	tg, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "v0.4.3", Pull: true, Push: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,11 +185,11 @@ func TestTagPullsAndPushes(t *testing.T) {
 	if typ := strings.TrimSpace(g.Git("cat-file", "-t", "v0.4.3")); typ != "tag" {
 		t.Errorf("not annotated: %s", typ)
 	}
-	if _, err := r.w.Tag(ctx, TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "again"}); err == nil {
+	if _, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "again"}); err == nil {
 		t.Error("tagging an existing name")
 	}
 	g.Git("remote", "set-url", "origin", filepath.Join(t.TempDir(), "gone.git"))
-	tg, err = r.w.Tag(ctx, TagReq{Repo: repo.ID, Name: "v0.4.4", Message: "v0.4.4", Push: true})
+	tg, err = r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.4", Message: "v0.4.4", Push: true})
 	if err != nil || tg.Pushed || tg.PushErr == "" {
 		t.Fatalf("a failed push: %+v, %v", tg, err)
 	}
@@ -203,7 +204,7 @@ func TestTagRefusesDirtyPull(t *testing.T) {
 	ctx := context.Background()
 	repo, g := r.cloned()
 	os.WriteFile(filepath.Join(g.Dir, "round.go"), []byte("changed\n"), 0o644)
-	if _, err := r.w.Tag(ctx, TagReq{Repo: repo.ID, Name: "v1.0.0", Message: "v1", Pull: true}); err == nil || !strings.Contains(err.Error(), "uncommitted") {
+	if _, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v1.0.0", Message: "v1", Pull: true}); err == nil || !strings.Contains(err.Error(), "uncommitted") {
 		t.Fatalf("tag over a dirty branch: %v", err)
 	}
 	if strings.Contains(g.Git("tag"), "v1.0.0") {

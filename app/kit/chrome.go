@@ -1,9 +1,7 @@
 package kit
 
 import (
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/ui"
 )
 
 // The window's chrome that features draw into or beside: its bars, overlays, the omnibox and their help pages.
@@ -12,11 +10,6 @@ const OverlayPrefix = "app.overlay." // views named so float over the window: th
 
 // HUDHelp is the help on the heads-up display.
 const HUDHelp = "shell/hud"
-
-// HUDDot is the heads-up display's small round status dot, in tone.
-func HUDDot(c *ui.Ctx, key any, tone render.Color) {
-	c.Box(key, ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: tone}, nil)
-}
 
 // TabsHelp is the help on the session tabs, and what each says of its session.
 const TabsHelp = "shell/tabs"

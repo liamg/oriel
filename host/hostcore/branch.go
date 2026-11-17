@@ -13,10 +13,8 @@ import (
 	"github.com/liamg/oriel/gitx"
 )
 
-type OffBranch = hostapi.OffBranch
-
 // OffBranchOf is p's worktree off the session's branch, or nil while it's on it or p has no branch of the session's.
-func OffBranchOf(ctx context.Context, st State, se core.SessionState, p core.Project, repo gitx.Repo) *OffBranch {
+func OffBranchOf(ctx context.Context, st State, se core.SessionState, p core.Project, repo gitx.Repo) *hostapi.OffBranch {
 	if p.Branch == "" || p.Detached || p.ReadOnly {
 		return nil
 	}
@@ -27,7 +25,7 @@ func OffBranchOf(ctx context.Context, st State, se core.SessionState, p core.Pro
 	if _, err := repo.Head(ctx); cur == "" && err != nil {
 		return nil
 	}
-	return &OffBranch{Session: p.Branch, Current: cur, Refused: adoptRefusal(ctx, st, se, p, repo, cur)}
+	return &hostapi.OffBranch{Session: p.Branch, Current: cur, Refused: adoptRefusal(ctx, st, se, p, repo, cur)}
 }
 
 // adoptRefusal is why cur can't become the session's branch for p, or "". It must be a branch; not the repo's

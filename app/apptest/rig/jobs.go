@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/gitx/gittest"
@@ -21,7 +22,7 @@ import (
 // FakeSandboxes run a sandboxed agent the way the fake provider runs any: on nothing, offering the backends Offered.
 type FakeSandboxes struct{ Offered []string }
 
-func (FakeSandboxes) Open(context.Context, core.SessionState, host.Approve, host.SandboxAgent) (host.Sandbox, error) {
+func (FakeSandboxes) Open(context.Context, core.SessionState, hostapi.Approve, hostapi.SandboxAgent) (hostapi.Sandbox, error) {
 	return FakeSandbox{}, nil
 }
 
@@ -85,7 +86,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 }
 
 // Save saves j as if at at.
-func (r *Jobs) Save(at time.Time, j host.Job) host.Job {
+func (r *Jobs) Save(at time.Time, j hostapi.Job) hostapi.Job {
 	r.T.Helper()
 	r.Clock.Set(at)
 	saved, err := r.W.SaveJob(j)
@@ -145,15 +146,15 @@ func (r *Jobs) Run(job string, fx FxRun) core.SessionID {
 	r.Clock.Set(fx.Start.Add(fx.Took))
 	tid := string(se.Snapshot().Threads[0].ID)
 	switch fx.Status {
-	case host.RunDone:
+	case hostapi.RunDone:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.Summary})
 		r.Stop(id)
-	case host.RunBlocked:
+	case hostapi.RunBlocked:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": "**Blocked:** " + fx.Summary})
 		r.Stop(id)
-	case host.RunRunning:
+	case hostapi.RunRunning:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.Summary, "working": true})
-	case host.RunStopped:
+	case hostapi.RunStopped:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.Summary, "working": true})
 		r.Stop(id)
 	}
@@ -178,40 +179,35 @@ func (r *Jobs) Build() {
 	sweep := "In api, web and pricing, bump every dependency that's behind on a minor or patch version. Keep major versions where they are.\n" +
 		"Run each repo's tests after bumping. If one bump breaks them, back that bump out and say why in the summary; don't fix code to fit it.\n" +
 		"Open one PR per repo titled `chore(deps): sweep`, linked to each other. Stop as blocked if a repo won't build before you start."
-	opus := host.Job{Provider: "claude", Model: "claude-opus-4-7", Effort: "high"}
-	job := func(at time.Time, title, prompt, pin string, s host.Schedule) string {
+	opus := hostapi.Job{Provider: "claude", Model: "claude-opus-4-7", Effort: "high"}
+	job := func(at time.Time, title, prompt, pin string, s hostapi.Schedule) string {
 		j := opus
 		j.Title, j.Prompt, j.Sandbox, j.Schedule = title, prompt, pin, s
 		return r.Save(at, j).Name
 	}
-	changelog := job(Day44(10, 12, 9, 0), "Weekly changelog draft", "Draft this week's changelog for api and web from the PRs merged since last Monday.", "",
-		host.Schedule{})
+	changelog := job(Day44(10, 12, 9, 0), "Weekly changelog draft", "Draft this week's changelog for api and web from the PRs merged since last Monday.", "", hostapi.Schedule{})
 	_ = changelog
-	pts := job(Day44(10, 1, 9, 0), "Pricing test sweep", "In pricing, find the slowest tests and say why they're slow.", "sandbox", host.Schedule{})
-	feed := job(Day44(9, 20, 9, 0), "Price-feed backfill", "Backfill the price feed in pricing for the days the importer missed.", "host", host.Schedule{})
-	flaky := job(Day44(9, 12, 9, 0), "Triage flaky e2e on main", "Find which web e2e tests flaked on main this week, and why.", "sandbox", host.Schedule{})
-	ci := job(Day44(9, 5, 9, 0), "Morning CI triage on my open PRs", "For each of my open PRs in api and web, say what CI failed and why.", "sandbox",
-		host.Schedule{Every: host.EveryWeekday, At: "07:00"})
-	deps := job(Day44(8, 20, 9, 0), "Sweep stale deps, keep major versions", sweep, "sandbox", host.Schedule{})
+	pts := job(Day44(10, 1, 9, 0), "Pricing test sweep", "In pricing, find the slowest tests and say why they're slow.", "sandbox", hostapi.Schedule{})
+	feed := job(Day44(9, 20, 9, 0), "Price-feed backfill", "Backfill the price feed in pricing for the days the importer missed.", "host", hostapi.Schedule{})
+	flaky := job(Day44(9, 12, 9, 0), "Triage flaky e2e on main", "Find which web e2e tests flaked on main this week, and why.", "sandbox", hostapi.Schedule{})
+	ci := job(Day44(9, 5, 9, 0), "Morning CI triage on my open PRs", "For each of my open PRs in api and web, say what CI failed and why.", "sandbox", hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"})
+	deps := job(Day44(8, 20, 9, 0), "Sweep stale deps, keep major versions", sweep, "sandbox", hostapi.Schedule{})
 	all := []string{"api", "web", "pricing"}
 	for _, fx := range []FxRun{
-		{Day44(8, 26, 7, 0), 24 * time.Minute, all, []int{3, 2, 1}, host.RunDone, "3 PRs · 22 bumps"},
-		{Day44(9, 2, 7, 0), 21 * time.Minute, all, []int{3, 2, 2}, host.RunDone, "3 PRs · 30 bumps"},
-		{Day44(9, 9, 7, 0), 19 * time.Minute, all, []int{4, 2, 2}, host.RunDone, "3 PRs · 27 bumps · one bump backed out (grpc 1.66)"},
-		{Day44(9, 16, 9, 12), 3 * time.Minute, []string{"api"}, []int{1}, host.RunStopped, "Listing what's behind in api."},
-		{Day44(9, 23, 7, 0), 18 * time.Minute, []string{"api", "pricing"}, []int{3, 2}, host.RunDone, "2 PRs · 18 bumps · web already current"},
-		{Day44(9, 30, 7, 0), 9 * time.Minute, []string{"web"}, []int{1}, host.RunBlocked,
-			"react-router 6.28 breaks loaders in 3 routes; held at 6.27. Needs a call: bump and fix, or pin?"},
-		{Day44(10, 7, 7, 0), 22 * time.Minute, all, []int{5, 4, 3}, host.RunDone, "3 PRs: api#812, web#4431, pricing#212 · 31 bumps · all green"},
-		{Day44(10, 14, 12, 13), 4 * time.Minute, []string{"api", "web"}, []int{5, 1}, host.RunRunning,
-			"Bumping 14 deps in api; go test running. web next, pricing not added yet."},
+		{Day44(8, 26, 7, 0), 24 * time.Minute, all, []int{3, 2, 1}, hostapi.RunDone, "3 PRs · 22 bumps"},
+		{Day44(9, 2, 7, 0), 21 * time.Minute, all, []int{3, 2, 2}, hostapi.RunDone, "3 PRs · 30 bumps"},
+		{Day44(9, 9, 7, 0), 19 * time.Minute, all, []int{4, 2, 2}, hostapi.RunDone, "3 PRs · 27 bumps · one bump backed out (grpc 1.66)"},
+		{Day44(9, 16, 9, 12), 3 * time.Minute, []string{"api"}, []int{1}, hostapi.RunStopped, "Listing what's behind in api."},
+		{Day44(9, 23, 7, 0), 18 * time.Minute, []string{"api", "pricing"}, []int{3, 2}, hostapi.RunDone, "2 PRs · 18 bumps · web already current"},
+		{Day44(9, 30, 7, 0), 9 * time.Minute, []string{"web"}, []int{1}, hostapi.RunBlocked, "react-router 6.28 breaks loaders in 3 routes; held at 6.27. Needs a call: bump and fix, or pin?"},
+		{Day44(10, 7, 7, 0), 22 * time.Minute, all, []int{5, 4, 3}, hostapi.RunDone, "3 PRs: api#812, web#4431, pricing#212 · 31 bumps · all green"},
+		{Day44(10, 14, 12, 13), 4 * time.Minute, []string{"api", "web"}, []int{5, 1}, hostapi.RunRunning, "Bumping 14 deps in api; go test running. web next, pricing not added yet."},
 	} {
 		r.Run(deps, fx)
 	}
-	r.Run(ci, FxRun{Day44(10, 14, 7, 0), 14 * time.Minute, []string{"api", "web"}, []int{1, 1}, host.RunDone, "No failing CI on your 4 open PRs."})
-	r.Run(flaky, FxRun{Day44(10, 13, 16, 40), 11 * time.Minute, []string{"web"}, []int{1}, host.RunBlocked,
-		"Two flaky specs share a fixture; fix the fixture or quarantine them?"})
-	r.Run(feed, FxRun{Day44(10, 13, 11, 2), 16 * time.Minute, []string{"pricing"}, []int{1}, host.RunDone, "Backfilled Oct 3–9: 7 days, 12,400 rows."})
-	r.Run(pts, FxRun{Day44(10, 11, 9, 0), 6 * time.Minute, []string{"pricing"}, []int{1}, host.RunStopped, "Timing the suite."})
+	r.Run(ci, FxRun{Day44(10, 14, 7, 0), 14 * time.Minute, []string{"api", "web"}, []int{1, 1}, hostapi.RunDone, "No failing CI on your 4 open PRs."})
+	r.Run(flaky, FxRun{Day44(10, 13, 16, 40), 11 * time.Minute, []string{"web"}, []int{1}, hostapi.RunBlocked, "Two flaky specs share a fixture; fix the fixture or quarantine them?"})
+	r.Run(feed, FxRun{Day44(10, 13, 11, 2), 16 * time.Minute, []string{"pricing"}, []int{1}, hostapi.RunDone, "Backfilled Oct 3–9: 7 days, 12,400 rows."})
+	r.Run(pts, FxRun{Day44(10, 11, 9, 0), 6 * time.Minute, []string{"pricing"}, []int{1}, hostapi.RunStopped, "Timing the suite."})
 	r.Clock.Set(StatsNow)
 }

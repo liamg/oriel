@@ -15,25 +15,12 @@ import (
 	"github.com/liamg/oriel/sandbox/gateway"
 )
 
-const (
-	SourceSession  = hostapi.SourceSession
-	SourceProject  = hostapi.SourceProject
-	SourceSettings = hostapi.SourceSettings
-	SourceAlways   = hostapi.SourceAlways
-	SourceReadOnly = hostapi.SourceReadOnly
-	SourceDefault  = hostapi.SourceDefault
-)
-
-type Permissions = hostapi.Permissions
-
-type ToolPermission = hostapi.ToolPermission
-
 // Permissions reads session id's sandbox permissions. A session whose agent isn't running in a sandbox has none.
-func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (_ Permissions, err error) {
+func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (_ hostapi.Permissions, err error) {
 	defer x.deps.Env.Recover("Permissions", &err)
 	b := x.of(id)
 	if b == nil {
-		return Permissions{}, nil
+		return hostapi.Permissions{}, nil
 	}
 	return b.permissions(ctx), nil
 }
@@ -91,25 +78,25 @@ func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action stri
 	return fmt.Errorf("%q isn't a network rule: allow, block, or none", action)
 }
 
-func (b *Box) permissions(ctx context.Context) Permissions {
-	p := Permissions{Sandboxed: true, Filtered: !b.cfg.NoEgressProxy, Waiting: b.egress.Waiting()}
+func (b *Box) permissions(ctx context.Context) hostapi.Permissions {
+	p := hostapi.Permissions{Sandboxed: true, Filtered: !b.cfg.NoEgressProxy, Waiting: b.egress.Waiting()}
 	always := sandbox.LoadAlways()
 	session := b.grants()
 	for _, t := range b.gateway.Policy(ctx) {
-		tp := ToolPermission{ToolPolicy: t, Source: SourceDefault}
+		tp := hostapi.ToolPermission{ToolPolicy: t, Source: hostapi.SourceDefault}
 		switch t.From {
 		case gateway.FromSession:
-			tp.Source = SourceSession
+			tp.Source = hostapi.SourceSession
 		case gateway.FromProject:
-			tp.Source = SourceProject
+			tp.Source = hostapi.SourceProject
 		case gateway.FromGlobal:
-			tp.Source = SourceSettings
+			tp.Source = hostapi.SourceSettings
 			mine := func(r gateway.Rule) bool { return r.Tool == t.Rule }
 			if slices.ContainsFunc(always.Rules, mine) && !slices.ContainsFunc(b.cfg.Rules, mine) {
-				tp.Source = SourceAlways
+				tp.Source = hostapi.SourceAlways
 			}
 		case gateway.FromReadOnly:
-			tp.Source = SourceReadOnly
+			tp.Source = hostapi.SourceReadOnly
 		}
 		if i := slices.IndexFunc(session, func(r gateway.Rule) bool { return r.Tool == t.Name }); i >= 0 {
 			tp.Session = session[i].Action

@@ -31,7 +31,7 @@
 //     (gateway.Discover over the provider's MCPServers); Levels from
 //     GrantsPath(root), cfg.Projects[repo].Rules, cfg.Rules and
 //     LoadAlways().Rules; Grant, Always (AddAlwaysRules) and Log.
-//     Approve on the Gateway is host.Approve; Timeout is cfg.ApprovalSecs.
+//     Approve on the Gateway is hostapi.Approve; Timeout is cfg.ApprovalSecs.
 //   - An agentsock.SSHAgent, served at RunDir(root)/ssh-agent.sock; the
 //     host's SSHAgent method is its Grant.
 //   - The Backend is BackendFor(cfg).

@@ -24,9 +24,6 @@ func NewID(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// Sanitise reduces a string to a name safe for a directory and a git branch.
-func Sanitise(s string) string { return hostapi.Sanitise(s) }
-
 // TrimWords keeps the first n hyphen-separated words of a name.
 func TrimWords(s string, n int) string {
 	parts := strings.Split(s, "-")
@@ -53,11 +50,11 @@ func Plural(n int) string {
 // WhoAmI is the first part of a branch name: the user's first name from git, or their login.
 func WhoAmI(ctx context.Context) string {
 	if f := strings.Fields(gitx.UserName(ctx)); len(f) > 0 {
-		if s := Sanitise(f[0]); s != "" {
+		if s := hostapi.Sanitise(f[0]); s != "" {
 			return s
 		}
 	}
-	if u := Sanitise(os.Getenv("USER")); u != "" {
+	if u := hostapi.Sanitise(os.Getenv("USER")); u != "" {
 		return u
 	}
 	return "oriel"

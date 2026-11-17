@@ -7,6 +7,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -30,7 +31,7 @@ func TestAProjectJoiningKeepsTheAgentsMode(t *testing.T) {
 	res := make(chan mcp.CallResult, 1)
 	go func() { res <- gatewayCall(t, b.Root(), "oriel__add_project", map[string]any{"repo": other.Dir}) }()
 	ask := s.waitAsk(id, core.AskGateway)
-	if err := s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError {
@@ -75,7 +76,7 @@ func TestAFreshConversationDropsTheMode(t *testing.T) {
 	id, a := planWithAgent(t, r)
 	a.Emit(agent.ModeChanged{Mode: "plan"})
 	a.Handled(t)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	if fresh := r.agent(); fresh.Spec.Mode != "" {
@@ -98,7 +99,7 @@ func TestLeavingTheSandboxDropsTheMode(t *testing.T) {
 	res := make(chan mcp.CallResult, 1)
 	go func() { res <- gatewayCall(t, b.Root(), "oriel__request_host", map[string]any{"why": "needs docker"}) }()
 	ask := s.waitAsk(id, core.AskGateway)
-	if err := s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError {

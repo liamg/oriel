@@ -26,12 +26,6 @@ import (
 // cancelled. The caller holds a *Utility while it wants it: the agent stops at
 // its Close.
 
-type UtilitySpec = hostapi.UtilitySpec
-
-type UtilityEvent = hostapi.UtilityEvent
-
-type UtilityReq = hostapi.UtilityReq
-
 var utilityName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // utilityRefusal is what an agent is told of a permission it isn't given.
@@ -50,7 +44,7 @@ type Deps struct {
 	Providers *agent.Providers
 	Exec      agent.Exec
 	// Tools are the tools the app offers an agent.
-	Tools func(hostcore.ToolsReq) []agent.Tool
+	Tools func(hostapi.ToolsReq) []agent.Tool
 	// SignedOut says a provider's login here has stopped working.
 	SignedOut func(provider string) bool
 }
@@ -70,7 +64,7 @@ func (x *Utilities) get(id string) (agent.Session, error) {
 }
 
 // runUtility starts a utility agent and sends its events until it exits, ctx ends or the host closes.
-func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(UtilityEvent) error) error {
+func (x *Utilities) runUtility(ctx context.Context, spec hostapi.UtilitySpec, send func(hostapi.UtilityEvent) error) error {
 	if !utilityName.MatchString(spec.Name) {
 		return fmt.Errorf("%q is not a utility agent's name: lower-case letters, digits, - and _", spec.Name)
 	}
@@ -90,7 +84,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 	sess, err := p.Start(ctx, agent.StartSpec{Cwd: dir, Model: model, Policy: agent.PolicyRefuse, Allow: spec.Allow, Exec: x.deps.Exec,
 		Pack:     agent.Pack{Name: spec.Name, Skill: spec.Name, Text: spec.Pack},
 		Prompt:   spec.Prompt,
-		Tools:    x.deps.Tools(hostcore.ToolsReq{Agent: spec.Name}),
+		Tools:    x.deps.Tools(hostapi.ToolsReq{Agent: spec.Name}),
 		StateDir: filepath.Join(dir, "runs", id),
 		NoWeb:    !spec.Web,
 		// Nobody sees a utility agent's terminal: an ask it leaves open would hold its turn for good.
@@ -108,7 +102,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 		delete(x.runs, id)
 		x.mu.Unlock()
 	}()
-	if err := send(UtilityEvent{Type: "ready", ID: id, Provider: p.ID(), Model: model}); err != nil {
+	if err := send(hostapi.UtilityEvent{Type: "ready", ID: id, Provider: p.ID(), Model: model}); err != nil {
 		return err
 	}
 	for {
@@ -119,7 +113,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 			return nil
 		case ev, ok := <-sess.Events():
 			if !ok {
-				return send(UtilityEvent{Type: "exited"})
+				return send(hostapi.UtilityEvent{Type: "exited"})
 			}
 			out, end := utilityEvent(ctx, sess, spec, ev)
 			if out.Type != "" {
@@ -135,22 +129,22 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 }
 
 // utilityEvent is what an agent's event says to the caller, answering its asks on the way; end says it's over.
-func utilityEvent(ctx context.Context, sess agent.Session, spec UtilitySpec, ev agent.Event) (UtilityEvent, bool) {
+func utilityEvent(ctx context.Context, sess agent.Session, spec hostapi.UtilitySpec, ev agent.Event) (hostapi.UtilityEvent, bool) {
 	switch ev := ev.(type) {
 	case agent.TurnStart:
-		return UtilityEvent{Type: "turn-start"}, false
+		return hostapi.UtilityEvent{Type: "turn-start"}, false
 	case agent.Message:
 		if ev.Partial || ev.Agent != "" || ev.Role != "" && ev.Role != core.ItemAssistant || strings.TrimSpace(ev.Text) == "" {
-			return UtilityEvent{}, false
+			return hostapi.UtilityEvent{}, false
 		}
-		return UtilityEvent{Type: "message", Text: ev.Text}, false
+		return hostapi.UtilityEvent{Type: "message", Text: ev.Text}, false
 	case agent.ToolCall:
 		if ev.Agent != "" {
-			return UtilityEvent{}, false
+			return hostapi.UtilityEvent{}, false
 		}
-		return UtilityEvent{Type: "tool-call", ID: ev.ID, Tool: toolName(ev.Tool), Input: ev.Input}, false
+		return hostapi.UtilityEvent{Type: "tool-call", ID: ev.ID, Tool: toolName(ev.Tool), Input: ev.Input}, false
 	case agent.ToolResult:
-		return UtilityEvent{Type: "tool-result", ID: ev.ID, Text: ev.Output, Error: ev.IsError}, false
+		return hostapi.UtilityEvent{Type: "tool-result", ID: ev.ID, Text: ev.Output, Error: ev.IsError}, false
 	case agent.Permission:
 		d := agent.Decision{Note: utilityRefusal}
 		if slices.Contains(spec.Allow, ev.Tool) {
@@ -167,22 +161,22 @@ func utilityEvent(ctx context.Context, sess agent.Session, spec UtilitySpec, ev 
 	case agent.Question:
 		_ = sess.Answer(ctx, ev.ID, agent.Decision{Note: "Nobody answers questions here: ask in your answer instead, and end the turn."})
 	case agent.TurnEnd:
-		return UtilityEvent{Type: "turn-end"}, false
+		return hostapi.UtilityEvent{Type: "turn-end"}, false
 	case agent.Failure:
-		return UtilityEvent{Type: "failure", Text: ev.Err}, false
+		return hostapi.UtilityEvent{Type: "failure", Text: ev.Err}, false
 	case agent.AuthExpired:
-		return UtilityEvent{Type: "failure", Text: ev.Error()}, true
+		return hostapi.UtilityEvent{Type: "failure", Text: ev.Error()}, true
 	case agent.Exited:
-		return UtilityEvent{Type: "exited", Text: ev.Err}, true
+		return hostapi.UtilityEvent{Type: "exited", Text: ev.Err}, true
 	}
-	return UtilityEvent{}, false
+	return hostapi.UtilityEvent{}, false
 }
 
 // toolName is a tool as Oriel knows it: mcp__oriel__sessions is sessions.
 func toolName(tool string) string { return strings.TrimPrefix(tool, "mcp__oriel__") }
 
 // utilityProvider is the provider and model a utility agent runs on.
-func (x *Utilities) utilityProvider(ctx context.Context, spec UtilitySpec) (agent.Provider, string, error) {
+func (x *Utilities) utilityProvider(ctx context.Context, spec hostapi.UtilitySpec) (agent.Provider, string, error) {
 	var p agent.Provider
 	if spec.Provider != "" {
 		var ok bool
@@ -220,7 +214,7 @@ func (x *Utilities) utilityProvider(ctx context.Context, spec UtilitySpec) (agen
 }
 
 // sendUtility gives a utility agent a turn.
-func (x *Utilities) sendUtility(ctx context.Context, r UtilityReq) error {
+func (x *Utilities) sendUtility(ctx context.Context, r hostapi.UtilityReq) error {
 	s, err := x.get(r.ID)
 	if err != nil {
 		return err
@@ -232,7 +226,7 @@ func (x *Utilities) sendUtility(ctx context.Context, r UtilityReq) error {
 }
 
 // interruptUtility stops a utility agent's turn.
-func (x *Utilities) interruptUtility(ctx context.Context, r UtilityReq) error {
+func (x *Utilities) interruptUtility(ctx context.Context, r hostapi.UtilityReq) error {
 	s, err := x.get(r.ID)
 	if err != nil {
 		return err
@@ -244,15 +238,15 @@ func (x *Utilities) interruptUtility(ctx context.Context, r UtilityReq) error {
 type Utility struct {
 	x      *Utilities
 	cancel context.CancelFunc
-	ready  UtilityEvent
-	events chan UtilityEvent
+	ready  hostapi.UtilityEvent
+	events chan hostapi.UtilityEvent
 }
 
 // StartUtility starts a utility agent; it runs until Close.
-func (x *Utilities) StartUtility(ctx context.Context, spec UtilitySpec) (_ hostapi.Utility, err error) {
+func (x *Utilities) StartUtility(ctx context.Context, spec hostapi.UtilitySpec) (_ hostapi.Utility, err error) {
 	defer x.env.Recover("StartUtility", &err)
 	run, cancel := context.WithCancel(context.Background())
-	events := make(chan UtilityEvent, 64)
+	events := make(chan hostapi.UtilityEvent, 64)
 	started := make(chan error, 1)
 	x.env.Go("a utility agent", func() {
 		defer close(events)
@@ -263,7 +257,7 @@ func (x *Utilities) StartUtility(ctx context.Context, spec UtilitySpec) (_ hosta
 				started <- cmpErr(err, errors.New("the utility agent ended before it started"))
 			}
 		}()
-		err = x.runUtility(run, spec, func(ev UtilityEvent) error {
+		err = x.runUtility(run, spec, func(ev hostapi.UtilityEvent) error {
 			if first {
 				first = false
 				events <- ev
@@ -299,19 +293,19 @@ func cmpErr(err, or error) error {
 }
 
 // Ready is what the agent said as it started: its id, provider and model.
-func (u *Utility) Ready() UtilityEvent { return u.ready }
+func (u *Utility) Ready() hostapi.UtilityEvent { return u.ready }
 
 // Events are what it does, until it's gone.
-func (u *Utility) Events() <-chan UtilityEvent { return u.events }
+func (u *Utility) Events() <-chan hostapi.UtilityEvent { return u.events }
 
 func (u *Utility) Send(ctx context.Context, text string) (err error) {
 	defer u.x.env.Recover("Utility.Send", &err)
-	return u.x.sendUtility(ctx, UtilityReq{ID: u.ready.ID, Text: text})
+	return u.x.sendUtility(ctx, hostapi.UtilityReq{ID: u.ready.ID, Text: text})
 }
 
 func (u *Utility) Interrupt(ctx context.Context) (err error) {
 	defer u.x.env.Recover("Utility.Interrupt", &err)
-	return u.x.interruptUtility(ctx, UtilityReq{ID: u.ready.ID})
+	return u.x.interruptUtility(ctx, hostapi.UtilityReq{ID: u.ready.ID})
 }
 
 // Close stops the agent.

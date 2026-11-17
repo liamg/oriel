@@ -13,16 +13,17 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
 // freshName is a session name from the prompt that no session or directory is using yet.
 func (x *Worktrees) freshName(spec core.SessionSpec) string {
-	base := hostcore.Sanitise(spec.Name)
+	base := hostapi.Sanitise(spec.Name)
 	if base == "" {
-		base = hostcore.TrimWords(hostcore.Sanitise(core.Summary(spec.Prompt)), 5)
+		base = hostcore.TrimWords(hostapi.Sanitise(core.Summary(spec.Prompt)), 5)
 	}
-	if t := hostcore.Sanitise(spec.Ticket); t != "" && !strings.HasPrefix(base, t) {
+	if t := hostapi.Sanitise(spec.Ticket); t != "" && !strings.HasPrefix(base, t) {
 		base = strings.Trim(t+"-"+base, "-")
 	}
 	if base == "" {
@@ -107,7 +108,7 @@ func inPlace(ctx context.Context, se *core.SessionState, spec core.SessionSpec) 
 // workspace makes the workspace and each repo's worktree the kind calls for.
 func (x *Worktrees) workspace(ctx context.Context, se *core.SessionState, spec core.SessionSpec, k core.KindSpec, branch string) error {
 	root := filepath.Join(x.env.WorkspacesDir(), string(se.ID))
-	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
+	m := hostapi.Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
 	if err := newWorkspace(ctx, root, m, x.notesFiles()); err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (x *Worktrees) workspace(ctx context.Context, se *core.SessionState, spec c
 			// Until Start work, the plan reads the checkout itself; the guard rails keep the agent out of it.
 			se.Projects = append(se.Projects, core.Project{Name: uniqueProjectName(m, r.Path), Repo: r.Path, Dir: r.Path,
 				Primary: len(se.Projects) == 0, ReadOnly: true, Branch: branch})
-			m.Projects = append(m.Projects, ManifestEntry{Name: se.Projects[len(se.Projects)-1].Name, Repo: r.Path, Dir: r.Path, Primary: len(m.Projects) == 0})
+			m.Projects = append(m.Projects, hostapi.ManifestEntry{Name: se.Projects[len(se.Projects)-1].Name, Repo: r.Path, Dir: r.Path, Primary: len(m.Projects) == 0})
 		case core.WorktreesPR:
 			if _, err := addPRProject(ctx, root, &m, r, spec); err != nil {
 				return undo(root, err)
@@ -202,7 +203,7 @@ func (x *Worktrees) newRepo(ctx context.Context, se *core.SessionState, spec cor
 	}
 	dir := filepath.Join(parent, string(se.ID))
 	if spec.Name != "" {
-		dir = filepath.Join(parent, hostcore.Sanitise(spec.Name))
+		dir = filepath.Join(parent, hostapi.Sanitise(spec.Name))
 	}
 	if _, err := os.Stat(dir); err == nil {
 		return fmt.Errorf("%s already exists", dir)
@@ -221,7 +222,7 @@ func (x *Worktrees) newRepo(ctx context.Context, se *core.SessionState, spec cor
 }
 
 // manifestProjects are m's projects with absolute directories under root.
-func manifestProjects(m Manifest, root string) []core.Project {
+func manifestProjects(m hostapi.Manifest, root string) []core.Project {
 	out := make([]core.Project, 0, len(m.Projects))
 	for _, p := range m.Projects {
 		out = append(out, core.Project{Name: p.Name, Repo: p.Repo, Dir: filepath.Join(root, p.Dir), Branch: p.Branch, Base: p.Base,

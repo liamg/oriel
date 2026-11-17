@@ -25,6 +25,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/sysload"
 )
@@ -478,7 +479,7 @@ func (r *Stats) Readings(t *testing.T) {
 		}})
 	// The host keeps readings as it takes the agents' events, after Emit returns.
 	kept := func(provider string, at time.Time) bool {
-		return slices.ContainsFunc(r.W.UsageHistory(host.UsageHistoryReq{Provider: provider, Since: at}),
+		return slices.ContainsFunc(r.W.UsageHistory(hostapi.UsageHistoryReq{Provider: provider, Since: at}),
 			func(u core.ProviderUsage) bool { return u.Sampled.Equal(at) })
 	}
 	for deadline := time.Now().Add(10 * time.Second); !kept("claude", StatsNow.Add(-40*time.Second)) || !kept("codex", StatsNow); {

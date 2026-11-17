@@ -248,7 +248,7 @@ func share(s perfSnap, f float64) string {
 	if !s.loads {
 		return "—"
 	}
-	return fmt.Sprintf("%d%%", kit.Pct(f))
+	return fmt.Sprintf("%d%%", pct(f))
 }
 
 func ms(d time.Duration) string { return fmt.Sprintf("%.1f ms", float64(d.Microseconds())/1000) }
@@ -264,7 +264,7 @@ func (x *Perf) oriel(c *ui.Ctx, s perfSnap) {
 	c.Row("oriel", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		statsTile(c, "cpu", "CPU", share(s, self.Share), "of a core", func(c *ui.Ctx) {
 			if cores := x.h.State().Machine.Cores; cores > 0 && s.loads {
-				dim(c, "s", fmt.Sprintf("%d%% of the machine", kit.Pct(self.Share/float64(cores))))
+				dim(c, "s", fmt.Sprintf("%d%% of the machine", pct(self.Share/float64(cores))))
 			}
 		})
 		statsTile(c, "mem", "MEMORY", kit.Bytes(int64(self.RSS)), "resident", func(c *ui.Ctx) {
@@ -300,7 +300,7 @@ func (x *Perf) machine(c *ui.Ctx, s perfSnap) {
 	c.Row("machine", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		cpu := "—"
 		if !m.Sampled.IsZero() {
-			cpu = fmt.Sprintf("%d%%", kit.Pct(m.CPU))
+			cpu = fmt.Sprintf("%d%%", pct(m.CPU))
 		}
 		statsTile(c, "cpu", "CPU", cpu, "all cores", func(c *ui.Ctx) {
 			if m.Cores > 0 {

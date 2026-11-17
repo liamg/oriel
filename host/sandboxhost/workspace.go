@@ -15,25 +15,21 @@ import (
 	"github.com/liamg/oriel/sandbox"
 )
 
-type Workspace = hostapi.Workspace
-
-type WorkspacePath = hostapi.WorkspacePath
-
 // Workspace reads session id's workspace. A session that isn't sandboxed has its directories only.
-func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (_ Workspace, err error) {
+func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (_ hostapi.Workspace, err error) {
 	defer x.deps.Env.Recover("Workspace", &err)
 	se, err := x.deps.State.Session(id)
 	if err != nil {
-		return Workspace{}, err
+		return hostapi.Workspace{}, err
 	}
 	root := hostcore.AgentDir(se)
-	ws := Workspace{Root: root}
+	ws := hostapi.Workspace{Root: root}
 	for _, p := range se.Projects {
 		note := p.Branch
 		if p.Repo != "" && p.Repo != p.Dir {
 			note += " · worktree of " + p.Repo
 		}
-		ws.Paths = append(ws.Paths, WorkspacePath{Name: p.Name, Host: p.Dir, Note: note})
+		ws.Paths = append(ws.Paths, hostapi.WorkspacePath{Name: p.Name, Host: p.Dir, Note: note})
 	}
 	if root == "" {
 		return ws, nil
@@ -60,24 +56,24 @@ func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (_ Workspace, 
 		_, ws.Rebuild = backend.(sandbox.Rebuilder)
 	}
 	if state, ok := sandbox.StateDir(root); ok {
-		ws.Paths = append(ws.Paths, WorkspacePath{Name: "State", Host: state, Note: "the session's comments, drafts and attachments"})
+		ws.Paths = append(ws.Paths, hostapi.WorkspacePath{Name: "State", Host: state, Note: "the session's comments, drafts and attachments"})
 	}
-	paths := []WorkspacePath{
+	paths := []hostapi.WorkspacePath{
 		{Name: "Scratchpad", Host: sandbox.TmpDir(root), Note: "the agent's temp dir"},
 		{Name: "Sandbox", Host: sandbox.Dir(root), Note: "the sandbox's record, sockets and grants"},
 		{Name: "Home", Host: sandbox.HomeDir(root), Note: "the agent's $HOME"},
 	}
 	if p := se.Agent.Provider; p != "" {
-		paths = append(paths, WorkspacePath{Name: "Agent config", Host: sandbox.AgentDir(root, p), Note: p + "'s own, in this sandbox"})
+		paths = append(paths, hostapi.WorkspacePath{Name: "Agent config", Host: sandbox.AgentDir(root, p), Note: p + "'s own, in this sandbox"})
 	}
 	if b != nil {
 		for _, m := range b.needs().Mounts {
 			if !m.ReadOnly && m.Host != sandbox.AgentDir(root, se.Agent.Provider) {
-				paths = append(paths, WorkspacePath{Name: filepath.Base(m.Host), Host: m.Host, Note: "written back by the agent"})
+				paths = append(paths, hostapi.WorkspacePath{Name: filepath.Base(m.Host), Host: m.Host, Note: "written back by the agent"})
 			}
 		}
 	}
-	paths = append(paths, WorkspacePath{Name: "Go cache", Host: sandbox.GoCache(), Note: "shared by every sandbox"})
+	paths = append(paths, hostapi.WorkspacePath{Name: "Go cache", Host: sandbox.GoCache(), Note: "shared by every sandbox"})
 	for _, p := range paths {
 		p.Agent = ws.Places[p.Host]
 		ws.Paths = append(ws.Paths, p)

@@ -33,14 +33,12 @@ func (x *Registry) repoGit(id core.RepoID) (core.Repo, gitx.Repo, error) {
 	return r, gitx.Repo{Dir: r.Path}, nil
 }
 
-type RepoFacts = hostapi.RepoFacts
-
 // RepoFacts reads a checkout's facts.
-func (x *Registry) RepoFacts(ctx context.Context, id core.RepoID) (f RepoFacts, err error) {
+func (x *Registry) RepoFacts(ctx context.Context, id core.RepoID) (f hostapi.RepoFacts, err error) {
 	defer x.env.Recover("RepoFacts", &err)
 	r, g, err := x.repoGit(id)
 	if err != nil {
-		return RepoFacts{}, err
+		return hostapi.RepoFacts{}, err
 	}
 	f.Branch, _ = g.Branch(ctx)
 	f.Default = defaultBranch(ctx, r, g)
@@ -71,30 +69,17 @@ func (x *Registry) FetchRepo(ctx context.Context, id core.RepoID) (err error) {
 	return g.FetchPrune(ctx)
 }
 
-const (
-	WhyMerged = hostapi.WhyMerged
-	WhyGone   = hostapi.WhyGone
-)
-
-type StaleBranch = hostapi.StaleBranch
-
-type HousekeepPlan = hostapi.HousekeepPlan
-
-type HousekeepReq = hostapi.HousekeepReq
-
-type Cleaned = hostapi.Cleaned
-
 // Housekeeping reads what a checkout has to clean: local branches merged into its default, or whose upstream was
 // deleted, and worktrees whose directory is gone. Never the default branch or the checkout's own.
-func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p HousekeepPlan, err error) {
+func (x *Registry) Housekeeping(ctx context.Context, req hostapi.HousekeepReq) (p hostapi.HousekeepPlan, err error) {
 	defer x.env.Recover("Housekeeping", &err)
 	r, g, err := x.repoGit(req.Repo)
 	if err != nil {
-		return HousekeepPlan{}, err
+		return hostapi.HousekeepPlan{}, err
 	}
 	if req.Fetch && r.Remote != "" {
 		if err := g.FetchPrune(ctx); err != nil {
-			return HousekeepPlan{}, err
+			return hostapi.HousekeepPlan{}, err
 		}
 	}
 	def := defaultBranch(ctx, r, g)
@@ -104,7 +89,7 @@ func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p Housek
 	}
 	branches, err := g.Branches(ctx)
 	if err != nil {
-		return HousekeepPlan{}, err
+		return hostapi.HousekeepPlan{}, err
 	}
 	merged, _ := g.MergedInto(ctx, p.Base)
 	wts, _ := g.Worktrees(ctx)
@@ -117,13 +102,13 @@ func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p Housek
 		why := ""
 		switch {
 		case slices.Contains(merged, b.Name):
-			why = WhyMerged
+			why = hostapi.WhyMerged
 		case b.Gone:
-			why = WhyGone
+			why = hostapi.WhyGone
 		default:
 			continue
 		}
-		s := StaleBranch{Name: b.Name, Why: why, When: b.When, Session: sessions[b.Name]}
+		s := hostapi.StaleBranch{Name: b.Name, Why: why, When: b.When, Session: sessions[b.Name]}
 		if i := slices.IndexFunc(wts, func(t gitx.Worktree) bool { return t.Branch == b.Name && !t.Prunable }); i >= 0 {
 			s.Worktree = wts[i].Dir
 			dirty, err := gitx.Repo{Dir: s.Worktree}.Dirty(ctx)
@@ -157,19 +142,19 @@ func (x *Registry) sessionBranches(path string) map[string]string {
 
 // Housekeep deletes the branches asked for, each with its worktree, and prunes stale worktrees if asked. Only
 // branches the plan offers go; a dirty worktree goes only when forced. Each has its own result.
-func (x *Registry) Housekeep(ctx context.Context, req HousekeepReq) (out []Cleaned, err error) {
+func (x *Registry) Housekeep(ctx context.Context, req hostapi.HousekeepReq) (out []hostapi.Cleaned, err error) {
 	defer x.env.Recover("Housekeep", &err)
 	_, g, err := x.repoGit(req.Repo)
 	if err != nil {
 		return nil, err
 	}
-	plan, err := x.Housekeeping(ctx, HousekeepReq{Repo: req.Repo})
+	plan, err := x.Housekeeping(ctx, hostapi.HousekeepReq{Repo: req.Repo})
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range req.Apply {
-		i := slices.IndexFunc(plan.Branches, func(b StaleBranch) bool { return b.Name == name })
-		res := Cleaned{Branch: name}
+		i := slices.IndexFunc(plan.Branches, func(b hostapi.StaleBranch) bool { return b.Name == name })
+		res := hostapi.Cleaned{Branch: name}
 		switch {
 		case i < 0:
 			res.Error = "not merged and its upstream isn't gone: kept"
@@ -188,7 +173,7 @@ func (x *Registry) Housekeep(ctx context.Context, req HousekeepReq) (out []Clean
 					break
 				}
 			}
-			if err := g.DeleteBranch(ctx, name, b.Why == WhyGone); err != nil {
+			if err := g.DeleteBranch(ctx, name, b.Why == hostapi.WhyGone); err != nil {
 				res.Error = err.Error()
 			}
 		}
@@ -202,18 +187,16 @@ func (x *Registry) Housekeep(ctx context.Context, req HousekeepReq) (out []Clean
 	return out, nil
 }
 
-type TagPreview = hostapi.TagPreview
-
 // TagPreview reads a checkout's branches and tags, and the commit branch ("" for the default) is at.
-func (x *Registry) TagPreview(ctx context.Context, id core.RepoID, branch string) (p TagPreview, err error) {
+func (x *Registry) TagPreview(ctx context.Context, id core.RepoID, branch string) (p hostapi.TagPreview, err error) {
 	defer x.env.Recover("TagPreview", &err)
 	r, g, err := x.repoGit(id)
 	if err != nil {
-		return TagPreview{}, err
+		return hostapi.TagPreview{}, err
 	}
 	bs, err := g.Branches(ctx)
 	if err != nil {
-		return TagPreview{}, err
+		return hostapi.TagPreview{}, err
 	}
 	for _, b := range bs {
 		p.Branches = append(p.Branches, b.Name)
@@ -229,37 +212,33 @@ func (x *Registry) TagPreview(ctx context.Context, id core.RepoID, branch string
 	return p, nil
 }
 
-type TagReq = hostapi.TagReq
-
-type Tagged = hostapi.Tagged
-
 // Tag makes an annotated tag on a branch: fast-forwarded first if asked, and pushed (that tag alone) if asked.
-func (x *Registry) Tag(ctx context.Context, req TagReq) (t Tagged, err error) {
+func (x *Registry) Tag(ctx context.Context, req hostapi.TagReq) (t hostapi.Tagged, err error) {
 	defer x.env.Recover("Tag", &err)
 	r, g, err := x.repoGit(req.Repo)
 	if err != nil {
-		return Tagged{}, err
+		return hostapi.Tagged{}, err
 	}
 	branch := cmp.Or(req.Branch, defaultBranch(ctx, r, g))
 	if err := g.ValidTagName(ctx, req.Name); err != nil {
-		return Tagged{}, err
+		return hostapi.Tagged{}, err
 	}
 	if g.TagExists(ctx, req.Name) {
-		return Tagged{}, fmt.Errorf("tag %s already exists", req.Name)
+		return hostapi.Tagged{}, fmt.Errorf("tag %s already exists", req.Name)
 	}
 	if req.Push && r.Remote == "" {
-		return Tagged{}, fmt.Errorf("%s has no remote to push to", r.ID)
+		return hostapi.Tagged{}, fmt.Errorf("%s has no remote to push to", r.ID)
 	}
 	if req.Pull && r.Remote != "" {
 		if err := g.FastForward(ctx, branch); err != nil {
-			return Tagged{}, err
+			return hostapi.Tagged{}, err
 		}
 	}
 	ref := "refs/heads/" + branch
 	if err := g.CreateTag(ctx, gitx.TagReq{Name: req.Name, Ref: ref, Message: req.Message, Sign: req.Sign}); err != nil {
-		return Tagged{}, err
+		return hostapi.Tagged{}, err
 	}
-	t = Tagged{Name: req.Name}
+	t = hostapi.Tagged{Name: req.Name}
 	t.Commit, t.Subject, _ = g.CommitOf(ctx, ref)
 	if req.Push {
 		if err := g.PushTag(ctx, "origin", req.Name); err != nil {

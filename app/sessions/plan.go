@@ -212,7 +212,7 @@ func (x *Plan) docs(se core.SessionState, st *planState) (docs []planDoc, loadin
 		case f.Data == nil:
 			continue
 		}
-		title, _ := kit.MarkdownTitle(x.h, string(f.Data))
+		title, _ := markdownTitle(x.h, string(f.Data))
 		st.docs = append(st.docs, planDoc{name: e.Name(), path: path, data: f.Data, buf: text.New(bytes.Clone(f.Data), text.Author{}), title: title})
 	}
 	rank := func(d planDoc) int {
@@ -591,4 +591,12 @@ func (x *Plan) document(c *ui.Ctx, vc uireg.ViewCtx, se core.SessionState, st *p
 // planDocsArgs are view.open's args for the Plan docs panel: in the sidebar, alone and fixed.
 func planDocsArgs() registry.Args {
 	return kit.SidebarArgs("view.open", registry.Args{"id": PlanDocsView, "place": "dock", "edge": "left", "size": 260, "title": "Plan docs"})
+}
+
+// markdownTitle is src's first level-1 heading as the window's markdown service reads it.
+func markdownTitle(r registry.Registry, src string) (string, bool) {
+	if md, ok := registry.ServiceOf[kit.Markdown](r, kit.MarkdownService); ok {
+		return md.Title(src)
+	}
+	return "", false
 }

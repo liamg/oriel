@@ -27,8 +27,6 @@ import (
 // (agent.Discovered): one that no Oriel session owns, by its path or the provider's id for it, is a session outside
 // Oriel.
 
-type StatsSessionReq = hostapi.StatsSessionReq
-
 // Stats are the stats and plan readings the host keeps.
 type Stats struct {
 	env       hostcore.Env
@@ -301,7 +299,7 @@ func (s *Stats) Query(q stats.Query) stats.Report {
 }
 
 // Session is one session's stats.
-func (s *Stats) Session(r StatsSessionReq) (stats.Detail, error) {
+func (s *Stats) Session(r hostapi.StatsSessionReq) (stats.Detail, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ss := s.Sessions(r.Session, time.Time{})

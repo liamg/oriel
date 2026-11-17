@@ -581,9 +581,9 @@ func (o *Overview) languages(ctx registry.Ctx, dir string) (ui.Node, error) {
 		th := c.Theme()
 		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 			c.Row("big", ui.Style{Gap: 6, Cross: ui.End, Pad: ui.Insets{B: 4}}, func(c *ui.Ctx) {
-				c.Text("lines", approx+kit.Thousands(total), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 26, Weight: typeset.SemiBold},
+				c.Text("lines", approx+thousands(total), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 26, Weight: typeset.SemiBold},
 					Color: th.C(theme.Fg)})
-				c.Text("of", fmt.Sprintf("lines · %s files", kit.Thousands(n)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11},
+				c.Text("of", fmt.Sprintf("lines · %s files", thousands(n)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11},
 					Color: th.C(theme.FgFaint)})
 			})
 			colour := func(i int, name string) render.Color {
@@ -640,7 +640,7 @@ func (o *Overview) size(ctx registry.Ctx, dir string) (ui.Node, error) {
 			dirs[filepath.Dir(f.path)] = true
 		}
 	}
-	return statRows([][2]string{{"files", kit.Thousands(n)}, {"directories", kit.Thousands(len(dirs))}, {"on disk", kit.Bytes(size)}}), nil
+	return statRows([][2]string{{"files", thousands(n)}, {"directories", thousands(len(dirs))}, {"on disk", kit.Bytes(size)}}), nil
 }
 
 func (o *Overview) largest(ctx registry.Ctx, dir string) (ui.Node, error) {
@@ -653,7 +653,7 @@ func (o *Overview) largest(ctx registry.Ctx, dir string) (ui.Node, error) {
 	var rows [][2]string
 	for _, f := range fs[:min(len(fs), 5)] {
 		if f.lines > 0 {
-			rows = append(rows, [2]string{f.path, kit.Thousands(f.lines)})
+			rows = append(rows, [2]string{f.path, thousands(f.lines)})
 		}
 	}
 	return statRows(rows), nil
@@ -708,7 +708,7 @@ func (o *Overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 	if len(times) > 0 {
 		busiest = " · busiest " + time.Weekday(slices.Index(weekdays[:], slices.Max(weekdays[:]))).String()[:3]
 	}
-	summary := fmt.Sprintf("%s commits in the last year%s", kit.Thousands(len(times)), busiest)
+	summary := fmt.Sprintf("%s commits in the last year%s", thousands(len(times)), busiest)
 	return &ui.Func{Key: "activity", Fn: func(c *ui.Ctx) {
 		th := c.Theme()
 		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
@@ -771,7 +771,7 @@ func (o *Overview) contributors(ctx registry.Ctx, dir string) (ui.Node, error) {
 						f.Rect(render.XYWH(r.Min.X, r.Min.Y, r.Dx()*share, r.Dy()), render.Style{Fill: th.C(tOverviewBar), Radius: 2.5})
 					})
 					c.Box("n", ui.Style{W: ui.Px(40), Main: ui.End}, func(c *ui.Ctx) {
-						c.Text("t", kit.Thousands(a.Commits), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
+						c.Text("t", thousands(a.Commits), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
 					})
 				})
 			}
@@ -788,4 +788,13 @@ func percent(n, total int) string {
 		return "0%"
 	}
 	return fmt.Sprintf("%d%%", (n*100+total/2)/total)
+}
+
+// thousands is n with its thousands separated by commas.
+func thousands(n int) string {
+	s := fmt.Sprint(n)
+	for i := len(s) - 3; i > 0 && s[i-1] != '-'; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }

@@ -105,7 +105,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 					if w.Used >= .7 {
 						fg = th.C(theme.Warn)
 					}
-					c.Text("v", fmt.Sprintf("%d%%", kit.Pct(w.Used)), widget.Mono(10.5, typeset.SemiBold, fg))
+					c.Text("v", fmt.Sprintf("%d%%", pct(w.Used)), widget.Mono(10.5, typeset.SemiBold, fg))
 					c.Text("at", x.headed(r, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 				if fiveHour(w) {
@@ -136,11 +136,11 @@ func (x *Plugin) headed(r windowRead, now time.Time) string {
 	case r.burn == 0:
 		return "idle"
 	case fiveHour(r.w):
-		return fmt.Sprintf("→%d%% at reset", kit.Pct(r.atReset))
+		return fmt.Sprintf("→%d%% at reset", pct(r.atReset))
 	case !r.w.Resets.IsZero() && r.w.Resets.Sub(now) > 20*time.Hour:
-		return fmt.Sprintf("→%d%% %s", kit.Pct(r.atReset), r.w.Resets.In(x.Loc).Format("Mon"))
+		return fmt.Sprintf("→%d%% %s", pct(r.atReset), r.w.Resets.In(x.Loc).Format("Mon"))
 	}
-	return fmt.Sprintf("→%d%%", kit.Pct(r.atReset))
+	return fmt.Sprintf("→%d%%", pct(r.atReset))
 }
 
 // usageNote is the panel's note: how many accounts, and how long ago they were read.
@@ -188,7 +188,7 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 	c.Row("a", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		hudFigure(c, "tokens", "TOKENS", total, unit, th.C(theme.Fg))
 		hudFigure(c, "cost", "COST", "$"+dollars, "."+cents, th.C(theme.Fg))
-		hudFigure(c, "cache", "CACHE", fmt.Sprint(kit.Pct(cache)), "%", th.C(theme.Fg))
+		hudFigure(c, "cache", "CACHE", fmt.Sprint(pct(cache)), "%", th.C(theme.Fg))
 	})
 	c.Row("b", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		hudFigure(c, "threads", "THREADS", fmt.Sprint(threads), "", th.C(theme.Fg))

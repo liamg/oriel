@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -58,7 +59,7 @@ func (x *Runner) draftsDue(ctx context.Context, id core.SessionID) []dueDraft {
 				continue
 			}
 			d := x.env.ReadDraft(id, p.Name, kind)
-			if d.By == hostcore.DraftByYou {
+			if d.By == hostapi.DraftByYou {
 				continue
 			}
 			code := hostcore.DraftCode(ctx, repo, base, kind)

@@ -1,6 +1,7 @@
 package agentui
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 var (
@@ -58,7 +60,7 @@ func (x *Requests) agentEdits(ctx uireg.DecorationCtx) []uireg.Decoration {
 	hi := sort.Search(len(e.lit), func(i int) bool { return e.lit[i].Line >= ctx.Bottom })
 	out := slices.Clone(e.lit[lo:max(lo, hi)])
 	if e.first >= 0 {
-		out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: e.first, Text: "agent edited " + kit.EditedAgo(ctx.Now, it.Time),
+		out = append(out, uireg.Decoration{Kind: uireg.VirtualText, Line: e.first, Text: "agent edited " + editedAgo(ctx.Now, it.Time),
 			Style: tAgentEditedEdge.Name(), Priority: 5})
 	}
 	next := time.Minute
@@ -109,4 +111,12 @@ func editedLines(d *core.FileDiff, snap text.Snapshot) ([]uireg.Decoration, int)
 	}
 	slices.SortStableFunc(out, func(a, b uireg.Decoration) int { return a.Line - b.Line })
 	return out, first
+}
+
+// editedAgo is how long ago an edit was, to the second while it's fresh.
+func editedAgo(now, t time.Time) string {
+	if d := now.Sub(t); d < time.Minute {
+		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
+	}
+	return widget.AgoLabel(now, t) + " ago"
 }

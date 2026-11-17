@@ -17,11 +17,9 @@ import (
 // maxAttach is the largest file a session's agent is handed.
 const maxAttach = 32 << 20
 
-type AttachReq = hostapi.AttachReq
-
 // Attach keeps a file for a session's agent in the session's agent folder, which a sandboxed agent sees too, and
 // returns where it is.
-func (w *Host) Attach(r AttachReq) (_ string, err error) {
+func (w *Host) Attach(r hostapi.AttachReq) (_ string, err error) {
 	defer w.env.Recover("Attach", &err)
 	if _, err := w.session(r.Session); err != nil {
 		return "", err

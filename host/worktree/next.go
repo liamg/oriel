@@ -13,11 +13,9 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-type NextPRReq = hostapi.NextPRReq
-
 // NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
 // It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
-func (x *Worktrees) NextPR(ctx context.Context, r NextPRReq) error {
+func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 	se, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return err

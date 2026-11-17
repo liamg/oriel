@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // usageStub is a provider whose plan reading the test sets, counting the times it's asked.
@@ -74,7 +75,7 @@ func TestReadUsageKeepsTheNewestReading(t *testing.T) {
 	if got := usedNow(r.w, "claude"); got != .5 {
 		t.Errorf("an older reading replaced the session's: %v", got)
 	}
-	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude"}); len(h) != 2 {
+	if h := r.w.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude"}); len(h) != 2 {
 		t.Errorf("history = %+v", h)
 	}
 	probed.Sampled, probed.Windows = r.now().Add(time.Minute), []core.UsageWindow{{Name: "weekly", Used: .6}}

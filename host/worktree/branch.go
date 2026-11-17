@@ -13,11 +13,9 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-type NewBranchReq = hostapi.NewBranchReq
-
 // NewBranch is a project's worktree on a fresh branch cut from its repo's default branch, freshly fetched, which
 // the session takes as its branch for it. The branch it leaves is kept, commits and all. It answers the new name.
-func (x *Worktrees) NewBranch(ctx context.Context, r NewBranchReq) (string, error) {
+func (x *Worktrees) NewBranch(ctx context.Context, r hostapi.NewBranchReq) (string, error) {
 	se, p, repo, err := x.ownedProject(ctx, r.Session, r.Project)
 	if err != nil {
 		return "", err

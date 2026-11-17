@@ -129,6 +129,7 @@ notices-check:
 
 vendor-check:
 	go mod verify
+	go mod tidy -diff
 	go mod vendor
 	@git diff --exit-code --stat -- vendor || (echo "vendor/ is out of date: run go mod vendor and commit it"; exit 1)
 	@test -z "$$(git status --porcelain -- vendor)" || (echo "vendor/ has uncommitted files: run go mod vendor and commit it"; exit 1)

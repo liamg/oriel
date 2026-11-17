@@ -145,9 +145,9 @@ func (r windowRead) verdict(now time.Time, loc *time.Location) (string, theme.To
 		return fmt.Sprintf("at this rate the %s window runs out %s · %s before the reset", strings.ToLower(windowKind(r.w)),
 			r.runsOut.In(loc).Format("Mon 15:04"), strings.ReplaceAll(kit.Duration(r.w.Resets.Sub(r.runsOut)), " 00m", "")), tUsageOut
 	case r.atReset >= .9:
-		return fmt.Sprintf("≈ %d%% at the reset · tight", kit.Pct(r.atReset)), tUsageTight
+		return fmt.Sprintf("≈ %d%% at the reset · tight", pct(r.atReset)), tUsageTight
 	}
-	return fmt.Sprintf("≈ %d%% at the reset · won't run out", kit.Pct(r.atReset)), tUsageOK
+	return fmt.Sprintf("≈ %d%% at the reset · won't run out", pct(r.atReset)), tUsageOK
 }
 
 // windowKind is a window's length in words: 5-hour, weekly.
@@ -250,7 +250,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 			}
 			c.Text(fmt.Sprint("n", i), usageShort(w), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			widget.Meter(c, fmt.Sprint("m", i), w.Used, widget.MeterOpts{Tone: tone, Width: ui.Px(44), Label: w.Name})
-			c.Text(fmt.Sprint("v", i), fmt.Sprintf("%d%%", kit.Pct(w.Used)), widget.MonoFont(10.5, th.C(theme.Fg)))
+			c.Text(fmt.Sprint("v", i), fmt.Sprintf("%d%%", pct(w.Used)), widget.MonoFont(10.5, th.C(theme.Fg)))
 		}
 	}).Clicked {
 		x.run("usage.open", nil)
@@ -299,7 +299,7 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 				c.Row("k", ui.Style{W: ui.Px(34)}, func(c *ui.Ctx) { c.Text("t", usageShort(w), widget.MonoFont(10, th.C(theme.FgGhost))) })
 				widget.Meter(c, "m", w.Used, widget.MeterOpts{Tone: windowTone(th, w), Width: ui.Px(60), Label: w.Name})
 				at, in := resets(now, x.Loc, w)
-				line := fmt.Sprintf("%d%%  %s", kit.Pct(w.Used), at)
+				line := fmt.Sprintf("%d%%  %s", pct(w.Used), at)
 				if in != "" && fiveHour(w) {
 					line += " · " + in
 				}
@@ -481,7 +481,7 @@ func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 			tone = th.C(tUsageWeek)
 		}
 		c.Row("v", ui.Style{Gap: 8, Cross: ui.End}, func(c *ui.Ctx) {
-			c.Text("p", fmt.Sprintf("%d%%", kit.Pct(w.Used)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 28, Weight: typeset.SemiBold},
+			c.Text("p", fmt.Sprintf("%d%%", pct(w.Used)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 28, Weight: typeset.SemiBold},
 				Color: tone})
 			sub := "used"
 			if o := w.Opened(); !o.IsZero() {
@@ -503,7 +503,7 @@ func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 			if !r.runsOut.IsZero() {
 				c.Text("full", "full "+r.runsOut.In(x.Loc).Format("Mon 15:04"), widget.MonoFont(10, th.C(tUsageOut)))
 			} else {
-				widget.Note(c, "at", fmt.Sprintf("at reset ≈ %d", kit.Pct(r.atReset)))
+				widget.Note(c, "at", fmt.Sprintf("at reset ≈ %d", pct(r.atReset)))
 				c.Box("g2", ui.Style{W: ui.Flex(1)}, nil)
 				widget.Note(c, "100", "100")
 			}

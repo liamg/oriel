@@ -32,6 +32,7 @@ import (
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/host/agentrun"
 	"github.com/liamg/oriel/host/aireview"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/jobs"
 	"github.com/liamg/oriel/host/persist"
@@ -57,7 +58,7 @@ type Options struct {
 	Load      func() sysload.Reading // the machine's load; a sysload.Reader of its own if nil
 	Version   string
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
-	Sandbox SandboxFactory
+	Sandbox hostapi.SandboxFactory
 	// Packs finds a kind's prompt pack (agent/packs.Get, with plugins' and the user's overrides).
 	Packs func(name string) (agent.Pack, bool)
 	// ReposDir is where repos.clone and new repos go; ~/src if "".
@@ -204,10 +205,10 @@ func (w *Host) parts() error {
 		UsageSampled: w.statsPart.UsageSampled,
 		PROpen:       func(id core.SessionID, project, branch string) bool { return w.codePart.PROpen(id, project, branch) },
 		RenameBranch: func(ctx context.Context, id core.SessionID, project, name string) error {
-			return w.ShipRename(ctx, RenameReq{Session: id, Project: project, Name: name})
+			return w.ShipRename(ctx, hostapi.RenameReq{Session: id, Project: project, Name: name})
 		},
 		NewBranch: func(ctx context.Context, id core.SessionID, project, name string, carry bool) (string, error) {
-			return w.NewBranch(ctx, NewBranchReq{Session: id, Project: project, Name: name, Carry: carry})
+			return w.NewBranch(ctx, hostapi.NewBranchReq{Session: id, Project: project, Name: name, Carry: carry})
 		},
 		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
 		Prices:         w.prices})
@@ -241,8 +242,8 @@ func (w *Host) sandboxDeps() sandboxhost.Deps {
 		Providers:       w.opts.Providers.List,
 		GatewayTools:    w.runPart.GatewayTools,
 		Factory:         w.opts.Sandbox,
-		Live:            func(id core.SessionID) hostcore.Sandbox { return w.runPart.Sandbox(id) },
-		Running:         func() []hostcore.Sandbox { return w.runPart.Sandboxes() },
+		Live:            func(id core.SessionID) hostapi.Sandbox { return w.runPart.Sandbox(id) },
+		Running:         func() []hostapi.Sandbox { return w.runPart.Sandboxes() },
 		Repos:           func() []core.Repo { return w.reposPart.Repos() },
 		AddRepo:         w.AddRepo,
 		Note:            func(id core.SessionID, it core.Item) { w.runPart.AppendItem(id, it) },

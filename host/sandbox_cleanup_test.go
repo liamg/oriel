@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -53,7 +54,7 @@ func TestArchiveCleansTheSandbox(t *testing.T) {
 	fill(t, filepath.Join(sandbox.TmpDir(b.Root()), "scratchpad", "notes.md"))
 	fill(t, filepath.Join(sandbox.HomeDir(b.Root()), ".npm", "x"))
 	fill(t, filepath.Join(sandbox.HomeDir(b.Root()), ".gitconfig"))
-	if err := s.w.End(context.Background(), EndReq{Session: id, Discard: true}); err != nil {
+	if err := s.w.End(context.Background(), hostapi.EndReq{Session: id, Discard: true}); err != nil {
 		t.Fatal(err)
 	}
 	if entries, _ := os.ReadDir(sandbox.TmpDir(b.Root())); len(entries) != 0 {
@@ -87,7 +88,7 @@ func TestArchiveStopsTheSandboxAndReopeningLaunchesItAgain(t *testing.T) {
 	s.stopped = make(chan string, 4)
 	id, spec, b := s.sandboxed()
 	s.launch(spec)
-	if err := s.w.End(context.Background(), EndReq{Session: id, Discard: true}); err != nil {
+	if err := s.w.End(context.Background(), hostapi.EndReq{Session: id, Discard: true}); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -116,7 +117,7 @@ func TestDeleteRemovesTheSandbox(t *testing.T) {
 	if !there(sandbox.Dir(b.Root())) {
 		t.Fatal("the session has no sandbox dir")
 	}
-	if err := s.w.End(context.Background(), EndReq{Session: id, Delete: true}); err != nil {
+	if err := s.w.End(context.Background(), hostapi.EndReq{Session: id, Delete: true}); err != nil {
 		t.Fatal(err)
 	}
 	if there(sandbox.Dir(b.Root())) {

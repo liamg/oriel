@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -24,7 +25,7 @@ type session struct {
 	mu           sync.Mutex
 	cancel       context.CancelFunc
 	sess         agent.Session
-	box          hostcore.Sandbox
+	box          hostapi.Sandbox
 	starting     bool
 	working      bool // a turn is running, or one was just asked for
 	interrupting bool
@@ -41,7 +42,7 @@ type session struct {
 	model        string          // the model the agent last ran as, by its tool calls: "claude-opus-5-5"
 	calls        map[string]agent.ToolCall
 	items        map[string]core.Item
-	waiting      map[string]chan AnswerReq // asks the user hasn't answered
+	waiting      map[string]chan hostapi.AnswerReq // asks the user hasn't answered
 	turnAt       time.Time
 	drafts       bool              // its pack fills the Ship page's drafts (commit_draft)
 	nudged       map[string]string // project/kind → the code it was last asked to draft for
@@ -168,7 +169,7 @@ func (h *session) startAside() {
 }
 
 // launch starts the agent under ctx, which cancel ends if it fails, with prompt as its first turn.
-func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt string) (agent.Session, hostcore.Sandbox, error) {
+func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt string) (agent.Session, hostapi.Sandbox, error) {
 	x := h.r
 	se, err := x.st.Session(h.id)
 	if err != nil {
@@ -200,13 +201,13 @@ func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt 
 	h.mu.Lock()
 	h.drafts = slices.Contains(spec.Pack.Tools, "commit_draft")
 	h.mu.Unlock()
-	var box hostcore.Sandbox
+	var box hostapi.Sandbox
 	if se.Agent.Sandboxed {
 		if x.deps.Sandbox == nil {
 			cancel()
 			return nil, nil, errors.New("this machine can't run a sandbox")
 		}
-		box, err = x.deps.Sandbox.Open(ctx, se, h.approve, hostcore.SandboxAgent{Provider: p, StateDir: spec.StateDir})
+		box, err = x.deps.Sandbox.Open(ctx, se, h.approve, hostapi.SandboxAgent{Provider: p, StateDir: spec.StateDir})
 		if err != nil {
 			cancel()
 			return nil, nil, fmt.Errorf("sandbox: %w", err)
@@ -283,7 +284,7 @@ func (h *session) stop(why, by string) {
 	sess, box, cancel := h.sess, h.box, h.cancel
 	h.sess, h.box, h.cancel, h.working, h.restartWhy = nil, nil, nil, false, ""
 	waiting := h.waiting
-	h.waiting = map[string]chan AnswerReq{}
+	h.waiting = map[string]chan hostapi.AnswerReq{}
 	h.mu.Unlock()
 	for id, ch := range waiting {
 		close(ch)

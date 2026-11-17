@@ -7,14 +7,16 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // Every call the app makes on the host recovers a panic in it (docs/architecture.md): each method of the parts'
 // services starts by deferring a Recover, whether it's the host's own or a part's it embeds.
 func TestHostCallsRecoverPanics(t *testing.T) {
 	calls := map[string]bool{}
-	for _, it := range []reflect.Type{reflect.TypeFor[SessionCalls](), reflect.TypeFor[SandboxCalls](), reflect.TypeFor[ShipCalls](),
-		reflect.TypeFor[CodeHostCalls](), reflect.TypeFor[RepoCalls](), reflect.TypeFor[JobCalls](), reflect.TypeFor[StatsCalls]()} {
+	for _, it := range []reflect.Type{reflect.TypeFor[hostapi.SessionCalls](), reflect.TypeFor[hostapi.SandboxCalls](), reflect.TypeFor[hostapi.ShipCalls](),
+		reflect.TypeFor[hostapi.CodeHostCalls](), reflect.TypeFor[hostapi.RepoCalls](), reflect.TypeFor[hostapi.JobCalls](), reflect.TypeFor[hostapi.StatsCalls]()} {
 		for i := range it.NumMethod() {
 			calls[it.Method(i).Name] = true
 		}

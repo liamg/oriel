@@ -6,6 +6,7 @@ import (
 
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // StatsQuery answers a stats query over every session the host has.
@@ -15,7 +16,7 @@ func (w *Host) StatsQuery(q stats.Query) stats.Report {
 }
 
 // SessionStats is one session's stats.
-func (w *Host) SessionStats(r StatsSessionReq) (_ stats.Detail, err error) {
+func (w *Host) SessionStats(r hostapi.StatsSessionReq) (_ stats.Detail, err error) {
 	defer w.env.Recover("SessionStats", &err)
 	return w.statsPart.Session(r)
 }

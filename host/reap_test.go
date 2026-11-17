@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // Ending a session, archived or deleted, stops what its agent left running however it was started: here a server
@@ -32,7 +33,7 @@ func TestEndingASessionStopsWhatItsAgentLeftRunning(t *testing.T) {
 		}
 		left, mine := start(a.Spec.Env), start(nil)
 		t.Cleanup(func() { _ = mine.Process.Kill(); _ = mine.Wait() })
-		if err := r.w.End(context.Background(), EndReq{Session: id, Delete: del, Discard: true}); err != nil {
+		if err := r.w.End(context.Background(), hostapi.EndReq{Session: id, Delete: del, Discard: true}); err != nil {
 			t.Fatal(err)
 		}
 		ended := make(chan error, 1)

@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 func loginCard(se core.SessionState) (core.Ask, bool) {
@@ -60,7 +61,7 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 	if p := r.w.ProviderInfo(context.Background()); p[0].Install.LoggedIn || !strings.Contains(p[0].Install.Note, "OAuth token revoked") {
 		t.Errorf("the launcher's provider = %+v", p[0].Install)
 	}
-	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id2, Body: "and this"}); err != nil {
+	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id2, Body: "and this"}); err != nil {
 		t.Fatal(err)
 	}
 	r.noneSent(a2)
@@ -92,7 +93,7 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 	a.WaitSent(t)
 	a.LoseLogin("Not logged in · Run /login")
 	first, _ := loginCard(r.eventually(id, "the login's card", flagged))
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: first.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: first.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	again, _ := loginCard(r.eventually(id, "a card again", func(se core.SessionState) bool {
@@ -100,7 +101,7 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 		return ok && a.ID != first.ID
 	}))
 	r.fake.SignIn(true)
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
@@ -130,7 +131,7 @@ func TestAnAgentRefusedForItsLoginStartsOnceSignedIn(t *testing.T) {
 	}
 	r.fake.Refuse(nil)
 	r.fake.SignIn(true)
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.agent().WaitSent(t); !strings.Contains(got.Text, "go on") {
@@ -151,7 +152,7 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 	if in, _ := r.fake.Detect(context.Background()); !in.LoggedIn {
 		t.Fatal("the fake's files should still say signed in")
 	}
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	again, _ := loginCard(r.eventually(id, "a card again: the same login is still refused", func(se core.SessionState) bool {
@@ -162,7 +163,7 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 		t.Errorf("rechecked, the launcher's provider = %+v", p[0].Install)
 	}
 	r.fake.SignIn(true) // signed in again outside Oriel: a new login on disk
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })

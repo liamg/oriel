@@ -6,10 +6,11 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // ShipRename renames a project's branch. The app refuses first when its PR is open on it.
-func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
+func (w *Host) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error) {
 	defer w.env.Recover("ShipRename", &err)
 	if err := w.codePart.ShipRename(ctx, r); err != nil {
 		return err
@@ -20,7 +21,7 @@ func (w *Host) ShipRename(ctx context.Context, r RenameReq) (err error) {
 
 // NewBranch moves a project onto a fresh branch cut from its repo's default branch, freshly fetched, which becomes
 // the session's branch for it; the one it leaves is kept. It answers the new branch's name.
-func (w *Host) NewBranch(ctx context.Context, r NewBranchReq) (_ string, err error) {
+func (w *Host) NewBranch(ctx context.Context, r hostapi.NewBranchReq) (_ string, err error) {
 	defer w.env.Recover("NewBranch", &err)
 	name, err := w.workPart.NewBranch(ctx, r)
 	if err != nil {
@@ -31,7 +32,7 @@ func (w *Host) NewBranch(ctx context.Context, r NewBranchReq) (_ string, err err
 }
 
 // ShipSwitchBack puts a project's worktree back on the session's branch for it.
-func (w *Host) ShipSwitchBack(ctx context.Context, r ShipRef) (err error) {
+func (w *Host) ShipSwitchBack(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipSwitchBack", &err)
 	if err := w.workPart.SwitchBack(ctx, r.Session, r.Project); err != nil {
 		return err
@@ -43,7 +44,7 @@ func (w *Host) ShipSwitchBack(ctx context.Context, r ShipRef) (err error) {
 }
 
 // ShipAdopt makes the branch a project's worktree is on the session's branch for it, when that's safe.
-func (w *Host) ShipAdopt(ctx context.Context, r ShipRef) (err error) {
+func (w *Host) ShipAdopt(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipAdopt", &err)
 	if err := w.workPart.Adopt(ctx, r.Session, r.Project); err != nil {
 		return err
@@ -56,7 +57,7 @@ func (w *Host) ShipAdopt(ctx context.Context, r ShipRef) (err error) {
 }
 
 // projectOf is the project r names.
-func (w *Host) projectOf(r ShipRef) (core.Project, bool) {
+func (w *Host) projectOf(r hostapi.ShipRef) (core.Project, bool) {
 	se, err := w.session(r.Session)
 	if err != nil {
 		return core.Project{}, false

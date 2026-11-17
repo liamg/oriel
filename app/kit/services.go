@@ -114,14 +114,6 @@ type Markdown interface {
 	Title(src string) (string, bool)
 }
 
-// MarkdownTitle is src's first level-1 heading as the window's markdown service reads it.
-func MarkdownTitle(r registry.Registry, src string) (string, bool) {
-	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
-		return md.Title(src)
-	}
-	return "", false
-}
-
 // Indicators build indicators to draw inside another panel, as the HUD keeps them.
 type Indicators interface {
 	// Node is ind's node to draw, or its error in its place; nil once it's been turned off.

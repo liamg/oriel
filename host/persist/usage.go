@@ -19,8 +19,6 @@ import (
 	"github.com/liamg/oriel/internal/atomicfile"
 )
 
-type UsageHistoryReq = hostapi.UsageHistoryReq
-
 // UsageKeep is how long plan readings are kept: the Usage page shows a week.
 const UsageKeep = 8 * 24 * time.Hour
 
@@ -97,7 +95,7 @@ func (s *Stats) RestoreUsage() {
 }
 
 // UsageHistory is the plan readings the host has kept, oldest first.
-func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
+func (s *Stats) UsageHistory(r hostapi.UsageHistoryReq) []core.ProviderUsage {
 	defer s.env.Recover("UsageHistory", nil)
 	s.usageMu.Lock()
 	defer s.usageMu.Unlock()

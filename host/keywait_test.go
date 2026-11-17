@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // signsSlowly makes the session's commits sign with a program that waits, as gpg does for a key's touch, until touch
@@ -55,7 +57,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644)
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.ShipCommit(context.Background(), ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 		done <- err
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok && se.Status == core.StatusNeedsYou })
@@ -78,17 +80,17 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644)
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.ShipCommit(context.Background(), ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 		done <- err
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok })
 	a, _ := keyAsk(se)
-	if err := r.w.Answer(AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case err := <-done:
-		if !errors.Is(err, ErrKeyCancelled) {
+		if !errors.Is(err, agentrun.ErrKeyCancelled) {
 			t.Errorf("the cancelled commit returned %v", err)
 		}
 	case <-time.After(waitTimeout):

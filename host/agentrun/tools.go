@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -67,7 +68,7 @@ func (x *Runner) tools(h *session) []agent.Tool {
 			own = append(own, branchTools(h)...)
 		}
 	}
-	for _, t := range x.AppTools(hostcore.ToolsReq{Session: h.id, Agent: kind}) {
+	for _, t := range x.AppTools(hostapi.ToolsReq{Session: h.id, Agent: kind}) {
 		if !slices.ContainsFunc(own, func(o agent.Tool) bool { return o.Name == t.Name }) {
 			own = append(own, t)
 		}
@@ -483,7 +484,7 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 		if err != nil {
 			return "", err
 		}
-		if h.r.env.ReadDraft(h.id, p.Name, kind).By == hostcore.DraftByYou {
+		if h.r.env.ReadDraft(h.id, p.Name, kind).By == hostapi.DraftByYou {
 			return fmt.Sprintf("Not saved: the user wrote %s's %s themselves. Leave it.", p.Name, hostcore.DraftNoun[kind]), nil
 		}
 		code := hostcore.DraftCode(ctx, repo, repo.FlightBase(ctx, p.Base), kind)
@@ -491,7 +492,7 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 		if kind == "commit" {
 			title, body = "", a.Str("message")
 		}
-		if err := h.r.env.WriteDraft(h.id, p.Name, kind, hostcore.Draft{Title: title, Body: body, By: se.Agent.Provider, Code: code}); err != nil {
+		if err := h.r.env.WriteDraft(h.id, p.Name, kind, hostapi.Draft{Title: title, Body: body, By: se.Agent.Provider, Code: code}); err != nil {
 			return "", err
 		}
 		return "saved", h.r.st.Emit(core.DraftSaved{Session: h.id, Project: p.Name, Kind: kind})

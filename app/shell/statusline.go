@@ -14,12 +14,6 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// The status line's segments (kit.StatusLeft, kit.StatusRight).
-const (
-	StatusLeft  = kit.StatusLeft
-	StatusRight = kit.StatusRight
-)
-
 // statusLine is the status line along the bottom (01-ide): its segments, left and right.
 type statusLine struct {
 	kit.Disposer

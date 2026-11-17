@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/sessions"
+	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -415,27 +416,27 @@ func withData(se core.SessionState, d core.KindData) core.SessionState {
 // The default agent is the last session's, while its provider is there; else installed, then logged in, then by name.
 func TestDefaultAgent(t *testing.T) {
 	models := []agent.Model{{ID: "big", Default: true}, {ID: "small"}}
-	claude := host.ProviderInfo{ID: "claude", Install: agent.Install{Bin: "claude"}, Models: models}
-	codex := host.ProviderInfo{ID: "codex", Install: agent.Install{Bin: "codex", LoggedIn: true}, Models: models}
-	gemini := host.ProviderInfo{ID: "gemini", Error: "not installed"}
-	aider := host.ProviderInfo{ID: "aider", Error: "not installed"}
+	claude := hostapi.ProviderInfo{ID: "claude", Install: agent.Install{Bin: "claude"}, Models: models}
+	codex := hostapi.ProviderInfo{ID: "codex", Install: agent.Install{Bin: "codex", LoggedIn: true}, Models: models}
+	gemini := hostapi.ProviderInfo{ID: "gemini", Error: "not installed"}
+	aider := hostapi.ProviderInfo{ID: "aider", Error: "not installed"}
 	session := func(provider, model string, ago time.Duration) core.SessionState {
 		return core.SessionState{ID: core.SessionID(provider + model), Created: time.Now().Add(-ago), Agent: core.AgentState{Provider: provider, Model: model}}
 	}
 	for _, tt := range []struct {
 		name            string
 		sessions        []core.SessionState
-		ps              []host.ProviderInfo
+		ps              []hostapi.ProviderInfo
 		provider, model string
 	}{
-		{"last session's agent and model", []core.SessionState{session("codex", "big", time.Hour), session("claude", "small", time.Minute)}, []host.ProviderInfo{codex, claude}, "claude", "small"},
-		{"last session's model gone", []core.SessionState{session("claude", "old", time.Minute)}, []host.ProviderInfo{codex, claude}, "claude", "big"},
+		{"last session's agent and model", []core.SessionState{session("codex", "big", time.Hour), session("claude", "small", time.Minute)}, []hostapi.ProviderInfo{codex, claude}, "claude", "small"},
+		{"last session's model gone", []core.SessionState{session("claude", "old", time.Minute)}, []hostapi.ProviderInfo{codex, claude}, "claude", "big"},
 		{"not a job's", []core.SessionState{session("claude", "big", time.Hour), withData(core.SessionState{ID: "job", Kind: core.KindJob, Created: time.Now(),
-			Agent: core.AgentState{Provider: "codex"}}, core.JobData{Job: "sweep"})}, []host.ProviderInfo{codex, claude}, "claude", "big"},
-		{"last session's provider gone", []core.SessionState{session("gone", "x", time.Minute)}, []host.ProviderInfo{claude, codex}, "codex", "big"},
-		{"logged in over installed", nil, []host.ProviderInfo{gemini, claude, codex}, "codex", "big"},
-		{"installed over not", nil, []host.ProviderInfo{gemini, claude}, "claude", "big"},
-		{"by name", nil, []host.ProviderInfo{gemini, aider}, "aider", ""},
+			Agent: core.AgentState{Provider: "codex"}}, core.JobData{Job: "sweep"})}, []hostapi.ProviderInfo{codex, claude}, "claude", "big"},
+		{"last session's provider gone", []core.SessionState{session("gone", "x", time.Minute)}, []hostapi.ProviderInfo{claude, codex}, "codex", "big"},
+		{"logged in over installed", nil, []hostapi.ProviderInfo{gemini, claude, codex}, "codex", "big"},
+		{"installed over not", nil, []hostapi.ProviderInfo{gemini, claude}, "claude", "big"},
+		{"by name", nil, []hostapi.ProviderInfo{gemini, aider}, "aider", ""},
 		{"none", nil, nil, "", ""},
 	} {
 		st := core.State{Sessions: tt.sessions}

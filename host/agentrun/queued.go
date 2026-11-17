@@ -11,10 +11,8 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-type QueuedReq = hostapi.QueuedReq
-
 // EditQueued changes or deletes a queued comment. It refuses one the agent already has: it can't be taken back.
-func (x *Runner) EditQueued(r QueuedReq) error {
+func (x *Runner) EditQueued(r hostapi.QueuedReq) error {
 	if !r.Delete && strings.TrimSpace(r.Body) == "" {
 		return errors.New("the comment is empty: delete it instead")
 	}
@@ -66,10 +64,8 @@ func (x *Runner) EditQueued(r QueuedReq) error {
 	return nil
 }
 
-type UnqueueReq = hostapi.UnqueueReq
-
 // Unqueue drops a queued message. One the agent has been given already is gone from the queue, so it refuses.
-func (x *Runner) Unqueue(r UnqueueReq) (err error) {
+func (x *Runner) Unqueue(r hostapi.UnqueueReq) (err error) {
 	defer x.env.Recover("Unqueue", &err)
 	var refused error
 	merr := x.st.Mutate(r.Session, func(se core.SessionState) error {

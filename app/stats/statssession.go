@@ -148,7 +148,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 			}
 		})
 		statsTile(c, "tokens", "TOKENS", kit.Count(t.Tokens.Total()), "", func(c *ui.Ctx) {
-			dim(c, "s", fmt.Sprintf("cache hit %d%%", kit.Pct(cacheHit(t.Tokens))))
+			dim(c, "s", fmt.Sprintf("cache hit %d%%", pct(cacheHit(t.Tokens))))
 		})
 		statsTile(c, "requests", "REQUESTS", kit.Count(t.Requests), "", func(c *ui.Ctx) {
 			if t.Turns > 0 {
@@ -167,7 +167,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 				frac = active.Seconds() / span.Seconds()
 			}
 			widget.Meter(c, "m", frac, widget.MeterOpts{Tone: th.C(tStatsHours), Label: "active"})
-			dim(c, "p", fmt.Sprintf("%d%%", kit.Pct(frac)))
+			dim(c, "p", fmt.Sprintf("%d%%", pct(frac)))
 		})
 		window := ""
 		if d.Window > 0 {
@@ -282,7 +282,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 			widget.Chart(c, "strip", strip, widget.ChartOpts{Kind: widget.ChartStrip, Highlight: -1, Label: "Cost per repo", Help: "agent/stats#split"})
 		}
 		for i, r := range d.Repos {
-			widget.KV(c, i, kit.RepoTone(th, st, r.Repo, i), r.Repo, "", fmt.Sprintf("%d%%", kit.Pct(r.Share)), kit.Money(r.Cost))
+			widget.KV(c, i, kit.RepoTone(th, st, r.Repo, i), r.Repo, "", fmt.Sprintf("%d%%", pct(r.Share)), kit.Money(r.Cost))
 		}
 		switch {
 		case len(d.Repos) > 1 && whole:
@@ -410,7 +410,7 @@ func effortCard(c *ui.Ctx, es []stats.Effort) {
 			e := es[i]
 			share := 0
 			if total > 0 {
-				share = kit.Pct(float64(e.Requests) / float64(total))
+				share = pct(float64(e.Requests) / float64(total))
 			}
 			widget.KV(c, i, render.Color{}, e.Name, "", fmt.Sprintf("%d%%", share), fmt.Sprint(e.Requests), kit.Money(e.Cost))
 		}

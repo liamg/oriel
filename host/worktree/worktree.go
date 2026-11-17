@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -77,7 +78,7 @@ func (x *Worktrees) SaveProjects(id core.SessionID) error {
 		m.Projects[i].Past = nil
 		for _, pr := range se.Past {
 			if pr.Project == e.Name {
-				m.Projects[i].Past = append(m.Projects[i].Past, ManifestPR{Branch: pr.Branch, Number: pr.Number, URL: pr.URL, Title: pr.Title, State: pr.State, ClosedAt: pr.Closed})
+				m.Projects[i].Past = append(m.Projects[i].Past, hostapi.ManifestPR{Branch: pr.Branch, Number: pr.Number, URL: pr.URL, Title: pr.Title, State: pr.State, ClosedAt: pr.Closed})
 			}
 		}
 	}
