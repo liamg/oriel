@@ -17,6 +17,7 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
@@ -252,7 +253,7 @@ func (x *Assistant) Prompt() string {
 
 // startAgent starts the conversation's agent: a utility agent.
 func (x *Assistant) startAgent(ctx context.Context, first string) (conversation.Agent, error) {
-	c, err := kit.SessionCalls(x.h)
+	c, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return nil, err
 	}

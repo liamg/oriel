@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -32,7 +33,7 @@ func (x *PRReview) rework(ctx registry.Ctx, se core.SessionState, it reviewItem,
 	}
 	body := "This is a rework request: reword this review comment before it goes to the PR's author. " + how +
 		" Reply with the new comment only, no preamble, and leave this thread open.\n\n" + quote(it.words())
-	w, err := kit.SessionCalls(x.h)
+	w, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func (x *PRReview) askSummary(ctx registry.Ctx, a registry.Args) error {
 	}
 	body := "This is a summary request: the review about to go to the author of " + kit.Label(se) + " has these comments:\n\n" +
 		cmp.Or(strings.Join(lines, "\n"), "(none: it approves)") + "\n\nReply with the summary only, and resolve this thread."
-	w, err := kit.SessionCalls(x.h)
+	w, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		return err
 	}

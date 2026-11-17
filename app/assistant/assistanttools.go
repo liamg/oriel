@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -308,7 +309,7 @@ type repoLine struct {
 }
 
 func (x *Assistant) repos(context.Context) []repoLine {
-	w, err := kit.RepoCalls(x.h)
+	w, err := sessionkit.RepoCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -390,7 +391,7 @@ func (x *Assistant) confirmStart(ctx registry.Ctx, p registry.Args) (registry.Co
 func (x *Assistant) startSession(ctx registry.Ctx, a registry.Args) (core.SessionID, error) {
 	s, ok := registry.SessionsOf(x.h)
 	if !ok {
-		return "", kit.ErrNoSessions
+		return "", sessionkit.ErrNoSessions
 	}
 	return s.Start(ctx, a)
 }
@@ -441,7 +442,7 @@ func (x *Assistant) toolStop(ctx registry.Ctx, p registry.Args) (any, error) {
 		return nil, err
 	}
 	return registry.Acted{Result: "stopped", Line: "stopped " + kit.Label(s), Undo: func(ctx registry.Ctx) error {
-		c, err := kit.SessionCalls(x.h)
+		c, err := sessionkit.SessionCalls(x.h)
 		if err != nil {
 			return err
 		}
@@ -514,7 +515,7 @@ type jobLine struct {
 }
 
 func (x *Assistant) jobs(context.Context) []jobLine {
-	w, err := kit.JobCalls(x.h)
+	w, err := sessionkit.JobCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -591,7 +592,7 @@ func (x *Assistant) toolRunJob(ctx registry.Ctx, p registry.Args) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := kit.JobCalls(x.h)
+	c, err := sessionkit.JobCalls(x.h)
 	if err != nil {
 		return nil, err
 	}

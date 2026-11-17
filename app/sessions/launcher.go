@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -100,7 +101,7 @@ func (x *Launcher) Manifest() plugin.Manifest { return plugin.Manifest{ID: "laun
 
 func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.life = h, x.Lifetime()
-	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
+	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	x.Add(h.Command(registry.Command{ID: "session.new",
 		Title:     "New session: the launcher, with {kind}, {prompt}, {ticket}, {pr}, {dir}, {repos} or {provider} filled in",
 		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
@@ -126,7 +127,7 @@ func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 
 // openWith opens the launcher afresh, with what a command gave filled in, and reads the kinds, providers and repos.
 func (x *Launcher) openWith(a registry.Args) {
-	spec := kit.SpecFrom(a)
+	spec := sessionkit.SpecFrom(a)
 	if x.providers != nil {
 		x.providers.Reset()
 	}
@@ -139,7 +140,7 @@ func (x *Launcher) openWith(a registry.Args) {
 		x.template = hostapi.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
-		x.sandbox = kit.DefaultSandbox(x.h.Options()).Container
+		x.sandbox = sessionkit.DefaultSandbox(x.h.Options()).Container
 	}
 	x.picked = x.provider != ""
 	x.load(core.Kind(a.String("kind")))
@@ -147,7 +148,7 @@ func (x *Launcher) openWith(a registry.Args) {
 
 // load reads the kinds, which are local, at once; the providers' probe runs off the loop.
 func (x *Launcher) load(want core.Kind) {
-	c, err := kit.SessionCalls(x.h)
+	c, err := sessionkit.SessionCalls(x.h)
 	if err != nil {
 		x.loadErr = err.Error()
 		return
@@ -319,7 +320,7 @@ func (x *Launcher) args() registry.Args {
 	if takesRepos(k) {
 		s.Repos = x.chosen
 	}
-	a := kit.SpecArgs(s)
+	a := sessionkit.SpecArgs(s)
 	if a.String("prompt") != "" || a.String("ticket") != "" {
 		a["then"] = kit.Then(kit.Call{Command: "request.open"}) // the first request, as the agent gets it
 	}

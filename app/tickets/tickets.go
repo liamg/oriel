@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -82,7 +83,7 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.View(kit.OverlayPrefix+"tickets", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "tickets", Fn: x.pageView} })))
 	x.Add(h.View(kit.TicketView, ticketTab{x}))
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it into progress"}, func(_ registry.Ctx, ev *kit.SessionStart) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it into progress"}, func(_ registry.Ctx, ev *sessionkit.SessionStart) (registry.Verdict, error) {
 		x.started(*ev)
 		return registry.Verdict{}, nil
 	}))
@@ -438,7 +439,7 @@ func (x *Tickets) Deactivate(ctx context.Context) error {
 }
 
 // started moves a session's ticket into progress as the session starts from it.
-func (x *Tickets) started(ev kit.SessionStart) {
+func (x *Tickets) started(ev sessionkit.SessionStart) {
 	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
 	if !ok || tr.Start == nil {
 		return

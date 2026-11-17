@@ -17,6 +17,7 @@ import (
 
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -173,14 +174,14 @@ func (x *AIReview) promptPath() string {
 
 // session is the session {id}, or the one in front.
 func (x *AIReview) session(a registry.Args) (core.SessionState, error) {
-	return kit.SessionFrom(x.h, a)
+	return sessionkit.SessionFrom(x.h, a)
 }
 
 func (x *AIReview) client(a registry.Args) (hostapi.ShipCalls, error) {
 	if _, err := x.session(a); err != nil {
 		return nil, err
 	}
-	return kit.ShipCalls(x.h)
+	return sessionkit.ShipCalls(x.h)
 }
 
 // run asks the session host for a review, with the user's prompt when they have one.
@@ -225,7 +226,7 @@ func (x *AIReview) run(a registry.Args) error {
 }
 
 func (x *AIReview) setFinding(se core.SessionState, f core.Finding) error {
-	c, err := kit.ShipCalls(x.h)
+	c, err := sessionkit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}

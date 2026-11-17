@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/desktop"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
@@ -77,7 +78,7 @@ func (x *Repos) newDialog(a registry.Args) error {
 	if a.String("mode") == "clone" || f.url != "" {
 		f.mode = 1
 	}
-	if w, _ := kit.RepoCalls(x.h); f.parent == "" && w != nil {
+	if w, _ := sessionkit.RepoCalls(x.h); f.parent == "" && w != nil {
 		f.parent = kit.TildePath(w.CloneParent())
 	}
 	if f.name == "" {
@@ -139,7 +140,7 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 	if k := f.probeKey(); k != f.key {
 		f.key, f.keyAt = k, now
 	}
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if w == nil || f.probing || f.key == f.probed {
 		return
 	}
@@ -336,7 +337,7 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 				})
 			}
 		})
-		if w, _ := kit.RepoCalls(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
+		if w, _ := sessionkit.RepoCalls(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
 			labelled(c, "where", "", func(c *ui.Ctx) { widget.Note(c, "t", "where most of your repos are") })
 		}
 		if h := f.parentHint(); h != "" {
@@ -418,7 +419,7 @@ func (f *addRepo) blocked() string {
 
 func (x *Repos) submitDialog() {
 	f := x.dialog
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if f == nil || f.busy || w == nil {
 		return
 	}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
@@ -54,7 +55,7 @@ type repoDetail struct {
 func (x *Repos) detail(id core.RepoID) *repoDetail {
 	d := x.details[id]
 	if d == nil {
-		w, _ := kit.RepoCalls(x.h)
+		w, _ := sessionkit.RepoCalls(x.h)
 		d = &repoDetail{facts: plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.RepoFacts, error) {
 			if w == nil {
 				return hostapi.RepoFacts{}, errors.New("there are no repos in this window")
@@ -72,7 +73,7 @@ func (x *Repos) readFacts(id core.RepoID) { x.detail(id).facts.Reload() }
 // readPlan reads what housekeeping would clean, fetching first if asked.
 func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 	d := x.detail(id)
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if d.planBusy || w == nil {
 		return
 	}
@@ -99,7 +100,7 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 // act runs a host call for a repo off the loop, then reads its facts again.
 func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w hostapi.RepoCalls) (string, error)) {
 	d := x.detail(id)
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if d.busy != "" || w == nil {
 		return
 	}
@@ -666,7 +667,7 @@ type tagForm struct {
 }
 
 func (x *Repos) loadTag(id core.RepoID, t *tagForm) {
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	if t.loading || w == nil {
 		return
 	}
@@ -846,7 +847,7 @@ func (x *Repos) createTag(id core.RepoID, t *tagForm) {
 	t.busy, t.err = true, ""
 	a := registry.Args{"repo": string(id), "branch": t.branch, "name": strings.TrimSpace(t.name), "message": t.message,
 		"pull": t.pull && t.preview.Remote, "sign": t.sign && t.preview.Signing, "push": t.push && t.preview.Remote}
-	w, _ := kit.RepoCalls(x.h)
+	w, _ := sessionkit.RepoCalls(x.h)
 	plugin.Go(x.h, "repos: tag "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()

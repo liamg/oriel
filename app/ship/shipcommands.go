@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
@@ -207,7 +208,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				if err != nil {
 					return err
 				}
-				agent, err := kit.SessionCalls(x.h)
+				agent, err := sessionkit.SessionCalls(x.h)
 				if err != nil {
 					return err
 				}
