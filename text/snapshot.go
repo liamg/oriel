@@ -59,7 +59,7 @@ func (s Snapshot) Slice(r Range) []byte {
 func (s Snapshot) piece(r Range) piece {
 	var p piece
 	s.r().walk(0, r.Start, r.End, func(off int, l *node) bool {
-		p = cat(p, l.piece.slice(max(r.Start, off)-off, min(r.End, off+len(l.text))-off))
+		p = cat(p, l.slice(max(r.Start, off)-off, min(r.End, off+len(l.text))-off))
 		return true
 	})
 	return p

@@ -117,6 +117,9 @@ func byteAt(l string, i int) byte {
 // numberStart is where the number at or after col begins in normal mode, its hex or bin prefix included.
 func (nf nrFormats) numberStart(l string, col int) int {
 	at := func(i int) byte { return byteAt(l, i) }
+	// hexAt and binAt: c is the x or b of a 0x or 0b prefix.
+	hexAt := func(c int) bool { return c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1)) }
+	binAt := func(c int) bool { return c > 0 && (at(c) == 'B' || at(c) == 'b') && at(c-1) == '0' && isBin(at(c+1)) }
 	c := col
 	if nf.bin {
 		for c > 0 && isBin(at(c)) {
@@ -128,21 +131,20 @@ func (nf nrFormats) numberStart(l string, col int) int {
 			c--
 		}
 	}
-	if nf.bin && nf.hex && !(c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1))) {
+	if nf.bin && nf.hex && !hexAt(c) {
 		c = col
 		for c > 0 && isDec(at(c)) {
 			c--
 		}
 	}
-	if nf.hex && c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1)) ||
-		nf.bin && c > 0 && (at(c) == 'B' || at(c) == 'b') && at(c-1) == '0' && isBin(at(c+1)) {
+	if nf.hex && hexAt(c) || nf.bin && binAt(c) {
 		return c - 1
 	}
 	c = col
 	for c < len(l) && !nf.startsNumber(at(c)) {
 		c++
 	}
-	for c > 0 && isDec(at(c-1)) && !(nf.alpha && isAlpha(at(c))) {
+	for c > 0 && isDec(at(c-1)) && (!nf.alpha || !isAlpha(at(c))) {
 		c--
 	}
 	return c
@@ -325,7 +327,7 @@ func (e *Engine) addSub(v *view, where numberAt, amount uint64, sub bool) (int, 
 		length--
 	}
 	repl := formatNumber(n, pre, negative && (!visual || wasPositive), lastLetterUpper(orig),
-		first == '0' && !(nf.oct && pre == 0), length)
+		first == '0' && (!nf.oct || pre != 0), length)
 	e.cur = Pos{line, start}
 	e.do(e.group, text.Replace{Range: text.Range{Start: ls + start, End: ls + start + todel}, Text: []byte(repl)})
 	return start + max(len(repl)-1, 0), true

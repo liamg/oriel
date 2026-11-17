@@ -72,9 +72,9 @@ func parse(src []byte) (*parser, error) {
 		lineStart := p.pos
 		kv, hd := -1, -1
 		p.ws()
-		switch c := p.peek(); {
-		case c == '#' || c == '\n' || c == '\r':
-		case c == '[':
+		switch c := p.peek(); c {
+		case '#', '\n', '\r':
+		case '[':
 			path, isAoT, err := p.header()
 			if err != nil {
 				return nil, err

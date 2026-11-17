@@ -229,7 +229,7 @@ func (e *Engine) nearEntry(l *qfList, cmd string, count int) (int, bool) {
 	cur := e.cur
 	var cands []int
 	for i, en := range l.entries {
-		if !en.valid || en.name != e.buffer.name {
+		if !en.valid || en.name != e.name {
 			continue
 		}
 		p := Pos{en.line - 1, max(en.col-1, 0)}
@@ -600,11 +600,11 @@ func (e *Engine) vimgrep(loc bool, args, title string) error {
 
 // qfEnter is <CR> in a quickfix or location-list window: jump to the entry under the cursor.
 func (e *Engine) qfEnter() {
-	s := e.window.buf.qf
+	s := e.buf.qf
 	if s.list() == nil || len(s.list().entries) == 0 {
 		return
 	}
-	loc := e.window.locOwner != nil
+	loc := e.locOwner != nil
 	if err := e.qfJump(loc, min(e.cur.Line, len(s.list().entries)-1), false); err != nil {
 		e.fail(err)
 	}

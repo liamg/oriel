@@ -102,7 +102,7 @@ func lclass(c byte, cl byte) bool {
 	case 'l':
 		res = c >= 'a' && c <= 'z'
 	case 'p':
-		res = c > 32 && c < 127 && !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9')
+		res = c > 32 && c < 127 && ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9'))
 	case 's':
 		res = c == ' ' || c >= '\t' && c <= '\r'
 	case 'u':

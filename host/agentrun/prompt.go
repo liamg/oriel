@@ -142,9 +142,10 @@ func renderThread(b *strings.Builder, se core.SessionState, t core.Thread, fresh
 
 func renderComment(b *strings.Builder, c core.Comment, origin string, isNew, full bool) {
 	by := "user"
-	if c.Author == core.AuthorAgent {
+	switch c.Author {
+	case core.AuthorAgent:
 		by = "you"
-	} else if c.Author == core.AuthorHost {
+	case core.AuthorHost:
 		by = c.Name
 	}
 	attrs := [][2]string{{"by", by}}

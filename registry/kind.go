@@ -52,7 +52,7 @@ func (k Kind) Gates() []string { return k.GateNames }
 
 func (k Kind) Label(se core.SessionState) string {
 	if k.LabelFunc == nil {
-		return string(k.KindSpec.Kind)
+		return string(k.Kind)
 	}
 	return k.LabelFunc(se)
 }

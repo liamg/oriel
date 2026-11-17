@@ -79,7 +79,7 @@ func Decode(b []byte) ([]byte, Format) {
 	lines := bytes.Split(b, []byte("\n"))
 	crlf := true
 	for i, l := range lines {
-		if !bytes.HasSuffix(l, []byte("\r")) && !(i == len(lines)-1 && noEOL) {
+		if !bytes.HasSuffix(l, []byte("\r")) && (i != len(lines)-1 || !noEOL) {
 			crlf = false
 			break
 		}

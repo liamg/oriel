@@ -648,10 +648,10 @@ func partMarks(c *ui.Ctx, parts []presentPart, lk blockLook, box render.Rect, ho
 		}
 		at := func(x float32) *ui.Float { return &ui.Float{Offset: render.Point{X: x, Y: r.Min.Y - box.Min.Y}} }
 		wash := render.Color{}
-		switch {
-		case k == lk.selPart:
+		switch k {
+		case lk.selPart:
 			wash = th.C(tPresentSel)
-		case k == hover:
+		case hover:
 			wash = th.C(tPresentHover)
 		}
 		if wash.A > 0 {

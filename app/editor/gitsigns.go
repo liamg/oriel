@@ -294,7 +294,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 			g.h.Do(func() {
 				g.mu.Lock()
 				bh.diffing = false
-				if g.hunks[key] == bh && !(bh.diffed && bh.version > version) {
+				if g.hunks[key] == bh && (!bh.diffed || bh.version <= version) {
 					bh.version, bh.gen, bh.hunks, bh.diffed = version, gen, hs, true
 				}
 				g.mu.Unlock()

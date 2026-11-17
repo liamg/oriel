@@ -408,15 +408,15 @@ func (m *matcher) inClass(c byte, r rune) bool {
 	case 'o':
 		return r >= '0' && r <= '7'
 	case 'O':
-		return !(r >= '0' && r <= '7')
+		return r < '0' || r > '7'
 	case 'w':
 		return isASCIIAlpha(r) || isASCIIDigit(r) || r == '_'
 	case 'W':
-		return !(isASCIIAlpha(r) || isASCIIDigit(r) || r == '_')
+		return !isASCIIAlpha(r) && !isASCIIDigit(r) && r != '_'
 	case 'h':
 		return isASCIIAlpha(r) || r == '_'
 	case 'H':
-		return !(isASCIIAlpha(r) || r == '_')
+		return !isASCIIAlpha(r) && r != '_'
 	case 'a':
 		return isASCIIAlpha(r)
 	case 'A':
@@ -424,11 +424,11 @@ func (m *matcher) inClass(c byte, r rune) bool {
 	case 'l':
 		return r >= 'a' && r <= 'z'
 	case 'L':
-		return !(r >= 'a' && r <= 'z')
+		return r < 'a' || r > 'z'
 	case 'u':
 		return r >= 'A' && r <= 'Z'
 	case 'U':
-		return !(r >= 'A' && r <= 'Z')
+		return r < 'A' || r > 'Z'
 	}
 	return false
 }

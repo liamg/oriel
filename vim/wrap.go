@@ -83,7 +83,7 @@ func (e *Engine) screenRow(v *view) (int, int) {
 	if e.opts.Wrap {
 		return e.rowCols(vc / e.widthOf(e.window))
 	}
-	return e.window.left, e.window.left + e.widthOf(e.window)
+	return e.left, e.left + e.widthOf(e.window)
 }
 
 // screenStart is g0: the first character of the screen row.

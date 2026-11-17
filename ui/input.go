@@ -178,7 +178,7 @@ func (u *UI) settleFocus(prev map[ID]*elem) {
 	if r.set && (r.touched != in.touched || !built && r.into) {
 		in.request, r = focusAsk{}, focusAsk{}
 	}
-	ready := r.set && built && !(r.into && u.defaultIn(r.id) == 0)
+	ready := r.set && built && (!r.into || u.defaultIn(r.id) != 0)
 	if ready {
 		in.request = focusAsk{}
 	}

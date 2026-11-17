@@ -90,15 +90,15 @@ func mdTokens(s string) []mdTok {
 		}
 	}
 	for i := 0; i < len(s); i++ {
-		switch c := s[i]; {
-		case c == '`':
+		switch c := s[i]; c {
+		case '`':
 			if j := strings.IndexByte(s[i+1:], '`'); j >= 0 {
 				flush()
 				toks = append(toks, mdTok{text: s[i+1 : i+1+j], code: true})
 				i += j + 1
 				continue
 			}
-		case c == '[':
+		case '[':
 			if j := strings.Index(s[i:], "]("); j > 0 {
 				if e := strings.IndexByte(s[i+j:], ')'); e > 0 {
 					b.WriteString(s[i+1 : i+j])
@@ -106,13 +106,13 @@ func mdTokens(s string) []mdTok {
 					continue
 				}
 			}
-		case c == ':':
+		case ':':
 			if name, e, ok := emojiCodeAt(s, i); ok {
 				b.WriteString(e)
 				i += len(name) + 1
 				continue
 			}
-		case c == '*' || c == '_' || c == '~':
+		case '*', '_', '~':
 			j := i
 			for j < len(s) && s[j] == c {
 				j++

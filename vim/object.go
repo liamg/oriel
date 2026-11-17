@@ -548,7 +548,7 @@ func currentTag(v *view, cur Pos, count int, include bool) (span, bool) {
 		var o *tag
 		for i := range tags {
 			t := tags[i]
-			if t.start >= lo && !(t.end <= lo) {
+			if t.start >= lo && t.end > lo {
 				break
 			}
 			if t.closing {

@@ -95,7 +95,7 @@ func TestWhichKeyWaitsItsDelay(t *testing.T) {
 		s.Registry().Keymap(k)
 	}
 	res := registry.NewResolver(s.Registry())
-	s.Headless.SetKeys(res)
+	s.SetKeys(res)
 	start := s.Now
 	res.Feed([]string{"n", "global"}, " ", start)
 	s.Now = start.Add(keys.WhichKeyDelay - time.Millisecond)
@@ -119,7 +119,7 @@ func TestWhichKeySnapshot(t *testing.T) {
 		s.Registry().Keymap(k)
 	}
 	res := registry.NewResolver(s.Registry())
-	s.Headless.SetKeys(res)
+	s.SetKeys(res)
 	start := s.Now
 	res.Feed([]string{"n", "global"}, " ", start)
 	res.Feed([]string{"n", "global"}, "a", start)
@@ -141,7 +141,7 @@ func TestWhichKeyHoldsThePrefix(t *testing.T) {
 		t.Fatal(err)
 	}
 	res := registry.NewResolver(s.Registry())
-	s.Headless.SetKeys(res)
+	s.SetKeys(res)
 	start := s.Now
 	res.Feed([]string{"n", "global"}, " ", start)
 	s.Now = start.Add(keys.WhichKeyDelay)

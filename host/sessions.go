@@ -34,7 +34,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
 		return "", fmt.Errorf("this machine can't run a %s sandbox", b)
 	}
-	se, err := w.workPart.New(ctx, spec, k)
+	se, err := w.New(ctx, spec, k)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +42,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
 	}
-	if err := w.runPart.Begin(ctx, se.ID, spec, k); err != nil {
+	if err := w.Begin(ctx, se.ID, spec, k); err != nil {
 		return se.ID, err
 	}
 	if spec.AutoName && !w.opts.NoAutoName && spec.Title == "" && strings.TrimSpace(spec.Prompt) != "" {
@@ -183,11 +183,11 @@ func (w *Host) StartWork(ctx context.Context, r hostapi.StartWorkReq) (err error
 	if err != nil {
 		return err
 	}
-	w.runPart.WriteNotes(se.ID)
-	if err := w.runPart.WorkAgent(se.ID, r, "start work"); err != nil {
+	w.WriteNotes(se.ID)
+	if err := w.WorkAgent(se.ID, r, "start work"); err != nil {
 		return err
 	}
-	_, err = w.runPart.Comment(ctx, hostapi.CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
+	_, err = w.Comment(ctx, hostapi.CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
 	return err
 }
 
@@ -216,8 +216,8 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 	if err != nil {
 		return err
 	}
-	w.runPart.WriteNotes(id)
-	w.runPart.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", r.ID, p.Dir))
+	w.WriteNotes(id)
+	w.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", r.ID, p.Dir))
 	return nil
 }
 
@@ -228,7 +228,7 @@ func (w *Host) NextPR(ctx context.Context, r hostapi.NextPRReq) (err error) {
 	if err := w.workPart.NextPR(ctx, r); err != nil {
 		return err
 	}
-	w.runPart.WriteNotes(r.Session)
+	w.WriteNotes(r.Session)
 	return nil
 }
 
@@ -240,5 +240,5 @@ func (w *Host) Rename(id core.SessionID, name string) (err error) {
 
 // resumeHandedOver is agentrun.Runner.ResumeHandedOver, resuming through Resume.
 func (w *Host) resumeHandedOver() {
-	w.runPart.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
+	w.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
 }

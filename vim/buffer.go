@@ -11,14 +11,14 @@ import (
 // SetModified sets whether the current buffer has changes not written, as 'modified'.
 func (e *Engine) SetModified(on bool) {
 	if on {
-		e.buffer.savedSeq, e.buffer.modified = -1, true
+		e.savedSeq, e.modified = -1, true
 	} else {
-		e.buffer.markSaved()
+		e.markSaved()
 	}
 }
 
 // BufferNum is the current buffer's number, as bufnr().
-func (e *Engine) BufferNum() int { return e.buffer.num }
+func (e *Engine) BufferNum() int { return e.num }
 
 // emptyBuffer makes a new buffer with no text and no name.
 func (e *Engine) emptyBuffer() *buffer { return e.newBuffer(text.New(nil, text.Author{})) }
@@ -53,7 +53,7 @@ func (e *Engine) gotoBuffer(b *buffer, force, edit bool) error {
 // canLeave reports why the current buffer can't be abandoned: without 'hidden', a changed buffer
 // isn't left unless force is set.
 func (e *Engine) canLeave(force bool) error {
-	if !force && !e.opts.Hidden && e.buffer.modified && !e.shownElsewhere(e.buffer) {
+	if !force && !e.opts.Hidden && e.modified && !e.shownElsewhere(e.buffer) {
 		return errUnsaved.with()
 	}
 	return nil
@@ -73,9 +73,9 @@ func (e *Engine) showBuffer(b *buffer, force bool) error {
 		defer e.unload(old)
 	}
 	old.last = e.cur
-	e.window.alt = old
-	e.window.ed = e.ed.Open(b.text)
-	e.window.buf = b
+	e.alt = old
+	e.ed = e.ed.Open(b.text)
+	e.buf = b
 	e.buffer = b
 	b.unloaded = false
 	e.cur = b.last
@@ -138,7 +138,7 @@ func (e *Engine) bufferByNum(n int) *buffer {
 
 // alternate is CTRL-^: the alternate buffer, or with a count that buffer.
 func (e *Engine) alternate(count int) {
-	b := e.window.alt
+	b := e.alt
 	if count > 0 {
 		if b = e.bufferByNum(count); b == nil {
 			e.notify(errBufferNotFound.with(count))
@@ -215,7 +215,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 		b := e.emptyBuffer()
 		b.name = args
 		if name == "balt" {
-			e.window.alt = b
+			e.alt = b
 		}
 	case "bdelete", "bwipeout", "bunload":
 		b := e.buffer
@@ -239,13 +239,13 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 	case "edit":
 		switch args {
 		case "#":
-			if e.window.alt == nil {
+			if e.alt == nil {
 				return errNoAlternate.with()
 			}
-			if e.window.alt.name == "" {
+			if e.alt.name == "" {
 				return errNoFileName.with()
 			}
-			return e.editBuffer(e.window.alt, bang)
+			return e.editBuffer(e.alt, bang)
 		case "":
 			if bang {
 				return e.reload()
@@ -263,7 +263,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 			switch {
 			case b == e.buffer:
 				flags = "%a"
-			case b == e.window.alt:
+			case b == e.alt:
 				flags = "#h"
 			case e.visible(b):
 				flags = " a"
@@ -276,13 +276,13 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 		}
 	case "file":
 		if args != "" {
-			if e.buffer.name != "" {
+			if e.name != "" {
 				old := e.emptyBuffer()
-				old.name, old.unlisted = e.buffer.name, true
-				e.window.alt = old
+				old.name, old.unlisted = e.name, true
+				e.alt = old
 			}
-			e.buffer.name = args
-			e.buffer.notEdited = true
+			e.name = args
+			e.notEdited = true
 		}
 		e.fileInfo()
 	}
@@ -293,7 +293,7 @@ func (e *Engine) exBuffer(name, args string, r exRange, bang bool) error {
 func (e *Engine) unloadCurrent() {
 	v := e.view()
 	e.do(e.newGroup(), text.Replace{Range: text.Range{Start: 0, End: v.s.Len()}})
-	e.buffer.markSaved()
+	e.markSaved()
 	e.cur = Pos{}
 }
 
@@ -336,10 +336,10 @@ func (e *Engine) findBuffer(arg string, r exRange) (*buffer, error) {
 		return nil, nil
 	}
 	if arg == "#" {
-		if e.window.alt == nil {
+		if e.alt == nil {
 			return nil, errNoAlternate.with()
 		}
-		return e.window.alt, nil
+		return e.alt, nil
 	}
 	if arg == "%" {
 		return e.buffer, nil

@@ -136,20 +136,20 @@ func New(opts Options) (*Host, error) {
 	if err := w.parts(); err != nil {
 		return nil, err
 	}
-	if err := w.logsPart.Restore(w.store); err != nil {
+	if err := w.Restore(w.store); err != nil {
 		return nil, err
 	}
 	strip := persist.NewStrip(opts.Home, opts.Log)
 	if err := strip.Restore(w.store); err != nil {
 		w.log.Warn("the tab strip as it was left", "err", err)
 	}
-	w.statsPart.RestoreUsage()
+	w.RestoreUsage()
 	w.store.Subscribe(core.Filter{}, w.logsPart.Record)
 	strip.Track(w.store)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
-	w.reposPart.EmitChanged()
-	w.runPart.RulesChanged()
+	w.EmitChanged()
+	w.RulesChanged()
 	w.resumeHandedOver()
 	return w, nil
 }
@@ -193,20 +193,20 @@ func (w *Host) parts() error {
 	if w.reposPart, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
 		return err
 	}
-	w.workPart = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.reposPart.Resolve, AddRepo: w.reposPart.Add,
-		Repos: w.reposPart.Repos, ReposDir: w.reposPart.Dir, NotesFiles: w.notesFiles})
+	w.workPart = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.Resolve, AddRepo: w.Add,
+		Repos: w.Repos, ReposDir: w.Dir, NotesFiles: w.notesFiles})
 	w.runPart = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
 		MCPServers:   w.mcpServers,
 		Exec:         w.opts.Exec,
 		Sandbox:      w.opts.Sandbox,
 		Packs:        w.opts.Packs,
 		KeyWait:      w.opts.KeyWait,
-		Repos:        w.reposPart.Repos,
+		Repos:        w.Repos,
 		AddRepo:      w.AddRepo,
-		AccountOf:    w.statsPart.AccountOf,
+		AccountOf:    w.AccountOf,
 		Record:       w.statsPart.Record,
-		UsageSampled: w.statsPart.UsageSampled,
-		PROpen:       func(id core.SessionID, project, branch string) bool { return w.codePart.PROpen(id, project, branch) },
+		UsageSampled: w.UsageSampled,
+		PROpen:       func(id core.SessionID, project, branch string) bool { return w.PROpen(id, project, branch) },
 		RenameBranch: func(ctx context.Context, id core.SessionID, project, name string) error {
 			return w.ShipRename(ctx, hostapi.RenameReq{Session: id, Project: project, Name: name})
 		},
@@ -218,20 +218,20 @@ func (w *Host) parts() error {
 	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}
-	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, RunAwaitingKey: w.runPart.RunAwaitingKey, Wake: w.runPart.Wake,
+	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, RunAwaitingKey: w.RunAwaitingKey, Wake: w.Wake,
 		BranchRenamed: worktree.BranchRenamed})
 	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
 		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})
 	w.utilityPart = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
-		Tools: w.runPart.AppTools, SignedOut: w.runPart.SignedOut})
+		Tools: w.AppTools, SignedOut: w.SignedOut})
 	w.reviewsPart = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
 		Pack: func(name string) (agent.Pack, bool) {
 			if w.opts.Packs == nil {
 				return agent.Pack{}, false
 			}
-			return w.runPart.Pack(name)
+			return w.Pack(name)
 		},
-		Protected: w.runPart.Protected, SignedOut: w.runPart.SignedOut})
+		Protected: w.Protected, SignedOut: w.SignedOut})
 	return nil
 }
 
@@ -239,19 +239,19 @@ func (w *Host) parts() error {
 func (w *Host) sandboxDeps() sandboxhost.Deps {
 	return sandboxhost.Deps{Env: w.env, State: state{w},
 		RunAwaitingKey: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
-			return w.runPart.RunAwaitingKey(ctx, id, what, project, fn)
+			return w.RunAwaitingKey(ctx, id, what, project, fn)
 		},
-		Config:          func() sandbox.Config { return w.boxesPart.Config() },
+		Config:          func() sandbox.Config { return w.Config() },
 		Providers:       w.opts.Providers.List,
-		GatewayTools:    w.runPart.GatewayTools,
+		GatewayTools:    w.GatewayTools,
 		Factory:         w.opts.Sandbox,
-		Live:            func(id core.SessionID) hostapi.Sandbox { return w.runPart.Sandbox(id) },
-		Running:         func() []hostapi.Sandbox { return w.runPart.Sandboxes() },
-		Repos:           func() []core.Repo { return w.reposPart.Repos() },
+		Live:            func(id core.SessionID) hostapi.Sandbox { return w.Sandbox(id) },
+		Running:         func() []hostapi.Sandbox { return w.Sandboxes() },
+		Repos:           func() []core.Repo { return w.Repos() },
 		AddRepo:         w.AddRepo,
-		Note:            func(id core.SessionID, it core.Item) { w.runPart.AppendItem(id, it) },
-		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.runPart.SetAgent(id, fn) },
-		RestartWhenIdle: w.runPart.RestartWhenIdle}
+		Note:            func(id core.SessionID, it core.Item) { w.AppendItem(id, it) },
+		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.SetAgent(id, fn) },
+		RestartWhenIdle: w.RestartWhenIdle}
 }
 
 // settle puts back what the last process left running when it ended without handing over.
@@ -293,7 +293,7 @@ const closeWait = 5 * time.Second
 func (w *Host) waitGoing() {
 	done := make(chan struct{})
 	go func() {
-		w.reviewsPart.Wait()
+		w.Wait()
 		w.going.Wait()
 		close(done)
 	}()
@@ -316,7 +316,7 @@ func (w *Host) notesFiles() []string { return agent.NotesFiles(w.opts.Providers.
 // Busy names the host's work under way off its callers that will end on its own: agents starting, resumes,
 // notices. A test waits for none before it counts what that work does.
 func (w *Host) Busy() []string {
-	out := w.runPart.Starting()
+	out := w.Starting()
 	for _, j := range w.going.Running() {
 		if name, _, _ := strings.Cut(j, " ×"); !slices.Contains(lastingJobs, name) {
 			out = append(out, j)
@@ -368,7 +368,7 @@ func (s state) Mutate(id core.SessionID, fn func(se core.SessionState) error) er
 // this machine, the ones installed for its provider.
 func (w *Host) mcpServers(se core.SessionState) []agent.MCPServer {
 	if se.Agent.Sandboxed && w.boxesPart != nil {
-		return w.boxesPart.MCPServers()
+		return w.MCPServers()
 	}
 	if w.opts.Providers == nil {
 		return nil

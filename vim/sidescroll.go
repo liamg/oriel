@@ -4,7 +4,7 @@ package vim
 // column, kept on the cursor as 'sidescroll' and 'sidescrolloff' say, and moved by zl, zh, zL, zH, zs and ze.
 
 // Left is the current window's first screen column shown.
-func (e *Engine) Left() int { return e.window.left }
+func (e *Engine) Left() int { return e.left }
 
 // Left is the window's first screen column shown.
 func (p Pane) Left() int { return p.w.left }

@@ -15,7 +15,7 @@ func (w *Host) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error) 
 	if err := w.codePart.ShipRename(ctx, r); err != nil {
 		return err
 	}
-	w.runPart.WriteNotes(r.Session)
+	w.WriteNotes(r.Session)
 	return nil
 }
 
@@ -27,18 +27,18 @@ func (w *Host) NewBranch(ctx context.Context, r hostapi.NewBranchReq) (_ string,
 	if err != nil {
 		return "", err
 	}
-	w.runPart.WriteNotes(r.Session)
+	w.WriteNotes(r.Session)
 	return name, nil
 }
 
 // ShipSwitchBack puts a project's worktree back on the session's branch for it.
 func (w *Host) ShipSwitchBack(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipSwitchBack", &err)
-	if err := w.workPart.SwitchBack(ctx, r.Session, r.Project); err != nil {
+	if err := w.SwitchBack(ctx, r.Session, r.Project); err != nil {
 		return err
 	}
 	if p, ok := w.projectOf(r); ok {
-		w.runPart.Note(r.Session, fmt.Sprintf("The user switched %s back to this session's branch %s. Stay on it.", p.Name, p.Branch))
+		w.Note(r.Session, fmt.Sprintf("The user switched %s back to this session's branch %s. Stay on it.", p.Name, p.Branch))
 	}
 	return nil
 }
@@ -46,12 +46,12 @@ func (w *Host) ShipSwitchBack(ctx context.Context, r hostapi.ShipRef) (err error
 // ShipAdopt makes the branch a project's worktree is on the session's branch for it, when that's safe.
 func (w *Host) ShipAdopt(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipAdopt", &err)
-	if err := w.workPart.Adopt(ctx, r.Session, r.Project); err != nil {
+	if err := w.Adopt(ctx, r.Session, r.Project); err != nil {
 		return err
 	}
-	w.runPart.WriteNotes(r.Session)
+	w.WriteNotes(r.Session)
 	if p, ok := w.projectOf(r); ok {
-		w.runPart.Note(r.Session, fmt.Sprintf("The user made %s this session's branch for %s: Oriel pushes it now.", p.Branch, p.Name))
+		w.Note(r.Session, fmt.Sprintf("The user made %s this session's branch for %s: Oriel pushes it now.", p.Branch, p.Name))
 	}
 	return nil
 }

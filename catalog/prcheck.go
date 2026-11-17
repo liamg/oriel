@@ -435,7 +435,7 @@ func capabilityDiff(m plugin.Manifest, old *plugin.Manifest, oldVersion string) 
 		case len(r.Added) > 0:
 			mark = " **(more: " + strings.Join(r.Added, ", ") + ")**"
 		}
-		fmt.Fprintf(&s, "- `%s`%s: %s\n", strings.Join(r.Grant.Lock(), "`, `"), mark, r.Explain)
+		fmt.Fprintf(&s, "- `%s`%s: %s\n", strings.Join(r.Lock(), "`, `"), mark, r.Explain)
 	}
 	for _, r := range c.Removed {
 		fmt.Fprintf(&s, "- ~~`%s`~~ no longer asked for\n", r)

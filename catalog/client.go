@@ -304,7 +304,7 @@ func (r *RegistryResolver) Resolve(ctx context.Context, e Entry, locked *Locked)
 		sum = locked.Archives[r.Platform]
 	}
 	if sum != "" {
-		res.Locked.Archives = map[string]string{r.Platform: sum}
+		res.Archives = map[string]string{r.Platform: sum}
 		res.Facts = append(res.Facts, plugin.Fact{Label: "sha256", Value: strings.TrimPrefix(sum, "sha256:")[:min(12, len(strings.TrimPrefix(sum, "sha256:")))] + " ok"})
 	}
 	id, version, tag, repo := e.ID, res.Version, pick.tag, f.RepoName()

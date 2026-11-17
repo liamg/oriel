@@ -616,7 +616,7 @@ func (x *PRReview) watch(id core.SessionID) {
 
 // reviewing says the agent is still on its review: its request open, and it hasn't answered it and stopped.
 func reviewing(se core.SessionState, t core.Thread) bool {
-	return t.Open() && !(t.AgentAnswered() && !se.Agent.Working)
+	return t.Open() && (!t.AgentAnswered() || se.Agent.Working)
 }
 
 // hear tells the user when someone other than them answers on the review's threads on its code host: the author, as a

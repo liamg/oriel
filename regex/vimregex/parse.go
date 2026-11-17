@@ -203,7 +203,7 @@ func (p *parser) peek() int {
 		}
 	case '*':
 		p.cur = '*'
-		if p.magic >= magicOn && !p.atStart && !(p.prevAtStart && p.prev == mg('^')) &&
+		if p.magic >= magicOn && !p.atStart && (!p.prevAtStart || p.prev != mg('^')) &&
 			(p.afterSlash > 0 || (p.prev != mg('(') && p.prev != mg('&') && p.prev != mg('|'))) {
 			p.cur = mg('*')
 		}

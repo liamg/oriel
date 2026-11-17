@@ -135,7 +135,7 @@ func TrimCache(dir string, max int64) (int, int64) {
 	var entries []entry
 	var total int64
 	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !(strings.HasSuffix(p, "-a") || strings.HasSuffix(p, "-d")) {
+		if err != nil || d.IsDir() || (!strings.HasSuffix(p, "-a") && !strings.HasSuffix(p, "-d")) {
 			return nil
 		}
 		info, err := d.Info()

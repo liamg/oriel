@@ -283,7 +283,7 @@ func (e *Engine) BufferList() []BufferInfo {
 			line = e.cur.Line
 		}
 		out = append(out, BufferInfo{Num: b.num, Name: b.displayName(), Modified: b.modified, Current: b == e.buffer,
-			Alternate: b == e.window.alt, File: b.name != "", Line: line})
+			Alternate: b == e.alt, File: b.name != "", Line: line})
 	}
 	return out
 }

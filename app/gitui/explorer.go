@@ -564,8 +564,8 @@ func (e *Explorer) activate(id string, sc gitx.Scope) {
 func (e *Explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.TreeItem {
 	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().Root(), changedOnly: e.changedOnly, hidden: e.hidden, layout: e.layout(),
 		statusCol: e.cols.status}
-	switch {
-	case sc == gitx.Uncommitted:
+	switch sc {
+	case gitx.Uncommitted:
 		if f, ok := e.selectedFile(); ok && f.Area != gitx.Untracked && f.Code != 'D' {
 			e.hunks.mu.Lock()
 			e.hunks.show(f.Path)

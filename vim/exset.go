@@ -44,7 +44,7 @@ func (e *Engine) exSet(args string) error {
 		}
 		switch name {
 		case "fdm", "foldmethod":
-			s := &e.window.fold
+			s := &e.fold
 			if val != s.method {
 				s.method = val
 				if val != "manual" {
@@ -57,13 +57,13 @@ func (e *Engine) exSet(args string) error {
 			if err != nil {
 				return errNumberRequired.with(a)
 			}
-			e.window.fold.level = n
-			e.window.fold.manual = true
-			e.window.fold.applyLevel()
+			e.fold.level = n
+			e.fold.manual = true
+			e.fold.applyLevel()
 		case "fen", "foldenable":
-			e.window.fold.enable = on
+			e.fold.enable = on
 		case "mod", "modified":
-			e.buffer.modified = on
+			e.modified = on
 		default:
 			return errUnknownOption.with(name)
 		}

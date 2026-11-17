@@ -60,7 +60,7 @@ func (e *Engine) Mark(r rune) (Pos, bool) {
 		}
 		return *e.pcmark, true
 	case '"':
-		return e.buffer.last, true
+		return e.last, true
 	}
 	return e.markPos(r)
 }

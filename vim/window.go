@@ -91,7 +91,7 @@ func (e *Engine) only() {
 		e.notify(msgOnlyWindow.with())
 		return
 	}
-	e.layout.Only(WindowID(e.window.id))
+	e.layout.Only(WindowID(e.id))
 	e.windows = []*window{e.window}
 	e.prevWin = nil
 }
@@ -159,7 +159,7 @@ func (e *Engine) windowCmd(k string, count int) {
 	case "x", "<C-x>":
 		e.exchange(count)
 	case "^", "<C-^>", "<C-6>":
-		alt := e.window.alt
+		alt := e.alt
 		if count > 0 {
 			alt = e.bufferByNum(count)
 		}
@@ -175,7 +175,7 @@ func (e *Engine) windowCmd(k string, count int) {
 
 // exchange swaps the current window with the next one in its row or column (the count-th with a count).
 func (e *Engine) exchange(count int) {
-	if id, ok := e.layout.Exchange(WindowID(e.window.id), count); ok {
+	if id, ok := e.layout.Exchange(WindowID(e.id), count); ok {
 		// The cursor stays in the same place on the screen: the window now there.
 		e.enter(e.windowByID(id))
 	}
@@ -183,7 +183,7 @@ func (e *Engine) exchange(count int) {
 
 // rotate moves the windows of the current row or column one place down or right (R: up or left).
 func (e *Engine) rotate(back bool, count int) {
-	if !e.layout.Rotate(WindowID(e.window.id), back, count) {
+	if !e.layout.Rotate(WindowID(e.id), back, count) {
 		e.notify(errRotateSplit.with())
 	}
 }
@@ -202,9 +202,10 @@ func (e *Engine) Buffers() string {
 	var out []string
 	for _, b := range e.listed() {
 		s := strconv.Itoa(b.num)
-		if b == e.buffer {
+		switch b {
+		case e.buffer:
 			s += "%"
-		} else if b == e.window.alt {
+		case e.alt:
 			s += "#"
 		}
 		out = append(out, s)

@@ -70,7 +70,7 @@ func TestWhichKeyShowsGlyphs(t *testing.T) {
 	s.Registry().Keymap(registry.Keymap{Mode: "n", Keys: "<Space>q<C-r>", Command: "test.noop", Desc: "redo the thing"})
 	s.Registry().Keymap(registry.Keymap{Mode: "n", Keys: "<Space>q<CR>", Command: "test.noop", Desc: "enter the thing"})
 	keys := registry.NewResolver(s.Registry())
-	s.Headless.SetKeys(keys)
+	s.SetKeys(keys)
 	start := s.Now
 	keys.Feed([]string{"n", "global"}, " ", start)
 	keys.Feed([]string{"n", "global"}, "q", start)

@@ -109,7 +109,7 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 
 // findRoot is the root of the work tree dir is in, and the window's tree set up for it.
 func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
-	g.gitTree.reset(dir, g.now())
+	g.reset(dir, g.now())
 	g.ready = true
 	if dir == "" {
 		return "", false
@@ -122,18 +122,18 @@ func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
 // Its changes redraw and go to the WatchWindow watchers.
 func (g *Git) hold(root string) {
 	if !g.unpark(root) {
-		g.gitTree.found(root)
+		g.found(root)
 	}
 	g.unwatch = g.status.Watch(func(paths []string) {
 		g.h.Redraw()
 		g.notify(root, paths)
 	})
-	g.gitTree.subscribe()
+	g.subscribe()
 }
 
 // release lets go of the window's work tree.
 func (g *Git) release() {
-	g.gitTree.unsubscribe()
+	g.unsubscribe()
 	if g.unwatch != nil {
 		g.unwatch()
 		g.unwatch = nil
@@ -146,9 +146,9 @@ func (g *Git) follow() {
 	g.park()
 	g.release()
 	dir := g.h.Here().Project
-	g.gitTree.reset(dir, g.now())
+	g.reset(dir, g.now())
 	if dir == "" {
-		g.gitTree.ready = true
+		g.ready = true
 		g.notify("", nil)
 		return
 	}
@@ -447,7 +447,7 @@ func (g *Git) state() *gitx.State {
 	if g == nil {
 		return nil
 	}
-	return g.gitTree.State()
+	return g.State()
 }
 
 func (g *Git) load() widget.LoadState {
@@ -461,14 +461,14 @@ func (g *Git) root() string {
 	if g == nil {
 		return ""
 	}
-	return g.gitTree.Root()
+	return g.Root()
 }
 
 func (g *Git) rel(p string) string {
 	if g == nil {
 		return p
 	}
-	return g.gitTree.Rel(p)
+	return g.Rel(p)
 }
 
 func (g *Git) now() time.Time { return kit.WindowNow(g.h) }

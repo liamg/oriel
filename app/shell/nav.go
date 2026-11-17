@@ -121,10 +121,10 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 			registry.Call(func() error { p.Close(); return nil })
 		}
 	}
-	switch {
-	case to.session == from.session:
+	switch to.session {
+	case from.session:
 		kit.RunCalls(x.h, then)
-	case to.session == "":
+	case "":
 		if err := x.h.Apply(core.SessionFocused{}); err != nil {
 			return err
 		}
