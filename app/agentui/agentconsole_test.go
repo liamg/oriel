@@ -312,9 +312,10 @@ func TestConsoleScrollsBack(t *testing.T) {
 		se, _ := r.Store.Session(r.Session)
 		return slices.ContainsFunc(se.Snapshot().Transcript, func(it core.Item) bool { return it.ID == "m40" })
 	})
+	// the loop has taken it, and draws it next
 	if err := r.Do(func() error { return nil }); err != nil {
 		t.Fatal(err)
-	} // the loop has taken it, and draws it next
+	}
 	r.Latest("the start still in view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 }
 

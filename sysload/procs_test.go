@@ -63,9 +63,10 @@ func TestSleeper(t *testing.T) {
 		t.Skip("only a child of TestFamily")
 	}
 	fmt.Println(sleeperReady)
+	// until its parent is done with it
 	if _, err := io.Copy(io.Discard, os.Stdin); err != nil {
 		t.Fatal(err)
-	} // until its parent is done with it
+	}
 }
 
 // A child started with a session's variable is in this process's family, with its command line and session.

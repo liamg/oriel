@@ -346,16 +346,18 @@ func TestDidChangeOutOfOrder(t *testing.T) {
 	c, s, buf, path := open(t, `{"textDocumentSync":2}`, "abc")
 	first := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("1")})
 	second := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("2")})
+	// arrives first: it doesn't follow what was sent, so the whole text goes
 	if err := c.DidChange(path, second); err != nil {
 		t.Fatal(err)
-	} // arrives first: it doesn't follow what was sent, so the whole text goes
+	}
 	p := decode[protocol.DidChangeTextDocumentParams](t, s.last("textDocument/didChange"))
 	if len(p.ContentChanges) != 1 || p.ContentChanges[0].Range != nil || p.ContentChanges[0].Text != "21abc" {
 		t.Errorf("out of order change = %+v", p.ContentChanges)
 	}
+	// older than what was sent: dropped
 	if err := c.DidChange(path, first); err != nil {
 		t.Fatal(err)
-	} // older than what was sent: dropped
+	}
 	third := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("3")})
 	if err := c.DidChange(path, third); err != nil {
 		t.Fatal(err)
@@ -558,9 +560,10 @@ func TestApplyEdit(t *testing.T) {
 	s := newServer(t, `{"positionEncoding":"utf-16"}`)
 	c := startClient(t, s, Options{OnApplyEdit: func(label string, e WorkspaceEdit) (bool, string) { got = e; return true, "" }})
 	path := filepath.Join(c.Root(), "a.txt")
+	// not open: read from disk to convert
 	if err := os.WriteFile(path, []byte("é𝄞x\n"), 0o644); err != nil {
 		t.Fatal(err)
-	} // not open: read from disk to convert
+	}
 	var res protocol.ApplyWorkspaceEditResult
 	err := s.call("workspace/applyEdit", map[string]any{"edit": map[string]any{"documentChanges": []any{
 		map[string]any{"kind": "create", "uri": URI(filepath.Join(c.Root(), "new.txt"))},

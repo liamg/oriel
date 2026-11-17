@@ -151,9 +151,10 @@ func TestAStopSaysWho(t *testing.T) {
 	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
 	ctx := context.Background()
 	quits, _ := r.w.RunJob(ctx, j.Name)
+	// the agent's process ends by itself
 	if err := r.agent().Close(); err != nil {
 		t.Fatal(err)
-	} // the agent's process ends by itself
+	}
 	if got := hostapi.RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Live() })); got.StoppedBy != core.StoppedByAgent {
 		t.Errorf("an agent that quit: %+v", got)
 	}
