@@ -21,6 +21,9 @@ var pureCalls = []string{
 	"theme.semanticOn", "strings.NewReplacer",
 	"template.Must", "time.Date", "time.Duration", "json.RawMessage", "slices.Clone", "append", "float32", "reflect.TypeFor",
 	"strings.Replace", "strings.ReplaceAll", "strings.Repeat", "strings.Join", "fmt.Sprintf", "filepath.Join",
+	"netip.MustParsePrefix", "fs.Sub", "image.Rect",
+	// packages' own constructors of values nothing changes
+	"vim.infoKind", "mine.set",
 }
 
 func isTest(f File) bool { return strings.HasSuffix(f.Path, "_test.go") }
@@ -188,13 +191,18 @@ func callName(e ast.Expr) string {
 	return ""
 }
 
-// conversion says c converts a value to a basic type, or calls a func literal at once to build a table.
+// conversion says c converts a value to a basic type or a slice of one ([]byte("…")), or calls a func literal at once
+// to build a table.
 func conversion(c *ast.CallExpr) bool {
 	if _, ok := c.Fun.(*ast.FuncLit); ok && len(c.Args) == 0 {
 		return true
 	}
 	if len(c.Args) != 1 {
 		return false
+	}
+	if at, ok := c.Fun.(*ast.ArrayType); ok && at.Len == nil {
+		id, ok := at.Elt.(*ast.Ident)
+		return ok && basic[id.Name]
 	}
 	id, ok := c.Fun.(*ast.Ident)
 	return ok && basic[id.Name]
