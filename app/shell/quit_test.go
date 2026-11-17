@@ -195,7 +195,8 @@ func TestQuitDialogSnapshot(t *testing.T) {
 	s.Run("quit", nil)
 	// The dialog is of the quit under way: its deadline is a timer Quiet would otherwise run.
 	s.Midway(func() {
-		s.Until("the quit dialog", func() bool { return strings.Contains(s.Text(), "Round half-even") })
+		// The session's name is on the home page too: wait for it in the dialog, which comes once the quit has looked.
+		s.Until("the quit dialog", func() bool { return apptest.HasAll(s.Text(), "QUITTING ORIEL", "Sweep stale deps") })
 		s.Advance(18 * time.Second)
 		s.Frame()
 		s.Lint("the quit dialog")
