@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -210,7 +211,7 @@ func mirroredBlockers(se core.SessionState, project string, pr int) []registry.M
 	if n == 0 {
 		return nil
 	}
-	return []registry.MergeBlocker{{Kind: registry.BlockThreads, Count: n, Text: kit.Counted(n, "reviewer comment") + " unresolved"}}
+	return []registry.MergeBlocker{{Kind: registry.BlockThreads, Count: n, Text: words.Counted(n, "reviewer comment") + " unresolved"}}
 }
 
 // sessionBlockers are what Oriel knows stands in a PR's way: its checks, the PRs before it in the session's merge
@@ -227,9 +228,9 @@ func (x *Ship) sessionBlockers(se core.SessionState, s shipRead) []registry.Merg
 		}
 	}
 	if failing > 0 {
-		out = append(out, registry.MergeBlocker{Kind: registry.BlockChecks, Count: failing, Text: kit.Counted(failing, "check") + " failing"})
+		out = append(out, registry.MergeBlocker{Kind: registry.BlockChecks, Count: failing, Text: words.Counted(failing, "check") + " failing"})
 	} else if running > 0 {
-		out = append(out, registry.MergeBlocker{Kind: registry.BlockChecks, Count: running, Text: kit.Counted(running, "check") + " still running"})
+		out = append(out, registry.MergeBlocker{Kind: registry.BlockChecks, Count: running, Text: words.Counted(running, "check") + " still running"})
 	}
 	for _, o := range x.report(se.ID).ships {
 		if o.Project == s.Project {
@@ -246,7 +247,7 @@ func (x *Ship) sessionBlockers(se core.SessionState, s shipRead) []registry.Merg
 		}
 	}
 	if open > 0 {
-		out = append(out, registry.MergeBlocker{Kind: registry.BlockOrielThreads, Count: open, Text: kit.Counted(open, "Oriel thread") + " open on the session"})
+		out = append(out, registry.MergeBlocker{Kind: registry.BlockOrielThreads, Count: open, Text: words.Counted(open, "Oriel thread") + " open on the session"})
 	}
 	return out
 }
@@ -257,7 +258,7 @@ func mergeLead(bs []registry.MergeBlocker) string {
 	for _, k := range []struct{ kind, what string }{{registry.BlockThreads, "reviewer comment"}, {registry.BlockOrielThreads, "Oriel thread"}} {
 		for _, b := range bs {
 			if b.Kind == k.kind && b.Count > 0 {
-				parts = append(parts, kit.Counted(b.Count, k.what))
+				parts = append(parts, words.Counted(b.Count, k.what))
 			}
 		}
 	}
@@ -267,7 +268,7 @@ func mergeLead(bs []registry.MergeBlocker) string {
 	case len(bs) == 0:
 		return "Nothing stands in the way."
 	}
-	return kit.Counted(len(bs), "thing") + " to weigh first"
+	return words.Counted(len(bs), "thing") + " to weigh first"
 }
 
 // confirmMerge merges at the head the dialog read, unless the host would refuse.

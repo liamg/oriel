@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
@@ -337,7 +338,7 @@ func (x *quitDialog) stoppingBody(c *ui.Ctx, r *quitDrain, width float32) {
 			left++
 		}
 	}
-	widget.Wrap(c, "t", fmt.Sprintf("Stopping %s. They come back when Oriel opens again.", kit.Counted(left, "agent")), width,
+	widget.Wrap(c, "t", fmt.Sprintf("Stopping %s. They come back when Oriel opens again.", words.Counted(left, "agent")), width,
 		widget.UIFont(12.5, th.C(theme.Fg)))
 	c.Column("agents", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 		for _, id := range ids {

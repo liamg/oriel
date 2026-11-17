@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -234,7 +235,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		On: func(registry.EditorWindow) bool { return h.Layout().Find(layout.ViewRef{ID: ChangedUnitsView}) != nil },
 		Note: func(w registry.EditorWindow) string {
 			hunks, n := x.changedIn(w.Path)
-			return fmt.Sprintf("%d changed %s · %d %s", n, kit.Plural(n, "unit", "units"), hunks, kit.Plural(hunks, "hunk", "hunks"))
+			return fmt.Sprintf("%d changed %s · %d %s", n, words.Plural(n, "unit", "units"), hunks, words.Plural(hunks, "hunk", "hunks"))
 		}}))
 	return nil
 }
@@ -440,7 +441,7 @@ func (x *Plugin) explainRange(path string, buf *text.Buffer, r text.Range, kind,
 	a, z := spanLines(snap, r)
 	n := z - a + 1
 	if subject == "" {
-		subject = fmt.Sprintf("selection · %d %s", n, kit.Plural(n, "line", "lines"))
+		subject = fmt.Sprintf("selection · %d %s", n, words.Plural(n, "line", "lines"))
 	}
 	x.openCard(path, buf, units, around, &r, subject)
 	last := &x.card.crumbs[len(x.card.crumbs)-1]

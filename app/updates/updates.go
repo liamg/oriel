@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -678,8 +679,8 @@ func (x *Update) drainSteps(c *ui.Ctx, d services.Drain, to string) {
 		for _, se := range busy {
 			names = append(names, kit.Label(se))
 		}
-		updateStepRow(c, "waiting", updateLine{text: fmt.Sprintf("Waiting for %s to finish %s, at most %s more: %s", kit.Counted(len(busy), "session"),
-			kit.Plural(len(busy), "its turn", "their turns"), left, strings.Join(names, ", ")), state: lineRunning})
+		updateStepRow(c, "waiting", updateLine{text: fmt.Sprintf("Waiting for %s to finish %s, at most %s more: %s", words.Counted(len(busy), "session"),
+			words.Plural(len(busy), "its turn", "their turns"), left, strings.Join(names, ", ")), state: lineRunning})
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -509,7 +510,7 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 				why = fmt.Sprintf("%d of %d blocked", g.blocked, g.n)
 			}
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
-			c.Text("n", kit.Counted(g.n, "connection"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("n", words.Counted(g.n, "connection"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			c.Text("bytes", "↑"+kit.Bytes(g.up)+" ↓"+kit.Bytes(g.down), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			widget.Ago(c, "last", g.last, widget.AgoOpts{Text: widget.MonoFont(10.5, th.C(theme.FgFaint))})
 			act(c, g.host, g.port, g.allowed)

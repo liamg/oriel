@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/pathx"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -644,7 +645,7 @@ func preview(r registry.Contributions, se core.SessionState, t core.Thread) stri
 	return core.Summary(c.Body)
 }
 
-func msgs(n int) string { return fmt.Sprintf("%d %s", n, kit.Plural(n, "msg", "msgs")) }
+func msgs(n int) string { return fmt.Sprintf("%d %s", n, words.Plural(n, "msg", "msgs")) }
 
 // avatar is a comment's author as a small square of initials.
 func avatar(c *ui.Ctx, key any, cm core.Comment) {

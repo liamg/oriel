@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -118,7 +119,7 @@ func (x *Machine) panel(c *ui.Ctx) {
 				c.Text("w", fmt.Sprintf("%d cores", m.Cores), widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("s", kit.Counted(len(st.Sessions), "session"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("s", words.Counted(len(st.Sessions), "session"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		})
 		c.Row("load", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Column("kv", ui.Style{Gap: 4}, func(c *ui.Ctx) {

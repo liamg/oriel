@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
@@ -617,7 +618,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 		}
 		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: widget.MonoFont(11, th.C(theme.FgMuted))}, parts...)
 	})
-	fields := [][2]string{{"size", fmt.Sprintf("%s  +%d −%d", kit.Counted(q.Files, "file"), q.Adds, q.Dels)}}
+	fields := [][2]string{{"size", fmt.Sprintf("%s  +%d −%d", words.Counted(q.Files, "file"), q.Adds, q.Dels)}}
 	if name, path := x.checkout(*q); name != "" {
 		fields = append(fields, [2]string{"checkout", name + "  " + path})
 	} else {

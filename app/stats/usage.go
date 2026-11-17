@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -355,7 +356,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 			c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(kit.TStatsHead)}, func(c *ui.Ctx) {
 				c.Text("h", "USAGE", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 					Color: th.C(theme.Fg)})
-				c.Text("m", fmt.Sprintf("plan windows · %s · %s", kit.Counted(len(st.Usage), "account"),
+				c.Text("m", fmt.Sprintf("plan windows · %s · %s", words.Counted(len(st.Usage), "account"),
 					now.In(x.Loc).Format("Mon Jan 2 15:04")), widget.MonoFont(11, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				widget.Ago(c, "read", read, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Now: now})
@@ -453,7 +454,7 @@ func (x *Plugin) providerLine(u core.ProviderUsage) string {
 	}
 	parts := models
 	if n > 0 {
-		parts = append(parts, kit.Counted(n, "session"))
+		parts = append(parts, words.Counted(n, "session"))
 	}
 	return strings.Join(parts, " · ")
 }

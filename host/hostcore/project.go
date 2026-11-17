@@ -33,14 +33,6 @@ func TrimWords(s string, n int) string {
 	return strings.Join(parts[:n], "-")
 }
 
-// Plural is "s" unless n is 1.
-func Plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}
-
 // WhoAmI is the first part of a branch name: the user's first name from git, or their login.
 func WhoAmI(ctx context.Context) string {
 	if f := strings.Fields(gitx.UserName(ctx)); len(f) > 0 {

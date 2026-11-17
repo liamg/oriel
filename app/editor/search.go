@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -388,7 +389,7 @@ func (p *Search) build(c *ui.Ctx) {
 						widget.BusyOpts{Label: "Searching with " + engine, Size: 10.5, Help: "files/search"})
 					return
 				default:
-					status = fmt.Sprintf("%s · %d in %d %s", engine, n, files, kit.Plural(files, "file", "files"))
+					status = fmt.Sprintf("%s · %d in %d %s", engine, n, files, words.Plural(files, "file", "files"))
 				}
 				tok := theme.FgFaint
 				if err != nil {
@@ -565,7 +566,7 @@ func (p *Search) showPlan(ctx registry.Ctx, q search.Query, repl string, plan []
 		count += f.Count
 	}
 	return p.show(ctx, &editPlan{
-		title:  fmt.Sprintf("%d %s in %d %s", count, kit.Plural(count, "replacement", "replacements"), len(plan), kit.Plural(len(plan), "file", "files")),
+		title:  fmt.Sprintf("%d %s in %d %s", count, words.Plural(count, "replacement", "replacements"), len(plan), words.Plural(len(plan), "file", "files")),
 		detail: fmt.Sprintf("/%s/ → %s", q.Pattern, repl), edits: plan, dir: q.Dir,
 		after: func() {
 			p.mu.Lock()

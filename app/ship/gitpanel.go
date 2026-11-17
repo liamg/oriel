@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -90,7 +90,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 				Color: th.C(theme.Fg)})
 		})
 	}
-	parts := []string{"→ " + cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")}
+	parts := []string{"→ " + cmp.Or(s.Base, "?"), words.Counted(s.Commits, "commit")}
 	if s.Behind > 0 {
 		parts = append(parts, fmt.Sprintf("%d behind", s.Behind))
 	}

@@ -10,11 +10,11 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/integ/gitlab"
 	"github.com/liamg/oriel/integ/gitlab/gitlabtest"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/registry"
@@ -182,7 +182,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	}
 	lead := "2 reviewer comments unresolved"
 	if own > 0 {
-		lead = fmt.Sprintf("2 reviewer comments, %s unresolved", kit.Counted(own, "Oriel thread"))
+		lead = fmt.Sprintf("2 reviewer comments, %s unresolved", words.Counted(own, "Oriel thread"))
 	}
 	s.Run("ship.merge", registry.Args{"project": p})
 	s.Until("the warning", func() bool { // the code host is Lua, which answers on frames: no waiting on the read

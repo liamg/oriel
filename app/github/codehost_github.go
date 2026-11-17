@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -513,7 +514,7 @@ func (x *GitHubHost) blockers(ctx context.Context, r registry.CodeRepo, pr regis
 	var out []registry.MergeBlocker
 	if m.Unresolved > 0 {
 		out = append(out, registry.MergeBlocker{Kind: registry.BlockThreads, Count: m.Unresolved,
-			Text: kit.Counted(m.Unresolved, "reviewer comment") + " unresolved", URL: pr.URL + "/files"})
+			Text: words.Counted(m.Unresolved, "reviewer comment") + " unresolved", URL: pr.URL + "/files"})
 	}
 	if len(m.Changes) > 0 {
 		out = append(out, registry.MergeBlocker{Kind: registry.BlockChanges, Count: len(m.Changes),

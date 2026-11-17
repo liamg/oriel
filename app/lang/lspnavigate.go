@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -473,7 +474,7 @@ func (x *LSP) previewEdit(title, detail string, e lsp.WorkspaceEdit) error {
 		return fmt.Errorf("nothing to change")
 	}
 	return x.h.Run(context.Background(), "edits.preview", registry.Args{"title": title,
-		"detail": fmt.Sprintf("%d %s in %d %s · %s", count, kit.Plural(count, "change", "changes"), len(plan), kit.Plural(len(plan), "file", "files"), detail),
+		"detail": fmt.Sprintf("%d %s in %d %s · %s", count, words.Plural(count, "change", "changes"), len(plan), words.Plural(len(plan), "file", "files"), detail),
 		"edits":  plan})
 }
 
@@ -676,7 +677,7 @@ func (x *LSP) substituteHints(h plugin.Host) {
 			return ""
 		}
 		n := len(regexp.MustCompile(`\b`+regexp.QuoteMeta(old)+`\b`).FindAllIndex(window(x.h).Text.Snapshot().Bytes(), -1))
-		return fmt.Sprintf("%d %s · ⇥ use LSP rename", n, kit.Plural(n, "match", "matches"))
+		return fmt.Sprintf("%d %s · ⇥ use LSP rename", n, words.Plural(n, "match", "matches"))
 	}}))
 	x.Add(h.Contribute(registry.KeyLayer{Name: "lsp.substitute", Mode: "lsp.substitute", Active: func() bool { _, _, ok := x.substitution(); return ok }}))
 	x.Add(h.Keymap(registry.Keymap{Mode: "lsp.substitute", Keys: "<Tab>", Command: "lsp.rename.substitute", Desc: "Use LSP rename"}))

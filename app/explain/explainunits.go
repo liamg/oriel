@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -522,7 +523,7 @@ func (x *Plugin) panelView(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", "CHANGED UNITS", monoCaps(c, theme.FgFaint))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprintf("%d %s · tree-sitter", n, kit.Plural(n, "unit", "units")), widget.MonoTok(c, 10, theme.FgGhost))
+			c.Text("n", fmt.Sprintf("%d %s · tree-sitter", n, words.Plural(n, "unit", "units")), widget.MonoTok(c, 10, theme.FgGhost))
 		})
 		if n > 0 {
 			c.Row("walk", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 6}}, func(c *ui.Ctx) {

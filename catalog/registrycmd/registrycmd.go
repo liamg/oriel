@@ -19,6 +19,7 @@ import (
 
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/internal/gomod"
+	"github.com/liamg/oriel/internal/words"
 )
 
 // Usage is the commands' usage.
@@ -77,7 +78,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 			}
 		}
 		if len(rep.Problems) > 0 {
-			return fmt.Errorf("%d %s", len(rep.Problems), plural(len(rep.Problems), "problem", "problems"))
+			return fmt.Errorf("%d %s", len(rep.Problems), words.Plural(len(rep.Problems), "problem", "problems"))
 		}
 		return nil
 	case "index":
@@ -151,11 +152,4 @@ func readRegistryKey(file string) (ed25519.PrivateKey, error) {
 		return nil, errors.New("the registry key isn't an ed25519 seed in hex, as keygen writes it")
 	}
 	return ed25519.NewKeyFromSeed(seed), nil
-}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return many
 }

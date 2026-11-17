@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -120,9 +121,9 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 		if n := lineCount(it.Output); n > 0 {
 			switch {
 			case verb == "Search" || verb == "Find":
-				summary = append(summary, fmt.Sprintf("%d %s", n, kit.Plural(n, "hit", "hits")))
+				summary = append(summary, fmt.Sprintf("%d %s", n, words.Plural(n, "hit", "hits")))
 			default:
-				summary = append(summary, fmt.Sprintf("%d %s", n, kit.Plural(n, "line", "lines")))
+				summary = append(summary, fmt.Sprintf("%d %s", n, words.Plural(n, "line", "lines")))
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/agentkit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -98,7 +99,7 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Help: "agent/console#running"}, func(c *ui.Ctx) {
 			c.Text("k", "RUNNING", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprintf("%d %s · left running by the last turn", len(ps), kit.Plural(len(ps), "process", "processes")),
+			c.Text("n", fmt.Sprintf("%d %s · left running by the last turn", len(ps), words.Plural(len(ps), "process", "processes")),
 				widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for i, t := range ps {

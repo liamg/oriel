@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -51,7 +52,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 			c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
 				if done && full.Request.Author != "" {
 					c.Text("who", fmt.Sprintf("%s wants to merge %s → %s · %s  +%d −%d", full.Request.Author, cmp.Or(full.Head, "?"), cmp.Or(full.Base, "?"),
-						kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), widget.MonoFont(11, th.C(theme.FgMuted)))
+						words.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), widget.MonoFont(11, th.C(theme.FgMuted)))
 				}
 				x.progress(c, se)
 				x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
@@ -126,7 +127,7 @@ func (x *PRReview) pageBanner(c *ui.Ctx, se core.SessionState, f *reviewForm, fu
 			x.run("session.end", registry.Args{"id": string(se.ID), "how": "archive"})
 		})
 	case f.moved.To != "":
-		x.banner(c, fmt.Sprintf("Fetched %s since the review read it.", kit.Counted(f.moved.Commits, "new commit")), "Ask the agent to review them", func() {
+		x.banner(c, fmt.Sprintf("Fetched %s since the review read it.", words.Counted(f.moved.Commits, "new commit")), "Ask the agent to review them", func() {
 			x.run("review.pr.recheck", registry.Args{"id": string(se.ID)})
 		})
 	case done && full.Commit != "" && p.Commit != "" && full.Commit != p.Commit:
@@ -244,7 +245,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 	reviewCard(c, "review", "YOUR REVIEW", ui.Flex(1), func(c *ui.Ctx) {
 		c.Row("state", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-				text := fmt.Sprintf("%s · %d of %d triaged · %d to post", kit.Counted(len(items), "comment"), decided, len(items), kept)
+				text := fmt.Sprintf("%s · %d of %d triaged · %d to post", words.Counted(len(items), "comment"), decided, len(items), kept)
 				if len(items) == 0 {
 					text = "No comments yet: the agent's and the AI review's land here as they're made, and yours (gc in the diff)."
 				}
@@ -270,7 +271,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 			Lines: 6, MinLines: 3, Help: prReviewHelp})
 		c.Row("verdicts", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-				c.Text("n", fmt.Sprintf("%s on lines, posted to %s with your verdict", kit.Counted(kept, "comment"), src.Label()), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("n", fmt.Sprintf("%s on lines, posted to %s with your verdict", words.Counted(kept, "comment"), src.Label()), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			})
 			empty := strings.TrimSpace(f.body) == "" && kept == 0
 			suggested := suggestedVerdict(items)
@@ -492,7 +493,7 @@ func (x *PRReview) sent(c *ui.Ctx, se core.SessionState, width float32) {
 			c.Column("sent", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 				for i, r := range reviewDraft(se).Sent {
 					widget.AgoLine(c, i, widget.AgoLineOpts{Text: widget.MonoFont(10.5, th.C(theme.FgMuted))},
-						widget.AgoPart{Text: sentWord(r.Verdict)}, widget.AgoPart{Text: kit.Counted(r.Comments, "comment")}, widget.AgoPart{At: r.At})
+						widget.AgoPart{Text: sentWord(r.Verdict)}, widget.AgoPart{Text: words.Counted(r.Comments, "comment")}, widget.AgoPart{At: r.At})
 				}
 			})
 			if widget.Button(c, "archive", "Archive this review", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {

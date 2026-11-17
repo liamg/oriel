@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -154,13 +155,13 @@ func (t Ticket) Facts() []string {
 	}
 	out := []string{addr}
 	if n := len(t.Attachments); n > 0 {
-		out = append(out, plural(n, "attachment"))
+		out = append(out, words.Counted(n, "attachment"))
 	}
 	if t.PR != nil {
 		out = append(out, fmt.Sprintf("linked PR #%d", t.PR.Number))
 	}
 	if n := len(t.Comments); n > 0 {
-		out = append(out, plural(n, "comment"))
+		out = append(out, words.Counted(n, "comment"))
 	}
 	return out
 }
@@ -299,11 +300,4 @@ func (c Client) LinkPR(ctx context.Context, key, url string, number int, title s
 		return fmt.Errorf("linear refused to link the PR to %s", t.Key)
 	}
 	return nil
-}
-
-func plural(n int, what string) string {
-	if n == 1 {
-		return "1 " + what
-	}
-	return fmt.Sprintf("%d %ss", n, what)
 }

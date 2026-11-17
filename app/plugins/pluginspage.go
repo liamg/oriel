@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -293,7 +294,7 @@ func contributes(r registry.Registry, id string, m plugin.Manifest) []string {
 		}
 	}
 	if n > 0 {
-		out = append(out, kit.Counted(n, "command"))
+		out = append(out, words.Counted(n, "command"))
 	}
 	n = 0
 	for _, o := range r.Options().Specs() {
@@ -302,7 +303,7 @@ func contributes(r registry.Registry, id string, m plugin.Manifest) []string {
 		}
 	}
 	if n > 0 {
-		out = append(out, kit.Counted(n, "option"))
+		out = append(out, words.Counted(n, "option"))
 	}
 	for _, kind := range []string{"agent.tool", "agent.pack", "inbox.source", "hud.indicator", "ticket.tracker", "start.entry", "font", "icon"} {
 		n := 0
@@ -384,7 +385,7 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 				if waits > 0 {
 					lazy = fmt.Sprintf("%d waiting for first use · ", waits)
 				}
-				c.Text("t", fmt.Sprintf("%d installed · %d running · %s%s", len(rows), loaded, lazy, kit.Counted(ups, "update")), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("t", fmt.Sprintf("%d installed · %d running · %s%s", len(rows), loaded, lazy, words.Counted(ups, "update")), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("file", "~/.config/oriel/settings.toml", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			})

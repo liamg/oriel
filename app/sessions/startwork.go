@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -240,7 +241,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	th := c.Theme()
 	c.Column("threads", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 		gone, carried := threadCounts(se)
-		widget.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, kit.Plural(gone, "goes", "go"), carried))
+		widget.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, words.Plural(gone, "goes", "go"), carried))
 		agentkit.ToggleRow(c, "clear", "Clear the plan's threads", &d.clear, agentkit.ToggleRowOpts{Note: "resolved go · open and deferred go into the prompt", Help: startWorkHelp})
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {

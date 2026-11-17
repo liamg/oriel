@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
@@ -75,9 +76,9 @@ func (x *PRReview) unsent(se core.SessionState) string {
 	summary := strings.TrimSpace(d.Summary) != "" && !isAutoSummary(d.Summary)
 	switch {
 	case n > 0 && summary:
-		return fmt.Sprintf("Your review isn't sent: %s and its summary, lost.", kit.Counted(n, "comment"))
+		return fmt.Sprintf("Your review isn't sent: %s and its summary, lost.", words.Counted(n, "comment"))
 	case n > 0:
-		return fmt.Sprintf("Your review isn't sent: %s, lost.", kit.Counted(n, "comment"))
+		return fmt.Sprintf("Your review isn't sent: %s, lost.", words.Counted(n, "comment"))
 	case summary:
 		return "Your review isn't sent: its summary, lost."
 	}

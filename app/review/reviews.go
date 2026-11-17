@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -558,11 +559,11 @@ func reviewNote(r registry.ReviewRequest) string {
 	}
 	switch {
 	case r.State == registry.ReviewReRequested && r.Since > 0:
-		parts = append(parts, kit.Counted(r.Since, "commit")+" since yours")
+		parts = append(parts, words.Counted(r.Since, "commit")+" since yours")
 	case !r.Waiting() && r.Since == 0:
 		parts = append(parts, "no commits since")
 	case !r.Waiting():
-		parts = append(parts, kit.Counted(r.Since, "commit")+" since")
+		parts = append(parts, words.Counted(r.Since, "commit")+" since")
 	}
 	return strings.Join(parts, " · ")
 }

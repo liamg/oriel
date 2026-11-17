@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent"
@@ -364,7 +365,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 10}, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("k", "PLAN DOCS", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprintf("%d %s", len(docs), kit.Plural(len(docs), "file", "files")), widget.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("n", fmt.Sprintf("%d %s", len(docs), words.Plural(len(docs), "file", "files")), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		widget.Rule(c, "rule")
 		if len(docs) == 0 && !loading {
