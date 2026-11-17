@@ -82,7 +82,7 @@ func (x *Worktrees) Adopt(ctx context.Context, id core.SessionID, project string
 
 // ownedProject is a project with a branch the session owns, in a worktree of its own.
 func (x *Worktrees) ownedProject(ctx context.Context, id core.SessionID, project string) (core.SessionState, core.Project, gitx.Repo, error) {
-	se, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, id, project)
+	se, p, repo, err := hostcore.ProjectRepo(ctx, x.env.Git, x.st, x.deps.Kinds, id, project)
 	if err != nil {
 		return se, p, repo, err
 	}

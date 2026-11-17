@@ -40,9 +40,9 @@ func (x *Ships) PROpen(id core.SessionID, project, branch string) bool {
 // ShipBranch is the branch a project's PR is raised from: the session's own, refused when the worktree is off it.
 func (x *Ships) ShipBranch(ctx context.Context, r hostapi.ShipRef) (_ string, err error) {
 	defer x.env.Recover("ShipBranch", &err)
-	_, p, _, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
+	_, p, _, err := hostcore.ProjectRepo(ctx, x.env.Git, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return "", err
 	}
-	return hostcore.OwnBranch(p)
+	return hostcore.OwnBranch(x.env.Git, p)
 }

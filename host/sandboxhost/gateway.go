@@ -52,7 +52,7 @@ func (g gatewayHost) contributed(t hostapi.GatewayTool) func(context.Context, js
 		if err != nil {
 			return mcp.TextResult(err.Error(), true), nil
 		}
-		env, err := sandbox.GitEnv(p.Dir)
+		env, err := g.b.d.Env.Git.GitEnv(p.Dir)
 		if err != nil {
 			return mcp.TextResult(err.Error(), true), nil
 		}
@@ -132,10 +132,10 @@ func (g gatewayHost) Commit(ctx context.Context, project, message string, files 
 	if len(files) > 0 {
 		add = append([]string{"add", "--"}, files...)
 	}
-	if _, err := sandbox.Git(p.Dir, add...); err != nil {
+	if _, err := g.b.d.Env.Git.Git(p.Dir, add...); err != nil {
 		return 0, err
 	}
-	staged, err := sandbox.Git(p.Dir, "diff", "--cached", "--name-only")
+	staged, err := g.b.d.Env.Git.Git(p.Dir, "diff", "--cached", "--name-only")
 	if err != nil {
 		return 0, err
 	}
@@ -154,7 +154,7 @@ func (g gatewayHost) Push(ctx context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	branch, err := hostcore.OwnBranch(p)
+	branch, err := hostcore.OwnBranch(g.b.d.Env.Git, p)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (g gatewayHost) Pull(ctx context.Context, project string) error {
 	if err != nil {
 		return err
 	}
-	branch, err := hostcore.OwnBranch(p)
+	branch, err := hostcore.OwnBranch(g.b.d.Env.Git, p)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (g gatewayHost) Fetch(ctx context.Context, project string) error {
 // keyed runs host git in a project for the gateway, asking for a security-key touch while it waits on one.
 func (g gatewayHost) keyed(ctx context.Context, p core.Project, what string, args ...string) error {
 	return g.b.d.RunAwaitingKey(ctx, g.b.id, what, p.Name, func(ctx context.Context) error {
-		_, err := sandbox.GitContext(ctx, p.Dir, args...)
+		_, err := g.b.d.Env.Git.GitContext(ctx, p.Dir, args...)
 		return err
 	})
 }
@@ -194,7 +194,7 @@ func (g gatewayHost) CreatePR(ctx context.Context, project, title, body string) 
 	if err != nil {
 		return "", err
 	}
-	branch, err := hostcore.OwnBranch(p)
+	branch, err := hostcore.OwnBranch(g.b.d.Env.Git, p)
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +223,7 @@ func (g gatewayHost) GH(ctx context.Context, project string, args ...string) (st
 	if err != nil {
 		return "", err
 	}
-	env, err := sandbox.GitEnv(p.Dir)
+	env, err := g.b.d.Env.Git.GitEnv(p.Dir)
 	if err != nil {
 		return "", err
 	}

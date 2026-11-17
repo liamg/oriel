@@ -135,7 +135,7 @@ func AnchorText(se core.SessionState, a *core.Anchor) string {
 }
 
 // ProjectRepo is a session's project and its git, guarded in a sandboxed workspace.
-func ProjectRepo(ctx context.Context, st State, kinds Kinds, id core.SessionID, project string) (core.SessionState, core.Project, gitx.Repo, error) {
+func ProjectRepo(ctx context.Context, g *sandbox.Guard, st State, kinds Kinds, id core.SessionID, project string) (core.SessionState, core.Project, gitx.Repo, error) {
 	se, err := st.Session(id)
 	if err != nil {
 		return se, core.Project{}, gitx.Repo{}, err
@@ -145,7 +145,7 @@ func ProjectRepo(ctx context.Context, st State, kinds Kinds, id core.SessionID, 
 		return se, core.Project{}, gitx.Repo{}, fmt.Errorf("session %s has no project %q", id, project)
 	}
 	p := se.Projects[i]
-	env, err := sandbox.GitEnv(p.Dir)
+	env, err := g.GitEnv(p.Dir)
 	if err != nil {
 		return se, p, gitx.Repo{}, err
 	}
@@ -168,11 +168,11 @@ func DirectBranch(ctx context.Context, p core.Project, repo gitx.Repo) core.Proj
 
 // OwnBranch refuses a push, pull or PR unless the worktree is on the session's branch for it: the sandbox can
 // switch branches, and "push this workspace" must not push anything else.
-func OwnBranch(p core.Project) (string, error) {
+func OwnBranch(g *sandbox.Guard, p core.Project) (string, error) {
 	if p.Branch == "" || p.Detached || p.ReadOnly {
 		return "", fmt.Errorf("%s has no branch of this session's to push", p.Name)
 	}
-	out, err := sandbox.Git(p.Dir, "rev-parse", "--abbrev-ref", "HEAD")
+	out, err := g.Git(p.Dir, "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		return "", err
 	}

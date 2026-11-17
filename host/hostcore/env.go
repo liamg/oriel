@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sysload"
 )
 
@@ -24,6 +25,9 @@ type Env struct {
 	Work   *Jobs // what Go starts, which the host waits for as it closes
 	// SessionIDs makes a new session's id; NewSessionID if nil.
 	SessionIDs func() string
+	// Git vets sandboxed workspaces' git config before host git runs there, remembering each verdict; nil vets
+	// every time.
+	Git *sandbox.Guard
 }
 
 // NewSessionID is a new session's id, from SessionIDs or NewSessionID.

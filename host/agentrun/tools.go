@@ -296,7 +296,7 @@ func (h *session) inDiff(ctx context.Context, se core.SessionState, a *core.Anch
 	if p, ok := se.Primary(); ok && project == "" {
 		project = p.Name
 	}
-	_, p, repo, err := hostcore.ProjectRepo(ctx, h.r.st, h.r.deps.Kinds, h.id, project)
+	_, p, repo, err := hostcore.ProjectRepo(ctx, h.r.env.Git, h.r.st, h.r.deps.Kinds, h.id, project)
 	if err != nil {
 		return err
 	}
@@ -480,7 +480,7 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 				project = p.Name
 			}
 		}
-		_, p, repo, err := hostcore.ProjectRepo(ctx, h.r.st, h.r.deps.Kinds, h.id, project)
+		_, p, repo, err := hostcore.ProjectRepo(ctx, h.r.env.Git, h.r.st, h.r.deps.Kinds, h.id, project)
 		if err != nil {
 			return "", err
 		}

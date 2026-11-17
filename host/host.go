@@ -131,7 +131,7 @@ func New(opts Options) (*Host, error) {
 		return nil, err
 	}
 	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, closed: make(chan struct{})}
-	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Clock: opts.Clock, Closed: w.closed, Work: &w.going, SessionIDs: opts.SessionIDs}
+	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Clock: opts.Clock, Closed: w.closed, Work: &w.going, SessionIDs: opts.SessionIDs, Git: &sandbox.Guard{}}
 	if err := w.parts(); err != nil {
 		return nil, err
 	}
