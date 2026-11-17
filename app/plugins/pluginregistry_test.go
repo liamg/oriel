@@ -28,12 +28,19 @@ type fakeRegistry struct {
 
 	mu    sync.Mutex
 	files map[string][]byte
+	tags  map[string][]fakeTag // by repo: what /repos/<repo>/tags lists
+}
+
+// fakeTag is a plugin repo's tag on the fake GitHub, and when its commit was made.
+type fakeTag struct {
+	name, commit string
+	at           time.Time
 }
 
 func newFakeRegistry(t *testing.T) *fakeRegistry {
 	isolate.Test(t)
 	_, key, _ := ed25519.GenerateKey(rand.Reader)
-	r := &fakeRegistry{t: t, key: key, files: map[string][]byte{}}
+	r := &fakeRegistry{t: t, key: key, files: map[string][]byte{}, tags: map[string][]fakeTag{}}
 	r.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		r.mu.Lock()
 		defer r.mu.Unlock()
@@ -45,7 +52,20 @@ func newFakeRegistry(t *testing.T) *fakeRegistry {
 		case strings.HasPrefix(req.URL.Path, "/asset/"):
 			w.Write(r.files[strings.TrimPrefix(req.URL.Path, "/asset/")])
 		case strings.HasSuffix(req.URL.Path, "/tags"):
-			w.Write([]byte("[]"))
+			out := []map[string]any{}
+			for _, tag := range r.tags[strings.TrimSuffix(strings.TrimPrefix(req.URL.Path, "/repos/"), "/tags")] {
+				out = append(out, map[string]any{"name": tag.name, "commit": map[string]string{"sha": tag.commit}})
+			}
+			json.NewEncoder(w).Encode(out)
+		case strings.Contains(req.URL.Path, "/commits/"):
+			repo, sha, _ := strings.Cut(strings.TrimPrefix(req.URL.Path, "/repos/"), "/commits/")
+			for _, tag := range r.tags[repo] {
+				if tag.commit == sha {
+					json.NewEncoder(w).Encode(map[string]any{"commit": map[string]any{"committer": map[string]string{"date": tag.at.Format(time.RFC3339)}}})
+					return
+				}
+			}
+			http.NotFound(w, req)
 		default:
 			http.NotFound(w, req)
 		}
@@ -135,6 +155,43 @@ func TestInstallFromTheRegistryTab(t *testing.T) {
 	card, _ := s.InboxCard("plugins", "revoked:acme/hi")
 	if !strings.Contains(card.Detail, "leaked tokens") {
 		t.Errorf("the card doesn't say why: %q", card.Detail)
+	}
+}
+
+// A trusted author's plugin installs from its tags on GitHub, not reviewed versions: the newest tag whose commit has
+// waited out registry.trusted_hold, pinned to that commit; a tag made since isn't offered yet.
+func TestInstallATrustedAuthorsTag(t *testing.T) {
+	repo, commit := pluginRepo(t, map[string]string{"oriel.toml": "id = \"acme/hi\"\nversion = \"1.0.0\"\ndescription = \"Says hi\"\n", "init.lua": hiPlugin})
+	fromGitHub(t, "acme/oriel-hi", repo)
+	reg := newFakeRegistry(t)
+	reg.publish(map[string]string{"acme/hi": "repo = \"github.com/acme/oriel-hi\"\ndescription = \"Says hi\"\ntrusted = true\nsince = \"2026-01-01\"\n"})
+	reg.mu.Lock()
+	// The hold is measured on the window's clock: v1.0.0's commit is a month old, v1.1.0's an hour.
+	now := time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC)
+	reg.tags["acme/oriel-hi"] = []fakeTag{{"v1.0.0", commit, now.AddDate(0, -1, 0)},
+		{"v1.1.0", "0123456789abcdef0123456789abcdef01234567", now.Add(-time.Hour)}}
+	reg.mu.Unlock()
+
+	data := rig.WritableAfter(t, t.TempDir())
+	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
+		cfg.DataDir, cfg.GitHub = data, &catalog.GitHub{Base: reg.srv.URL}
+	}})
+	s.Now = now
+	settings := filepath.Join(s.ConfigDir, "settings.toml")
+	rig.WriteFile(t, settings, "[registry]\nkeys = { \""+catalog.DefaultRepo+"\" = \""+catalog.FormatKey(reg.key.Public().(ed25519.PublicKey))+
+		"\" }\n\n[plugins]\n\"acme/hi\" = \"*\"\n")
+	s.Run("settings.reload", nil)
+	if !s.Headless.Until(30*time.Second, func() bool { return s.HasCommand("Hi") }) {
+		t.Fatalf("not loaded; notices: %v", s.Notices())
+	}
+	lock := rig.ReadFile(t, filepath.Join(s.ConfigDir, catalog.LockFile))
+	for _, want := range []string{`badge = "trusted"`, `version = "1.0.0"`, commit} {
+		if !strings.Contains(lock, want) {
+			t.Errorf("the lockfile doesn't have %s:\n%s", want, lock)
+		}
+	}
+	if strings.Contains(lock, "1.1.0") {
+		t.Errorf("a tag inside the hold was installed:\n%s", lock)
 	}
 }
 
