@@ -331,3 +331,43 @@ func TestLuaCodeHostCLIConfig(t *testing.T) {
 		t.Errorf("a path out of the config directory: %v", err)
 	}
 }
+
+// A Lua code host reads a checkout's pull request template and code owners, as the Raise PR tab asks for them.
+func TestLuaCodeHostTemplateAndOwners(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	src := `oriel.code.host{ name = "forge", sites = { { host = "forge.dev" } },
+  template = function(dir, done) done({ body = "## Why\n", file = dir .. "/.forge/pr.md" }) end,
+  owners = function(dir, files, done) done({ "ada:" .. files[1] }) end }`
+	s.Lua(src)
+	h, ok := registry.HostByName(s.Registry(), "forge")
+	if !ok || h.Template == nil || h.Owners == nil {
+		t.Fatalf("the host didn't register its template and owners: %+v", h)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	type answer struct {
+		t   registry.PRTemplate
+		who []string
+		err error
+	}
+	got := make(chan answer, 1)
+	go func() {
+		var a answer
+		if a.t, a.err = h.Template(ctx, "/src/api"); a.err == nil {
+			a.who, a.err = h.Owners(ctx, "/src/api", []string{"limiter.go"})
+		}
+		got <- a
+	}()
+	var a answer
+	s.Until("the answers", func() bool {
+		select {
+		case a = <-got:
+			return true
+		default:
+			return false
+		}
+	})
+	if a.err != nil || a.t.Body != "## Why\n" || a.t.File != "/src/api/.forge/pr.md" || len(a.who) != 1 || a.who[0] != "ada:limiter.go" {
+		t.Errorf("template %+v, owners %q, err %v", a.t, a.who, a.err)
+	}
+}

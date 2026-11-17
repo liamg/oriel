@@ -131,12 +131,12 @@ func prDefaults(s shipRead) (title, body string) {
 	}
 	first := s.First
 	if first.Body == "" {
-		return first.Subject, s.Template
+		return first.Subject, s.Template.Body
 	}
-	if s.Template == "" {
+	if s.Template.Body == "" {
 		return first.Subject, first.Body
 	}
-	return first.Subject, first.Body + "\n\n" + s.Template
+	return first.Subject, first.Body + "\n\n" + s.Template.Body
 }
 
 // reviewersOf are who a project's PR asks: the CODEOWNERS of its change and those added, less those taken off.

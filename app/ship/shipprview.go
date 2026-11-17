@@ -54,7 +54,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 		}
 		shipCard(c, false, func(c *ui.Ctx) {
 			stepTitle(c, sentence(w.Long), note)
-			if s.Template != "" {
+			if s.Template.Body != "" {
 				widget.Chip(c, "tmpl", "template filled", th.C(tShipTodo), "git/ship#raise")
 			}
 		}, func(c *ui.Ctx) {

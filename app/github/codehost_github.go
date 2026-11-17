@@ -60,7 +60,8 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 		CLIConfig: registry.CLIConfig{Path: "gh/hosts.yml"},
 		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
-		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve}))
+		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve,
+		Template: githubTemplate, Owners: githubOwners}))
 	x.Add(h.Option(registry.OptionSpec{Name: trustedOrgsOption, Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
 		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
 	x.Add(h.Option(registry.OptionSpec{Name: trustedUsersOption, Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -338,6 +339,17 @@ func githubCheckout(_ context.Context, _ registry.Site, url string) (registry.PR
 		return registry.PRCheckout{}, err
 	}
 	return registry.PRCheckout{Remote: repo.String(), Ref: fmt.Sprintf("pull/%d/head", n)}, nil
+}
+
+// githubTemplate is the checkout's pull request template, in .github/, its root or docs/.
+func githubTemplate(_ context.Context, dir string) (registry.PRTemplate, error) {
+	body, file := gh.Template(dir)
+	return registry.PRTemplate{Body: body, File: file}, nil
+}
+
+// githubOwners are the code owners CODEOWNERS names for files.
+func githubOwners(_ context.Context, dir string, files []string) ([]string, error) {
+	return gh.Owners(dir, files), nil
 }
 
 // CheckOf is a GitHub check as a code host tells it.

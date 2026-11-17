@@ -55,8 +55,8 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 					{Hash: "7be0d13", Subject: "test(api): table-test the 429 path"}},
 				CommitDraft: host.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
 					"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
-				PRDraft:  host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
-				Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}}},
+				PRDraft: host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"}},
+				Template: registry.PRTemplate{Body: "## What\n\n## Why\n", File: ".github/pull_request_template.md"}, Owners: []string{"acme/platform-team", "jkowalski"}},
 			{CodeHost: hub, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
 				Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 					Origin: "https://github.com/acme/web-dashboard.git", Commits: 3, Pushed: true, Synced: now.Add(-6 * time.Minute), Head: "c3f1a9e0b7d24e6f"},

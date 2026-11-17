@@ -329,7 +329,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		if !f.edited && !s.PR.Open() && !s.PRDraft.Empty() && s.PRDraft.By != "" {
 			draftChip(c, s.PRDraft)
 		}
-		if s.Template != "" {
+		if s.Template.Body != "" {
 			widget.Chip(c, "tmpl", "template filled", th.C(theme.FgMuted), "git/ship#raise")
 		}
 	})
@@ -337,8 +337,8 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		c.Row("tabs", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Segmented(c, "mode", []string{"WRITE", "PREVIEW"}, &f.tab, widget.SegmentedOpts{Label: "Body", Help: "git/ship#raise"})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if s.TemplateFile != "" {
-				c.Text("file", s.TemplateFile, widget.MonoFont(10, th.C(theme.FgFaint)))
+			if s.Template.File != "" {
+				c.Text("file", s.Template.File, widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			if widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Ghost: true, Help: "git/ship#drafts", Disabled: !x.h.Available("ship.redraft", nil)}) {
 				x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "pr"})

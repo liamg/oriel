@@ -53,9 +53,8 @@ type Ship struct {
 	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
 	CommitDraft  Draft    `json:"commitDraft,omitzero"`
 	PRDraft      Draft    `json:"prDraft,omitzero"`
-	Template     string   `json:"template,omitempty"` // the repo's pull request template
-	TemplateFile string   `json:"templateFile,omitempty"`
-	Owners       []string `json:"owners,omitempty"` // CODEOWNERS of what the branch changes
+	Dir          string   `json:"dir,omitempty"`     // the project's checkout
+	Changed      []string `json:"changed,omitempty"` // the files the branch changes since its base
 	GitError     string   `json:"gitError,omitempty"`
 	// Off is set while the worktree is on a branch other than the session's for it, which Oriel won't push.
 	Off *OffBranch `json:"off,omitempty"`
