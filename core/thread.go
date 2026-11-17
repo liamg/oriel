@@ -95,7 +95,7 @@ type HostThread struct {
 }
 
 // UnmarshalJSON reads where a mirrored thread lives, taking one older logs kept as GitHub's alone (no host, its
-// first comment's id as root) as GitHub's under its key.
+// first comment's id as root) as GitHub's under its key, and a verdict they kept in GitHub's words in a code host's.
 func (g *HostThread) UnmarshalJSON(b []byte) error {
 	type plain HostThread
 	var v struct {
@@ -106,6 +106,9 @@ func (g *HostThread) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*g = HostThread(v.plain)
+	if s, ok := githubVerdicts[g.State]; ok {
+		g.State = s
+	}
 	if g.Host == "" {
 		g.Host = "github"
 		if v.Root != 0 {
@@ -114,6 +117,9 @@ func (g *HostThread) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
+
+// githubVerdicts are GitHub's review states, as older logs kept them, in a code host's words.
+var githubVerdicts = map[string]string{"APPROVED": "approved", "CHANGES_REQUESTED": "changes", "COMMENTED": "commented"}
 
 // UnmarshalJSON reads a comment, taking the GitHub id older logs kept apart (githubId) as its HostID.
 func (c *Comment) UnmarshalJSON(b []byte) error {

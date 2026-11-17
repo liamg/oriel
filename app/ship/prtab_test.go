@@ -9,7 +9,6 @@ import (
 
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -144,7 +143,7 @@ func TestPROverviewSnapshot(t *testing.T) {
 		core.Thread{ID: "gh1", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
 			Anchor: &core.Anchor{Project: "web-dashboard", File: "src/search/backoff.ts", Line: 42},
 			Hosted: &core.HostThread{Host: "github", Project: "web-dashboard", Repo: "acme/web-dashboard", PR: 812, Key: "9001", Reviewer: "mchen",
-				State: gh.ReviewChangesRequested},
+				State: registry.ReviewChanges},
 			Comments: []core.Comment{{ID: "c1", Author: core.AuthorHost, Name: "mchen", Time: said,
 				Body: "Cap the wait: a `Retry-After` of an hour shouldn't freeze the page."}}},
 		core.Thread{ID: "gh2", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
