@@ -163,7 +163,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 			},
 		},
 	})
-	x.Add(h.Decorations("lsp", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
+	x.Add(h.Decoration("lsp", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.Add(registry.On(h, registry.Hook{Label: "tell the language server"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
 		x.mu.Lock()
 		d := x.docs[w.File]

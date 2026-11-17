@@ -141,9 +141,9 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.MenuItem{Name: "requests.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
-	x.Add(h.Decorations("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
-	x.Add(h.Decorations("threads.plus", uireg.KeyedDecorations{Key: x.threadsPlusKey, Make: x.threadsPlus}))
-	x.Add(h.Decorations("agent.edits", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
+	x.Add(h.Decoration("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
+	x.Add(h.Decoration("threads.plus", uireg.KeyedDecorations{Key: x.threadsPlusKey, Make: x.threadsPlus}))
+	x.Add(h.Decoration("agent.edits", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
 		se, ok := x.front()
 		if !ok {
 			return nil

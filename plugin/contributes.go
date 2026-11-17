@@ -165,7 +165,7 @@ func (f pluginFiles) texts(r registry.Registry, source string, c Contributes, ds
 	if err != nil {
 		return err
 	}
-	*ds = append(*ds, r.HelpPages(registry.HelpSource{FS: pages, Source: source}))
+	*ds = append(*ds, r.HelpPage(registry.HelpSource{FS: pages, Source: source}))
 	return nil
 }
 

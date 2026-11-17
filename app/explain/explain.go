@@ -219,7 +219,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused}))
-	x.Add(h.Decorations("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
+	x.Add(h.Decoration("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	for _, it := range []registry.MenuItem{
 		{Name: "explain.this", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this"},
 		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this", Args: registry.Args{"what": "review"}},

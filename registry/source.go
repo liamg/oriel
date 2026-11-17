@@ -34,7 +34,7 @@ func (s sourced) HelpPages(h HelpSource) Disposable {
 	if h.Source == "" {
 		h.Source = s.src
 	}
-	return s.Registry.HelpPages(h)
+	return s.Registry.HelpPage(h)
 }
 
 func (s sourced) Option(o OptionSpec) Disposable {

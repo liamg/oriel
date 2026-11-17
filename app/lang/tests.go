@@ -147,7 +147,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 			h.Do(x.scan) // off the loop: the hook only notes the move
 		}
 	}))
-	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
+	x.Add(h.Decoration("tests", uireg.DecorationFunc(x.decorations)))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}

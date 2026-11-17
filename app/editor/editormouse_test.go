@@ -214,7 +214,7 @@ func TestEditorClickBelowABlock(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("first\nsecond line\nthird\nfourth\nfifth\nsixth\n"), 0o644)
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
 	open(s, t, "a.txt")
-	s.Registry().Decorations("test.block", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration {
+	s.Registry().Decoration("test.block", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration {
 		return []uireg.Decoration{{Kind: uireg.Block, Line: 0, Node: ui.ColumnNode(ui.TextNode("a card"), ui.TextNode("of three"), ui.TextNode("lines"))}}
 	}))
 	s.Frame()

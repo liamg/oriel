@@ -41,7 +41,7 @@ func (p *Problems) Activate(_ context.Context, h plugin.Host) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "problems", "place": "dock", "edge": "bottom", "title": "Problems", "size": 260})
 	}}))
 	p.Add(h.View("problems", problemsView{p}))
-	p.Add(h.Decorations("diagnostics", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
+	p.Add(h.Decoration("diagnostics", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
 		_, gen := h.Diagnostics()
 		return gen
 	}, Make: p.decorations}))

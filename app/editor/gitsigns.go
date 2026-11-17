@@ -174,7 +174,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		k.Mode = "n"
 		g.Add(h.Keymap(k))
 	}
-	g.Add(h.Decorations("git.hunks", uireg.KeyedDecorations{Key: g.decorationKey, Make: g.decorations}))
+	g.Add(h.Decoration("git.hunks", uireg.KeyedDecorations{Key: g.decorationKey, Make: g.decorations}))
 	return nil
 }
 

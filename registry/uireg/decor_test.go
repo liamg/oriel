@@ -16,7 +16,7 @@ func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 	buf := text.New([]byte("a\nb\nc\n"), text.Author{})
 	asked, key := 0, 1
 	var refresh time.Time
-	r.Decorations("p", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any { return key }, Make: func(ctx uireg.DecorationCtx) []uireg.Decoration {
+	r.Decoration("p", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any { return key }, Make: func(ctx uireg.DecorationCtx) []uireg.Decoration {
 		asked++
 		if !refresh.IsZero() {
 			ctx.RefreshAt(refresh)
@@ -106,7 +106,7 @@ func TestAnEveryLineSignIsOnEachLine(t *testing.T) {
 	buf := text.New([]byte("a\nb\nc\n"), text.Author{})
 	plus := uireg.Decoration{Kind: uireg.Sign, Line: uireg.EveryLine, Text: "+", Command: "thread.new", Args: map[string]any{"file": "/f"},
 		Tooltip: "Comment on line {line}"}
-	r.Decorations("p", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration { return []uireg.Decoration{plus} }))
+	r.Decoration("p", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration { return []uireg.Decoration{plus} }))
 	ds := r.Decorate(uireg.DecorationCtx{Window: "1", Path: "/f", Buffer: buf, Snap: buf.Snapshot(), Top: 1, Bottom: 3})
 	if len(ds) != 1 || len(ds[uireg.EveryLine]) != 1 {
 		t.Fatalf("decorations %v, want the one sign under EveryLine", ds)
