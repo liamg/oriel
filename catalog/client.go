@@ -3,8 +3,6 @@ package catalog
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,6 +15,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/fetch"
 	"github.com/liamg/oriel/plugin"
 )
 
@@ -317,9 +316,8 @@ func (r *RegistryResolver) Resolve(ctx context.Context, e Entry, locked *Locked)
 		if err != nil {
 			return "", "", fmt.Errorf("%s %s's %s archive: %w", id, version, r.Platform, err)
 		}
-		got := sha256.Sum256(b)
-		have := "sha256:" + hex.EncodeToString(got[:])
-		if have != sum {
+		have := "sha256:" + fetch.Sum(b)
+		if !fetch.Matches(fetch.Sum(b), sum) {
 			return "", "", fmt.Errorf("%s %s's %s archive is %s, not %s as recorded", id, version, r.Platform, have, sum)
 		}
 		tmp, err := os.CreateTemp(r.Temp, "oriel-plugin-*.tar.gz")

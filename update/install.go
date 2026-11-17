@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +17,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/atomicfile"
+	"github.com/liamg/oriel/internal/fetch"
 )
 
 // maxArtifact bounds what an update can make this machine write.
@@ -149,19 +148,14 @@ func readChecked(r io.Reader, a Artifact) ([]byte, error) {
 	if a.Size <= 0 || a.Size > maxArtifact {
 		return nil, fmt.Errorf("%s: bad size %d", a.Name, a.Size)
 	}
-	h := sha256.New()
-	var buf bytes.Buffer
-	n, err := io.Copy(io.MultiWriter(&buf, h), io.LimitReader(r, a.Size+1))
+	b, err := fetch.Read(r, a.SHA256, a.Size)
+	if errors.Is(err, fetch.ErrMismatch) {
+		return nil, fmt.Errorf("%s: its sha256 doesn't match the manifest", a.Name)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", a.Name, err)
 	}
-	if n != a.Size {
-		return nil, fmt.Errorf("%s: got %d bytes, want %d", a.Name, n, a.Size)
-	}
-	if hex.EncodeToString(h.Sum(nil)) != a.SHA256 {
-		return nil, fmt.Errorf("%s: its sha256 doesn't match the manifest", a.Name)
-	}
-	return buf.Bytes(), nil
+	return b, nil
 }
 
 // untar unpacks a bundle's .tar.gz, whose paths are relative to the bundle, into dir.

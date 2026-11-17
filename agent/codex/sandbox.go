@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/release"
 	"github.com/liamg/oriel/internal/atomicfile"
+	"github.com/liamg/oriel/internal/fetch"
 	"github.com/liamg/oriel/toml"
 )
 
@@ -233,9 +234,9 @@ func (p *Provider) download(ctx context.Context, at agent.SandboxPlace, version,
 	if !ok || sum == "" {
 		return "", fmt.Errorf("codex %s's %s has no sha256 digest to check it against", version, name)
 	}
-	archive, err := release.Verified(ctx, p.HTTP, asset.URL, sum, maxArchive, "Codex")
+	archive, err := fetch.Verified(ctx, p.HTTP, asset.URL, sum, maxArchive)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("the Codex download: %w", err)
 	}
 	bin, err := untar(archive, "codex-"+triple)
 	if err != nil {
