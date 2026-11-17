@@ -186,10 +186,19 @@ func (e *Engine) Mode() string {
 	if e.visual != nil {
 		return map[rune]string{'v': "visual", 'V': "visual-line", 0x16: "visual-block"}[e.vmode]
 	}
-	if c, st := parse(e.pend, false); e.visual == nil && st == incomplete && c.op != "" {
+	if e.inOpPending() {
 		return "op-pending"
 	}
 	return "normal"
+}
+
+// inOpPending says an operator waits for its motion, in normal mode.
+func (e *Engine) inOpPending() bool {
+	if e.mode == Insert || e.mode == Replace || e.cmdline != nil || e.visual != nil {
+		return false
+	}
+	c, st := parse(e.pend, false)
+	return st == incomplete && c.op != ""
 }
 
 // Pending is the normal-mode command typed so far, for which-key and showcmd.

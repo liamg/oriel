@@ -91,120 +91,87 @@ func readNumber(s string, hex, bin, oct bool, maxlen int) (pre byte, n uint64, l
 	return pre, n, i, overflow
 }
 
-// addSub is vim's do_addsub() for CTRL-A (add) and CTRL-X on one line, following 'nrformats'. From normal
-// mode it finds the number at or after col; in Visual mode (visual set) it only looks in [col, end). It
-// returns where the changed text ends, or false when there was nothing to change.
-func (e *Engine) addSub(v *view, line, col, end int, amount uint64, sub, visual bool) (int, bool) {
+// nrFormats is 'nrformats': the kinds of number CTRL-A and CTRL-X read.
+type nrFormats struct{ hex, oct, bin, alpha, unsigned, blank bool }
+
+func (e *Engine) nrFormats() nrFormats {
 	nf := strings.Split(e.opts.NrFormats, ",")
-	dohex, dooct, dobin := slices.Contains(nf, "hex"), slices.Contains(nf, "octal"), slices.Contains(nf, "bin")
-	doalp, unsigned, blank := slices.Contains(nf, "alpha"), slices.Contains(nf, "unsigned"), slices.Contains(nf, "blank")
-	l := string(v.line(line))
-	at := func(i int) byte {
-		if i >= 0 && i < len(l) {
-			return l[i]
-		}
-		return 0
+	return nrFormats{hex: slices.Contains(nf, "hex"), oct: slices.Contains(nf, "octal"), bin: slices.Contains(nf, "bin"),
+		alpha: slices.Contains(nf, "alpha"), unsigned: slices.Contains(nf, "unsigned"), blank: slices.Contains(nf, "blank")}
+}
+
+// numberAt is where addSub looks: from col on the line, or in Visual mode only in [col, end).
+type numberAt struct {
+	line, col, end int
+	visual         bool
+}
+
+// byteAt reads l at i, with 0 off either end.
+func byteAt(l string, i int) byte {
+	if i >= 0 && i < len(l) {
+		return l[i]
 	}
-	if len(l) == 0 || col >= len(l) {
-		return 0, false
-	}
-	start := col
-	length := end - col
-	if !visual {
-		c := col
-		if dobin {
-			for c > 0 && isBin(at(c)) {
-				c--
-			}
-		}
-		if dohex {
-			for c > 0 && isHex(at(c)) {
-				c--
-			}
-		}
-		if dobin && dohex && !(c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1))) {
-			c = col
-			for c > 0 && isDec(at(c)) {
-				c--
-			}
-		}
-		if dohex && c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1)) ||
-			dobin && c > 0 && (at(c) == 'B' || at(c) == 'b') && at(c-1) == '0' && isBin(at(c+1)) {
+	return 0
+}
+
+// numberStart is where the number at or after col begins in normal mode, its hex or bin prefix included.
+func (nf nrFormats) numberStart(l string, col int) int {
+	at := func(i int) byte { return byteAt(l, i) }
+	c := col
+	if nf.bin {
+		for c > 0 && isBin(at(c)) {
 			c--
-		} else {
-			c = col
-			for c < len(l) && !isDec(at(c)) && !(doalp && isAlpha(at(c))) {
-				c++
-			}
-			for c > 0 && isDec(at(c-1)) && !(doalp && isAlpha(at(c))) {
-				c--
-			}
-		}
-		start = c
-	}
-	negative, wasPositive := false, true
-	if visual {
-		for start < len(l) && length > 0 && !isDec(at(start)) && !(doalp && isAlpha(at(start))) {
-			start++
-			length--
-		}
-		if length <= 0 {
-			return 0, false
-		}
-		if start > col && at(start-1) == '-' && !unsigned {
-			negative, wasPositive = true, false
 		}
 	}
-	first := at(start)
-	if !isDec(first) && !(doalp && isAlpha(first)) {
-		return 0, false
-	}
-	ls := v.s.LineStart(line)
-	if doalp && isAlpha(first) {
-		base := byte('a')
-		if first < 'a' {
-			base = 'A'
-		}
-		c := first
-		if sub {
-			if uint64(first-base) < amount {
-				c = base
-			} else {
-				c -= byte(amount)
-			}
-		} else {
-			if 25-uint64(first-base) < amount {
-				c = base + 25
-			} else {
-				c += byte(amount)
-			}
-		}
-		e.do(e.group, text.Replace{Range: text.Range{Start: ls + start, End: ls + start + 1}, Text: []byte{c}})
-		return start, true
-	}
-	blankUnsigned := false
-	if start > 0 && at(start-1) == '-' && !visual && !unsigned {
-		if blank && start >= 2 && at(start-2) != ' ' && at(start-2) != '\t' {
-			blankUnsigned = true
-		} else {
-			start--
-			negative = true
+	if nf.hex {
+		for c > 0 && isHex(at(c)) {
+			c--
 		}
 	}
-	maxlen := 0
-	if visual && e.vmodeAtOp != 'V' {
-		maxlen = length
-		if e.wantAtOp == maxCol {
-			maxlen = len(l) - start
+	if nf.bin && nf.hex && !(c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1))) {
+		c = col
+		for c > 0 && isDec(at(c)) {
+			c--
 		}
 	}
-	pre, n, length, overflow := readNumber(l[start:], dohex, dobin, dooct, maxlen)
-	if pre != 0 && negative {
-		start++
-		length--
-		negative = false
+	if nf.hex && c > 0 && (at(c) == 'X' || at(c) == 'x') && at(c-1) == '0' && isHex(at(c+1)) ||
+		nf.bin && c > 0 && (at(c) == 'B' || at(c) == 'b') && at(c-1) == '0' && isBin(at(c+1)) {
+		return c - 1
 	}
-	subtract := sub != negative
+	c = col
+	for c < len(l) && !nf.startsNumber(at(c)) {
+		c++
+	}
+	for c > 0 && isDec(at(c-1)) && !(nf.alpha && isAlpha(at(c))) {
+		c--
+	}
+	return c
+}
+
+// startsNumber says c can begin what CTRL-A changes: a digit, or a letter with alpha.
+func (nf nrFormats) startsNumber(c byte) bool { return isDec(c) || nf.alpha && isAlpha(c) }
+
+// stepLetter is CTRL-A or CTRL-X on a letter: it moves through the alphabet, stopping at either end.
+func stepLetter(first byte, amount uint64, sub bool) byte {
+	base := byte('a')
+	if first < 'a' {
+		base = 'A'
+	}
+	if sub {
+		if uint64(first-base) < amount {
+			return base
+		}
+		return first - byte(amount)
+	}
+	if 25-uint64(first-base) < amount {
+		return base + 25
+	}
+	return first + byte(amount)
+}
+
+// stepNumber adds amount to n, signed by negative, or subtracts it, as vim does: a decimal crosses zero by
+// flipping its sign, a prefixed one wraps, and an unsigned one stops at either end.
+func stepNumber(n, amount uint64, pre byte, negative, subtract, overflow, unsigned bool) (uint64, bool) {
 	old := n
 	if !overflow {
 		if subtract {
@@ -227,7 +194,7 @@ func (e *Engine) addSub(v *view, line, col, end int, amount uint64, sub, visual 
 			negative = false
 		}
 	}
-	if (unsigned || blankUnsigned) && negative {
+	if unsigned && negative {
 		if subtract {
 			n = 0
 		} else {
@@ -235,32 +202,23 @@ func (e *Engine) addSub(v *view, line, col, end int, amount uint64, sub, visual 
 		}
 		negative = false
 	}
-	if visual && !wasPositive && !negative && start > 0 {
-		start--
-		length++
-	}
-	todel := length
-	orig := l[start : start+todel]
-	if at(start) == '-' {
-		length--
-	}
-	upper := false
-	for i := 0; i < len(orig); i++ {
-		if c := orig[i]; isAlpha(c) {
-			upper = c < 'a'
-		}
-	}
+	return n, negative
+}
+
+// formatNumber writes n back with its sign and prefix, in its base and letter case, padded with zeros to width
+// when pad is set.
+func formatNumber(n uint64, pre byte, sign, upper, pad bool, width int) string {
 	var b strings.Builder
-	if negative && (!visual || wasPositive) {
+	if sign {
 		b.WriteByte('-')
 	}
 	if pre != 0 {
 		b.WriteByte('0')
-		length--
+		width--
 	}
 	if pre == 'b' || pre == 'B' || pre == 'x' || pre == 'X' {
 		b.WriteByte(pre)
-		length--
+		width--
 	}
 	var digits string
 	switch pre {
@@ -276,14 +234,98 @@ func (e *Engine) addSub(v *view, line, col, end int, amount uint64, sub, visual 
 			digits = strings.ToUpper(digits)
 		}
 	}
-	length -= len(digits)
-	if first == '0' && !(dooct && pre == 0) {
-		for ; length > 0; length-- {
+	width -= len(digits)
+	if pad {
+		for ; width > 0; width-- {
 			b.WriteByte('0')
 		}
 	}
 	b.WriteString(digits)
-	repl := b.String()
+	return b.String()
+}
+
+// lastLetterUpper says the last letter in s is upper case: how a hex number's digits are written back.
+func lastLetterUpper(s string) bool {
+	upper := false
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; isAlpha(c) {
+			upper = c < 'a'
+		}
+	}
+	return upper
+}
+
+// addSub is vim's do_addsub() for CTRL-A (add) and CTRL-X (sub) on one line, following 'nrformats'. It returns
+// where the changed text ends, or false when there was nothing to change.
+func (e *Engine) addSub(v *view, where numberAt, amount uint64, sub bool) (int, bool) {
+	nf := e.nrFormats()
+	line, col, visual := where.line, where.col, where.visual
+	l := string(v.line(line))
+	at := func(i int) byte { return byteAt(l, i) }
+	if len(l) == 0 || col >= len(l) {
+		return 0, false
+	}
+	start, length := col, where.end-col
+	negative, wasPositive := false, true
+	if visual {
+		for start < len(l) && length > 0 && !nf.startsNumber(at(start)) {
+			start++
+			length--
+		}
+		if length <= 0 {
+			return 0, false
+		}
+		if start > col && at(start-1) == '-' && !nf.unsigned {
+			negative, wasPositive = true, false
+		}
+	} else {
+		start = nf.numberStart(l, col)
+	}
+	first := at(start)
+	if !nf.startsNumber(first) {
+		return 0, false
+	}
+	ls := v.s.LineStart(line)
+	if nf.alpha && isAlpha(first) {
+		c := stepLetter(first, amount, sub)
+		e.do(e.group, text.Replace{Range: text.Range{Start: ls + start, End: ls + start + 1}, Text: []byte{c}})
+		return start, true
+	}
+	blankUnsigned := false
+	if start > 0 && at(start-1) == '-' && !visual && !nf.unsigned {
+		if nf.blank && start >= 2 && at(start-2) != ' ' && at(start-2) != '\t' {
+			blankUnsigned = true
+		} else {
+			start--
+			negative = true
+		}
+	}
+	maxlen := 0
+	if visual && e.vmodeAtOp != 'V' {
+		maxlen = length
+		if e.wantAtOp == maxCol {
+			maxlen = len(l) - start
+		}
+	}
+	pre, n, length, overflow := readNumber(l[start:], nf.hex, nf.bin, nf.oct, maxlen)
+	if pre != 0 && negative {
+		start++
+		length--
+		negative = false
+	}
+	subtract := sub != negative
+	n, negative = stepNumber(n, amount, pre, negative, subtract, overflow, nf.unsigned || blankUnsigned)
+	if visual && !wasPositive && !negative && start > 0 {
+		start--
+		length++
+	}
+	todel := length
+	orig := l[start : start+todel]
+	if at(start) == '-' {
+		length--
+	}
+	repl := formatNumber(n, pre, negative && (!visual || wasPositive), lastLetterUpper(orig),
+		first == '0' && !(nf.oct && pre == 0), length)
 	e.cur = Pos{line, start}
 	e.do(e.group, text.Replace{Range: text.Range{Start: ls + start, End: ls + start + todel}, Text: []byte(repl)})
 	return start + max(len(repl)-1, 0), true
@@ -291,7 +333,7 @@ func (e *Engine) addSub(v *view, line, col, end int, amount uint64, sub, visual 
 
 // increment is CTRL-A and CTRL-X in normal mode.
 func (e *Engine) increment(v *view, c cmd, sub bool) {
-	endCol, ok := e.addSub(v, e.cur.Line, e.cur.Col, -1, uint64(c.count1()), sub, false)
+	endCol, ok := e.addSub(v, numberAt{line: e.cur.Line, col: e.cur.Col, end: -1}, uint64(c.count1()), sub)
 	if !ok {
 		e.rec = nil
 		e.failed = true
@@ -337,7 +379,7 @@ func (e *Engine) visualIncrement(v *view, c cmd, sub, seq bool) {
 		if seq {
 			amount *= n + 1
 		}
-		if _, ok := e.addSub(e.view(), l, from, to, amount, sub, true); ok {
+		if _, ok := e.addSub(e.view(), numberAt{line: l, col: from, end: to, visual: true}, amount, sub); ok {
 			n++
 		}
 	}

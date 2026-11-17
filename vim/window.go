@@ -152,9 +152,7 @@ func (e *Engine) windowCmd(k string, count int) {
 		d := map[string]byte{"h": 'h', "<C-h>": 'h', "<Left>": 'h', "j": 'j', "<C-j>": 'j', "<Down>": 'j',
 			"k": 'k', "<C-k>": 'k', "<Up>": 'k', "l": 'l', "<C-l>": 'l', "<Right>": 'l'}[k]
 		e.enter(e.neighbour(d, count))
-	case "c", "<C-c>":
-		e.closeWindow(e.window)
-	case "q", "<C-q>":
+	case "c", "<C-c>", "q", "<C-q>": // quit closes the window as close does; the last one stays.
 		e.closeWindow(e.window)
 	case "o", "<C-o>":
 		e.only()
