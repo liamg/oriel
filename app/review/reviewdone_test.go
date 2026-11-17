@@ -117,3 +117,24 @@ func TestApprovedReviewIsQuiet(t *testing.T) {
 		return mirrored && sess.Status() == core.StatusQuiet
 	})
 }
+
+// The agent's verdict on its request (review.md: "a first line **Approve**, **Request changes** or **Comment**, then a
+// short paragraph") shows at the top of the review tab, and Reply… opens the request's thread to answer it.
+func TestTheAgentsVerdictShowsOnTheReviewTab(t *testing.T) {
+	s, lw, _, _, id, _ := prReviewScene(t, false)
+	a := lw.Fake.WaitStarted(t)
+	for a.Spec.Pack.Name != "review" {
+		a = lw.Fake.WaitStarted(t)
+	}
+	sess, _ := s.Store().State().Session(id)
+	req := sess.Snapshot().Threads[0].ID
+	a.Call(t, "reply", map[string]any{"thread": string(req), "body": "**Request changes**\n\nThe bucket takes a token whatever the cost."})
+	s.Run("ship.pr.open", nil)
+	s.Until("the verdict on the review tab", func() bool {
+		return s.Has("THE AGENT'S VERDICT") && s.Has("Request changes") && s.Has("The bucket takes a token whatever the cost.")
+	})
+	s.ClickText("Reply…")
+	s.Until("the request's thread", func() bool {
+		return s.Has("The bucket takes a token whatever the cost.") && s.Has("Reply, or ask more")
+	})
+}

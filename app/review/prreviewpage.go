@@ -54,6 +54,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 						kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), widget.MonoFont(11, th.C(theme.FgMuted)))
 				}
 				x.progress(c, se)
+				x.agentVerdict(c, se, width)
 				x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
 				x.sent(c, se, width)
 				switch {
@@ -216,6 +217,34 @@ func (x *PRReview) progress(c *ui.Ctx, se core.SessionState) {
 				c.Text("t", s.text, widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}
+	})
+}
+
+// agentVerdict is the agent's answer on the review's request, its recommendation and summary, once it has one: read
+// here, and answered in the request's thread.
+func (x *PRReview) agentVerdict(c *ui.Ctx, se core.SessionState, width float32) {
+	t, ok := reviewRequest(se)
+	if !ok {
+		return
+	}
+	var said core.Comment
+	for _, cm := range slices.Backward(t.Comments) {
+		if cm.Author == core.AuthorAgent && !cm.Progress {
+			said = cm
+			break
+		}
+	}
+	if said.Body == "" {
+		return
+	}
+	th := c.Theme()
+	reviewCard(c, "verdict", "THE AGENT'S VERDICT", ui.Flex(1), func(c *ui.Ctx) {
+		kit.MarkdownText(c, x.h, "body", said.Body, width-24, widget.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
+		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
+			if widget.Button(c, "reply", "Reply…", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
+				x.run("request.open", registry.Args{"thread": string(t.ID)})
+			}
+		})
 	})
 }
 

@@ -77,6 +77,8 @@ tab's header has a badge of where the PR stands: **Merged** (purple) or **Closed
 then **Changes requested** (amber), **Approved** (green), **Draft** or **Open**; from Approved on, the tab's boxes
 are bordered in that colour too. The tab's top line says where the agent and the AI review are;
 when the agent answers its request and stops, a **Review done** notice says how many comments it has for you to triage.
+Its answer, **the agent's verdict** (approve, request changes or comment, and why), shows above your review;
+**Reply…** opens the request's thread to answer it.
 
 ### Triage {#triage}
 
