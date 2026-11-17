@@ -57,8 +57,10 @@ the agents. **Start another** brings them back, for a new session on the ticket.
 ## Repositories
 
 The repos the session works on: each gets a worktree, all on one branch. Pick a registered repo with **+ add**, or
-type a checkout's path. The branch is named from the ticket and prompt unless you name it. To register a repo
-first, run `repos.add` with its `path`, or `repos.clone` with a `url`.
+type a checkout's path. The branch is the ticket's id as written (ENG-2231, then ENG-2231-2 if that's taken), or
+with no ticket your name and the session's id (liam/k7m2q9xa), unless you name it. A session's id is short and its
+own; its name is separate, and you can change it. To register a repo first, run `repos.add` with its `path`, or
+`repos.clone` with a `url`.
 
 ## Runs in
 

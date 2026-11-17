@@ -36,7 +36,7 @@ func TestAddProjectWorksOffTheLoop(t *testing.T) {
 	})
 	r.WaitText("Adding billing-ui to the session")
 	r.UntilState("billing-ui in the session", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		return slices.ContainsFunc(se.Snapshot().Projects, func(p core.Project) bool {
 			return p.Name == "billing-ui" || filepath.Base(p.Repo) == "billing-ui" || filepath.Base(p.Dir) == "billing-ui"
 		})

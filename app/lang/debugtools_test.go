@@ -119,7 +119,7 @@ func TestAgentDebuggerTools(t *testing.T) {
 	ch := callAgentTool(a, "debug_breakpoint", map[string]any{"file": "main.go", "line": 12, "condition": "v == 2"})
 	var ask core.Ask
 	s.Until("the permission card", func() bool {
-		se, ok := s.Store().State().Session("w")
+		se, ok := s.Store().State().Session(apptest.Named(s.Store().State(), "w"))
 		if !ok || len(se.Snapshot().Asks) == 0 {
 			return false
 		}
@@ -134,12 +134,12 @@ func TestAgentDebuggerTools(t *testing.T) {
 	}
 	// An answer that doesn't say what it decides lets nothing through: the ask still waits.
 	var refused error
-	s.Registry().Run(registry.OnDone(context.Background(), func(e error) { refused = e }), "ask.answer", registry.Args{"id": "w"})
+	s.Registry().Run(registry.OnDone(context.Background(), func(e error) { refused = e }), "ask.answer", registry.Args{"id": string(apptest.Named(s.Store().State(), "w"))})
 	s.Until("ask.answer to finish", func() bool { return refused != nil })
-	if se, _ := s.Store().State().Session("w"); len(se.Snapshot().Asks) != 1 || len(x.Breakpoints(main)) != 1 {
+	if se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "w")); len(se.Snapshot().Asks) != 1 || len(x.Breakpoints(main)) != 1 {
 		t.Fatalf("an answer with no decision was taken: asks %+v, breakpoints %+v", se.Snapshot().Asks, x.Breakpoints(main))
 	}
-	s.Run("ask.answer", registry.Args{"id": "w", "decision": "allow"})
+	s.Run("ask.answer", registry.Args{"id": string(apptest.Named(s.Store().State(), "w")), "decision": "allow"})
 	if r = toolAnswer(t, s, ch); r.err != nil || r.out != "set a breakpoint at main.go:12" {
 		t.Fatalf("debug_breakpoint = %q, %v", r.out, r.err)
 	}

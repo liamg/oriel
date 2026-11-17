@@ -39,13 +39,13 @@ func quitScene(t *testing.T, job *hostapi.Job, change ...func(*apptest.Config)) 
 			f(cfg)
 		}
 	}})
-	rig.WaitState(t, r.Store, "the session", func(st core.State) bool { _, ok := st.Session("rounding"); return ok })
+	rig.WaitState(t, r.Store, "the session", func(st core.State) bool { _, ok := st.Session(apptest.Named(st, "rounding")); return ok })
 	return r, lw, a
 }
 
 // handedOver says whether the host stopped the session's agent for the next start to resume.
 func handedOver(lw *rig.Host) bool {
-	se, ok := lw.W.Store().State().Session("rounding")
+	se, ok := lw.W.Store().State().Session(apptest.Named(lw.W.Store().State(), "rounding"))
 	return ok && !se.Snapshot().Agent.Running && se.Snapshot().Agent.StoppedBy == core.StoppedByHandOver
 }
 
@@ -105,7 +105,7 @@ func TestQuitWaitsForTheTurnOrCancels(t *testing.T) {
 	r, lw, a := quitScene(t, nil)
 	a.Emit(agent.TurnStart{})
 	rig.WaitState(t, r.Store, "the turn", func(st core.State) bool {
-		se, ok := st.Session("rounding")
+		se, ok := st.Session(apptest.Named(st, "rounding"))
 		return ok && se.Snapshot().Agent.Working
 	})
 	for _, cancel := range []func(){func() { r.TypeKeys("<Esc>") }, func() { r.ClickTop("Cancel") }} {
@@ -133,7 +133,7 @@ func TestQuitWaitsForTheTurnOrCancels(t *testing.T) {
 func working(r *apptest.Window) {
 	r.T.Helper()
 	r.UntilState("the agent working", func(st core.State) bool {
-		se, ok := st.Session("rounding")
+		se, ok := st.Session(apptest.Named(st, "rounding"))
 		return ok && se.Snapshot().Agent.Working
 	})
 }

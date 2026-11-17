@@ -610,7 +610,8 @@ func (t *tally) report() Report {
 		if t.q.Group == ByDay {
 			return strings.Compare(a.Key, b.Key)
 		}
-		return cmp.Or(cmp.Compare(b.Cost, a.Cost), strings.Compare(a.Key, b.Key))
+		// Ties go by what's shown, the label: a session's key is its id, random and in no order of its own.
+		return cmp.Or(cmp.Compare(b.Cost, a.Cost), strings.Compare(a.Label, b.Label), strings.Compare(a.Key, b.Key))
 	})
 	for _, name := range []string{OriginOriel, OriginOutside} {
 		if o := t.origins[name]; o != nil && o.Requests > 0 {

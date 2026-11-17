@@ -230,13 +230,14 @@ func TestStartWorkChangesTheModel(t *testing.T) {
 	}
 }
 
-// "Branch name per project, pre-filled from the ticket and prompt": a name given for a project is its branch; one
-// git wouldn't take, or for a project that isn't there, refuses before any worktree is made.
+// "Branch name per project", pre-filled with the ticket's id as written when there's a ticket: a name given for a
+// project is its branch; one git wouldn't take, or for a project that isn't there, refuses before any worktree is
+// made.
 func TestStartWorkBranchNames(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindPlan, Ticket: "ENG-2231", Prompt: "Round invoice lines", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	name := r.session(id).Projects[0].Name
-	if got := r.session(id).Projects[0].Branch; got != "tester/eng-2231-round-invoice-lines" {
+	if got := r.session(id).Projects[0].Branch; got != "ENG-2231" {
 		t.Errorf("the branch Start work offers is %q", got)
 	}
 	for _, bad := range []map[string]string{{name: "two..dots"}, {"nope": "tester/x"}} {

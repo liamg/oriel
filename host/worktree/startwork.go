@@ -160,7 +160,7 @@ func (x *Worktrees) AddRepo(ctx context.Context, se core.SessionState, ref core.
 	}
 	branch := se.Branch
 	if branch == "" {
-		branch = BranchName(hostcore.WhoAmI(ctx), se.Ticket, string(se.ID))
+		branch = BranchName(hostcore.WhoAmI(ctx), se.Ticket, se.ID)
 	}
 	projects := slices.Clone(se.Projects)
 	switch {

@@ -130,7 +130,7 @@ clip 44,50 1556x924 r 0
     text "Claude" @92,107.729004 #ece6d8 Inter 13
     rect 146.20312,94.73 40.28x16.54 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
     text "IDLE" @153.20312,106.420006 #4fe0a0 JetBrains Mono 9.5
-    text "job: sweep stale deps · tester/sweep-stale-deps-8" @196.48312,106.96 #7c7566 JetBrains Mono 11
+    text "job: sweep stale deps · tester/s0000008" @196.48312,106.96 #7c7566 JetBrains Mono 11
     rect 1322.875,90 45.25x26 fill #191815 radius 6 stroke 1 #332f27
     text "Fork" @1332.875,107.365234 #ece6d8 Inter 12
     rect 1378.125,90 101.609375x26 fill #191815 radius 6 stroke 1 #332f27

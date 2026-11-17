@@ -71,7 +71,7 @@ func TestWorkspacePage(t *testing.T) {
 
 // Rename… on the overview renames the session in place: its id stays.
 func TestWorkspaceRenamesTheSession(t *testing.T) {
-	s, _, _ := apptest.SandboxedScene(t, imageBackend{log: filepath.Join(t.TempDir(), "build.log")})
+	s, _, w := apptest.SandboxedScene(t, imageBackend{log: filepath.Join(t.TempDir(), "build.log")})
 	s.Run("workspace.open", nil)
 	s.Until("Rename…", func() bool { return s.Has("Rename…") })
 	s.ClickText("Rename…")
@@ -79,11 +79,11 @@ func TestWorkspaceRenamesTheSession(t *testing.T) {
 	s.TypeText("Pricing fixes")
 	s.Type("CR")
 	s.UntilState("the new name", func(st core.State) bool {
-		se, ok := st.Session("w")
+		se, ok := st.Session(w.ID)
 		return ok && se.Snapshot().Name == "Pricing fixes"
 	})
-	if st := s.Store().State(); st.Focus != "w" {
-		t.Errorf("the session in front is %q, not w", st.Focus)
+	if st := s.Store().State(); st.Focus != w.ID {
+		t.Errorf("the session in front is %q, not %s", st.Focus, w.ID)
 	}
 	s.Until("the name on the page", func() bool { return s.Has("Pricing fixes", "Rename…") })
 }

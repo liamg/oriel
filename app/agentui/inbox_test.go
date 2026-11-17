@@ -230,7 +230,7 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 func TestSecurityKeyCardCancelsAWaitingCommit(t *testing.T) {
 	r, _, _ := apptest.AgentWindowOn(t, rig.NewHostWith(t, host.Options{KeyWait: 100 * time.Millisecond}))
 	st := r.Store.State()
-	se, _ := st.Session("w")
+	se, _ := st.Session(apptest.Named(st, "w"))
 	p, _ := se.Snapshot().Primary()
 	gpg := filepath.Join(t.TempDir(), "gpg")
 	if err := os.WriteFile(gpg, []byte("#!/bin/sh\nsleep 5\nexit 1\n"), 0o755); err != nil {

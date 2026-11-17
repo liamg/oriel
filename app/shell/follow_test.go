@@ -56,10 +56,10 @@ func TestFollowingASessionKeepsThePluginsRunning(t *testing.T) {
 		w.RunFinished("session.start", registry.Args{"kind": "work", "name": name, "provider": "fake", "repos": lw.Repo})
 		lw.Fake.WaitStarted(t)
 		st := w.UntilState("session "+name+" in front", func(st core.State) bool {
-			se, ok := st.Session(core.SessionID(name))
+			se, ok := st.Session(apptest.Named(st, name))
 			return ok && kit.SessionDir(se.Snapshot()) != "" && st.Focus == se.ID()
 		})
-		se, _ := st.Session(core.SessionID(name))
+		se, _ := st.Session(apptest.Named(st, name))
 		on(se.ID())
 		return se.ID()
 	}

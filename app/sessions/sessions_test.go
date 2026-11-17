@@ -27,10 +27,10 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st := w.UntilState("the session in front", func(st core.State) bool { return st.Focus == "rounding" })
-	se, _ := st.Session("rounding")
+	st := w.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
+	se, _ := st.Session(apptest.Named(st, "rounding"))
 	p, _ := se.Snapshot().Primary()
-	if !strings.HasSuffix(p.Dir, filepath.Join("workspaces", "rounding", "repos", "pricing")) {
+	if !strings.HasSuffix(p.Dir, filepath.Join("workspaces", string(se.ID()), "repos", "pricing")) {
 		t.Fatalf("project = %+v", p)
 	}
 	w.TypeKeys("<Space><Space>")
@@ -109,7 +109,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 	rm, _ := json.Marshal(map[string]string{"command": "rm -rf build"})
 	a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: rm})
 	w.UntilState("a card for what the hook left", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		return se != nil && len(se.Snapshot().Asks) == 1
 	})
 }
@@ -139,7 +139,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 	if !tool.ReadOnly || !strings.Contains(string(tool.Schema), `"required":["service"]`) {
 		t.Fatalf("tool = %+v %s", tool, tool.Schema)
 	}
-	if got := a.Call(t, "staging_logs", map[string]any{"service": "api"}); got != "logs of api" || session != "w" {
+	if got := a.Call(t, "staging_logs", map[string]any{"service": "api"}); got != "logs of api" || session != string(apptest.Named(w.Store.State(), "w")) {
 		t.Errorf("got %q for session %q", got, session)
 	}
 }
@@ -161,11 +161,11 @@ func TestAgentTurnEndFires(t *testing.T) {
 	a := lw.Fake.WaitStarted(t)
 	a.Emit(agent.TurnStart{})
 	w.UntilState("the turn under way", func(st core.State) bool { // the window sees it start, as it would a turn of any length
-		se, ok := st.Session("w")
+		se, ok := st.Session(apptest.Named(st, "w"))
 		return ok && se.Snapshot().Agent.Working
 	})
 	a.Emit(agent.TurnEnd{})
-	if got := apptest.Recv(t, "AgentTurnEnd", ended); got != "w" {
+	if got := apptest.Recv(t, "AgentTurnEnd", ended); got != string(apptest.Named(w.Store.State(), "w")) {
 		t.Errorf("AgentTurnEnd for %q", got)
 	}
 }

@@ -198,8 +198,8 @@ func TestStartViewListsSessions(t *testing.T) {
 		return apptest.HasAll(s, "SESSIONS", "pricing-rounding", "work · pricing") && !strings.Contains(s, "SOON")
 	})
 	r.ClickTop("pricing-rounding")
-	st := r.UntilState("the session in front", func(st core.State) bool { return st.Focus == "pricing-rounding" })
-	se, _ := st.Session("pricing-rounding")
+	st := r.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "pricing-rounding") })
+	se, _ := st.Session(apptest.Named(st, "pricing-rounding"))
 	p, _ := se.Snapshot().Primary()
 	r.WaitGone("SESSIONS")
 	r.WaitProject(p.Dir)
@@ -217,8 +217,8 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	st := r.UntilState("the session in front", func(st core.State) bool { return st.Focus == "w" })
-	se, _ := st.Session("w")
+	st := r.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "w") })
+	se, _ := st.Session(apptest.Named(st, "w"))
 	p, _ := se.Snapshot().Primary()
 	inside := filepath.Join(p.Dir, "round.go")
 	os.WriteFile(inside, []byte("package pricing\n"), 0o644)

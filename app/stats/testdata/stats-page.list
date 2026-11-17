@@ -41,9 +41,9 @@ clip 0,50 223x924 r 0
   rect 196.1875,88.32 18.8125x13.879997 radius 3 stroke 1 #332f27
   text "⌃1" @200.1875,98.5 #7c7566 JetBrains Mono 9
   clip 10,104.520004 205x13.199997 r 0
-    text "tester/pricing-rounding" @25,114.72 #7c7566 JetBrains Mono 10
-    text "·" @167,114.72 #7c7566 JetBrains Mono 10
-    text "clean" @177,114.72 #7c7566 JetBrains Mono 10
+    text "tester/s0000008" @25,114.72 #7c7566 JetBrains Mono 10
+    text "·" @119,114.72 #7c7566 JetBrains Mono 10
+    text "clean" @129,114.72 #7c7566 JetBrains Mono 10
   pop
   path 7 segments stroke 1.25 #7c7566
   text "Explorer" @54,138.58524 #b3ab99 Inter 12
@@ -76,9 +76,9 @@ clip 0,50 223x924 r 0
   rect 196.1875,243.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
   text "⌃2" @200.1875,253.22 #7c7566 JetBrains Mono 9
   clip 10,259.24 205x13.200012 r 0
-    text "tester/pricing-rounding" @25,269.44 #7c7566 JetBrains Mono 10
-    text "·" @167,269.44 #7c7566 JetBrains Mono 10
-    text "clean" @177,269.44 #7c7566 JetBrains Mono 10
+    text "tester/s0000008" @25,269.44 #7c7566 JetBrains Mono 10
+    text "·" @119,269.44 #7c7566 JetBrains Mono 10
+    text "clean" @129,269.44 #7c7566 JetBrains Mono 10
   pop
   rect 10,282.44 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566

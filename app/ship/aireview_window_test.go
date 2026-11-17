@@ -49,7 +49,7 @@ func above(f headless.Frame, a, b string) bool {
 // place and body, and a finding about a repo the session hasn't got offers Add project. The foot names the reviewer.
 func TestAIReviewColumn(t *testing.T) {
 	r, _, codex, _ := apptest.ReviewWindow(t)
-	base := strings.TrimSpace(rig.Git(t, r.ProjectDir("w"), "rev-parse", "--short", "HEAD"))
+	base := strings.TrimSpace(rig.Git(t, r.ProjectDir(r.Session), "rev-parse", "--short", "HEAD"))
 	r.ClickText("Review changes")
 	rv := waitReviewer(t, codex)
 	if !strings.Contains(rv.Spec.Prompt, "+\tt := scaled.Truncate(0)") {
@@ -112,7 +112,7 @@ func TestAIReviewFilterAndDismiss(t *testing.T) {
 	r.WaitFrame("the dismissed one shown", func(s string) bool { return apptest.HasAll(s, "Historic invoices re-rounded", "Restore") })
 	r.ClickText("Restore")
 	r.UntilState("the finding back", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		return !se.Snapshot().SortedFindings()[0].Dismissed
 	})
 	r.WaitGone("dismissed")
@@ -143,10 +143,10 @@ func TestAIReviewFindingToThreadAndFix(t *testing.T) {
 		}
 	}
 	st := r.UntilState("the finding's thread", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		return se.Snapshot().SortedFindings()[0].Thread != ""
 	})
-	sw, _ := st.Session("w")
+	sw, _ := st.Session(apptest.Named(st, "w"))
 	se := sw.Snapshot()
 	f := se.SortedFindings()[0]
 	th, ok := se.Thread(f.Thread)
@@ -184,7 +184,7 @@ func TestAIReviewAddProject(t *testing.T) {
 	rv.Emit(agent.TurnEnd{})
 	r.ClickText("Add project")
 	r.UntilState("billing-ui in the session", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		return hasRepo(se.Snapshot(), "billing-ui")
 	})
 	r.WaitFrame("the finding can go to the agent", func(s string) bool { return strings.Contains(s, "→ Thread") && !strings.Contains(s, "Add project") })
@@ -210,7 +210,7 @@ func TestAIReviewPromptAndReReview(t *testing.T) {
 		t.Fatalf("the prompt file: %v %q", err, b)
 	}
 	os.WriteFile(path, []byte(strings.Replace(string(b), "# AI review", "# AI review\n\nBe brief.", 1)), 0o644)
-	os.WriteFile(filepath.Join(r.ProjectDir("w"), "round.go"), []byte(rig.RoundWork), 0o644)
+	os.WriteFile(filepath.Join(r.ProjectDir(r.Session), "round.go"), []byte(rig.RoundWork), 0o644)
 	r.Do(func() error { return r.Host.Run(context.Background(), "review.ai.run", nil) })
 	rv = waitReviewer(t, codex)
 	if !strings.Contains(rv.Spec.Pack.Text, "Be brief.") {
@@ -224,7 +224,7 @@ func TestAIReviewPromptAndReReview(t *testing.T) {
 
 func sessionState(t *testing.T, r *apptest.Window) core.SessionState {
 	t.Helper()
-	se, ok := r.Store.Session("w")
+	se, ok := r.Store.Session(r.Session)
 	if !ok {
 		t.Fatal("no session w")
 	}

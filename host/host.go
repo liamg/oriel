@@ -75,6 +75,9 @@ type Options struct {
 	CloseWait time.Duration
 	// NoAutoName never starts the agent that names a session (SessionSpec.AutoName): for fakes that script each start.
 	NoAutoName bool
+	// SessionIDs makes a new session's id; hostcore.NewSessionID (short and random) if nil. A test gives one that
+	// counts, so what it draws is the same each run.
+	SessionIDs func() string
 }
 
 // The host's parts, by the names it embeds them under.
@@ -129,7 +132,7 @@ func New(opts Options) (*Host, error) {
 		return nil, err
 	}
 	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, closed: make(chan struct{})}
-	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Clock: opts.Clock, Closed: w.closed, Work: &w.going}
+	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Clock: opts.Clock, Closed: w.closed, Work: &w.going, SessionIDs: opts.SessionIDs}
 	if err := w.parts(); err != nil {
 		return nil, err
 	}

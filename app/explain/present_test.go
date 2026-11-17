@@ -179,7 +179,7 @@ func opStarting(f headless.Frame, prefix string) (render.Point, bool) {
 // on a row anchors to that row's line and shows inline in Edit.
 func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	path := filepath.Join(r.ProjectDir("w"), "prices.csv")
+	path := filepath.Join(r.ProjectDir(r.Session), "prices.csv")
 	os.WriteFile(path, []byte("sku,price\nA-1,10\nB-2,20\nC-3,30\nD-4,40\nE-5,50\n"), 0o644)
 	r.Run("lua", registry.Args{"args": `oriel.editor.presenter{ name = "csv", label = "Table", comments = true, ` +
 		`when = function(p) return p:match("%.csv$") ~= nil end, ` +

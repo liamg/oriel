@@ -234,7 +234,7 @@ func TestAPlanDocClickedComesToTheFront(t *testing.T) {
 	s := planScene(t)
 	s.Run("plan.open", nil)
 	s.SettleReads()
-	se, _ := s.Store().State().Session("pricing-rounding")
+	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "pricing-rounding"))
 	other := filepath.Join(se.Snapshot().Projects[0].Dir, "notes.go")
 	os.WriteFile(other, []byte("package pricing\n"), 0o644)
 	s.Run("editor.open", registry.Args{"path": other})
@@ -271,7 +271,7 @@ func TestAResolvedThreadsLineTakesANewThread(t *testing.T) {
 // end don't stop the composer from opening.
 func TestAShortenedDocStillTakesNewThreads(t *testing.T) {
 	s := planScene(t)
-	se, _ := s.Store().State().Session("pricing-rounding")
+	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "pricing-rounding"))
 	os.WriteFile(filepath.Join(se.Snapshot().Dir, "PLAN.md"), []byte("# Round invoice lines\n\nKeep it short.\n"), 0o644)
 	s.Run("plan.open", nil)
 	s.SettleReads()
@@ -289,7 +289,7 @@ func TestAShortenedDocStillTakesNewThreads(t *testing.T) {
 // again), and a click on the same line after still opens one: the composer is never lost to a doc read again.
 func TestAComposerOutlivesTheDocBeingReadAgain(t *testing.T) {
 	s := planScene(t)
-	se, _ := s.Store().State().Session("pricing-rounding")
+	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "pricing-rounding"))
 	plan := filepath.Join(se.Snapshot().Dir, "PLAN.md")
 	s.Run("plan.open", nil)
 	s.SettleReads()

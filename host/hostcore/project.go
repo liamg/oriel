@@ -24,6 +24,18 @@ func NewID(n int) string {
 	return hex.EncodeToString(b)
 }
 
+// NewSessionID is a short random session id: 8 of lower-case letters and digits, with none that read alike (no i,
+// l, o or u).
+func NewSessionID() string {
+	const alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	for i := range b {
+		b[i] = alphabet[int(b[i])%len(alphabet)]
+	}
+	return string(b)
+}
+
 // TrimWords keeps the first n hyphen-separated words of a name.
 func TrimWords(s string, n int) string {
 	parts := strings.Split(s, "-")

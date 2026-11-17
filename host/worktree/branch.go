@@ -23,7 +23,7 @@ func (x *Worktrees) NewBranch(ctx context.Context, r hostapi.NewBranchReq) (stri
 	main := gitx.Repo{Dir: p.Repo}
 	name := strings.TrimSpace(r.Name)
 	if name == "" {
-		name = main.FreshBranch(ctx, BranchName(hostcore.WhoAmI(ctx), se.Ticket, string(se.ID)))
+		name = main.FreshBranch(ctx, BranchName(hostcore.WhoAmI(ctx), se.Ticket, se.ID))
 	} else if err := gitx.ValidBranch(ctx, name); err != nil {
 		return "", err
 	} else if main.HasBranch(ctx, name) {

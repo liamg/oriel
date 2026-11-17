@@ -49,8 +49,9 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Ticket: "ENG-2231", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	se := r.session(id)
-	if id != "eng-2231-fix-stale-search-results" {
-		t.Errorf("id = %q", id)
+	// A session's id is its own, short and random; its name is from the ticket and the prompt.
+	if len(id) != 8 || se.Name != "eng-2231-fix-stale-search-results" {
+		t.Errorf("id = %q, name = %q", id, se.Name)
 	}
 	if se.Dir != filepath.Join(r.home, "workspaces", string(id)) {
 		t.Errorf("dir = %q", se.Dir)
@@ -59,7 +60,8 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if want := filepath.Join(se.Dir, "repos", filepath.Base(r.repo.Dir)); p.Dir != want {
 		t.Errorf("project dir = %q, want %q", p.Dir, want)
 	}
-	if got := branchOf(t, p.Dir); got != "tester/eng-2231-fix-stale-search-results" || se.Branch != got {
+	// A session for a ticket is on a branch named the ticket's id and nothing else.
+	if got := branchOf(t, p.Dir); got != "ENG-2231" || se.Branch != got {
 		t.Errorf("branch = %q (state %q)", got, se.Branch)
 	}
 	if !gitx.IsRepo(se.Dir) {
@@ -138,7 +140,8 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 	if p.ReadOnly || p.Dir != filepath.Join(se.Dir, "repos", filepath.Base(r.repo.Dir)) || !se.Started {
 		t.Fatalf("after Start work: %+v", se)
 	}
-	if got := branchOf(t, p.Dir); !strings.HasPrefix(got, "tester/round-invoice-lines") {
+	// With no ticket, the branch is <you>/<session id>.
+	if got := branchOf(t, p.Dir); got != "tester/"+string(id) {
 		t.Errorf("branch = %q", got)
 	}
 	plan, _ := se.Thread(se.PlanThread())

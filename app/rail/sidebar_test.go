@@ -355,7 +355,7 @@ func TestSidebarAddsAProject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return st.Focus == "rounding" })
+	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	r.WaitFrame("the window on the session", func(s string) bool {
 		return strings.Contains(s, "+") && !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening rounding")
 	})
@@ -365,15 +365,15 @@ func TestSidebarAddsAProject(t *testing.T) {
 	r.WaitAccess("the row adding billing", func(w *apptest.Window) bool { return w.Access("Add "+billing) != nil }) // its text may be cut
 	r.TypeKeys("<CR>")
 	st := rig.WaitState(t, r.Store, "billing in the session", func(st core.State) bool {
-		se, ok := st.Session("rounding")
+		se, ok := st.Session(apptest.Named(st, "rounding"))
 		return ok && len(se.Projects()) == 2
 	})
-	se, _ := st.Session("rounding")
+	se, _ := st.Session(apptest.Named(st, "rounding"))
 	if names := []string{se.Projects()[0].Name, se.Projects()[1].Name}; names[1] != "billing" {
 		t.Fatalf("projects %v", names)
 	}
 	rig.WaitState(t, r.Store, "billing open", func(st core.State) bool {
-		se, _ := st.Session("rounding")
+		se, _ := st.Session(apptest.Named(st, "rounding"))
 		return se.Snapshot().OpenProject() == "billing"
 	})
 	r.WaitFrame("both projects' headers", func(s string) bool { return apptest.HasAll(s, "pricing", "billing", "⌃2") })

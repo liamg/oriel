@@ -58,14 +58,14 @@ func idleWindow(t *testing.T) *apptest.Window {
 			t.Fatal(err)
 		}
 		a := lw.Fake.WaitStarted(t)
-		rig.WaitState(t, r.Store, name+" in front", func(st core.State) bool { return st.Focus == core.SessionID(name) })
+		rig.WaitState(t, r.Store, name+" in front", func(st core.State) bool { return apptest.FocusedOn(st, name) })
 		if !working {
 			a.Emit(agent.TurnStart{})
 			working = true
 		}
 	}
 	rig.WaitState(t, r.Store, "one working", func(st core.State) bool {
-		se, ok := st.Session("one")
+		se, ok := st.Session(apptest.Named(st, "one"))
 		return ok && se.Snapshot().Agent.Working
 	})
 	r.Win.Send(render.FocusEvent{Focused: false})
