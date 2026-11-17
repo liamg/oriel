@@ -709,6 +709,26 @@ func (w *Window) ScrollAt(text string, dy float32) {
 	w.Win.Send(render.PointerEvent{Kind: render.PointerScroll, Pos: at, Scroll: render.Point{Y: dy}})
 }
 
+// ScrollToShow scrolls down where the text at is until text is shown and has settled: content still arriving above it after one
+// scroll can push it back out of view.
+func (w *Window) ScrollToShow(at, text string) {
+	w.T.Helper()
+	find, p := textIn(text, true), w.textAt(at, true)
+	for deadline := time.Now().Add(Timeout); ; {
+		w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		w.Win.Send(render.PointerEvent{Kind: render.PointerScroll, Pos: p, Scroll: render.Point{Y: 2000}})
+		w.Idle()
+		fs := w.Win.Frames()
+		if _, ok := find(fs[len(fs)-1]); ok {
+			Settled(w, `"`+text+`" in view`, find)
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatalf("%q never scrolled into view:\n%s", text, fs[len(fs)-1].Text())
+		}
+	}
+}
+
 // ReviewWindow is a work session on the fake whose worktree changes round.go from a committed base, with a second
 // provider, codex, picked to review it; the diff of the change is open.
 func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fake, *rig.Host) {

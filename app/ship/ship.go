@@ -96,6 +96,7 @@ type shipReport struct {
 	started int               // reads started; a read older than the one last kept is dropped
 	kept    int
 	fixed   bool           // a Fixture's: reads don't replace it
+	thaw    bool           // fixed until a fresh read (a Retry) is asked for
 	seq     int            // reads started, a session's whole or a project's, in order
 	from    map[string]int // project → the seq of the read its entry is from
 }
@@ -292,6 +293,9 @@ func (x *Ship) ship(id core.SessionID, project string) (shipRead, bool) {
 // refresh reads a session's projects, off the loop; fresh fetches and asks their code hosts again.
 func (x *Ship) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
+	if r := x.reports[id]; r != nil && r.thaw && fresh {
+		r.fixed, r.thaw = false, false
+	}
 	if r := x.reports[id]; r != nil && r.loading && !fresh {
 		r.again = true // what changed may be after what the read running has read
 		x.mu.Unlock()

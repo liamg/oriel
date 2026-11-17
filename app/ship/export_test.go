@@ -18,7 +18,8 @@ func (x *Ship) Fired(url string) bool {
 	return x.merged[url]
 }
 
-// Pending makes id's reading a first read running; fail ends it with err, and restore brings back what it was.
+// Pending makes id's reading a first read running; fail ends it with err, which stands until a Retry reads again,
+// and restore brings back what it was.
 func (x *Ship) Pending(id core.SessionID) (fail func(err string), restore func()) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -29,7 +30,7 @@ func (x *Ship) Pending(id core.SessionID) (fail func(err string), restore func()
 	fail = func(err string) {
 		x.mu.Lock()
 		defer x.mu.Unlock()
-		pending.loading, pending.err, pending.fixed = false, errors.New(err), false
+		pending.loading, pending.err, pending.thaw = false, errors.New(err), true
 	}
 	restore = func() {
 		x.mu.Lock()
