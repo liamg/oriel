@@ -7,6 +7,10 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 
 A failure the caller may expect (a file or program that isn't there, a program that fails) is returned: nil, and why. A mistake in the call (a missing argument, a path out of bounds, a capability the plugin didn't declare) raises an error.
 
+Options go last: a call's opts table follows its function (oriel.command(name, fn, opts)). oriel.on and oriel.exec_async take it before the function too. Options that aren't a table are a mistake in the call.
+
+A contribution is given as its spec table: { name, run = fn, order, … } (oriel.agent.forker{ name, run }). Those that also take (name, fn) take their spec table as well.
+
 ## oriel
 
 - `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
@@ -48,17 +52,17 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 ## oriel.coverage
 
 - `oriel.coverage.lines(file, first, last)` (`ui`): A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
-- `oriel.coverage.set(owner, file, hits)` (`ui`): Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
+- `oriel.coverage.set(owner, file, hits)` (`ui`): Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config. owner is your plugin's own, as for diagnostics.
 
 ## oriel.decorations
 
 - `oriel.decorations.changed(name)` (`ui`): Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
-- `oriel.decorations.provider(name, fn)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name).
+- `oriel.decorations.provider(spec, fn?)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }.
 
 ## oriel.diagnostics
 
 - `oriel.diagnostics.list()` (`ui`): Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.
-- `oriel.diagnostics.set(owner, file, list)` (`ui`): Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config.
+- `oriel.diagnostics.set(owner, file, list)` (`ui`): Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config. owner is your plugin's own, shown as '<plugin>:<owner>' ('init.lua:lint' for your config's), so it never touches a built-in's.
 
 ## oriel.editor
 
@@ -135,12 +139,12 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.session
 
-- `oriel.session.chips(name, fn)` (`session.control`): Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }.
-- `oriel.session.done(name, fn)` (`session.control`): Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it.
+- `oriel.session.chips(spec, fn?)` (`session.control`): Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }. Takes its spec too: { name, run = fn }.
+- `oriel.session.done(spec, fn?)` (`session.control`): Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.
 - `oriel.session.keep(id, key, value)` (`session.control`): Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.
 - `oriel.session.kept(id, key)` (`session.control`): What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.
 - `oriel.session.kind(spec)` (`session.control`): A kind of session, shadowing a built-in of the same name: { name, title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
-- `oriel.session.unsaved(name, fn)` (`session.control`): Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it.
+- `oriel.session.unsaved(spec, fn?)` (`session.control`): Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it. Takes its spec too: { name, run = fn }.
 
 ## oriel.ship
 
@@ -153,7 +157,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.status
 
-- `oriel.status.rule(name, fn)` (`ui`): A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.
+- `oriel.status.rule(spec, fn?)` (`ui`): A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it. Takes its spec too: { name, run = fn }.
 
 ## oriel.thread
 
@@ -193,7 +197,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.view
 
-- `oriel.view.override(id, fn)` (`ui`): Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes.
+- `oriel.view.override(spec, fn?)` (`ui`): Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes. Takes its spec too: { id, run = fn }.
 
 ## oriel.wasm
 

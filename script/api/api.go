@@ -44,6 +44,7 @@ type APIs struct {
 
 	mu      sync.Mutex
 	owned   []registry.Disposable
+	keyed   map[string]bool // what's owned once however often it's set: diagnostics and coverage, by owner and file
 	n       int
 	pending map[string]pendingOption     // options set before anything registered them
 	touched map[optKey]optPrev           // options the config set, and what they held before
@@ -77,7 +78,7 @@ func InstallPlugin(vm *script.VM, h plugin.Host, p plugin.Caller) *APIs {
 func (a *APIs) Dispose() {
 	a.mu.Lock()
 	owned := a.owned
-	a.owned, a.inbox = nil, nil
+	a.owned, a.inbox, a.keyed = nil, nil, nil
 	procs, wasm := a.procs, a.wasm
 	a.procs, a.wasm = nil, nil
 	a.mu.Unlock()
@@ -168,6 +169,24 @@ func (a *APIs) own(d registry.Disposable) {
 	a.mu.Unlock()
 }
 
+// ownOnce owns d unless something under key already is: what's set again and again needs one undoing.
+func (a *APIs) ownOnce(key string, d registry.Disposable) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.keyed[key] {
+		return
+	}
+	if a.keyed == nil {
+		a.keyed = map[string]bool{}
+	}
+	a.keyed[key] = true
+	a.owned = append(a.owned, d)
+}
+
+// scoped is a diagnostics or coverage owner a plugin names, under the plugin's id: it can't reach a built-in's owner
+// of the same name (lua, tests, an LSP server's).
+func (a *APIs) scoped(owner string) string { return a.Plugin.ID + ":" + owner }
+
 // anon names a Lua function a command so keymaps can run it: "lua.init.lua:10".
 func (a *APIs) anon(fn *script.Fn) string {
 	a.mu.Lock()
@@ -180,6 +199,53 @@ func (a *APIs) anon(fn *script.Fn) string {
 			return err
 		}}))
 	return id
+}
+
+// optsAndFn reads a call's options and its function: options go last (a, fn, opts), and a call may give them before
+// the function instead (a, opts, fn), as oriel.on and oriel.exec_async always have. Options are a table or nothing;
+// anything else is a mistake in the call.
+func optsAndFn(first, second any) (script.Table, *script.Fn, error) {
+	opts, f := second, (*script.Fn)(nil)
+	if fn, ok := first.(*script.Fn); ok {
+		f = fn
+	} else if fn, ok := second.(*script.Fn); ok {
+		opts, f = first, fn
+	}
+	if f == nil {
+		return nil, nil, errors.New("no function")
+	}
+	switch o := opts.(type) {
+	case nil:
+		return nil, f, nil
+	case script.Table:
+		return o, f, nil
+	case []any:
+		if len(o) == 0 {
+			return nil, f, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("options are a table, not %T", opts)
+}
+
+// specOr reads a contribution given as its spec table, { <key> = name, run = fn }, the canonical shape, or as
+// (name, fn). Either way it needs both.
+func specOr(first any, fn *script.Fn, key string) (string, *script.Fn, error) {
+	var name string
+	switch v := first.(type) {
+	case string:
+		name = v
+	case script.Table:
+		name = str(v, key)
+		if run, ok := v["run"].(*script.Fn); ok && fn == nil {
+			fn = run
+		}
+	default:
+		return "", nil, fmt.Errorf("a %s or a spec table { %s, run = fn }, not %T", key, key, first)
+	}
+	if name == "" || fn == nil {
+		return "", nil, fmt.Errorf("it needs a %s and a function: { %s, run = fn }, or (%s, fn)", key, key, key)
+	}
+	return name, fn, nil
 }
 
 // str reads a string field of a table.

@@ -216,7 +216,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Provider(c.String(0), c.Fn(1))
+				return nil, x.Provider(c.Any(0), c.Fn(1))
 			},
 		})
 	}
@@ -468,13 +468,13 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err
 				}
-				return nil, x.Chips(c.String(0), c.Fn(1), c.Where())
+				return nil, x.Chips(c.Any(0), c.Fn(1), c.Where())
 			},
 			"done": func(c *script.Args) ([]any, error) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err
 				}
-				return nil, x.Done(c.String(0), c.Fn(1), c.Where())
+				return nil, x.Done(c.Any(0), c.Fn(1), c.Where())
 			},
 			"keep": func(c *script.Args) ([]any, error) {
 				if err := a.check("session.control"); err != nil {
@@ -499,7 +499,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err
 				}
-				return nil, x.Unsaved(c.String(0), c.Fn(1), c.Where())
+				return nil, x.Unsaved(c.Any(0), c.Fn(1), c.Where())
 			},
 		})
 	}
@@ -538,7 +538,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Rule(c.String(0), c.Fn(1), c.Where())
+				return nil, x.Rule(c.Any(0), c.Fn(1), c.Where())
 			},
 		})
 	}
@@ -726,7 +726,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Override(c.String(0), c.Fn(1), c.Where())
+				return nil, x.Override(c.Any(0), c.Fn(1), c.Where())
 			},
 		})
 	}

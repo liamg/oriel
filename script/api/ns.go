@@ -48,10 +48,11 @@ func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, wher
 //oriel:api name=view cap=ui
 type View struct{ a *APIs }
 
-//oriel:api doc="Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes."
-func (v View) Override(id string, fn *script.Fn, where string) error {
-	if fn == nil {
-		return fmt.Errorf("%s: no function", id)
+//oriel:api doc="Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes. Takes its spec too: { id, run = fn }." optional=fn
+func (v View) Override(spec any, fn *script.Fn, where string) error {
+	id, fn, err := specOr(spec, fn, "id")
+	if err != nil {
+		return fmt.Errorf("oriel.view.override: %w", err)
 	}
 	v.a.own(v.a.Host.View(id, uireg.SourcedView{Source: where, View: uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: id, Fn: func(c *ui.Ctx) {
@@ -84,8 +85,12 @@ func (a *APIs) viewCtx(vc uireg.ViewCtx) script.Table {
 //oriel:api name=decorations cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name)."
-func (d Decor) Provider(name string, fn *script.Fn) error {
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }." optional=fn
+func (d Decor) Provider(spec any, fn *script.Fn) error {
+	name, fn, err := specOr(spec, fn, "name")
+	if err != nil {
+		return fmt.Errorf("oriel.decorations.provider: %w", err)
+	}
 	d.a.own(d.a.Host.Decoration(name, uireg.DecorationFunc(func(ctx uireg.DecorationCtx) []uireg.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)
 		d.a.Host.Report(registry.KindDecoration, name, err)
@@ -383,8 +388,12 @@ func (s Session) Kind(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }."
-func (s Session) Chips(name string, fn *script.Fn, where string) error {
+//oriel:api doc="Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }. Takes its spec too: { name, run = fn }." optional=fn
+func (s Session) Chips(spec any, fn *script.Fn, where string) error {
+	name, fn, err := specOr(spec, fn, "name")
+	if err != nil {
+		return fmt.Errorf("oriel.session.chips: %w", err)
+	}
 	s.a.own(s.a.Host.Contribute(registry.CardChips{Name: name, Source: where, Chips: func(se core.SessionState) []registry.Chip {
 		out, err := s.a.VM.Call(fn, sessionTable(se))
 		s.a.Host.Report(registry.KindView, "session.chips."+name, err)
@@ -396,8 +405,12 @@ func (s Session) Chips(name string, fn *script.Fn, where string) error {
 	return nil
 }
 
-//oriel:api doc="Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it."
-func (s Session) Done(name string, fn *script.Fn, where string) error {
+//oriel:api doc="Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }." optional=fn
+func (s Session) Done(spec any, fn *script.Fn, where string) error {
+	name, fn, err := specOr(spec, fn, "name")
+	if err != nil {
+		return fmt.Errorf("oriel.session.done: %w", err)
+	}
 	s.a.own(s.a.Host.Contribute(registry.SessionDone{Name: name, Source: where, Done: func(se core.SessionState) string {
 		out, err := s.a.VM.Call(fn, sessionTable(se))
 		s.a.Host.Report(registry.KindView, "session.done."+name, err)
@@ -410,8 +423,12 @@ func (s Session) Done(name string, fn *script.Fn, where string) error {
 	return nil
 }
 
-//oriel:api doc="Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it."
-func (s Session) Unsaved(name string, fn *script.Fn, where string) error {
+//oriel:api doc="Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it. Takes its spec too: { name, run = fn }." optional=fn
+func (s Session) Unsaved(spec any, fn *script.Fn, where string) error {
+	name, fn, err := specOr(spec, fn, "name")
+	if err != nil {
+		return fmt.Errorf("oriel.session.unsaved: %w", err)
+	}
 	s.a.own(s.a.Host.Contribute(registry.SessionUnsaved{Name: name, Source: where, Unsaved: func(se core.SessionState) string {
 		out, err := s.a.VM.Call(fn, sessionTable(se))
 		s.a.Host.Report(registry.KindView, "session.unsaved."+name, err)
@@ -495,10 +512,11 @@ func (h HUD) Refresh(name string) error {
 //oriel:api name=status cap=ui
 type Status struct{ a *APIs }
 
-//oriel:api doc="A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it."
-func (s Status) Rule(name string, fn *script.Fn, where string) error {
-	if name == "" || fn == nil {
-		return fmt.Errorf("a status rule needs a name and a function")
+//oriel:api doc="A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it. Takes its spec too: { name, run = fn }." optional=fn
+func (s Status) Rule(spec any, fn *script.Fn, where string) error {
+	name, fn, err := specOr(spec, fn, "name")
+	if err != nil {
+		return fmt.Errorf("a status rule: %w", err)
 	}
 	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: name, Source: where, Rule: func(sess map[string]any) (string, error) {
 		out, err := s.a.VM.Call(fn, sess)

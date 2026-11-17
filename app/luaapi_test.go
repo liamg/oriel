@@ -135,13 +135,13 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 	}
 }
 
-// L.diagnostics publishes into the registry's diagnostics, gone when the config reloads.
+// L.diagnostics publishes into the registry's diagnostics under an owner the config scopes, gone when the config reloads.
 func TestLuaDiagnostics(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severity = "warning", message = "unused" } })
 `)
 	ds, _ := s.Registry().Diagnostics()
-	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "lint"}) {
+	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "init.lua:lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
 	if got := luaconfig.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
@@ -469,4 +469,39 @@ end)
 	if got.Int("line") != 3 || got.String("why") != "x" {
 		t.Errorf("the every-line sign ran with %v", got)
 	}
+}
+
+// Options go last, and oriel.on and oriel.exec_async take them before the function too, as they always have
+// (docs/api.md); options that aren't a table are a mistake in the call, which raises rather than being ignored.
+func TestLuaOptionsGoLastOrBeforeTheFunction(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+L.on("BufWritePre", function() end, { pattern = "*.last", desc = "opts last" })
+L.on("BufWritePre", { pattern = "*.before", desc = "opts before" }, function() end)
+L.on("BufWritePre", function() end)
+`)
+	pats := map[string]string{}
+	for _, h := range s.Registry().Hooks() {
+		if h.Event == "BufWritePre" {
+			pats[h.Label] = h.Pattern
+		}
+	}
+	if pats["opts last"] != "*.last" || pats["opts before"] != "*.before" {
+		t.Errorf("the hooks' patterns: %v", pats)
+	}
+	for line, want := range map[string]string{
+		`L.on("BufWritePre", "*.go", function() end)`:             "options are a table",
+		`L.on("BufWritePre", function() end, 7)`:                  "options are a table",
+		`L.on("BufWritePre", { pattern = "*.go" })`:               "no function",
+		`L.exec_async({ "echo", "hi" }, "quiet", function() end)`: "options are a table",
+		`L.exec_async({ "echo", "hi" }, function() end, true)`:    "options are a table",
+	} {
+		if err := s.LuaErr(line); !strings.Contains(err, want) {
+			t.Errorf("%s: %q, want %q in it", line, err, want)
+		}
+	}
+	s.Lua(`L.exec_async({ "echo", "last" }, function(out) L.last = out end, { cwd = "/" })`)
+	s.Lua(`L.exec_async({ "echo", "before" }, { cwd = "/" }, function(out) L.before = out end)`)
+	s.Until("both answers", func() bool {
+		return luaconfig.Show(s.Lua(`L.last`)[0]) == `"last\n"` && luaconfig.Show(s.Lua(`L.before`)[0]) == `"before\n"`
+	})
 }
