@@ -244,6 +244,23 @@ func BenchmarkResolve(b *testing.B) {
 	}
 }
 
+// A token declared after the theme was resolved (a plugin loaded later declares its own) takes what the theme set
+// for its name, else its default, rather than painting nothing.
+func TestALateTokenResolves(t *testing.T) {
+	r := resolve(t, Dark, oriel(t), spec(t, "name = \"late\"\n[component]\n\"test.late.themed\" = \"accent\"\n"))
+	byDefault := Declare("test.late.default", "fg")
+	themed := Declare("test.late.themed", "fg")
+	if got, want := r.C(byDefault), r.C(Fg); got != want || got == (Color{}) {
+		t.Errorf("a late token by its default = %s, want fg's %s", Hex(got), Hex(want))
+	}
+	if got, want := r.C(themed), r.C(Accent); got != want {
+		t.Errorf("a late token the theme set = %s, want accent's %s", Hex(got), Hex(want))
+	}
+	if got := r.C(TokenID(1 << 20)); got != (Color{}) {
+		t.Errorf("an id never declared = %s, want none", Hex(got))
+	}
+}
+
 func TestTokenName(t *testing.T) {
 	if Accent.Name() != "accent" || TokenID(-1).Name() != "" {
 		t.Errorf("%q", Accent.Name())
