@@ -13,8 +13,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // ModelRevision is the commit of huggingface.co/ggerganov/whisper.cpp models
@@ -46,16 +49,41 @@ var modelClient = &http.Client{Transport: &http.Transport{
 // stallAfter ends a download that has received nothing for this long.
 var stallAfter = time.Minute
 
-// backgroundRate caps a background download, in bytes a second, so it doesn't crowd out the user's own traffic.
-var backgroundRate int64 = 4 << 20
+// defaultBackgroundRate caps a background download, in bytes a second, so it doesn't crowd out the user's own
+// traffic, when Whisper.BackgroundRate is 0.
+const defaultBackgroundRate int64 = 4 << 20
+
+// throttleTick is how much of a background download's time is read at once.
+const throttleTick = 20 * time.Millisecond
 
 var modelName = regexp.MustCompile(`^(tiny|base|small|medium|large-v[123](-turbo)?)(\.en)?$`)
 
 type download struct {
 	got, total atomic.Int64
 	done       atomic.Bool
-	slow       atomic.Bool  // a background download, held to backgroundRate
-	err        atomic.Value // string
+	err        atomic.Value  // string
+	fast       chan struct{} // closed once the download goes full speed
+	speed      sync.Once
+}
+
+func newDownload(background bool) *download {
+	d := &download{fast: make(chan struct{})}
+	if !background {
+		d.speedUp()
+	}
+	return d
+}
+
+// speedUp lifts a background download's cap, waking it if it's held back.
+func (d *download) speedUp() { d.speed.Do(func() { close(d.fast) }) }
+
+func (d *download) slow() bool {
+	select {
+	case <-d.fast:
+		return false
+	default:
+		return true
+	}
 }
 
 // DownloadStatus is one model download's progress.
@@ -84,12 +112,12 @@ func (w *Whisper) start(name string, background bool) (DownloadStatus, error) {
 	}
 	d := w.dl[name]
 	if d == nil || (d.done.Load() && d.err.Load() != nil) {
-		d = &download{}
-		d.slow.Store(background)
+		d = newDownload(background)
 		w.dl[name] = d
-		go w.fetch(name, d, modelSource{url: ModelBase + "/ggml-" + name + ".bin", sha: ModelSHA256[name], stall: stallAfter, rate: backgroundRate})
+		go w.fetch(name, d, modelSource{url: ModelBase + "/ggml-" + name + ".bin", sha: ModelSHA256[name], stall: stallAfter,
+			rate: cmp.Or(w.BackgroundRate, defaultBackgroundRate)})
 	} else if !background {
-		d.slow.Store(false)
+		d.speedUp()
 	}
 	w.dlMu.Unlock()
 	w.changed()
@@ -136,7 +164,7 @@ func (e *DownloadingError) Error() string {
 	return "the voice model " + e.Status.Model + " is still downloading"
 }
 
-// Prefetch starts downloading the configured model in the background, held to backgroundRate, when transcription
+// Prefetch starts downloading the configured model in the background, held to its BackgroundRate, when transcription
 // can run here and the model is a known name not yet on disk, so the first dictation doesn't wait on it. It doesn't
 // start on a network the OS says is metered. It reports whether a download is running.
 func (w *Whisper) Prefetch() bool {
@@ -244,7 +272,7 @@ func (w *Whisper) fetchTo(name string, d *download, src modelSource) error {
 	}
 	stall := time.AfterFunc(src.stall, func() { cancel(fmt.Errorf("the download stalled for %s", src.stall)) })
 	defer stall.Stop()
-	c := &counter{r: res.Body, d: d, stall: stall, after: src.stall, rate: src.rate, step: w.changed}
+	c := &counter{r: res.Body, d: d, stall: stall, after: src.stall, rate: src.rate, clock: clock.Or(w.Clock), step: w.changed}
 	_, err = io.Copy(io.MultiWriter(f, h), c)
 	if cerr := f.Close(); err == nil {
 		err = cerr
@@ -269,18 +297,24 @@ type counter struct {
 	stall *time.Timer
 	after time.Duration
 	rate  int64
+	clock clock.Clock
 	step  func()
 	pct   int64
 }
 
+// Read reads at full speed, or, held back, at most a tick's worth of rate and then waits out what it read's time on
+// the clock; a download sped up while it waits goes on at once.
 func (c *counter) Read(p []byte) (int, error) {
+	held := c.rate > 0 && c.d.slow()
+	if held {
+		p = p[:min(len(p), max(int(c.rate*int64(throttleTick)/int64(time.Second)), 1))]
+	}
 	n, err := c.r.Read(p)
 	got := c.d.got.Add(int64(n))
 	if n > 0 {
 		c.stall.Reset(c.after)
-		// Held back in short naps, so a download sped up mid-way goes on at once.
-		for wait := time.Duration(n) * time.Second / time.Duration(max(c.rate, 1)); wait > 0 && c.d.slow.Load() && c.rate > 0; wait -= 20 * time.Millisecond {
-			time.Sleep(min(wait, 20*time.Millisecond))
+		if held {
+			c.hold(time.Duration(n) * time.Second / time.Duration(c.rate))
 		}
 	}
 	if t := c.d.total.Load(); t > 0 && got*100/t != c.pct {
@@ -288,4 +322,14 @@ func (c *counter) Read(p []byte) (int, error) {
 		c.step()
 	}
 	return n, err
+}
+
+func (c *counter) hold(wait time.Duration) {
+	due := make(chan struct{})
+	t := c.clock.AfterFunc(wait, func() { close(due) })
+	select {
+	case <-due:
+	case <-c.d.fast:
+		t.Stop()
+	}
 }

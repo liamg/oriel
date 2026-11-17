@@ -67,8 +67,10 @@ type Whisper struct {
 	Metered func() bool
 	// Net is what models are downloaded with; a client with connect and header timeouts if nil.
 	Net *http.Client
-	// Clock times how long the model has gone unused; the system's when nil.
+	// Clock times how long the model has gone unused and paces a background download; the system's when nil.
 	Clock clock.Clock
+	// BackgroundRate caps a background download, in bytes a second; 4 MiB/s when 0.
+	BackgroundRate int64
 
 	load func(path string) (engine, error) // loadEngine, swapped in tests
 
