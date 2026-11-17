@@ -107,12 +107,12 @@ func TestSessionArchiveLeavesTheLoopDrawing(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return st.Focus == "rounding" })
+	rig.WaitState(t, r.Store, "the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	archived := func(st core.State) bool {
-		se, ok := st.Session("rounding")
+		se, ok := st.Session(apptest.Named(st, "rounding"))
 		return ok && se.Snapshot().Archived
 	}
-	slowCommand(t, r, started, release, "session.archive", registry.Args{"id": "rounding"}, nil, archived)
+	slowCommand(t, r, started, release, "session.archive", registry.Args{"id": string(apptest.Named(r.Store.State(), "rounding"))}, nil, archived)
 }
 
 // busyNotice says whether the notice id is up saying what is under way.
@@ -156,7 +156,7 @@ func TestSessionStartLeavesTheLoopDrawing(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	slowCommand(t, r, started, release, "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}}, nil,
-		func(st core.State) bool { return st.Focus == "rounding" })
+		func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 }
 
 // Opening a directory starts its direct session off the loop: the window keeps drawing while git finds its repo.

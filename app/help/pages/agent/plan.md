@@ -50,7 +50,7 @@ Opens a dialog of how the plan becomes work; `⌘↵` starts, `esc` or Cancel cl
   nothing asked is lost. Off, they stay.
 - **Restart the agent with a fresh context**: a new agent starts from the plan docs and the work prompt. Off, the
   plan's agent carries on with what it knows.
-- **Branches**: each repo's branch, named from the ticket and prompt; change it here.
+- **Branches**: each repo's branch, the ticket's id, or your name and the session's id; change it here.
 - **Sandbox**, **Open network**, and the **model** and **effort** for the work.
 
 Start work makes a worktree of each repo on its branch, tells the agent the plan is approved and where to implement

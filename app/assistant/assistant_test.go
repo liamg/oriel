@@ -118,12 +118,12 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 	s.Run("session.start", registry.Args{"kind": "work", "name": "other", "provider": "fake", "repos": []string{lw.Repo}})
 	lw.Fake.WaitStarted(t)
 	st := s.UntilState("rounding waiting on a permission", func(st core.State) bool {
-		se, ok := st.Session("rounding")
-		return ok && se.Status() == core.StatusPermission && st.Focus == "other"
+		se, ok := st.Session(apptest.Named(st, "rounding"))
+		return ok && se.Status() == core.StatusPermission && apptest.FocusedOn(st, "other")
 	})
 
 	// The window follows the session in front, out of the start view, which keeps to its own keys.
-	other, _ := st.Session("other")
+	other, _ := st.Session(apptest.Named(st, "other"))
 	s.Until("the window to follow the session", func() bool {
 		s.Reopen()
 		return s.Host().Here().Project == kit.SessionDir(other.Snapshot())
@@ -189,12 +189,12 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 		t.Fatal(err)
 	}
 	var lines []assistant.SessionLine
-	if json.Unmarshal([]byte(out), &lines) != nil || len(lines) != 2 || lines[0].ID != "rounding" || lines[0].Status != "permission" ||
+	if json.Unmarshal([]byte(out), &lines) != nil || len(lines) != 2 || lines[0].ID != string(apptest.Named(st, "rounding")) || lines[0].Status != "permission" ||
 		len(lines[0].Asks) != 1 || lines[0].Asks[0] != "Bash make e2e" || lines[0].Kind != "work" {
 		t.Fatalf("sessions: %s", out)
 	}
 	if _, err := settleCall(t, s, asstCall(ua, "reply", map[string]any{"text": "One thing waits on you.", "items": []map[string]any{
-		{"title": "rounding", "text": "wants to run make e2e", "meta": "1m · this machine", "session": "rounding"}}})); err != nil {
+		{"title": "rounding", "text": "wants to run make e2e", "meta": "1m · this machine", "session": string(apptest.Named(st, "rounding"))}}})); err != nil {
 		t.Fatal(err)
 	}
 	ua.Emit(agent.TurnEnd{})
@@ -212,7 +212,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 
 	// ⌘1 picks the first row: its session comes to the front, and the window stays over it until it's minimised.
 	s.Press("<D-1>")
-	s.UntilState("rounding in front", func(st core.State) bool { return st.Focus == "rounding" })
+	s.UntilState("rounding in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	if !assistantOf(s).Open() {
 		t.Error("the window went when its row opened a session")
 	}

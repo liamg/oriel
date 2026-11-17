@@ -7,7 +7,6 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -39,8 +38,9 @@ func (r *rulesRig) start(name string) *agenttest.FakeSession {
 
 func (r *rulesRig) front(name string) {
 	r.t.Helper()
-	r.s.Run("session.focus", registry.Args{"id": name})
-	r.s.Until(name+" in front", func() bool { return r.s.Store().State().Focus == core.SessionID(name) })
+	r.s.Until(name+" started", func() bool { return apptest.Named(r.s.Store().State(), name) != "" })
+	r.s.Run("session.focus", registry.Args{"id": string(apptest.Named(r.s.Store().State(), name))})
+	r.s.Until(name+" in front", func() bool { return apptest.FocusedOn(r.s.Store().State(), name) })
 }
 
 // goTest asks a's gate for go test args.

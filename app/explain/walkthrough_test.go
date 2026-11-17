@@ -200,7 +200,7 @@ func TestExplainChangeSnapshot(t *testing.T) {
 // conversation), told the answer's format, and nothing reaches the main conversation.
 func TestExplainChangeAskedOfTheSessionsFork(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	if err := os.WriteFile(filepath.Join(dir, "round.go"), []byte(rig.ExplainWork), 0o644); err != nil {
 		t.Fatal(err)
 	}

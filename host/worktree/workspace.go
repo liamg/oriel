@@ -11,10 +11,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/hostcore"
 )
 
 // LoadManifest reads root's manifest; ok is false when root isn't a workspace.
@@ -103,14 +103,23 @@ func uniqueProjectName(m hostapi.Manifest, repo string) string {
 	return base + "-" + hex.EncodeToString(sum[:3])
 }
 
-// BranchName is <you>/<ticket>-<slug>.
-func BranchName(you, ticket, slug string) string {
-	name := hostapi.Sanitise(slug)
-	if t := hostapi.Sanitise(ticket); t != "" && !strings.HasPrefix(name, t) {
-		name = strings.Trim(t+"-"+name, "-")
+// BranchName is a session's branch: its ticket's id as the tracker writes it (TRK-1234), else <you>/<session id>.
+func BranchName(you, ticket string, id core.SessionID) string {
+	if t := ticketBranch(ticket); t != "" {
+		return t
 	}
-	if name == "" {
-		name = "work"
-	}
-	return you + "/" + hostcore.TrimWords(name, 6)
+	return you + "/" + string(id)
+}
+
+// ticketBranch is a ticket id as a branch name: its letters, digits and - _ . kept as written, the rest dropped.
+func ticketBranch(ticket string) string {
+	return strings.Trim(strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+			return r
+		case r == '.' || r == ' ' || r == '/':
+			return '-'
+		}
+		return -1
+	}, strings.TrimSpace(ticket)), "-.")
 }

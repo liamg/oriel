@@ -22,10 +22,10 @@ import (
 // asked waits for session w to have n asks, and returns them.
 func asked(r *apptest.Window, n int) []core.Ask {
 	st := r.UntilState("the question", func(st core.State) bool {
-		se, ok := st.Session("w")
+		se, ok := st.Session(apptest.Named(st, "w"))
 		return ok && len(se.Snapshot().Asks) == n
 	})
-	se, _ := st.Session("w")
+	se, _ := st.Session(apptest.Named(st, "w"))
 	return se.Snapshot().Asks
 }
 
@@ -144,7 +144,7 @@ func TestAQuestionStaysInItsResolvedThread(t *testing.T) {
 	asked(r, 1)
 	r.Run("request.resolve", registry.Args{"thread": string(th.ID)})
 	r.UntilState("the thread resolved", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		t, _ := se.Snapshot().Thread(th.ID)
 		return t.Status == core.ThreadResolved
 	})
@@ -187,7 +187,7 @@ func TestSeveralQuestionsWaitInAThread(t *testing.T) {
 			rounding = q
 		}
 	}
-	r.Run("ask.answer", registry.Args{"id": "w", "ask": rounding.ID, "answers": map[string]string{"Which rounding?": "banker's"}})
+	r.Run("ask.answer", registry.Args{"id": string(r.Session), "ask": rounding.ID, "answers": map[string]string{"Which rounding?": "banker's"}})
 	if out := apptest.Recv(t, "the first answer", first); !strings.Contains(out, "banker's") {
 		t.Errorf("the first question was answered %q", out)
 	}
@@ -315,7 +315,7 @@ func TestAQuestionInASessionBehind(t *testing.T) {
 // and is answered there.
 func TestAQuestionShowsInItsThreadInTheDiff(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
 	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
 	rig.Git(t, dir, "add", "-A")
@@ -355,11 +355,11 @@ func TestAnAnsweredQuestionStaysInItsThread(t *testing.T) {
 	asked(r, 0)
 
 	st := r.UntilState("the question and its answer in the thread", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(apptest.Named(st, "w"))
 		t, _ := se.Snapshot().Thread(th.ID)
 		return len(t.Comments) == 3
 	})
-	se, _ := st.Session("w")
+	se, _ := st.Session(apptest.Named(st, "w"))
 	got2, _ := se.Snapshot().Thread(th.ID)
 	q, ans := got2.Comments[1], got2.Comments[2]
 	if q.Author != core.AuthorAgent || !q.Asked || !strings.Contains(q.Body, "Which rounding?") {

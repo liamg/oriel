@@ -17,8 +17,9 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// freshName is a session name from the prompt that no session or directory is using yet.
-func (x *Worktrees) freshName(spec core.SessionSpec) string {
+// sessionName is a new session's name until it's renamed: what spec names it, else its ticket and the prompt's first
+// words.
+func sessionName(spec core.SessionSpec) string {
 	base := hostapi.Sanitise(spec.Name)
 	if base == "" {
 		base = hostcore.TrimWords(hostapi.Sanitise(core.Summary(spec.Prompt)), 5)
@@ -26,34 +27,30 @@ func (x *Worktrees) freshName(spec core.SessionSpec) string {
 	if t := hostapi.Sanitise(spec.Ticket); t != "" && !strings.HasPrefix(base, t) {
 		base = strings.Trim(t+"-"+base, "-")
 	}
-	if base == "" {
-		base = string(spec.Kind)
-	}
+	return cmp.Or(base, string(spec.Kind))
+}
+
+// freshID is a new session's id: short and random, apart from its name, and one no session or directory is using.
+func (x *Worktrees) freshID() core.SessionID {
 	st := x.st.Snapshot()
-	out := base
-	for n := 2; n < 1000; n++ {
-		_, taken := st.Session(core.SessionID(out))
-		if _, err := os.Stat(filepath.Join(x.env.WorkspacesDir(), out)); err == nil {
-			taken = true
-		}
-		if _, err := os.Stat(x.env.SessionDir(core.SessionID(out))); err == nil {
-			taken = true
-		}
-		if _, err := os.Stat(x.env.RetiredID(core.SessionID(out))); err == nil {
-			taken = true
+	for {
+		id := x.env.NewSessionID()
+		_, taken := st.Session(id)
+		for _, p := range []string{filepath.Join(x.env.WorkspacesDir(), string(id)), x.env.SessionDir(id), x.env.RetiredID(id)} {
+			if _, err := os.Stat(p); err == nil {
+				taken = true
+			}
 		}
 		if !taken {
-			break
+			return id
 		}
-		out = fmt.Sprintf("%s-%d", base, n)
 	}
-	return out
 }
 
 // New is a fresh session of kind k as spec asks, its workspace and worktrees made as k calls for.
 func (x *Worktrees) New(ctx context.Context, spec core.SessionSpec, k core.KindSpec) (core.SessionState, error) {
-	name := x.freshName(spec)
-	se := core.SessionState{ID: core.SessionID(name), Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
+	name := sessionName(spec)
+	se := core.SessionState{ID: x.freshID(), Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
 		Created: x.env.Now().UTC(), StartWork: k.Worktrees == core.WorktreesStartWork || k.Worktrees == core.WorktreesInit,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: hostcore.GateOf(spec, k),
 			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network, Backend: spec.Sandbox.Backend,
@@ -61,7 +58,7 @@ func (x *Worktrees) New(ctx context.Context, spec core.SessionSpec, k core.KindS
 	se.SetData(spec.Data())
 	branch := spec.Branch
 	if branch == "" {
-		branch = BranchName(hostcore.WhoAmI(ctx), spec.Ticket, name)
+		branch = BranchName(hostcore.WhoAmI(ctx), spec.Ticket, se.ID)
 	}
 	var err error
 	switch k.Worktrees {
@@ -201,10 +198,7 @@ func (x *Worktrees) newRepo(ctx context.Context, se *core.SessionState, spec cor
 	if parent == "" {
 		parent = x.deps.ReposDir()
 	}
-	dir := filepath.Join(parent, string(se.ID))
-	if spec.Name != "" {
-		dir = filepath.Join(parent, hostapi.Sanitise(spec.Name))
-	}
+	dir := filepath.Join(parent, sessionName(spec))
 	if _, err := os.Stat(dir); err == nil {
 		return fmt.Errorf("%s already exists", dir)
 	}

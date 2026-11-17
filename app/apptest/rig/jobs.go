@@ -69,7 +69,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Clock: r.Clock, NoAutoName: true, HTTP: isolate.Net(t),
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Clock: r.Clock, NoAutoName: true, HTTP: isolate.Net(t), SessionIDs: SessionIDs(),
 		Sandbox: FakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

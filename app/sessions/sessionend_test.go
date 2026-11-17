@@ -16,9 +16,9 @@ import (
 func endScene(t *testing.T) (*apptest.Scene, core.SessionState) {
 	s, lw := apptest.HostScene(t)
 	s.Run("session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})
-	s.UntilState("the session in front", func(st core.State) bool { return st.Focus == "rounding" })
+	s.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	s.Until("its tab", func() bool { return s.Node("rounding") != nil })
-	se, _ := s.Store().State().Session("rounding")
+	se, _ := s.Store().State().Session(apptest.Named(s.Store().State(), "rounding"))
 	return s, se.Snapshot()
 }
 
@@ -35,7 +35,7 @@ func TestEndSessionFromItsTab(t *testing.T) {
 	s.WantFrame("END SESSION", "Its worktrees, workspace and log go")
 	s.Lint("the End session dialog")
 	s.Press("<D-CR>")
-	s.UntilState("the session gone", func(st core.State) bool { _, ok := st.Session("rounding"); return !ok })
+	s.UntilState("the session gone", func(st core.State) bool { _, ok := st.Session(apptest.Named(st, "rounding")); return !ok })
 }
 
 // Uncommitted work is shown, file by file, and Archive offers to discard it rather than refusing.
@@ -44,13 +44,13 @@ func TestEndSessionDiscardsAndArchives(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(se.Projects[0].Dir, "notes.txt"), []byte("x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s.Run("session.end", registry.Args{"id": "rounding"})
+	s.Run("session.end", registry.Args{"id": string(apptest.Named(s.Store().State(), "rounding"))})
 	s.WaitFor("1 file uncommitted, lost: notes.txt")
 	s.ClickText("Archive")
 	s.WantFrame("Discard and archive")
 	s.Press("<D-CR>")
 	s.UntilState("the session archived", func(st core.State) bool {
-		se, ok := st.Session("rounding")
+		se, ok := st.Session(apptest.Named(st, "rounding"))
 		return ok && se.Snapshot().Archived
 	})
 	if _, err := os.Stat(se.Projects[0].Dir); err == nil {
@@ -146,7 +146,7 @@ func TestEndSessionListsWhatTheAgentIsStillRunning(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s.Run("session.end", registry.Args{"id": "rounding"})
+	s.Run("session.end", registry.Args{"id": string(apptest.Named(s.Store().State(), "rounding"))})
 	s.WaitFor("The agent is mid-turn")
 	// Each wraps in the dialog, so its count and what it's running are looked for apart.
 	s.WantFrame("1 subagent still running, stopped with the agent: sweep the flaky tests",

@@ -35,7 +35,7 @@ func threadWith(t *testing.T, r *apptest.Window, body string) core.Thread {
 	t.Helper()
 	var th core.Thread
 	r.UntilState("the thread "+body, func(st core.State) bool {
-		se, ok := st.Session("w")
+		se, ok := st.Session(r.Session)
 		if !ok {
 			return false
 		}
@@ -53,7 +53,7 @@ func threadWith(t *testing.T, r *apptest.Window, body string) core.Thread {
 // projectDir is the session's worktree.
 func projectDir(t *testing.T, r *apptest.Window) string {
 	t.Helper()
-	se, ok := r.Store.Session("w")
+	se, ok := r.Store.Session(r.Session)
 	if !ok {
 		t.Fatal("no session w")
 	}
@@ -133,7 +133,7 @@ func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 	a.Emit(agent.ToolCall{ID: "b1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "go test ./internal/pricing/"})})
 	a.Emit(agent.ToolResult{ID: "b1", Output: "--- PASS: TestRoundHalfEven (0.00s)\nok  \tpricing\t0.01s\n"})
 	r.UntilState("the run", func(st core.State) bool {
-		s, _ := st.Session("w")
+		s, _ := st.Session(r.Session)
 		return s != nil && len(s.Snapshot().Runs) == 1
 	})
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Right: `Floor` rounds toward -∞.\n\n- made the negative cases table-driven\n- checked the `RoundMinor` callers\n\nThe tests pass."})
@@ -150,9 +150,15 @@ func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 	}
 	// A later turn that ran no tests isn't backed by this one's.
 	a.Emit(agent.TurnEnd{})
-	r.UntilState("the turn's end", func(st core.State) bool { s, _ := st.Session("w"); return s != nil && !s.Snapshot().Agent.Working })
+	r.UntilState("the turn's end", func(st core.State) bool {
+		s, _ := st.Session(r.Session)
+		return s != nil && !s.Snapshot().Agent.Working
+	})
 	a.Emit(agent.TurnStart{})
-	r.UntilState("the next turn", func(st core.State) bool { s, _ := st.Session("w"); return s != nil && s.Snapshot().Agent.Working })
+	r.UntilState("the next turn", func(st core.State) bool {
+		s, _ := st.Session(r.Session)
+		return s != nil && s.Snapshot().Agent.Working
+	})
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Tidied the table; tests pass."})
 	r.WaitText("⚠ says tests pass, but no passing test run backs it")
 
@@ -317,7 +323,7 @@ func TestLuaThreads(t *testing.T) {
 	}
 	lua(`oriel.thread.resolve("` + string(th.ID) + `")`)
 	r.UntilState("the thread resolved", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		x, _ := se.Snapshot().Thread(th.ID)
 		return x.Status == core.ThreadResolved
 	})
@@ -397,7 +403,7 @@ func TestComposerTakesPastedPicturesAndFiles(t *testing.T) {
 	in := a.WaitSent(t)
 	var th core.Thread
 	r.UntilState("the request", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		for _, x := range se.Snapshot().Threads {
 			if len(x.Comments) > 0 && strings.HasPrefix(x.Comments[0].Body, "this looks off") {
 				th = x
@@ -440,7 +446,7 @@ func TestRenameFromTabMenus(t *testing.T) {
 	r.TypeText("Rounding")
 	r.TypeKeys("<CR>")
 	r.UntilState("the session renamed", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		return se != nil && se.Name() == "Rounding"
 	})
 
@@ -454,7 +460,7 @@ func TestRenameFromTabMenus(t *testing.T) {
 	r.TypeText("Negatives round down")
 	r.TypeKeys("<CR>")
 	r.UntilState("the request renamed", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		t, ok := se.Snapshot().Thread(th.ID)
 		return ok && t.Title == "Negatives round down"
 	})
@@ -534,7 +540,7 @@ func TestQueuedMessagesEditAndDelete(t *testing.T) {
 	}
 	comments := func(st core.State) []string {
 		var out []string
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		t2, _ := se.Snapshot().Thread(th.ID)
 		for _, c := range t2.Comments {
 			out = append(out, c.Body)
@@ -608,7 +614,7 @@ func TestQueuedEditKeepsTheToggles(t *testing.T) {
 	edit("why decimal?", "why decimal and not big.Rat?", "BTW")
 	r.WaitText("fork says:")
 	r.UntilState("the btw last", func(st core.State) bool {
-		se, _ := st.Session("w")
+		se, _ := st.Session(r.Session)
 		t2, _ := se.Snapshot().Thread(th.ID)
 		for i, c := range t2.Comments {
 			if c.Body == "why decimal and not big.Rat?" {

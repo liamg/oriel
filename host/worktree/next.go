@@ -43,7 +43,7 @@ func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 		return fmt.Errorf("%s has %s on %s that aren't pushed or on %s: push them, or drop them, first",
 			p.Name, words.Counted(n, "commit"), branch, strings.TrimPrefix(base, "origin/"))
 	}
-	fresh := main.FreshBranch(ctx, BranchName(hostcore.WhoAmI(ctx), se.Ticket, string(se.ID))+"-next")
+	fresh := main.FreshBranch(ctx, BranchName(hostcore.WhoAmI(ctx), se.Ticket, se.ID)+"-next")
 	if err := repo.CheckoutNew(ctx, fresh, base); err != nil {
 		return fmt.Errorf("%s: %w", p.Name, err)
 	}

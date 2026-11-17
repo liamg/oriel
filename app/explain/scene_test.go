@@ -91,7 +91,7 @@ func waitThread(t *testing.T, w *apptest.Window, ok func(core.Thread) bool) core
 	t.Helper()
 	var th core.Thread
 	w.UntilState("the thread", func(st core.State) bool {
-		se, found := st.Session("w")
+		se, found := st.Session(apptest.Named(st, "w"))
 		if !found {
 			return false
 		}

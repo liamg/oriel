@@ -42,13 +42,13 @@ func planSession(t *testing.T) (*apptest.Window, *agenttest.FakeSession, *rig.Ho
 	if in := a.WaitSent(t); !strings.Contains(in.Text, `where="plan"`) {
 		t.Fatalf("the prompt reached the agent as %q", in.Text)
 	}
-	w.UntilState("the session in front", func(st core.State) bool { return st.Focus == "rounding" })
+	w.UntilState("the session in front", func(st core.State) bool { return apptest.FocusedOn(st, "rounding") })
 	return w, a, lw
 }
 
 func planNow(t *testing.T, w *apptest.Window) core.SessionState {
 	t.Helper()
-	se, ok := w.Store.Session("rounding")
+	se, ok := w.Store.Session(apptest.Named(w.Store.State(), "rounding"))
 	if !ok {
 		t.Fatal("no session rounding")
 	}
@@ -138,10 +138,10 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	fresh := lw.Fake.WaitStarted(t)
 	in = fresh.WaitSent(t)
 	st := w.UntilState("work started", func(st core.State) bool {
-		s, _ := st.Session("rounding")
+		s, _ := st.Session(apptest.Named(st, "rounding"))
 		return s != nil && s.Snapshot().Started
 	})
-	s, _ := st.Session("rounding")
+	s, _ := st.Session(apptest.Named(st, "rounding"))
 	p, _ := s.Snapshot().Primary()
 	if p.ReadOnly || p.Dir != filepath.Join(se.Dir, "repos", filepath.Base(lw.Repo)) {
 		t.Fatalf("the project after Start work: %+v", p)
@@ -166,12 +166,12 @@ func TestStartWorkDialog(t *testing.T) {
 		body   string
 		status core.ThreadStatus
 	}{{"Is half-even what finance wants?", core.ThreadDeferred}, {"Which currencies?", core.ThreadResolved}} {
-		tid, err := lw.W.Comment(ctx, hostapi.CommentReq{Session: "rounding", Body: th.body,
+		tid, err := lw.W.Comment(ctx, hostapi.CommentReq{Session: se.ID, Body: th.body,
 			Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 10}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := lw.W.SetThread(hostapi.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
+		if err := lw.W.SetThread(hostapi.ThreadReq{Session: se.ID, Thread: tid, Status: th.status}); err != nil {
 			t.Fatal(err)
 		}
 	}

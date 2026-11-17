@@ -284,7 +284,7 @@ func TestComposerSwitchesTheModel(t *testing.T) {
 func TestComposerShowsTheSandbox(t *testing.T) {
 	r, _, _ := apptest.ConsoleWindow(t)
 	r.WaitText("GATE ASK")
-	st, _ := r.Store.State().Session("w")
+	st, _ := r.Store.State().Session(apptest.Named(r.Store.State(), "w"))
 	se := st.Snapshot()
 	se.Agent.Sandboxed, se.Agent.Network = true, "ask"
 	if err := r.Store.Apply(core.SessionSynced{Session: se}); err != nil {
@@ -307,7 +307,7 @@ func TestConsoleScrollsBack(t *testing.T) {
 	r.Latest("the start scrolled into view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 	a.Emit(agent.Message{ID: "m40", Role: core.ItemAssistant, Text: "Message number 40."})
 	r.WaitFor("the message in the transcript", func() bool {
-		se, _ := r.Store.Session("w")
+		se, _ := r.Store.Session(r.Session)
 		return slices.ContainsFunc(se.Snapshot().Transcript, func(it core.Item) bool { return it.ID == "m40" })
 	})
 	r.Do(func() error { return nil }) // the loop has taken it, and draws it next

@@ -44,8 +44,10 @@ type Window struct {
 	Dir   string      // the directory it opened
 	// ConfigDir is the config directory: init.lua, settings.toml.
 	ConfigDir string
-	done      chan error
-	once      sync.Once
+	// Session is the session AgentWindow started, named "w", by its id.
+	Session core.SessionID
+	done    chan error
+	once    sync.Once
 
 	mu      sync.Mutex
 	plugins map[string]plugin.Plugin // each active, by id
@@ -622,7 +624,8 @@ func HasAll(s string, parts ...string) bool {
 	return true
 }
 
-// AgentWindow is a HostWindow with a work session, "w", of the fake agent in front, the window on its worktree.
+// AgentWindow is a HostWindow with a work session named "w" (its id is Window.Session) of the fake agent in front,
+// the window on its worktree.
 func AgentWindow(t *testing.T) (*Window, *agenttest.FakeSession, *rig.Host) {
 	t.Helper()
 	return AgentWindowOn(t, rig.NewHost(t))
@@ -651,8 +654,9 @@ func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOpts) (*Window, *agentte
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": h.Repo})
 	a := h.Fake.WaitStarted(t)
-	st := w.UntilState("the session in front", func(st core.State) bool { return st.Focus == "w" })
-	se, _ := st.Session("w")
+	st := w.UntilState("the session in front", func(st core.State) bool { return FocusedOn(st, "w") })
+	w.Session = Named(st, "w")
+	se, _ := st.Session(w.Session)
 	p, _ := se.Snapshot().Primary()
 	deadline := time.Now().Add(Timeout)
 	for {
@@ -743,7 +747,7 @@ func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fak
 	}); err != nil {
 		t.Fatal(err)
 	}
-	se, _ := r.Store.Session("w")
+	se, _ := r.Store.Session(r.Session)
 	p, _ := se.Snapshot().Primary()
 	dir := p.Dir
 	path := filepath.Join(dir, "round.go")

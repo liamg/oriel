@@ -204,7 +204,7 @@ func TestDiffExplainRunsExplainUnit(t *testing.T) {
 // change itself, so it's still reviewed after another hunk of the file is edited.
 func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	r, _, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
 	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
 	rig.Git(t, dir, "add", "-A")
@@ -217,10 +217,10 @@ func TestDiffReviewedLastsInTheSession(t *testing.T) {
 	})
 	r.ClickText("MARK REVIEWED")
 	st := r.UntilState("the mark in the session", func(st core.State) bool {
-		se, ok := st.Session("w")
+		se, ok := st.Session(apptest.Named(st, "w"))
 		return ok && len(se.Snapshot().ReviewedHunks(sessionProject(t, r), "round.go")) > 0
 	})
-	se, _ := st.Session("w")
+	se, _ := st.Session(apptest.Named(st, "w"))
 	if len(se.Snapshot().Reviews) != 1 {
 		t.Errorf("reviews: %+v", se.Snapshot().Reviews)
 	}
@@ -236,7 +236,7 @@ func TestDiffReviewedLastsInTheSession(t *testing.T) {
 // there.
 func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
 	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
 	rig.Git(t, dir, "add", "-A")
@@ -269,7 +269,7 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 // gutter for that: the click is the way.
 func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
 	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
 	rig.Git(t, dir, "add", "-A")
@@ -299,7 +299,7 @@ func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 // sessionProject is the name of session w's project.
 func sessionProject(t *testing.T, r *apptest.Window) string {
 	t.Helper()
-	se, ok := r.Store.Session("w")
+	se, ok := r.Store.Session(r.Session)
 	if !ok {
 		t.Fatal("no session w")
 	}

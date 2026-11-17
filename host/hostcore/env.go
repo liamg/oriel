@@ -22,6 +22,16 @@ type Env struct {
 	Clock  clock.Clock // the system's if nil
 	Closed <-chan struct{}
 	Work   *Jobs // what Go starts, which the host waits for as it closes
+	// SessionIDs makes a new session's id; NewSessionID if nil.
+	SessionIDs func() string
+}
+
+// NewSessionID is a new session's id, from SessionIDs or NewSessionID.
+func (e Env) NewSessionID() core.SessionID {
+	if e.SessionIDs != nil {
+		return core.SessionID(e.SessionIDs())
+	}
+	return core.SessionID(NewSessionID())
 }
 
 // Now is the time on the host's clock.

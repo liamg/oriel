@@ -38,10 +38,10 @@ func SandboxedScene(t *testing.T, backend sandbox.Backend) (*Scene, *rig.Host, c
 	s.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": h.Repo, "sandbox": true, "network": "ask"})
 	h.Fake.WaitStarted(t)
 	s.UntilState("the sandboxed session in front", func(st core.State) bool {
-		se, ok := st.Session("w")
-		return ok && st.Focus == "w" && se.Snapshot().Agent.Sandboxed
+		se, ok := st.Session(Named(st, "w"))
+		return ok && FocusedOn(st, "w") && se.Snapshot().Agent.Sandboxed
 	})
 	s.Until("the window on the session", func() bool { s.RunQueued(); return s.Reopen() })
-	se, _ := s.Store().State().Session("w")
+	se, _ := s.Store().State().Session(Named(s.Store().State(), "w"))
 	return s, h, se.Snapshot()
 }

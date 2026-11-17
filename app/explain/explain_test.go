@@ -213,7 +213,7 @@ func TestChangedUnitsPanel(t *testing.T) {
 // a request with the explanation.
 func TestExplainAnsweredByTheSessionsFork(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	path := filepath.Join(r.ProjectDir("w"), "round.go")
+	path := filepath.Join(r.ProjectDir(r.Session), "round.go")
 	if err := os.WriteFile(path, []byte(rig.ExplainWork), 0o644); err != nil {
 		t.Fatal(err)
 	}
