@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Registry is the checkouts the host knows (repos.json), and what the Repos page does to them.
@@ -274,7 +275,7 @@ func (x *Registry) CloneParent() string {
 	best := ""
 	for _, r := range x.list.all() {
 		p := filepath.Dir(r.Path)
-		if hostcore.Within(p, x.env.Home) {
+		if pathx.StrictlyInside(p, x.env.Home) {
 			continue
 		}
 		n[p]++

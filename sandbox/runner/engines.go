@@ -64,7 +64,7 @@ func findDocker() (container.Engine, error) {
 		socks = append(socks[:len(socks):len(socks)], d+"/docker.sock")
 	}
 	for _, s := range socks {
-		if p := container.Socket(s); p != "" && !container.Within(p, otherEngines...) {
+		if p := container.Socket(s); p != "" && !container.InsideAny(p, otherEngines...) {
 			return e, nil
 		}
 	}

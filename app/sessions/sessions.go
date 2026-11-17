@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -545,12 +546,12 @@ func (x *Sessions) readOnly(path string) string {
 	for _, p := range st.Projects {
 		roots = append(roots, root{p.Dir, p.ReadOnly})
 	}
-	if !slices.ContainsFunc(roots, func(r root) bool { return kit.Within(work, r.dir) }) {
+	if !slices.ContainsFunc(roots, func(r root) bool { return pathx.InsideResolved(work, r.dir) }) {
 		return "" // the window isn't on this session
 	}
 	best := -1
 	for i, r := range roots {
-		if kit.Within(path, r.dir) && (best < 0 || len(r.dir) > len(roots[best].dir)) {
+		if pathx.InsideResolved(path, r.dir) && (best < 0 || len(r.dir) > len(roots[best].dir)) {
 			best = i
 		}
 	}

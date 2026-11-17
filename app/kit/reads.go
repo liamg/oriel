@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
@@ -115,12 +116,12 @@ func (r *Reads) Stat(path string) (fs.FileInfo, ui.LoadState) {
 	return fi, st
 }
 
-// Within is kit.Within with symbolic links resolved through the cache: as written until they are.
-func (r *Reads) Within(path, dir string) bool {
+// InsideResolved is pathx.InsideResolved with symbolic links resolved through the cache: as written until they are.
+func (r *Reads) InsideResolved(path, dir string) bool {
 	if dir == "" || path == "" {
 		return false
 	}
-	if Inside(path, dir) {
+	if pathx.Inside(path, dir) {
 		return true
 	}
 	r.q.run()
@@ -128,7 +129,7 @@ func (r *Reads) Within(path, dir string) bool {
 	rd, st2 := r.Reals.Get(dir)
 	r.note(st1)
 	r.note(st2)
-	return rp != "" && rd != "" && Inside(rp, rd)
+	return rp != "" && rd != "" && pathx.Inside(rp, rd)
 }
 
 // Has says the program name is on PATH; false until it's looked up.

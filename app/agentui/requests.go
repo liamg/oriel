@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -711,13 +712,13 @@ func anchorIn(st core.SessionState, file string, line, end int, text string) *co
 		return an
 	}
 	for _, p := range st.Projects {
-		if kit.Within(file, p.Dir) {
+		if pathx.InsideResolved(file, p.Dir) {
 			rel, _ := filepath.Rel(p.Dir, file)
 			an.Project, an.File = p.Name, filepath.ToSlash(rel)
 			return an
 		}
 	}
-	if kit.Within(file, st.Dir) {
+	if pathx.InsideResolved(file, st.Dir) {
 		rel, _ := filepath.Rel(st.Dir, file)
 		an.Project, an.File = core.DocsProject, filepath.ToSlash(rel)
 	}

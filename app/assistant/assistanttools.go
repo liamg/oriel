@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
 	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
@@ -712,7 +713,7 @@ func (x *Assistant) toolWhere(ctx registry.Ctx, _ registry.Args) (any, error) {
 	}
 	for _, p := range w.Projects {
 		out.Projects = append(out.Projects, projectLine{Name: p.Name, Branch: p.Branch, Dir: p.Dir})
-		if at.File != "" && kit.Inside(at.File, p.Dir) {
+		if at.File != "" && pathx.Inside(at.File, p.Dir) {
 			out.FileIn = p.Name
 			if rel, err := filepath.Rel(p.Dir, at.File); err == nil {
 				out.File = filepath.ToSlash(rel)
@@ -847,7 +848,7 @@ func (x *Assistant) toolFocusFile(ctx registry.Ctx, p registry.Args) (any, error
 	name := p.Trimmed("project")
 	if name == "" && filepath.IsAbs(path) {
 		for _, pr := range s.Projects {
-			if kit.Inside(path, pr.Dir) {
+			if pathx.Inside(path, pr.Dir) {
 				name = pr.Name
 			}
 		}

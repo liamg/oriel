@@ -325,7 +325,7 @@ func Asset(dir, name string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("asset %s: %w", name, err)
 	}
-	if !Within(r, real) {
+	if !absInside(real, r) {
 		return nil, fmt.Errorf("asset %q leads out of %s/", name, AssetsDir)
 	}
 	return os.ReadFile(real)
