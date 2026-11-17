@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"flag"
 	"fmt"
@@ -73,6 +74,7 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	log := cfg.Logs.Logger("host")
+	wasmCaches(cmp.Or(cfg.CacheDir, app.DefaultCacheDir()), log)
 	loginPath(log, fromTerminal)
 	// load reads the machine's load in-process, only while it's wanted, and says when it moves.
 	load := sysload.NewSampler(5*time.Second, nil)

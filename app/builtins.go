@@ -36,8 +36,6 @@ import (
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/app/watches"
 	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/syntax"
-	"github.com/liamg/oriel/term/ghostty"
 )
 
 // builtins are the window's built-in plugins, in the order they start: the shell's own (p) and the features'. They're
@@ -45,7 +43,6 @@ import (
 // p.DirState, DirChanged).
 func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	c := p.Config // the window's, as it starts
-	wasmCaches(c)
 	dirState := func(name string) func() string { return func() string { return p.DirState(name) } }
 	ed, gits := &editor.Editor{Files: c.Files, Clipboard: p.Clipboard, Tools: p.Tools}, &gitui.Git{}
 	st, dictate := &stats.Stats{}, &dictation.Voice{Config: cfg.Voice}
@@ -73,17 +70,4 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)
-}
-
-// wasmCaches points the grammar and terminal runtimes at the window's cache before any plugin can use them: they're
-// the process's, so a later window's own dir (a test's) is logged as not taken, not dropped silently.
-func wasmCaches(c shell.Config) {
-	if c.CacheDir == "" {
-		return
-	}
-	for _, err := range []error{syntax.SetCacheDir(c.CacheDir), ghostty.SetCacheDir(filepath.Join(c.CacheDir, "wasm"))} {
-		if err != nil && c.Logs != nil {
-			c.Logs.Logger("app").Debug("wasm cache", "err", err)
-		}
-	}
 }

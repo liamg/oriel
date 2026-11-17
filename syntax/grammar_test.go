@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/liamg/oriel/internal/wasmrt"
 )
 
 // The embedded grammars are what build.sh makes: each decompresses to its SHA256SUMS line, which CI checks a rebuild
@@ -92,7 +94,11 @@ func TestMoreLanguagesByFile(t *testing.T) {
 // A compile with the cache's folder gone, deleted while Oriel runs, still compiles, and keeps it again.
 func TestCompilesWithItsCacheFolderGone(t *testing.T) {
 	dir := t.TempDir()
-	rt, err := newRuntime(dir)
+	r := wasmrt.Runtime{Name: "grammar", Init: grammars.Init}
+	if err := r.SetCacheDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	rt, err := r.Get()
 	if err != nil {
 		t.Fatal(err)
 	}

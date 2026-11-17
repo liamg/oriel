@@ -109,6 +109,14 @@ type Parts struct {
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
 
+// DefaultCacheDir is the user's cache directory's oriel/, "" when there's none.
+func DefaultCacheDir() string {
+	if d, err := os.UserCacheDir(); err == nil {
+		return filepath.Join(d, "oriel")
+	}
+	return ""
+}
+
 // DefaultConfigDir is $XDG_CONFIG_HOME/oriel, or ~/.config/oriel, on every platform.
 func DefaultConfigDir() string {
 	if d := os.Getenv("XDG_CONFIG_HOME"); d != "" {
@@ -229,9 +237,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 // windowDefaults are the directories Run fills in that a headless app goes without.
 func (cfg *Config) windowDefaults() {
 	if cfg.CacheDir == "" {
-		if d, err := os.UserCacheDir(); err == nil {
-			cfg.CacheDir = filepath.Join(d, "oriel")
-		}
+		cfg.CacheDir = DefaultCacheDir()
 	}
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = DefaultConfigDir()
