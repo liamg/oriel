@@ -2,11 +2,14 @@ package lang_test
 
 import (
 	"context"
+	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
@@ -449,9 +452,14 @@ func TestComingBackScansNoTestsAgain(t *testing.T) {
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "first")
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.SettleGit()
+	scans := &scanCounter{}
+	s.Registry().Contribute(testrun.Contribution{Adapter: scans})
 	x := testsOf(s)
 	rows := func() string { return treeRows(x.TreeAll(), true) }
 	s.Until("the first scan", func() bool { return strings.Contains(rows(), "TestRoundMinor") })
+	if scans.n.Load() == 0 {
+		t.Fatal("the first scan didn't ask the adapters about the workspace's files")
+	}
 	win, _ := kit.WindowOf(s.Registry())
 	move := func(to string) {
 		t.Helper()
@@ -462,13 +470,32 @@ func TestComingBackScansNoTestsAgain(t *testing.T) {
 		s.Quiet()
 	}
 	move(t.TempDir())
-	before := x.Scans()
+	before := scans.n.Load()
 	if err := os.WriteFile(filepath.Join(dir, "away_test.go"), []byte("package pricing\n\nimport \"testing\"\n\nfunc TestAway(t *testing.T) {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	move(dir)
 	s.Until("the test added while away", func() bool { return strings.Contains(rows(), "TestAway") })
-	if n := x.Scans() - before; n > 0 {
+	if n := scans.n.Load() - before; n > 0 {
 		t.Errorf("coming back scanned the directory %d times", n)
 	}
+}
+
+// scanCounter is an adapter, added as a plugin adds one, that counts the whole scans of a workspace: a scan asks every
+// adapter whether each file is a test file, go.mod among them, and nothing else asks about go.mod. It runs nothing.
+type scanCounter struct{ n atomic.Int32 }
+
+func (c *scanCounter) Name() string                               { return "scan-counter" }
+func (c *scanCounter) Detect(testrun.Workspace) bool              { return true }
+func (c *scanCounter) Discover(testrun.Source) []testrun.Item     { return nil }
+func (c *scanCounter) Parse(io.Reader, func(testrun.Event)) error { return nil }
+func (c *scanCounter) Command(testrun.Workspace, []testrun.Item, testrun.Mode) (testrun.Cmd, error) {
+	return testrun.Cmd{}, errors.New("it only counts")
+}
+
+func (c *scanCounter) TestFile(path string) bool {
+	if filepath.Base(path) == "go.mod" {
+		c.n.Add(1)
+	}
+	return false
 }

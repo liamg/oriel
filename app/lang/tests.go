@@ -64,7 +64,6 @@ type Tests struct {
 	keptGit  map[string]bool                      // which of kept git was watching
 	foundNow map[string]bool                      // the files found in an open buffer since the scan began
 	scanFrom time.Time                            // when the workspace scan began
-	scans    int                                  // whole scans begun, for the tests
 	scanGen  int                                  // which scan is the window's directory's: one of a directory left is dropped
 	byKey    map[string]testrun.Item              // scanned by key, made when asked for
 	pkgs     map[string]bool

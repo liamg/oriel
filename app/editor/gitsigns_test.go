@@ -232,12 +232,11 @@ func TestInlineBlame(t *testing.T) {
 	}
 }
 
-// Typing doesn't diff the file for the gutter at every key: its signs wait for the buffer to be still a moment, then
-// are right.
+// Typing doesn't diff the file for the gutter at every key: its signs stand as they were while the keys come, and
+// once the buffer is still a moment they're right.
 func TestGutterWaitsForTypingToStop(t *testing.T) {
 	s, _ := signsScene(t)
-	g := signsOf(s)
-	before := g.Diffs()
+	before := signsAt(s)
 	keys(s, "ggO")
 	for _, k := range "typing" { // as quick as a person types: well inside the wait between keys
 		keys(s, string(k))
@@ -245,12 +244,12 @@ func TestGutterWaitsForTypingToStop(t *testing.T) {
 		s.Advance(60 * time.Millisecond)
 		s.RunQueued()
 		s.Frame()
+		if got := signsAt(s); got != before {
+			t.Fatalf("typing %q changed the signs to %q: the gutter diffed while typing, want %q until it stops", k, got, before)
+		}
 	}
 	keys(s, "<Esc>")
 	s.Frame()
-	if n := g.Diffs() - before; n > 0 {
-		t.Errorf("typing 6 letters began %d diffs", n)
-	}
 	settle(s)
 	if got, want := signsAt(s), "added@1 modified@4 added@12 added@13 deleted@22"; got != want {
 		t.Errorf("once still, signs %q, want %q", got, want)
@@ -260,9 +259,10 @@ func TestGutterWaitsForTypingToStop(t *testing.T) {
 // Another file's change leaves the open file's gutter base as it was read: only the index's copy of a file whose
 // status changed is read again.
 func TestAnotherFilesChangeKeepsTheBase(t *testing.T) {
+	runs := gittest.CountGit(t)
 	s, r := signsScene(t)
-	g := signsOf(s)
-	before := g.BaseReads()
+	baseReads := func() int { return runs("blob :f.txt") } // the open file's copy in the index
+	before := baseReads()
 	if before == 0 {
 		t.Fatal("no base read for the open file")
 	}
@@ -277,7 +277,7 @@ func TestAnotherFilesChangeKeepsTheBase(t *testing.T) {
 		return ok
 	})
 	settle(s)
-	if n := g.BaseReads() - before; n > 0 {
+	if n := baseReads() - before; n > 0 {
 		t.Errorf("a new file read the open file's base %d more times", n)
 	}
 	if got, want := signsAt(s), "modified@3 added@11 added@12 deleted@21"; got != want {

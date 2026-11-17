@@ -65,17 +65,3 @@ func (x *Editor) UnsearchableWalks() int {
 	defer x.unsearched.mu.Unlock()
 	return x.unsearched.walks
 }
-
-// Diffs counts the gutter's diffs begun off the loop.
-func (g *GitSigns) Diffs() int {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.diffs
-}
-
-// BaseReads counts the bases the gutter has read, each file's index or commit copy.
-func (g *GitSigns) BaseReads() int {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.gens
-}
