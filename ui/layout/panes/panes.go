@@ -345,12 +345,15 @@ func node(c *ui.Ctx, r *layout.Root, st *viewState, n *layout.Node, content Cont
 	}
 	// Keyed by its place, not its node: the layout can be made again while a splitter is dragged.
 	id := c.Next("split")
+	// A pane's keys are read as it's built, and they can close its siblings (CTRL-W o), collapsing this split under
+	// the loop: the frame goes on with the split as it began, and the next is built from what's left.
+	kids, weights := slices.Clone(n.Kids), slices.Clone(n.Weights)
 	box("split", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		for i, k := range n.Kids {
+		for i, k := range kids {
 			if i > 0 {
 				changed = splitter(c, st, n, id, i-1, bar) || changed
 			}
-			c.Column(i, main(n.Weights[i]), func(c *ui.Ctx) {
+			c.Column(i, main(weights[i]), func(c *ui.Ctx) {
 				changed = node(c, r, st, k, content) || changed
 			})
 		}
