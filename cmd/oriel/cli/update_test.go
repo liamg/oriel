@@ -107,7 +107,7 @@ func TestBootRunsOnlyUnderTheLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	var cfg app.Config
-	if err := claim(home, &cfg, in); !errors.Is(err, ErrRunning) {
+	if _, err := claim(home, &cfg, in); !errors.Is(err, ErrRunning) {
 		t.Fatalf("claim with the lock held = %v", err)
 	}
 	if p, ok := in.Pending(); !ok || p.Boots != 0 {
@@ -117,10 +117,11 @@ func TestBootRunsOnlyUnderTheLock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := claim(home, &cfg, in); err != nil {
+	held, err := claim(home, &cfg, in)
+	if err != nil {
 		t.Fatal(err)
 	}
-	defer unlock()
+	defer func() { _ = held.Close() }()
 	cfg.Started()
 	deadline := time.Now().Add(5 * time.Second)
 	for {

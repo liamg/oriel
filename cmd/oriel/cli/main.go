@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/pprof"
 	"strings"
 	"sync"
@@ -69,7 +70,8 @@ func runApp(args []string) {
 	cfg.Plugins = append(cfg.Plugins, plugin.Native()...)
 	home := orielHome()
 	in, _, _ := selfInstaller()
-	if err := claim(home, &cfg, in); err != nil {
+	held, err := claim(home, &cfg, in)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
@@ -105,6 +107,7 @@ func runApp(args []string) {
 		os.Exit(shutdown(err, cfg.Logs, cancel, func() { _ = w.Close(); sandboxes.Close() }, stopProfile))
 	}()
 	gio.Main()
+	runtime.KeepAlive(held) // the lock is the process's until it ends: a collected file would let it go
 }
 
 // loginPath gives the process the PATH and ssh agent the user's login shell sets up, when it wasn't started from a
@@ -122,19 +125,21 @@ func loginPath(log *slog.Logger, fromTerminal bool) {
 }
 
 // claim takes home for this process, then confirms or rolls back a pending update: only the Oriel holding the
-// lock may, or a second launch would count as the new version's start.
-func claim(home string, cfg *app.Config, in *update.Installer) error {
-	var err error
-	if held, err = lock(home); err != nil {
-		return err
+// lock may, or a second launch would count as the new version's start. The lock is held while the file it answers
+// stays open.
+func claim(home string, cfg *app.Config, in *update.Installer) (*os.File, error) {
+	held, err := lock(home)
+	if err != nil {
+		return nil, err
 	}
 	if err := oldWorker(home); err != nil {
-		return err
+		_ = held.Close()
+		return nil, err
 	}
 	if in != nil {
-		appUpdates(cfg, in)
+		appUpdates(cfg, in, held)
 	}
-	return nil
+	return held, nil
 }
 
 // shutdown stops what's running once the window has closed, then the log, and is the exit code.

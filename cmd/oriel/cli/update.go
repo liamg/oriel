@@ -89,7 +89,7 @@ func newUpdater(src update.Source) (*update.Updater, error) {
 
 // appUpdates sets cfg up to update Oriel, and confirms or rolls back a swap: a new version must open its window
 // within healthWait, and one that doesn't, or crashed on the start before, is replaced by the previous one.
-func appUpdates(cfg *app.Config, in *update.Installer) {
+func appUpdates(cfg *app.Config, in *update.Installer, held *os.File) {
 	started := make(chan struct{})
 	cfg.Started = func() { close(started) }
 	go func() {
@@ -115,7 +115,7 @@ func appUpdates(cfg *app.Config, in *update.Installer) {
 		return
 	}
 	cfg.Updates = &app.Updates{Updater: u, Relaunch: func() error {
-		unlock() // the new Oriel takes the lock; this one has handed its sessions over
+		_ = held.Close() // the new Oriel takes the lock; this one has handed its sessions over
 		return relaunch(in)
 	}}
 }
