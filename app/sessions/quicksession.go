@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/sessionkit"
@@ -53,7 +52,7 @@ func (x *Launcher) quick() {
 			return h.Run(ctx, "session.start", sessionkit.SpecArgs(spec))
 		})
 		if err != nil {
-			kit.NotifyFailure(h, core.Notice{ID: "session.quick.start"}, fmt.Errorf("Quick session: %w", err))
+			kit.NotifyFailure(h, core.Notice{ID: "session.quick.start", Title: "Quick session"}, err)
 		}
 	})
 }
