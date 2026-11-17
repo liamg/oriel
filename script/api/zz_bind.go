@@ -148,6 +148,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.Forker(c.Table(0), c.Where())
 			},
+			"gateway_tool": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.tools"); err != nil {
+					return nil, err
+				}
+				return nil, x.GatewayTool(c.Table(0), c.Where())
+			},
 			"pack": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.prompt"); err != nil {
 					return nil, err

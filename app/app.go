@@ -40,8 +40,7 @@ type Config struct {
 	SandboxBackends func() []string
 	// GitHub is how plugins and the plugin registries are read; GitHub's API with your gh login's token if nil.
 	GitHub *catalog.GitHub
-	// GitHubClient is the client GitHub's code host asks GitHub through, as host.Options.GitHub is the session host's;
-	// GitHub's API with the user's token if nil.
+	// GitHubClient is the client GitHub's code host asks GitHub through; GitHub's API with the user's token if nil.
 	GitHubClient func(dir string, env []string) gh.Client
 	// Bundled are the plugins shipped in the binary, loaded by the plugin manager unless turned off or installed.
 	Bundled []plugin.Bundled

@@ -331,3 +331,52 @@ func TestLuaCodeHostCLIConfig(t *testing.T) {
 		t.Errorf("a path out of the config directory: %v", err)
 	}
 }
+
+// A Lua code host reads a checkout's pull request template and code owners, as the Raise PR tab asks for them, and
+// lists the pull requests the user wrote, as the assistant's my_prs asks.
+func TestLuaCodeHostTemplateOwnersAndAuthored(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	src := `oriel.code.host{ name = "forge", sites = { { host = "forge.dev" } },
+  template = function(dir, done) done({ body = "## Why\n", file = dir .. "/.forge/pr.md" }) end,
+  owners = function(dir, files, done) done({ "ada:" .. files[1] }) end,
+  authored = function(site, done) done({ { url = "https://" .. site.host .. "/acme/api/pulls/3", repo = "acme/api", number = 3, title = "mine", draft = true } }) end }`
+	s.Lua(src)
+	h, ok := registry.HostByName(s.Registry(), "forge")
+	if !ok || h.Template == nil || h.Owners == nil || h.Authored == nil {
+		t.Fatalf("the host didn't register its template and owners: %+v", h)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	type answer struct {
+		t    registry.PRTemplate
+		who  []string
+		mine []registry.ReviewRequest
+		err  error
+	}
+	got := make(chan answer, 1)
+	go func() {
+		var a answer
+		if a.t, a.err = h.Template(ctx, "/src/api"); a.err == nil {
+			a.who, a.err = h.Owners(ctx, "/src/api", []string{"limiter.go"})
+		}
+		if a.err == nil {
+			a.mine, a.err = h.Authored(ctx, registry.Site{Host: "forge.dev"})
+		}
+		got <- a
+	}()
+	var a answer
+	s.Until("the answers", func() bool {
+		select {
+		case a = <-got:
+			return true
+		default:
+			return false
+		}
+	})
+	if a.err != nil || a.t.Body != "## Why\n" || a.t.File != "/src/api/.forge/pr.md" || len(a.who) != 1 || a.who[0] != "ada:limiter.go" {
+		t.Errorf("template %+v, owners %q, err %v", a.t, a.who, a.err)
+	}
+	if len(a.mine) != 1 || a.mine[0].URL != "https://forge.dev/acme/api/pulls/3" || a.mine[0].Number != 3 || !a.mine[0].Draft {
+		t.Errorf("authored %+v", a.mine)
+	}
+}

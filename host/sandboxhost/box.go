@@ -207,7 +207,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	}
 	up := &gateway.Upstreams{Servers: gateway.Found(providers, cfg.Servers, cfg.Hidden), Cache: sandbox.ToolsCache()}
 	b.gateway = &gateway.Gateway{
-		Builtins: gateway.Builtins(gatewayHost{b}),
+		Builtins: b.gatewayBuiltins(),
 		Up:       up,
 		Levels:   b.gatewayLevels,
 		Approve:  gatewayHost{b}.Approve,

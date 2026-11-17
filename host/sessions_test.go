@@ -162,7 +162,7 @@ func TestReviewChecksOutThePRHead(t *testing.T) {
 	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRRef: "pull/7/head", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	se := r.session(id)
 	p := se.Projects[0]
 	rd, _ := core.DataOf[core.ReviewData](se)
@@ -173,7 +173,7 @@ func TestReviewChecksOutThePRHead(t *testing.T) {
 	if len(se.Threads) != 1 || se.Threads[0].Title != "Review the pull request" || !strings.Contains(se.Threads[0].Comments[0].Body, pr) {
 		t.Errorf("the review isn't a request: %+v", se.Threads)
 	}
-	named := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr, Title: "pricing#7", Context: "Its base is main.",
+	named := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr, PRRef: "pull/7/head", Title: "pricing#7", Context: "Its base is main.",
 		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	if th := r.session(named).Threads; len(th) != 1 || th[0].Title != "Review pricing#7" || th[0].Comments[0].Body != "Review pricing#7: "+pr+"\n\nIts base is main." {
 		t.Errorf("a named review's request: %+v", th)
@@ -199,7 +199,7 @@ func TestReviewComparesWithThePRBase(t *testing.T) {
 	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "release",
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRRef: "pull/7/head", PRBase: "release",
 		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	st, err := gitx.Repo{Dir: r.session(id).Projects[0].Dir}.Status(ctx)
 	if err != nil {
@@ -235,7 +235,7 @@ func TestReviewCommentsStayInTheDiff(t *testing.T) {
 	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "main", Provider: "fake",
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRRef: "pull/7/head", PRBase: "main", Provider: "fake",
 		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	a := r.agent()
 	if rvs := r.session(id).AIReviews; len(rvs) != 0 {
@@ -281,7 +281,7 @@ func TestReviewUpdatesToTheNewHead(t *testing.T) {
 	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRRef: "pull/7/head", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	if moved, err := r.w.UpdatePR(ctx, id); err != nil || len(moved) != 0 {
 		t.Fatalf("nothing new: %v, %v", moved, err)
 	}

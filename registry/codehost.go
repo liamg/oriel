@@ -37,6 +37,7 @@ type CodeHost struct {
 	Allow func(host, secret, why string) (undo func())
 
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
+	Authored  func(ctx context.Context, s Site) ([]ReviewRequest, error) // the open pull requests you wrote
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)
 	Checkout  func(ctx context.Context, s Site, url string) (PRCheckout, error)
 	// Submit posts the user's review of someone else's PR. Each of r.Comments goes on its lines, or as near as the host
@@ -61,6 +62,11 @@ type CodeHost struct {
 	// Resolve resolves a review thread there, or reopens it, as the user did in Oriel.
 	Resolve func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, resolved bool) error
 
+	// Template is the pull request template in the project's checkout at dir, and Owners the code owners of files
+	// there, as the host reads its files. They read the checkout, not the host's servers.
+	Template func(ctx context.Context, dir string) (PRTemplate, error)
+	Owners   func(ctx context.Context, dir string, files []string) ([]string, error)
+
 	MergeMethods func(ctx context.Context, r CodeRepo, pr PR) (MergeMethods, error)
 	Blockers     func(ctx context.Context, r CodeRepo, pr PR) ([]MergeBlocker, error)
 	Merge        func(ctx context.Context, r CodeRepo, pr PR, o MergeOpts) error
@@ -70,6 +76,12 @@ type CodeHost struct {
 
 func (CodeHost) ContributionKind() string   { return "code.host" }
 func (h CodeHost) ContributionName() string { return h.Name }
+
+// PRTemplate is a repo's pull request template, and the file it's in.
+type PRTemplate struct {
+	Body string `json:"body"`
+	File string `json:"file,omitempty"`
+}
 
 // Words are how a host names a pull request.
 type Words struct {

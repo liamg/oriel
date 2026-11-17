@@ -293,10 +293,10 @@ clip 1220,50 380x924 r 0
       text "Agents" @1318,142.14 #7c7566 JetBrains Mono 10
       rect 1366,129.54001 30x18 radius 4 stroke 1 #332f27
       text "Bus" @1372,142.14 #7c7566 JetBrains Mono 10
-      rect 1402,129.54001 48x18 radius 4 stroke 1 #332f27
-      text "GitHub" @1408,142.14 #7c7566 JetBrains Mono 10
-      rect 1456,129.54001 54x18 radius 4 stroke 1 #332f27
-      text "Sandbox" @1462,142.14 #7c7566 JetBrains Mono 10
+      rect 1402,129.54001 30x18 radius 4 stroke 1 #332f27
+      text "PRs" @1408,142.14 #7c7566 JetBrains Mono 10
+      rect 1438,129.54001 54x18 radius 4 stroke 1 #332f27
+      text "Sandbox" @1444,142.14 #7c7566 JetBrains Mono 10
     pop
     clip 1230,157.54001 360x806.45996 r 0
       rect 1244,167.54001 24x24 radius 5 stroke 1 #4cc9f080

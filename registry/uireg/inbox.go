@@ -25,7 +25,7 @@ type InboxCard struct {
 	ID      string // unique in its source
 	From    string // its source's name; InboxCards sets it
 	Type    string // what kind of card: "network", "review-request"; its help anchor
-	Group   string // the Inbox panel's filter it's under: GroupAgents, GroupBus, GroupGitHub, GroupSandbox
+	Group   string // the Inbox panel's filter it's under: GroupAgents, GroupBus, GroupCodeHost, GroupSandbox
 	Mine    bool   // for you by name: the ME filter
 	Session string // the session it's for, whose tab counts it; "" for none
 	Icon    string // a glyph for its inbox row
@@ -92,10 +92,10 @@ type CardPlace struct {
 
 // The Inbox panel's filters.
 const (
-	GroupAgents  = "agents"
-	GroupBus     = "bus"
-	GroupGitHub  = "github"
-	GroupSandbox = "sandbox"
+	GroupAgents   = "agents"
+	GroupBus      = "bus"
+	GroupCodeHost = "codehost" // a code host's: its pull requests' activity
+	GroupSandbox  = "sandbox"
 )
 
 // Key is the card's key in the inbox: its source's name and its ID.

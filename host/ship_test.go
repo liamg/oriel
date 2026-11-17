@@ -73,8 +73,8 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if a.Origin != "https://github.com/acme/api.git" || !a.HasOrigin || a.Base != "main" || a.Branch != se.Branch || len(a.Files) != 0 || a.Commits != 0 {
 		t.Fatalf("a fresh project: %+v", a)
 	}
-	if a.Template != "## What\n\n## Why\n" || a.TemplateFile != ".github/pull_request_template.md" {
-		t.Errorf("template %q from %q", a.Template, a.TemplateFile)
+	if a.Dir != dirs["api"] {
+		t.Errorf("dir %q, want %q", a.Dir, dirs["api"])
 	}
 
 	// The agent drafts a commit message; it shows with who drafted it.
@@ -104,8 +104,8 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if len(a.Files) != 1 || a.Commits != 1 || len(a.Unpushed) != 1 || a.Unpushed[0].Subject != "feat(api): back off on 429" || !a.CommitDraft.Empty() {
 		t.Fatalf("after committing one file: %+v", a)
 	}
-	if !slices.Equal(a.Owners, []string{"jkowalski"}) {
-		t.Errorf("owners of the branch's change: %q", a.Owners)
+	if !slices.Equal(a.Changed, []string{"limiter.go"}) {
+		t.Errorf("the branch's change: %q", a.Changed)
 	}
 	r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: "api", Message: "test(api): retry"})
 

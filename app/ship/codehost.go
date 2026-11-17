@@ -21,11 +21,13 @@ import (
 // shipRead is a project as the Ship page shows it: the host's reading of its git, and its pull request.
 type shipRead struct {
 	hostapi.Ship
-	CodeHost    *registry.CodeHost // the host origin is on; nil for none Oriel knows
-	Site        registry.Site      // which of its servers
-	Repo        string             // its name there: "acme/api"
-	UnknownHost string             // origin's hostname, when no code host is known to be there
-	Unkeyed     bool               // the site's token isn't set yet
+	CodeHost    *registry.CodeHost  // the host origin is on; nil for none Oriel knows
+	Site        registry.Site       // which of its servers
+	Repo        string              // its name there: "acme/api"
+	UnknownHost string              // origin's hostname, when no code host is known to be there
+	Template    registry.PRTemplate // the repo's pull request template, as its code host reads it
+	Owners      []string            // the code owners of what the branch changes
+	Unkeyed     bool                // the site's token isn't set yet
 	PR          *registry.PR
 	Checks      []registry.Check
 	FailLine    string // what the first failing check's log says
@@ -99,6 +101,9 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 			}
 		}
 		out[i].CodeHost, out[i].Site, out[i].Repo = &hs.CodeHost, hs.Site, repo
+		if !s.ReadOnly {
+			out[i].Template, out[i].Owners = conventions(ctx, hs.CodeHost, s.Dir, s.Changed)
+		}
 		kit.Sites(x.h).Warm(ctx, hs)
 		if !kit.Sites(x.h).Keyed(hs) {
 			out[i].Unkeyed = true
@@ -120,6 +125,17 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 	}
 	wg.Wait()
 	return out
+}
+
+// conventions are the template and code owners the project's checkout at dir gives, as its code host reads them.
+func conventions(ctx context.Context, h registry.CodeHost, dir string, changed []string) (t registry.PRTemplate, owners []string) {
+	if h.Template != nil {
+		_ = registry.Call(func() (err error) { t, err = h.Template(ctx, dir); return err })
+	}
+	if h.Owners != nil && len(changed) > 0 {
+		_ = registry.Call(func() (err error) { owners, err = h.Owners(ctx, dir, changed); return err })
+	}
+	return t, owners
 }
 
 func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh bool) prRead {

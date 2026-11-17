@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 )
@@ -167,20 +166,16 @@ func undo(root string, err error) error {
 	return err
 }
 
-// prRepo is the registered repo whose remote is the PR's: spec.PRRemote, else the GitHub repo its URL names.
+// prRepo is the registered repo whose remote is the PR's: the spec's first repo, else the one whose remote contains
+// spec.PRRemote.
 func (x *Worktrees) prRepo(ctx context.Context, spec core.SessionSpec) (core.Repo, error) {
-	want := strings.TrimSpace(spec.PRRemote)
-	if want == "" {
-		pr, _, err := gh.ParsePR(spec.PR)
-		if err != nil {
-			return core.Repo{}, err
-		}
-		want = pr.String()
-	}
 	if len(spec.Repos) > 0 {
 		return x.deps.Resolve(ctx, string(spec.Repos[0]))
 	}
-	want = strings.ToLower(want)
+	want := strings.ToLower(strings.TrimSpace(spec.PRRemote))
+	if want == "" {
+		return core.Repo{}, fmt.Errorf("no code host says which repo %s is in", spec.PR)
+	}
 	for _, r := range x.deps.Repos() {
 		if strings.Contains(strings.ToLower(remotePath(r.Remote)), want) {
 			return r, nil

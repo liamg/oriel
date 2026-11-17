@@ -16,7 +16,7 @@ import (
 //oriel:api name=inbox cap=ui
 type Inbox struct{ a *APIs }
 
-//oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } }, open = { command, args } or fn() }. An action runs its command or its function and answers the card: it goes to the inbox's history. open takes you to where the card is answered: choosing its row in the Inbox panel runs it rather than opening the card there."
+//oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, codehost (a pull request's activity; github is taken as it) or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } }, open = { command, args } or fn() }. An action runs its command or its function and answers the card: it goes to the inbox's history. open takes you to where the card is answered: choosing its row in the Inbox panel runs it rather than opening the card there."
 func (i Inbox) Add(card script.Table, where string) error {
 	c := uireg.InboxCard{ID: str(card, "id"), Type: str(card, "type"), Title: str(card, "title"), Sub: str(card, "sub"), Group: str(card, "group"),
 		Session: str(card, "session"), Icon: str(card, "icon"), Tone: str(card, "tone"), Kicker: str(card, "kicker"), Detail: str(card, "detail"),
@@ -26,6 +26,9 @@ func (i Inbox) Add(card script.Table, where string) error {
 	}
 	if c.ID == "" || c.Title == "" {
 		return errors.New("an inbox card needs an id and a title")
+	}
+	if c.Group == "github" {
+		c.Group = uireg.GroupCodeHost
 	}
 	c.Mine, _ = card["mine"].(bool)
 	c.Interrupt, _ = card["interrupt"].(bool)

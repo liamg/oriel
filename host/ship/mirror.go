@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/host/hostapi"
@@ -17,7 +18,19 @@ import (
 )
 
 // Review mirroring for any code host: a PR's review threads and conversation, as the app's review mirror reads them
-// from the host, are brought into the session's threads, and the user's forwarded drafts marked sent.
+// from the host, become threads with origin codehost, which reach the agent like any comment. On them the agent only
+// drafts; the user forwards a draft, and its code host posts it as the user. A forwarded comment carries its id
+// there, so it never comes back as a new comment (echo reconciliation); edits, deletions and resolutions there update
+// the mirror.
+
+type ForwardReq = hostapi.ForwardReq
+
+type DraftEditReq = hostapi.DraftEditReq
+
+// mirrorState serialises applying a mirror with a forward's post and mark, so a forward's echo is always recognised.
+type mirrorState struct {
+	mu sync.Mutex
+}
 
 // mirrorMsg is one comment of a mirrored thread; key is its id on the host.
 type mirrorMsg struct {

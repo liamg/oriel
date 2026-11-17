@@ -11,11 +11,58 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
+
+// gatewayBuiltins are the gateway's own tools and the ones plugins add, each of theirs run in the project its call
+// names. One of theirs never takes an own tool's name.
+func (b *Box) gatewayBuiltins() map[string]gateway.Builtin {
+	g := gatewayHost{b}
+	out := gateway.Builtins(g)
+	if b.d.GatewayTools == nil {
+		return out
+	}
+	for _, t := range b.d.GatewayTools() {
+		name := gateway.Prefix + t.Name
+		if _, taken := out[name]; taken || t.Run == nil {
+			continue
+		}
+		tool := mcp.Tool{Name: name, Description: t.Desc, InputSchema: t.InputSchema}
+		if t.ReadOnly {
+			tool.Annotations = &mcp.ToolAnnotations{ReadOnlyHint: new(true)}
+		}
+		out[name] = gateway.Builtin{Tool: tool, Run: g.contributed(t)}
+	}
+	return out
+}
+
+// contributed runs a plugin's gateway tool in the project its call's project argument names.
+func (g gatewayHost) contributed(t hostapi.GatewayTool) func(context.Context, json.RawMessage) (mcp.CallResult, error) {
+	return func(ctx context.Context, args json.RawMessage) (mcp.CallResult, error) {
+		var in struct {
+			Project string `json:"project"`
+		}
+		_ = json.Unmarshal(args, &in) // arguments that don't fit are the tool's to refuse
+		p, err := g.project(in.Project)
+		if err != nil {
+			return mcp.TextResult(err.Error(), true), nil
+		}
+		env, err := sandbox.GitEnv(p.Dir)
+		if err != nil {
+			return mcp.TextResult(err.Error(), true), nil
+		}
+		out, err := t.Run(ctx, hostapi.GatewayCall{Session: g.b.id, Project: p.Name, Dir: p.Dir, Env: env, Args: args})
+		if err != nil {
+			return mcp.TextResult(err.Error(), true), nil
+		}
+		return mcp.TextResult(out, false), nil
+	}
+}
 
 // gatewayHost runs the gateway's own tools for one session, with the user's credentials.
 type gatewayHost struct{ b *Box }
@@ -180,7 +227,7 @@ func (g gatewayHost) GH(ctx context.Context, project string, args ...string) (st
 	if err != nil {
 		return "", err
 	}
-	return gateway.RunGH(ctx, p.Dir, env, args...)
+	return gh.Run(ctx, p.Dir, env, args...)
 }
 
 func (g gatewayHost) Repos(context.Context) ([]gateway.Repo, error) {

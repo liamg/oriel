@@ -128,6 +128,26 @@ type App struct {
 	Tools    func(ToolsReq) []agent.Tool
 	CallTool func(context.Context, ToolCall) (string, error)
 	Decide   func(context.Context, Decide) Verdict
+	// GatewayTools are the tools plugins add to a sandboxed agent's gateway, beside its own.
+	GatewayTools func() []GatewayTool
+}
+
+// GatewayTool is a tool a sandboxed agent calls through the gateway (oriel__ and Name), run on this machine under the
+// gateway's rules: asked by default, allowed unless a rule says otherwise when ReadOnly.
+type GatewayTool struct {
+	Name, Desc  string
+	InputSchema json.RawMessage
+	ReadOnly    bool
+	Run         func(ctx context.Context, c GatewayCall) (string, error)
+}
+
+// GatewayCall is a call of a GatewayTool in one of the session's projects: the one its project argument names.
+type GatewayCall struct {
+	Session core.SessionID
+	Project string
+	Dir     string   // the project's checkout
+	Env     []string // the sandbox's git guard, for git or a host CLI run in Dir
+	Args    json.RawMessage
 }
 
 // QueuedReq changes a comment of the user's the agent hasn't been given yet: Body in its place, or with Delete, the

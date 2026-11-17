@@ -265,7 +265,7 @@ func TestReviewsStartAndContinue(t *testing.T) {
 	s.Type("Esc")
 	s.Frame()
 
-	id, err := lw.W.Start(context.Background(), core.SessionSpec{Kind: core.KindReview, PR: prs["ratelimit"].URL, Repos: []core.RepoID{core.RepoID(lw.Repo)},
+	id, err := lw.W.Start(context.Background(), core.SessionSpec{Kind: core.KindReview, PR: prs["ratelimit"].URL, PRRef: fmt.Sprintf("pull/%d/head", prs["ratelimit"].Number), Repos: []core.RepoID{core.RepoID(lw.Repo)},
 		Provider: "fake"})
 	if err != nil {
 		t.Fatal(err)

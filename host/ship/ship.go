@@ -11,7 +11,6 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
@@ -76,7 +75,7 @@ func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
 }
 
 func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Project, fresh bool) Ship {
-	s := Ship{Project: p.Name, Branch: p.Branch, Base: strings.TrimPrefix(p.Base, "origin/"), ReadOnly: p.ReadOnly || p.Detached}
+	s := Ship{Project: p.Name, Dir: p.Dir, Branch: p.Branch, Base: strings.TrimPrefix(p.Base, "origin/"), ReadOnly: p.ReadOnly || p.Detached}
 	s.CommitDraft = x.env.ReadDraft(se.ID, p.Name, "commit")
 	s.PRDraft = x.env.ReadDraft(se.ID, p.Name, "pr")
 	env, err := sandbox.GitEnv(p.Dir)
@@ -97,7 +96,6 @@ func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Pr
 		return s
 	}
 	s.Default = localDefault(ctx, repo)
-	s.Template, s.TemplateFile = gh.Template(p.Dir)
 	if fresh && s.HasOrigin {
 		_ = repo.Fetch(ctx) // offline, it's behind by what it last saw
 	}
@@ -135,7 +133,7 @@ func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Pr
 	}
 	if f.Base != "" {
 		if files, err := repo.ChangedFiles(ctx, f.Base); err == nil {
-			s.Owners = gh.Owners(p.Dir, files)
+			s.Changed = files
 		}
 	}
 	for kind, d := range map[string]*hostcore.Draft{"commit": &s.CommitDraft, "pr": &s.PRDraft} {

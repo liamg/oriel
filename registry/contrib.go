@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"slices"
@@ -159,6 +160,28 @@ type PromptPack struct {
 	Source       string
 }
 
+// GatewayTool is a tool a sandboxed session's agent calls through Oriel's gateway (oriel__ and Name), run on this
+// machine with the user's credentials. The gateway's rules decide each call as they do its own tools': asked by
+// default, and when ReadOnly allowed unless a rule says otherwise. Its schema's project argument names the project
+// the call is about, in a workspace with more than one.
+type GatewayTool struct {
+	Name, Desc  string
+	InputSchema json.RawMessage
+	ReadOnly    bool
+	// Run answers a call; an error is the agent's to read.
+	Run    func(ctx context.Context, c GatewayCall) (string, error)
+	Source string
+}
+
+// GatewayCall is a call of a GatewayTool: its arguments, and the project it's about.
+type GatewayCall struct {
+	Session string
+	Project string
+	Dir     string   // the project's checkout on this machine
+	Env     []string // the sandbox's git guard, for git or a host CLI run in Dir
+	Args    json.RawMessage
+}
+
 // StatusRule picks a session's status colour from its fields, or "" to leave it.
 type StatusRule struct {
 	Name   string
@@ -166,12 +189,14 @@ type StatusRule struct {
 	Source string
 }
 
-func (AgentTool) ContributionKind() string    { return "agent.tool" }
-func (t AgentTool) ContributionName() string  { return t.Name }
-func (PromptPack) ContributionKind() string   { return "agent.pack" }
-func (p PromptPack) ContributionName() string { return p.Name }
-func (StatusRule) ContributionKind() string   { return "status.rule" }
-func (s StatusRule) ContributionName() string { return s.Name }
+func (GatewayTool) ContributionKind() string   { return "gateway.tool" }
+func (t GatewayTool) ContributionName() string { return t.Name }
+func (AgentTool) ContributionKind() string     { return "agent.tool" }
+func (t AgentTool) ContributionName() string   { return t.Name }
+func (PromptPack) ContributionKind() string    { return "agent.pack" }
+func (p PromptPack) ContributionName() string  { return p.Name }
+func (StatusRule) ContributionKind() string    { return "status.rule" }
+func (s StatusRule) ContributionName() string  { return s.Name }
 
 // InspectSection is part of :Inspect: rows about what's under the cursor, shown in
 // Order. The editor gives its syntax and decorations; anything else can add its own.

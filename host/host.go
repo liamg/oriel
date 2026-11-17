@@ -239,6 +239,7 @@ func (w *Host) sandboxDeps() sandboxhost.Deps {
 		},
 		Config:          func() sandbox.Config { return w.boxesPart.Config() },
 		Providers:       w.opts.Providers.List,
+		GatewayTools:    w.runPart.GatewayTools,
 		Factory:         w.opts.Sandbox,
 		Live:            func(id core.SessionID) hostcore.Sandbox { return w.runPart.Sandbox(id) },
 		Running:         func() []hostcore.Sandbox { return w.runPart.Sandboxes() },

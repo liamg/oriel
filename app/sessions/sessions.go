@@ -49,9 +49,10 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.ctx, x.cancel = ctx, cancel
 	if w, err := kit.SessionCalls(h); err == nil {
 		w.SetApp(hostapi.App{
-			Tools:    func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
-			CallTool: func(ctx context.Context, call hostapi.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
-			Decide:   func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
+			Tools:        func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
+			CallTool:     func(ctx context.Context, call hostapi.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
+			Decide:       func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
+			GatewayTools: func() []hostapi.GatewayTool { return gatewayTools(h) },
 		})
 		x.Add(registry.DisposeFunc(func() { w.SetApp(hostapi.App{}) }))
 	}
@@ -569,6 +570,22 @@ func (x *Sessions) agentTools(h plugin.Host, r hostapi.ToolsReq) []agent.Tool {
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly && t.Confirm == nil,
 			CoveredBy: t.CoveredBy})
+	}
+	return out
+}
+
+// gatewayTools are the tools plugins add to a sandboxed agent's gateway, as the host runs them.
+func gatewayTools(h plugin.Host) []hostapi.GatewayTool {
+	var out []hostapi.GatewayTool
+	for _, t := range registry.ContributionsOf[registry.GatewayTool](h) {
+		out = append(out, hostapi.GatewayTool{Name: t.Name, Desc: t.Desc, InputSchema: t.InputSchema, ReadOnly: t.ReadOnly,
+			Run: func(ctx context.Context, c hostapi.GatewayCall) (out string, err error) {
+				err = registry.Call(func() (err error) {
+					out, err = t.Run(ctx, registry.GatewayCall{Session: string(c.Session), Project: c.Project, Dir: c.Dir, Env: c.Env, Args: c.Args})
+					return err
+				})
+				return out, err
+			}})
 	}
 	return out
 }

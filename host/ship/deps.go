@@ -1,5 +1,5 @@
 // Package ship is the session host's side of code hosts: a session's projects on their way to a merged pull request
-// (the Ship page), their pull requests on GitHub, and review threads mirrored from GitHub or another code host.
+// (the Ship page), their pull requests on their code host, and review threads mirrored from it.
 package ship
 
 import (

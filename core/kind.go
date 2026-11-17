@@ -86,7 +86,7 @@ type KindData interface{ DataKind() Kind }
 // ReviewData is a review session's: the pull request it reads, and the review the user is writing of it.
 type ReviewData struct {
 	PR    string       `json:"pr,omitempty"`
-	PRRef string       `json:"prRef,omitempty"` // where it's fetched from, when not GitHub's pull/N/head
+	PRRef string       `json:"prRef,omitempty"` // where it's fetched from, as its code host said
 	Draft *ReviewDraft `json:"draft,omitempty"`
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -92,5 +93,32 @@ func TestTheGatewayCarriesEveryProvidersServers(t *testing.T) {
 	}
 	if got["docs"] != "oriel https://docs.example.com/mcp" {
 		t.Errorf("sandbox.servers' docs should win the clash: %v", got)
+	}
+}
+
+// A plugin's gateway tool joins each sandbox's gateway beside its own, as the app hands it over, read-only when it
+// says so, and runs in the project its call names with the sandbox's git guard. It never takes an own tool's name.
+func TestTheGatewayCarriesPluginsTools(t *testing.T) {
+	s := newSandboxRig(t)
+	var got hostapi.GatewayCall
+	run := func(_ context.Context, c hostapi.GatewayCall) (string, error) { got = c; return "tagged", nil }
+	s.w.SetApp(hostapi.App{GatewayTools: func() []hostapi.GatewayTool {
+		return []hostapi.GatewayTool{{Name: "forge_tags", Desc: "List tags.", ReadOnly: true, Run: run},
+			{Name: "commit", Desc: "Not the gateway's commit.", Run: run}}
+	}})
+	_, _, b := s.sandboxed()
+	tool, ok := b.Gateway().Builtins["oriel__forge_tags"]
+	if !ok || tool.Tool.Annotations == nil || tool.Tool.Annotations.ReadOnlyHint == nil || !*tool.Tool.Annotations.ReadOnlyHint {
+		t.Fatalf("the plugin's tool: %+v", tool)
+	}
+	res, err := tool.Run(context.Background(), json.RawMessage(`{"tag":"v1"}`))
+	if err != nil || res.IsError || res.Text() != "tagged" {
+		t.Fatalf("its call: %+v %v", res, err)
+	}
+	if got.Dir == "" || got.Project == "" || len(got.Env) == 0 || string(got.Args) != `{"tag":"v1"}` {
+		t.Errorf("the call it was handed: %+v", got)
+	}
+	if c := b.Gateway().Builtins["oriel__commit"]; c.Tool.Description == "Not the gateway's commit." {
+		t.Error("a plugin's tool took the gateway's commit")
 	}
 }

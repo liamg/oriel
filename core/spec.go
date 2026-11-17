@@ -51,7 +51,7 @@ type SessionSpec struct {
 	Context string `json:"context,omitempty"`
 	PR      string `json:"pr,omitempty"` // review kind: the PR's URL
 	// PRRemote and PRRef are where a review fetches the PR from, as its review source says: the registered repo whose
-	// remote contains PRRemote, and the refspec PRRef. A GitHub URL needs neither.
+	// remote contains PRRemote, and the refspec PRRef.
 	PRRemote string        `json:"prRemote,omitempty"`
 	PRRef    string        `json:"prRef,omitempty"`
 	PRBase   string        `json:"prBase,omitempty"` // the branch the PR merges into, which its Changed compares with

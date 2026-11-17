@@ -50,7 +50,7 @@ var inboxFilters = []struct {
 	{"Me", func(c uireg.InboxCard) bool { return c.Mine }},
 	{"Agents", func(c uireg.InboxCard) bool { return c.Group == uireg.GroupAgents }},
 	{"Bus", func(c uireg.InboxCard) bool { return c.Group == uireg.GroupBus }},
-	{"GitHub", func(c uireg.InboxCard) bool { return c.Group == uireg.GroupGitHub }},
+	{"PRs", func(c uireg.InboxCard) bool { return c.Group == uireg.GroupCodeHost }},
 	{"Sandbox", func(c uireg.InboxCard) bool { return c.Group == uireg.GroupSandbox }},
 }
 

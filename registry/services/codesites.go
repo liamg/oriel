@@ -22,6 +22,7 @@ type CodeSites interface {
 	Named(hostname string) (string, bool)                                 // the code host the user, gh or glab names hostname as
 	Remember(hostname, name, api string) error                            // keeps which host hostname is, and its API URL
 	ReviewSources() []registry.HostSite                                   // the sites review requests are read from
+	Sources(can func(registry.CodeHost) bool) []registry.HostSite         // the sites of every host can says yes to
 	Keyed(s registry.HostSite) bool                                       // s's token is set
 	Warm(ctx context.Context, s registry.HostSite)                        // reads s's token ahead of its first request
 	Refuse(s registry.HostSite, err error) bool                           // says s refused its token with err; true if it was refused
