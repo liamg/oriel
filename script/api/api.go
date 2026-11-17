@@ -182,6 +182,32 @@ func (a *APIs) anon(fn *script.Fn) string {
 	return id
 }
 
+// optsAndFn reads a call's options and its function: options go last (a, fn, opts), and a call may give them before
+// the function instead (a, opts, fn), as oriel.on and oriel.exec_async always have. Options are a table or nothing;
+// anything else is a mistake in the call.
+func optsAndFn(first, second any) (script.Table, *script.Fn, error) {
+	opts, f := second, (*script.Fn)(nil)
+	if fn, ok := first.(*script.Fn); ok {
+		f = fn
+	} else if fn, ok := second.(*script.Fn); ok {
+		opts, f = first, fn
+	}
+	if f == nil {
+		return nil, nil, errors.New("no function")
+	}
+	switch o := opts.(type) {
+	case nil:
+		return nil, f, nil
+	case script.Table:
+		return o, f, nil
+	case []any:
+		if len(o) == 0 {
+			return nil, f, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("options are a table, not %T", opts)
+}
+
 // str reads a string field of a table.
 func str(t script.Table, k string) string {
 	s, _ := t[k].(string)

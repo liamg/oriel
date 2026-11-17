@@ -7,6 +7,8 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 
 A failure the caller may expect (a file or program that isn't there, a program that fails) is returned: nil, and why. A mistake in the call (a missing argument, a path out of bounds, a capability the plugin didn't declare) raises an error.
 
+Options go last: a call's opts table follows its function (oriel.command(name, fn, opts)). oriel.on and oriel.exec_async take it before the function too. Options that aren't a table are a mistake in the call.
+
 ## oriel
 
 - `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.

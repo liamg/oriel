@@ -46,14 +46,9 @@ func (r Root) Run(id string, args script.Table) error {
 
 //oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc." optional=opts
 func (r Root) On(event string, opts any, fn any, where string) error {
-	f, ok := opts.(*script.Fn)
-	var o script.Table
-	if !ok {
-		o, _ = opts.(script.Table)
-		f, ok = fn.(*script.Fn)
-	}
-	if !ok {
-		return fmt.Errorf("%s: no function", event)
+	o, f, err := optsAndFn(opts, fn)
+	if err != nil {
+		return fmt.Errorf("%s: %w", event, err)
 	}
 	prio, _ := o["priority"].(float64)
 	h := registry.Hook{Event: event, Pattern: str(o, "pattern"), Priority: int(prio), Kind: registry.HookKind(str(o, "kind")), Label: str(o, "desc"),
@@ -199,14 +194,9 @@ func (e *notFound) Unwrap() error { return e.err }
 
 //oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too." optional=opts cap=exec
 func (r Root) ExecAsync(argv []string, opts any, fn any) error {
-	f, ok := opts.(*script.Fn)
-	var o script.Table
-	if !ok {
-		o, _ = opts.(script.Table)
-		f, ok = fn.(*script.Fn)
-	}
-	if !ok {
-		return fmt.Errorf("no function for the output")
+	o, f, err := optsAndFn(opts, fn)
+	if err != nil {
+		return fmt.Errorf("the output: %w", err)
 	}
 	run, err := r.program(argv, o)
 	if missing(err) {
