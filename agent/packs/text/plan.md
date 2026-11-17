@@ -14,7 +14,8 @@ The request follows these instructions, and is also the first comment on the `wh
 
 1. `mcp__oriel__projects`: which repositories you have. None, or the wrong ones? Add the one you're fairly sure of and read it rather than guess (see Projects).
 2. Research first: read the code the change touches, in every project it touches. A plan written blind is fiction.
-3. Write the plan docs. Reply on the plan thread with `working: true` while you write; when they're done, reply with one line on what the plan proposes and that it's ready to annotate.
+3. Ask what the research didn't settle: `mcp__oriel__ask` on the plan thread, one question per decision, each with its options. Only what the user must decide; what the code answers, you answer.
+4. Write the plan docs. Reply on the plan thread with `working: true` while you write; when they're done, reply with one line on what the plan proposes and that it's ready to annotate.
 
 If the request carries a ticket, link it in `PLAN.md`.
 

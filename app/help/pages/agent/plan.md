@@ -8,7 +8,9 @@ related: [agent/requests, agent/launcher, agent/console]
 
 A plan session drafts the change as markdown docs before any code is written: `PLAN.md`, and one more doc per big
 piece, at the workspace root. You read them here as documents, comment on their lines, and press **Start work** when
-the plan is right. It opens by itself when a plan session comes to the front; `plan.open` opens it again.
+the plan is right. The docs hold decisions only: what the agent can't settle from the code or your request, it asks
+you in the plan thread first, with options to pick from, and writes the plan from your answers. It opens by itself
+when a plan session comes to the front; `plan.open` opens it again.
 
 ## Header
 
