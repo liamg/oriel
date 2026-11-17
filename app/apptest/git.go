@@ -45,7 +45,7 @@ func ExplorerRepo(t *testing.T) *gittest.Repo {
 func ExplorerScene(t *testing.T) (*Scene, *gittest.Repo) {
 	r := ExplorerRepo(t)
 	s := New(t, Options{WorkDir: r.Dir})
-	PluginOf[*editor.GitSigns](s, "gitsigns").Clock = clocktest.New(r.When.Add(14 * 24 * time.Hour))
+	PluginOf[*editor.GitSigns](s, "git-signs").Clock = clocktest.New(r.When.Add(14 * 24 * time.Hour))
 	s.WaitGit()
 	s.Frame()
 	return s, r

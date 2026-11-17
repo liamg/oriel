@@ -85,7 +85,7 @@ type walkthrough struct {
 	cardH   map[int]float32 // each note card's height last frame
 }
 
-func (x *Walkthrough) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain.change"} }
+func (x *Walkthrough) Manifest() plugin.Manifest { return plugin.Manifest{ID: "walkthrough"} }
 
 func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "walkthrough", Busy: x.busy.Busy}))

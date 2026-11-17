@@ -81,7 +81,8 @@ type answer[T any] struct {
 	at time.Time
 }
 
-type Plugin struct {
+// Stats is the stats feature: the usage it reads and keeps, which the Stats page, the HUD and the session views show.
+type Stats struct {
 	kit.Disposer
 	h     plugin.Host
 	Clock clock.Clock    // the system's if nil
@@ -112,9 +113,9 @@ type Plugin struct {
 // liveAfter is how soon a report is asked for again once the agents it counts have moved on.
 const liveAfter = 10 * time.Second
 
-func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"} }
+func (x *Stats) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"} }
 
-func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
+func (x *Stats) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "stats", Busy: x.Busy}))
 	x.h = h
 	if x.Loc == nil {
@@ -152,12 +153,12 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 // Page is the Stats page, a plugin of its own over the stats' data (Stats), loaded the first time it's asked for.
 type Page struct {
 	kit.Disposer
-	Stats *Plugin
+	Stats *Stats
 }
 
 // Manifest loads it on the first use of one of its commands, or its global key.
 func (p *Page) Manifest() plugin.Manifest {
-	return plugin.Manifest{ID: "stats.page", Lazy: kit.LazyOn(p.Stats.pageCommands(), p.Stats.pageKeymaps()[:1])}
+	return plugin.Manifest{ID: "stats-page", Lazy: kit.LazyOn(p.Stats.pageCommands(), p.Stats.pageKeymaps()[:1])}
 }
 
 func (p *Page) Activate(_ context.Context, h plugin.Host) error {
@@ -173,7 +174,7 @@ func (p *Page) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // readUsage is Refresh's read of every provider's plan windows, off the loop.
-func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct{}, error) {
+func (x *Stats) readUsage(ctx context.Context, _ func(string, float64)) (struct{}, error) {
 	w, _ := kit.StatsCalls(x.h)
 	if w == nil {
 		return struct{}{}, errors.New("there are no sessions in this window")
@@ -184,7 +185,7 @@ func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct
 }
 
 // seen keeps the plan readings as they come, and notes when an agent did something that costs.
-func (x *Plugin) seen(ev core.Event) {
+func (x *Stats) seen(ev core.Event) {
 	switch ev := ev.(type) {
 	case core.UsageSampled:
 		x.mu.Lock()
@@ -198,7 +199,7 @@ func (x *Plugin) seen(ev core.Event) {
 	}
 }
 
-func (x *Plugin) commands() []registry.Command {
+func (x *Stats) commands() []registry.Command {
 	has := func(registry.Args) bool { return kit.HasSessions(x.h) }
 	return []registry.Command{
 		{ID: "stats.session", Title: "Open a session's stats as a main tab: {id}, the one in front by default, or one outside Oriel",
@@ -221,7 +222,7 @@ func (x *Plugin) commands() []registry.Command {
 }
 
 // pageCommands are the Stats page's.
-func (x *Plugin) pageCommands() []registry.Command {
+func (x *Stats) pageCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "Stats", Title: "The Stats page; :Stats {repo=api 7d session group=model}", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.ex(ctx, a.String("args"))
@@ -272,7 +273,7 @@ func (x *Plugin) pageCommands() []registry.Command {
 	}
 }
 
-func (x *Plugin) keymaps() []registry.Keymap {
+func (x *Stats) keymaps() []registry.Keymap {
 	return []registry.Keymap{
 		{Mode: "global", Keys: "<D-U>", Command: "usage.open", Desc: "Usage"},
 		{Mode: UsageKeyMode, Keys: "r", Command: "usage.refresh", Desc: "Read the windows again"},
@@ -280,7 +281,7 @@ func (x *Plugin) keymaps() []registry.Keymap {
 }
 
 // pageKeymaps are the Stats page's: its global key first.
-func (x *Plugin) pageKeymaps() []registry.Keymap {
+func (x *Stats) pageKeymaps() []registry.Keymap {
 	out := []registry.Keymap{
 		{Mode: "global", Keys: "<D-S>", Command: "stats.open", Desc: "Stats"},
 		{Mode: StatsKeyMode, Keys: "g", Desc: "+group by"},
@@ -304,7 +305,7 @@ func (x *Plugin) pageKeymaps() []registry.Keymap {
 	return out
 }
 
-func (x *Plugin) views() map[string]uireg.View {
+func (x *Stats) views() map[string]uireg.View {
 	fn := func(key string, f func(c *ui.Ctx)) uireg.View {
 		return uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: key, Fn: f} })
 	}
@@ -316,7 +317,7 @@ func (x *Plugin) views() map[string]uireg.View {
 }
 
 // contributions are the service, the pages' places, rail and start entries, and the HUD's indicators.
-func (x *Plugin) contributions() []registry.Contribution {
+func (x *Stats) contributions() []registry.Contribution {
 	panel := func(key string, f func(c *ui.Ctx)) func(registry.Ctx) (ui.Node, error) {
 		return func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: key, Fn: f}, nil }
 	}
@@ -340,12 +341,12 @@ func (x *Plugin) contributions() []registry.Contribution {
 }
 
 // split is stats.split_sessions.
-func (x *Plugin) split() bool {
+func (x *Stats) split() bool {
 	on, ok := registry.Option[bool](x.h.Options(), SplitOption, registry.At{})
 	return on || !ok
 }
 
-func (x *Plugin) setSplit(ctx registry.Ctx, on bool) error {
+func (x *Stats) setSplit(ctx registry.Ctx, on bool) error {
 	if x.h.Available("settings.set", nil) {
 		return x.h.Run(ctx, "settings.set", registry.Args{"name": SplitOption, "value": on, "scope": "user"})
 	}
@@ -354,7 +355,7 @@ func (x *Plugin) setSplit(ctx registry.Ctx, on bool) error {
 
 // ex runs :Stats with its words: "session" for the session in front's tab, else a page with key=value filters, a
 // range (7d) and a group.
-func (x *Plugin) ex(ctx registry.Ctx, args string) error {
+func (x *Stats) ex(ctx registry.Ctx, args string) error {
 	a := registry.Args{}
 	for _, w := range strings.Fields(args) {
 		switch k, v, ok := strings.Cut(w, "="); {
@@ -371,7 +372,7 @@ func (x *Plugin) ex(ctx registry.Ctx, args string) error {
 	return x.openPage(a)
 }
 
-func (x *Plugin) openPage(a registry.Args) error {
+func (x *Stats) openPage(a registry.Args) error {
 	q := statsQuery{rng: x.q.rng, group: cmp.Or(a.String("group"), stats.ByRepo), filters: map[string][]string{}}
 	if r := strings.ToUpper(a.String("range")); r != "" {
 		i := slices.IndexFunc(statsRanges, func(s statsRange) bool { return s.label == r })
@@ -408,16 +409,16 @@ func (x *Plugin) openPage(a registry.Args) error {
 }
 
 // custom makes the page's range r's days.
-func (x *Plugin) custom(r widget.DateRange) {
+func (x *Stats) custom(r widget.DateRange) {
 	x.q.rng, x.q.from, x.q.to, x.sel = len(statsRanges)-1, r.From, r.To.AddDate(0, 0, 1), 0
 }
 
-func (x *Plugin) openUsage() error {
+func (x *Stats) openUsage() error {
 	x.usageOpen, x.open = true, false
 	return nil
 }
 
-func (x *Plugin) regroup(by string) error {
+func (x *Stats) regroup(by string) error {
 	if !slices.ContainsFunc(statsGroups, func(g statsGroup) bool { return g.key == by }) {
 		return fmt.Errorf("no grouping %q: repo, session, kind, model, provider, account, origin or day", by)
 	}
@@ -426,7 +427,7 @@ func (x *Plugin) regroup(by string) error {
 }
 
 // setOrigin keeps the page to one origin's sessions, or every one's with "".
-func (x *Plugin) setOrigin(origin string) error {
+func (x *Stats) setOrigin(origin string) error {
 	switch origin {
 	case "":
 		delete(x.q.filters, "origin")
@@ -445,7 +446,7 @@ var drillOrder = map[string]string{stats.ByRepo: stats.BySession, stats.BySessio
 	stats.ByDay: stats.BySession}
 
 // drill narrows the page to a group's row: its filter chip, regrouped. A day becomes the range.
-func (x *Plugin) drill(g stats.Group) {
+func (x *Stats) drill(g stats.Group) {
 	x.back = append(x.back, x.q.clone())
 	q := x.q.clone()
 	if q.group == stats.ByDay {
@@ -460,7 +461,7 @@ func (x *Plugin) drill(g stats.Group) {
 	x.q, x.sel, x.hover = q, 0, -1
 }
 
-func (x *Plugin) drillSelected() error {
+func (x *Stats) drillSelected() error {
 	r, _ := x.report(x.query())
 	if x.sel >= 0 && x.sel < len(r.Groups) {
 		x.drill(r.Groups[x.sel])
@@ -469,7 +470,7 @@ func (x *Plugin) drillSelected() error {
 }
 
 // span is the page's range: its last days up to the end of today, or the custom one.
-func (x *Plugin) span(q statsQuery) (time.Time, time.Time) {
+func (x *Stats) span(q statsQuery) (time.Time, time.Time) {
 	if statsRanges[q.rng].days == 0 && !q.from.IsZero() {
 		return q.from, q.to
 	}
@@ -482,13 +483,13 @@ func (x *Plugin) span(q statsQuery) (time.Time, time.Time) {
 	return end.AddDate(0, 0, -days), end
 }
 
-func (x *Plugin) offset() int {
+func (x *Stats) offset() int {
 	_, off := x.now().In(x.Loc).Zone()
 	return off
 }
 
 // query is the page's query.
-func (x *Plugin) query() stats.Query {
+func (x *Stats) query() stats.Query {
 	from, to := x.span(x.q)
 	return stats.Query{Group: x.q.group, From: from, To: to, Offset: x.offset(), Filters: cloneFilters(x.q.filters), Split: x.split()}
 }
@@ -505,7 +506,7 @@ type reportMeta struct {
 }
 
 // report is q's answer as last read, read through the app's manager while frames ask for it.
-func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
+func (x *Stats) report(q stats.Query) (stats.Report, reportMeta) {
 	w, _ := kit.StatsCalls(x.h)
 	if w == nil {
 		return stats.Report{Points: q.Points()}, reportMeta{}
@@ -518,7 +519,7 @@ func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
 }
 
 // retryReport reads q's answer again.
-func (x *Plugin) retryReport(q stats.Query) {
+func (x *Stats) retryReport(q stats.Query) {
 	x.subs.Refresh(queryKey(q))
 	x.h.Redraw()
 }
@@ -529,7 +530,7 @@ var statsNeed = watch.Need{MaxAge: kit.RefetchAfter}
 // keep is key's answer, read through the app's manager while frames keep asking for it: at once, then every
 // kit.RefetchAfter, and sooner once agents have moved on (seen); a read no frame asks for is paused, keeping its
 // answer. ask runs off the loop; a failure after an answer keeps that answer.
-func keep[T any](x *Plugin, key, what string, ask func() (T, error)) (answer[T], widget.LoadState) {
+func keep[T any](x *Stats, key, what string, ask func() (T, error)) (answer[T], widget.LoadState) {
 	x.mu.Lock()
 	x.used[key] = true
 	x.frameNow = x.now()
@@ -565,7 +566,7 @@ func keep[T any](x *Plugin, key, what string, ask func() (T, error)) (answer[T],
 
 // loadState is a read's state for the widgets: Pending while it runs (Stale when there's an answer to show), Failed
 // when it failed with nothing to show.
-func (x *Plugin) loadState(key string, have bool, err error, busy bool) widget.LoadState {
+func (x *Stats) loadState(key string, have bool, err error, busy bool) widget.LoadState {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if !busy {
@@ -588,7 +589,7 @@ func (x *Plugin) loadState(key string, have bool, err error, busy bool) widget.L
 }
 
 // framed pauses the reads no frame asked for since the last.
-func (x *Plugin) framed() {
+func (x *Stats) framed() {
 	x.mu.Lock()
 	used := x.used
 	x.used = map[string]bool{}
@@ -602,7 +603,7 @@ func (x *Plugin) framed() {
 }
 
 // fresher reads again the reports older than liveAfter: the agents they count have moved on.
-func (x *Plugin) fresher() {
+func (x *Stats) fresher() {
 	now := x.now()
 	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
 		if a, _, ok := sub.Get(); ok && now.Sub(a.at) > liveAfter && !sub.Busy() {
@@ -612,19 +613,19 @@ func (x *Plugin) fresher() {
 }
 
 // Busy says whether a read it asked the session host for is still out, or about to be.
-func (x *Plugin) Busy() bool { return x.subs.Busy() }
+func (x *Stats) Busy() bool { return x.subs.Busy() }
 
 // Session is a session's stats, once they've been read (services.Stats).
-func (x *Plugin) Session(id core.SessionID) (stats.Detail, bool) { return x.detail(id) }
+func (x *Stats) Session(id core.SessionID) (stats.Detail, bool) { return x.detail(id) }
 
 // detail is a session's stats once read.
-func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
+func (x *Stats) detail(id core.SessionID) (stats.Detail, bool) {
 	d, s := x.detailLoad(id)
 	return d, s.Phase == widget.Ready || s.Stale
 }
 
 // detailLoad is a session's stats (an Oriel session's, or one outside Oriel), read while frames ask, and its load.
-func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
+func (x *Stats) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
 	w, _ := kit.StatsCalls(x.h)
 	if w == nil {
 		return stats.Detail{}, widget.LoadState{}
@@ -634,10 +635,10 @@ func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) 
 	return a.v, state
 }
 
-func (x *Plugin) detailKey(id core.SessionID) string { return fmt.Sprintf("%s|%v", id, x.split()) }
+func (x *Stats) detailKey(id core.SessionID) string { return fmt.Sprintf("%s|%v", id, x.split()) }
 
 // retryDetail reads a session's stats again.
-func (x *Plugin) retryDetail(id core.SessionID) {
+func (x *Stats) retryDetail(id core.SessionID) {
 	x.subs.Refresh(x.detailKey(id))
 	x.h.Redraw()
 }
@@ -646,7 +647,7 @@ func (x *Plugin) retryDetail(id core.SessionID) {
 const historyKey = "usage.history"
 
 // usageHistory is the readings of an account's plan over the last week, oldest first.
-func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
+func (x *Stats) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	var hist []core.ProviderUsage
 	if w, _ := kit.StatsCalls(x.h); w != nil {
 		a, _ := keep(x, historyKey, "usage history", func() ([]core.ProviderUsage, error) {
@@ -679,7 +680,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 }
 
 // refreshUsage reads every provider's windows again, off the loop.
-func (x *Plugin) refreshUsage(registry.Ctx) error {
+func (x *Stats) refreshUsage(registry.Ctx) error {
 	if x.reading.State().Phase != widget.Pending {
 		x.reading.Reload()
 	}
@@ -687,7 +688,7 @@ func (x *Plugin) refreshUsage(registry.Ctx) error {
 }
 
 // figure is the cost of today or this week, for the sidebar and the start view.
-func (x *Plugin) figure(span string) string {
+func (x *Stats) figure(span string) string {
 	now := x.now().In(x.Loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc).AddDate(0, 0, 1)
 	from := end.AddDate(0, 0, -1)
@@ -705,7 +706,7 @@ func (x *Plugin) figure(span string) string {
 }
 
 // usageFigure is the session in front's provider's weekly window: "wk 71%".
-func (x *Plugin) usageFigure() string {
+func (x *Stats) usageFigure() string {
 	u, ok := x.frontUsage()
 	if !ok {
 		return ""
@@ -721,7 +722,7 @@ func (x *Plugin) usageFigure() string {
 }
 
 // frontUsage is the plan of the account the session in front runs on (its provider's); else the first read.
-func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
+func (x *Stats) frontUsage() (core.ProviderUsage, bool) {
 	st := x.h.State()
 	us := st.Usage
 	if len(us) == 0 {
@@ -741,7 +742,7 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 }
 
 // accountLabel is how an account reads: the user's label for it (usage.accounts), else its email or organisation.
-func (x *Plugin) accountLabel(account, name string) string {
+func (x *Stats) accountLabel(account, name string) string {
 	if m, _ := registry.Option[map[string]string](x.h.Options(), AccountsOption, registry.At{}); m[account] != "" {
 		return m[account]
 	}
@@ -749,12 +750,12 @@ func (x *Plugin) accountLabel(account, name string) string {
 }
 
 // accountTitle is an account as the Usage page's switcher names it: its label and plan.
-func (x *Plugin) accountTitle(u core.ProviderUsage) string {
+func (x *Stats) accountTitle(u core.ProviderUsage) string {
 	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))
 }
 
 // openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel the Stats page found.
-func (x *Plugin) openSession(ctx registry.Ctx, id core.SessionID) error {
+func (x *Stats) openSession(ctx registry.Ctx, id core.SessionID) error {
 	if id == "" {
 		id = x.h.State().Focus
 	}
@@ -773,7 +774,7 @@ func (x *Plugin) openSession(ctx registry.Ctx, id core.SessionID) error {
 }
 
 // found is a session's row in any answer the Stats page has had grouped by session.
-func (x *Plugin) found(id core.SessionID) (stats.Group, bool) {
+func (x *Stats) found(id core.SessionID) (stats.Group, bool) {
 	var found stats.Group
 	ok := false
 	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
@@ -788,7 +789,7 @@ func (x *Plugin) found(id core.SessionID) (stats.Group, bool) {
 }
 
 // csv is the page's table.
-func (x *Plugin) csv() string {
+func (x *Stats) csv() string {
 	r, _ := x.report(x.query())
 	var b strings.Builder
 	b.WriteString(x.q.group + ",sessions,requests,tokens,cost,share\n")
@@ -837,4 +838,4 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 // accountKey is an account's plan as the Usage page keys it.
 func accountKey(u core.ProviderUsage) string { return u.Provider + "|" + u.Account }
 
-func (x *Plugin) now() time.Time { return clock.Or(x.Clock).Now() }
+func (x *Stats) now() time.Time { return clock.Or(x.Clock).Now() }

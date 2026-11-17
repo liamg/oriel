@@ -29,7 +29,7 @@ func SignsScene(t *testing.T) (*Scene, *gittest.Repo) {
 	r.Write(map[string]string{"f.txt": work})
 	s := New(t, Options{WorkDir: r.Dir})
 	s.WaitGit()
-	PluginOf[*editor.GitSigns](s, "gitsigns").Clock = clocktest.New(r.When.Add(3 * 24 * time.Hour))
+	PluginOf[*editor.GitSigns](s, "git-signs").Clock = clocktest.New(r.When.Add(3 * 24 * time.Hour))
 	s.Run("editor.open", registry.Args{"path": filepath.Join(r.Dir, "f.txt")})
 	s.SettleSigns()
 	return s, r

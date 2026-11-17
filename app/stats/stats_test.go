@@ -20,19 +20,19 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-func statsScene(t *testing.T) (*apptest.Scene, *rig.Stats, *stats.Plugin) {
+func statsScene(t *testing.T) (*apptest.Scene, *rig.Stats, *stats.Stats) {
 	return apptest.StatsScene(t)
 }
 
 // statsOf is the scene's stats plugin, on the scene's clock and in UTC.
-func statsOf(s *apptest.Scene) *stats.Plugin {
-	x := apptest.PluginOf[*stats.Plugin](s, "stats")
+func statsOf(s *apptest.Scene) *stats.Stats {
+	x := apptest.PluginOf[*stats.Stats](s, "stats")
 	x.Clock, x.Loc = s.Clock(), time.UTC
 	return x
 }
 
 // settle draws frames until every answer the stats asked for, and the sidebar's git status, is in.
-func settle(s *apptest.Scene, x *stats.Plugin) {
+func settle(s *apptest.Scene, x *stats.Stats) {
 	s.T.Helper()
 	s.SettleGit()
 	s.Until("the stats to come in", func() bool { return !x.Busy() })
@@ -225,7 +225,7 @@ func TestStatsEntryPoints(t *testing.T) {
 func TestStartViewLinks(t *testing.T) {
 	r := rig.NewStats(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W, r.Claude, r.Codex)})
-	x := apptest.PluginOf[*stats.Plugin](s, "stats")
+	x := apptest.PluginOf[*stats.Stats](s, "stats")
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	settle(s, x)
 	s.Click(apptest.Centre(startCard(s, "Stats").Bounds), 0)
@@ -430,7 +430,7 @@ func fixtureSpan(t *testing.T, r *rig.Stats, from, to time.Time) time.Duration {
 }
 
 // wantTools checks the Stats page's tools against the calls the fixture logs make in its range.
-func wantTools(t *testing.T, r *rig.Stats, x *stats.Plugin) {
+func wantTools(t *testing.T, r *rig.Stats, x *stats.Stats) {
 	t.Helper()
 	q := x.Query()
 	want := fixtureCalls(t, r, q.From, q.To)

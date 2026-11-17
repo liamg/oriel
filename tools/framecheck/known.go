@@ -13,12 +13,12 @@ var Known = []string{
 
 	// A setting changed on the Settings page: its TOML file is read, rewritten and read back into the option layer
 	// in the same click, so the page and the options agree at the next frame.
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.ReadFile",
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.MkdirAll",
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: atomicfile.Write",
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).trustFile: os.ReadFile",
-	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: atomicfile.Write",
-	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: os.Remove",
+	"app/settings.(*Settings).build.func1.func1.func2.func1 → app/settings.(*Settings).edit: os.ReadFile",
+	"app/settings.(*Settings).build.func1.func1.func2.func1 → app/settings.(*Settings).edit: os.MkdirAll",
+	"app/settings.(*Settings).build.func1.func1.func2.func1 → app/settings.(*Settings).edit: atomicfile.Write",
+	"app/settings.(*Settings).build.func1.func1.func2.func1 → app/settings.(*Settings).trustFile: os.ReadFile",
+	"app/settings.(*Settings).footer.func1 → app/settings.(*Settings).undoLast: atomicfile.Write",
+	"app/settings.(*Settings).footer.func1 → app/settings.(*Settings).undoLast: os.Remove",
 
 	// The theme editor's edits: the theme resolves from the file it writes, so it's written before the next frame.
 	"app/settings.(*ThemeEditor).contrast.func1.func2 → app/settings.(*ThemeEditor).edit: os.ReadFile",

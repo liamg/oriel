@@ -25,7 +25,7 @@ import (
 
 // The session stats tab: one session's stats as a main tab, its instance the session's ID.
 
-type sessionStatsView struct{ x *Plugin }
+type sessionStatsView struct{ x *Stats }
 
 func (v sessionStatsView) Title(instance string) string {
 	if se, ok := v.x.h.Session(core.SessionID(instance)); ok {
@@ -61,7 +61,7 @@ type tabState struct{ tokens int }
 // maxSteps is how many steps the session chart draws at most; a longer session's are wider than five minutes.
 const maxSteps = 150
 
-func (x *Plugin) sessionTab(c *ui.Ctx, id core.SessionID) {
+func (x *Stats) sessionTab(c *ui.Ctx, id core.SessionID) {
 	th := c.Theme()
 	d, load := x.detailLoad(id)
 	se, _ := x.h.Session(id)
@@ -92,7 +92,7 @@ func (x *Plugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 	})
 }
 
-func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabState) {
+func (x *Stats) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabState) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(kit.TStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "STATS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
@@ -184,7 +184,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 }
 
 // overTime is the session's cost (or tokens) per step by token kind, with idle stretches, compactions and turns.
-func (x *Plugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
+func (x *Stats) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 	th := c.Theme()
 	if len(d.Buckets) == 0 {
 		widget.DataCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { widget.Note(c, "none", "no requests yet") })
@@ -265,7 +265,7 @@ func (x *Plugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 }
 
 // repoCard is the session's cost per repo, split or whole, then its models.
-func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
+func (x *Stats) repoCard(c *ui.Ctx, d stats.Detail) {
 	th := c.Theme()
 	st := x.h.State()
 	whole := !x.split()

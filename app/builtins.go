@@ -48,7 +48,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	wasmCaches(c)
 	dirState := func(name string) func() string { return func() string { return p.DirState(name) } }
 	ed, gits := &editor.Editor{Files: c.Files, Clipboard: p.Clipboard, Tools: p.Tools}, &gitui.Git{}
-	st, dictate := &stats.Plugin{}, &dictation.Voice{Config: cfg.Voice}
+	st, dictate := &stats.Stats{}, &dictation.Voice{Config: cfg.Voice}
 	out := []plugin.Plugin{p.UI, p.Frames, &watches.Watches{Timing: cfg.WatchTiming}, &hostPlugin{Host: c.Host}}
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
@@ -61,13 +61,13 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 			InstallDir: filepath.Join(cmp.Or(cfg.DataDir, DefaultDataDir()), "lsp")},
 		lang.TestsEntries(), &lang.Tests{HistoryFile: dirState("tests")}, lang.DebugEntries(),
 		&lang.Debug{StateFile: dirState("debug"), Logger: c.Logs.Logger},
-		&explain.Plugin{}, &explain.Walkthrough{ConfigDir: c.ConfigDir},
+		&explain.Explain{}, &explain.Walkthrough{ConfigDir: c.ConfigDir},
 		&terminal.Terminals{SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
-		&settings.Plugin{ConfigDir: c.ConfigDir}, &ship.CodeSites{}, &appsessions.Sessions{ConfigDir: c.ConfigDir},
+		&settings.Settings{ConfigDir: c.ConfigDir}, &ship.CodeSites{}, &appsessions.Sessions{ConfigDir: c.ConfigDir},
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &jobs.Jobs{}, &repos.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, dictation.NewVoiceEntries(dictate), dictate,
-		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &github.GitHubHost{Client: cfg.GitHubClient},
+		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &github.Host{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &mirror.Mirror{}, &settings.Secrets{},
 		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,

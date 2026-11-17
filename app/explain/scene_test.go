@@ -11,11 +11,11 @@ import (
 	"github.com/liamg/oriel/text"
 )
 
-func explainer(s *apptest.Scene) *explain.Plugin {
-	return apptest.PluginOf[*explain.Plugin](s, "explain")
+func explainer(s *apptest.Scene) *explain.Explain {
+	return apptest.PluginOf[*explain.Explain](s, "explain")
 }
 func walker(s *apptest.Scene) *explain.Walkthrough {
-	return apptest.PluginOf[*explain.Walkthrough](s, "explain.change")
+	return apptest.PluginOf[*explain.Walkthrough](s, "walkthrough")
 }
 
 type fakeExplainer = apptest.FakeExplainer

@@ -31,7 +31,7 @@ func (f usageFails) Usage(context.Context) (core.ProviderUsage, error) {
 }
 
 // failingHost is a host whose only provider, Claude, fails its usage probe with err, and an app on it.
-func failingHost(t *testing.T, err error) (*apptest.Scene, *stats.Plugin) {
+func failingHost(t *testing.T, err error) (*apptest.Scene, *stats.Stats) {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
@@ -45,7 +45,7 @@ func failingHost(t *testing.T, err error) (*apptest.Scene, *stats.Plugin) {
 	}
 	t.Cleanup(func() { w.Close() })
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(w)})
-	return s, apptest.PluginOf[*stats.Plugin](s, "stats")
+	return s, apptest.PluginOf[*stats.Stats](s, "stats")
 }
 
 // The Usage page says why a probe got no windows, in words, not the probe's timeout.

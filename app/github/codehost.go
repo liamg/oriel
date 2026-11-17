@@ -21,10 +21,10 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// GitHubHost is GitHub as a code host, built in on the user's own token: one GraphQL search per list for the Reviews
+// Host is GitHub as a code host, built in on the user's own token: one GraphQL search per list for the Reviews
 // page, the REST calls for a PR in full, reviews and reactions, GitHub's pull/N/head to check one out, and the search
 // the GitHub service offers, and a project's PR raised, read and merged.
-type GitHubHost struct {
+type Host struct {
 	kit.Disposer
 	// Client is the GitHub client its calls go through; GitHub's API with the user's token if nil (gh.Clients).
 	Client  func(dir string, env []string) gh.Client
@@ -44,9 +44,9 @@ var (
 	githubPath   = regexp.MustCompile(`^/?([^/]+/[^/]+?)(?:\.git)?/?$`)
 )
 
-func (x *GitHubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github-host"} }
+func (x *Host) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github-host"} }
 
-func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
+func (x *Host) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.clients = gh.Clients{Client: x.Client, HTTP: h.Net}
 	x.Add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
@@ -72,10 +72,10 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // on is the client for a GitHub server, with its token, else the one found for it.
-func (x *GitHubHost) on(s registry.Site) gh.Client { return x.clients.On("", nil, s.Host, x.token(s)) }
+func (x *Host) on(s registry.Site) gh.Client { return x.clients.On("", nil, s.Host, x.token(s)) }
 
 // authored are the open pull requests the site's user wrote.
-func (x *GitHubHost) authored(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
+func (x *Host) authored(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
 	found, err := x.on(s).SearchPRs(ctx, gh.SearchMine)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (x *GitHubHost) authored(ctx context.Context, s registry.Site) ([]registry.
 }
 
 // probe says hostname is a GitHub Enterprise server: its /api/v3/meta answers GitHub's JSON with no token.
-func (x *GitHubHost) probe(ctx context.Context, hostname string) (bool, error) {
+func (x *Host) probe(ctx context.Context, hostname string) (bool, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://"+hostname+"/api/v3/meta", nil)
 	if err != nil {
 		return false, err
@@ -105,7 +105,7 @@ func (x *GitHubHost) probe(ctx context.Context, hostname string) (bool, error) {
 	return resp.StatusCode == 200 && json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&meta) == nil && meta.Installed != nil, nil
 }
 
-func (x *GitHubHost) requested(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
+func (x *Host) requested(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
 	queue, err := x.on(s).ReviewQueue(ctx)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func ciWord(state string) string {
 	return ""
 }
 
-func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (registry.ReviewDetail, error) {
+func (x *Host) lookup(ctx context.Context, s registry.Site, url string) (registry.ReviewDetail, error) {
 	repo, n, err := gh.ParsePR(url)
 	if err != nil {
 		return registry.ReviewDetail{}, err
@@ -293,7 +293,7 @@ func prEvents(p prInFull) []registry.PREvent {
 }
 
 // submit posts the user's review of a GitHub PR, its comments on the lines they're about.
-func (x *GitHubHost) submit(ctx context.Context, s registry.Site, url string, r registry.ReviewSubmit) error {
+func (x *Host) submit(ctx context.Context, s registry.Site, url string, r registry.ReviewSubmit) error {
 	event := map[string]string{registry.VerdictApprove: "APPROVE", registry.VerdictChanges: "REQUEST_CHANGES", registry.VerdictComment: "COMMENT"}[r.Event]
 	if event == "" {
 		return fmt.Errorf("no such review as %q", r.Event)
@@ -314,7 +314,7 @@ func (x *GitHubHost) submit(ctx context.Context, s registry.Site, url string, r 
 }
 
 // react reacts to a GitHub PR with one of the emoji GitHub offers.
-func (x *GitHubHost) react(ctx context.Context, s registry.Site, url, emoji string) error {
+func (x *Host) react(ctx context.Context, s registry.Site, url, emoji string) error {
 	name := gh.ReactionName(emoji)
 	if name == "" {
 		return fmt.Errorf("GitHub has no %s reaction", emoji)
@@ -326,7 +326,7 @@ func (x *GitHubHost) react(ctx context.Context, s registry.Site, url, emoji stri
 	return x.on(s).ReactPR(ctx, repo, n, name)
 }
 
-func (x *GitHubHost) unreact(ctx context.Context, s registry.Site, url, emoji string) error {
+func (x *Host) unreact(ctx context.Context, s registry.Site, url, emoji string) error {
 	name := gh.ReactionName(emoji)
 	if name == "" {
 		return nil // never reacted with it: GitHub has no such reaction
@@ -383,7 +383,7 @@ func ghPR(p registry.PR) *gh.PR {
 }
 
 // repo is the client and repo of a project's GitHub repo.
-func (x *GitHubHost) repo(r registry.CodeRepo) (gh.Client, gh.Repo, error) {
+func (x *Host) repo(r registry.CodeRepo) (gh.Client, gh.Repo, error) {
 	owner, name, ok := strings.Cut(r.Repo, "/")
 	if !ok || owner == "" || name == "" {
 		return nil, gh.Repo{}, fmt.Errorf("%s isn't a GitHub repo", cmp.Or(r.Repo, r.Remote))
@@ -400,7 +400,7 @@ func number(pr registry.PR) (int, error) {
 }
 
 // token is the site's token, wherever Oriel found it; "" leaves gh to its own login.
-func (x *GitHubHost) token(s registry.Site) string {
+func (x *Host) token(s registry.Site) string {
 	if s.Secret == "" {
 		return ""
 	}
@@ -408,7 +408,7 @@ func (x *GitHubHost) token(s registry.Site) string {
 	return v
 }
 
-func (x *GitHubHost) forBranch(ctx context.Context, r registry.CodeRepo, branch string) (*registry.PR, error) {
+func (x *Host) forBranch(ctx context.Context, r registry.CodeRepo, branch string) (*registry.PR, error) {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return nil, err
@@ -417,7 +417,7 @@ func (x *GitHubHost) forBranch(ctx context.Context, r registry.CodeRepo, branch 
 	return prOf(pr), err
 }
 
-func (x *GitHubHost) create(ctx context.Context, r registry.CodeRepo, n registry.NewPR) (*registry.PR, error) {
+func (x *Host) create(ctx context.Context, r registry.CodeRepo, n registry.NewPR) (*registry.PR, error) {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return nil, err
@@ -426,7 +426,7 @@ func (x *GitHubHost) create(ctx context.Context, r registry.CodeRepo, n registry
 	return prOf(pr), err
 }
 
-func (x *GitHubHost) edit(ctx context.Context, r registry.CodeRepo, pr registry.PR, title, body string) (*registry.PR, error) {
+func (x *Host) edit(ctx context.Context, r registry.CodeRepo, pr registry.PR, title, body string) (*registry.PR, error) {
 	n, err := number(pr)
 	if err != nil {
 		return nil, err
@@ -439,7 +439,7 @@ func (x *GitHubHost) edit(ctx context.Context, r registry.CodeRepo, pr registry.
 	return prOf(out), err
 }
 
-func (x *GitHubHost) ready(ctx context.Context, r registry.CodeRepo, pr registry.PR) error {
+func (x *Host) ready(ctx context.Context, r registry.CodeRepo, pr registry.PR) error {
 	if _, err := number(pr); err != nil {
 		return err
 	}
@@ -450,7 +450,7 @@ func (x *GitHubHost) ready(ctx context.Context, r registry.CodeRepo, pr registry
 	return c.MarkReady(ctx, repo, ghPR(pr))
 }
 
-func (x *GitHubHost) reviewers(ctx context.Context, r registry.CodeRepo, pr registry.PR, who []string) error {
+func (x *Host) reviewers(ctx context.Context, r registry.CodeRepo, pr registry.PR, who []string) error {
 	n, err := number(pr)
 	if err != nil {
 		return err
@@ -463,7 +463,7 @@ func (x *GitHubHost) reviewers(ctx context.Context, r registry.CodeRepo, pr regi
 }
 
 // checks are the checks on the PR's branch, the first failing Actions job's with its log's failing line.
-func (x *GitHubHost) checks(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.Check, error) {
+func (x *Host) checks(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.Check, error) {
 	c, repo, err := x.repo(r)
 	if err != nil {
 		return nil, err
@@ -487,7 +487,7 @@ func (x *GitHubHost) checks(ctx context.Context, r registry.CodeRepo, pr registr
 	return out, nil
 }
 
-func (x *GitHubHost) mergeState(ctx context.Context, r registry.CodeRepo, pr registry.PR) (gh.MergeState, error) {
+func (x *Host) mergeState(ctx context.Context, r registry.CodeRepo, pr registry.PR) (gh.MergeState, error) {
 	n, err := number(pr)
 	if err != nil {
 		return gh.MergeState{}, err
@@ -499,14 +499,14 @@ func (x *GitHubHost) mergeState(ctx context.Context, r registry.CodeRepo, pr reg
 	return c.MergeState(ctx, repo, n)
 }
 
-func (x *GitHubHost) mergeMethods(ctx context.Context, r registry.CodeRepo, pr registry.PR) (registry.MergeMethods, error) {
+func (x *Host) mergeMethods(ctx context.Context, r registry.CodeRepo, pr registry.PR) (registry.MergeMethods, error) {
 	m, err := x.mergeState(ctx, r, pr)
 	return registry.MergeMethods{Allowed: m.Methods, Default: m.Default}, err
 }
 
 // blockers are what GitHub says of merging now: unresolved review threads, changes still asked for, and the PR's
 // mergeStateStatus. A draft, a conflict and missing required reviews GitHub refuses outright.
-func (x *GitHubHost) blockers(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.MergeBlocker, error) {
+func (x *Host) blockers(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.MergeBlocker, error) {
 	m, err := x.mergeState(ctx, r, pr)
 	if err != nil {
 		return nil, err
@@ -536,7 +536,7 @@ func (x *GitHubHost) blockers(ctx context.Context, r registry.CodeRepo, pr regis
 }
 
 // merge merges at the head the user saw, then deletes the branch if asked.
-func (x *GitHubHost) merge(ctx context.Context, r registry.CodeRepo, pr registry.PR, o registry.MergeOpts) error {
+func (x *Host) merge(ctx context.Context, r registry.CodeRepo, pr registry.PR, o registry.MergeOpts) error {
 	n, err := number(pr)
 	if err != nil {
 		return err

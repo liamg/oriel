@@ -24,7 +24,7 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-func (s *Plugin) build(c *ui.Ctx) {
+func (s *Settings) build(c *ui.Ctx) {
 	if !s.open || c.Theme().IsProbe() {
 		return
 	}
@@ -120,7 +120,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 	})
 }
 
-func (s *Plugin) header(c *ui.Ctx, th *theme.Resolved) {
+func (s *Settings) header(c *ui.Ctx, th *theme.Resolved) {
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(16, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", "SETTINGS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11, Weight: typeset.SemiBold, Tracking: .14}, Color: th.C(theme.Accent)})
 		c.Box("q", ui.Style{W: ui.Size{Kind: ui.Grow, Value: 1, Max: 420}}, func(c *ui.Ctx) {
@@ -147,7 +147,7 @@ func (s *Plugin) header(c *ui.Ctx, th *theme.Resolved) {
 	})
 }
 
-func (s *Plugin) sourceLabel(name string, l registry.Layer, at registry.At) string {
+func (s *Settings) sourceLabel(name string, l registry.Layer, at registry.At) string {
 	switch l {
 	case registry.LayerDefault:
 		if sp, ok := s.h.Options().Spec(name); ok && sp.Follows != "" {
@@ -164,7 +164,7 @@ func (s *Plugin) sourceLabel(name string, l registry.Layer, at registry.At) stri
 	return l.String()
 }
 
-func (s *Plugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at registry.At) {
+func (s *Settings) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at registry.At) {
 	o := s.h.Options()
 	v, l, _ := o.Get(sp.Name, at)
 	_, setHere := o.Lookup(sp.Name, s.layerFor(s.scope), at)
@@ -222,7 +222,7 @@ func (s *Plugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at r
 
 // shadowNote says what decides a row's value over the layer the page edits: init.lua, with a link to the line, or
 // a later layer.
-func (s *Plugin) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
+func (s *Settings) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
 	c.Row("shadow", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if l != registry.LayerLua {
 			c.Text("t", "overridden here by "+strings.TrimSuffix(s.sourceLabel("", l, registry.At{})+" · "+src, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
@@ -245,7 +245,7 @@ func (s *Plugin) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src
 }
 
 // control is a row's typed control: a toggle, choices, a list or map editor, or a field that's checked when entered.
-func (s *Plugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, v any, disabled bool) {
+func (s *Settings) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, v any, disabled bool) {
 	const help = "shell/settings#rows"
 	switch sp.Type {
 	case registry.List:
@@ -300,7 +300,7 @@ func (s *Plugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, 
 }
 
 // save sets an option from the page at the scope it edits, and marks its row saved.
-func (s *Plugin) save(name string, v any) {
+func (s *Settings) save(name string, v any) {
 	if err := s.set(name, v, s.scope); err != nil {
 		s.fail(err)
 		return
@@ -330,7 +330,7 @@ func entryCheck(sp registry.OptionSpec) func(k, v string) error {
 }
 
 // dropdown is a menu of values for a row.
-func (s *Plugin) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
+func (s *Settings) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values []string, disabled bool) {
 	if v, ok := widget.Select(c, "drop", cur, values, widget.SelectOpts{Label: sp.Name, Disabled: disabled, Help: "shell/settings#rows"}); ok {
 		s.save(sp.Name, v)
 	}
@@ -338,7 +338,7 @@ func (s *Plugin) dropdown(c *ui.Ctx, sp registry.OptionSpec, cur string, values 
 
 // field is a text field for a value, checked as it's typed and set when entered, when it loses focus or once
 // typing pauses. A number with a range and a step has a slider beside it too, set when it's let go.
-func (s *Plugin) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
+func (s *Settings) field(c *ui.Ctx, sp registry.OptionSpec, v any, disabled bool) {
 	text := fieldText(v)
 	fid := c.Next("field")
 	st := ui.State[fieldState](c, fid)
@@ -483,7 +483,7 @@ func parseField(sp registry.OptionSpec, s string) (any, error) {
 	return s, nil
 }
 
-func (s *Plugin) footer(c *ui.Ctx, th *theme.Resolved) {
+func (s *Settings) footer(c *ui.Ctx, th *theme.Resolved) {
 	f, _ := s.fileFor(s.scope)
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(16, 0), Gap: 12, Cross: ui.Center, Fill: th.C(tThemePanel), Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
 		where := "this session: not written to disk"
@@ -513,7 +513,7 @@ func (s *Plugin) footer(c *ui.Ctx, th *theme.Resolved) {
 	})
 }
 
-func (s *Plugin) fail(err error) {
+func (s *Settings) fail(err error) {
 	if err != nil {
 		kit.NotifyFailure(s.h, core.Notice{ID: "settings.set", Title: "Settings", AutoClear: true}, err)
 	}

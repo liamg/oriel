@@ -28,7 +28,7 @@ import (
 func editorOf(s *apptest.Scene) *editor.Editor { return apptest.PluginOf[*editor.Editor](s, "editor") }
 func engine(s *apptest.Scene) *vim.Engine      { return editorOf(s).Engine() }
 func signsOf(s *apptest.Scene) *editor.GitSigns {
-	return apptest.PluginOf[*editor.GitSigns](s, "gitsigns")
+	return apptest.PluginOf[*editor.GitSigns](s, "git-signs")
 }
 func searchOf(s *apptest.Scene) *editor.Search { return apptest.PluginOf[*editor.Search](s, "search") }
 

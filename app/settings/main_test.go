@@ -19,6 +19,6 @@ func TestMain(m *testing.M) {
 }
 
 // settingsOf is the scene's settings plugin.
-func settingsOf(s *apptest.Scene) *settings.Plugin {
-	return apptest.PluginOf[*settings.Plugin](s, "settings")
+func settingsOf(s *apptest.Scene) *settings.Settings {
+	return apptest.PluginOf[*settings.Settings](s, "settings")
 }

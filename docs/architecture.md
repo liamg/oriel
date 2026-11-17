@@ -123,6 +123,12 @@ names is registered: a keymap's, any contribution's `Command` (menu items, start
 `{{keys}}`, and an id written out in a `Run` in the code. Ids are strings, so a rename that misses one would
 otherwise leave a key or button doing nothing.
 
+### Plugin ids
+
+A built-in plugin's id is kebab-case (`stats-page`, `session-end`, `which-key`), as a third-party manifest's
+`<owner>/<name>` parts are: never dotted, which reads as a command. It shows as `builtin:<id>` on the Plugins page.
+`TestBuiltinPluginIDsAreKebabCase` holds it.
+
 ## Freshness
 
 Nothing polls or watches on its own. What a feature wants kept up to date is a source (`watch.Source`: files, a work

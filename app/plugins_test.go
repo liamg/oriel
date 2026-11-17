@@ -6,6 +6,6 @@ import (
 )
 
 // settingsPlugin is the settings plugin, which reads settings.toml.
-func settingsPlugin(s *apptest.Scene) *settings.Plugin {
-	return apptest.PluginOf[*settings.Plugin](s, "settings")
+func settingsPlugin(s *apptest.Scene) *settings.Settings {
+	return apptest.PluginOf[*settings.Settings](s, "settings")
 }

@@ -57,7 +57,7 @@ type endAsk struct {
 	done         string // why it looks finished, when closing its tab opened the dialog
 }
 
-func (x *End) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessionend"} }
+func (x *End) Manifest() plugin.Manifest { return plugin.Manifest{ID: "session-end"} }
 
 func (x *End) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
@@ -78,11 +78,11 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 	}
 	for _, it := range []registry.MenuItem{
 		{Name: "session.close-tab", Label: "Close tab", Group: "session", Order: 10, When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"},
-			Source: "builtin:sessionend", Run: onSession(func(ctx registry.Ctx, id string) error {
+			Source: "builtin:session-end", Run: onSession(func(ctx registry.Ctx, id string) error {
 				return h.Run(ctx, "session.close", registry.Args{"id": id})
 			})},
 		{Name: "session.end", Label: "End session…", Group: "session", Order: 90, When: registry.MenuWhen{Subject: kit.SessionSubject},
-			Source: "builtin:sessionend", Run: onSession(func(ctx registry.Ctx, id string) error {
+			Source: "builtin:session-end", Run: onSession(func(ctx registry.Ctx, id string) error {
 				return h.Run(ctx, "session.end", registry.Args{"id": id})
 			})},
 	} {
@@ -351,7 +351,7 @@ func (x *End) view(c *ui.Ctx) {
 }
 
 func (x *End) run(id string) {
-	kit.RunOrNotify(x.h, "sessionend", id, nil)
+	kit.RunOrNotify(x.h, "session-end", id, nil)
 }
 
 // body is the choice, what it does, and what would be lost, project by project.

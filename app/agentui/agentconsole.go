@@ -101,7 +101,7 @@ type forkAnswer struct {
 	since time.Time
 }
 
-func (x *Console) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agentconsole"} }
+func (x *Console) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agent-console"} }
 
 func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h

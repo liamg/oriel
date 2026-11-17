@@ -637,9 +637,9 @@ clip 20,109.110016 816x516.78 r 8
   clip 160,583.52997 220x15.179993 r 0
     text "app.statusline" @160,595.25995 #ece6d8 JetBrains Mono 11.5
   pop
-  clip 392,583.52997 299.3125x15.179993 r 0
+  clip 392,583.52997 292.71875x15.179993 r 0
   pop
-  text "builtin:statusline" @703.3125,594.74994 #ffd23f JetBrains Mono 11
+  text "builtin:status-line" @696.71875,594.74994 #ffd23f JetBrains Mono 11
   clip 160,602.70996 220x15.179993 r 0
     text "editor" @160,614.43994 #ece6d8 JetBrains Mono 11.5
   pop

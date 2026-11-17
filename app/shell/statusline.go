@@ -20,7 +20,7 @@ type statusLine struct {
 	sh *shell
 }
 
-func (s *statusLine) Manifest() plugin.Manifest { return plugin.Manifest{ID: "statusline"} }
+func (s *statusLine) Manifest() plugin.Manifest { return plugin.Manifest{ID: "status-line"} }
 
 func (s *statusLine) Activate(_ context.Context, h plugin.Host) error {
 	s.Add(h.View(kit.StatusLineView, uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
