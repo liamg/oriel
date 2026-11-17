@@ -151,7 +151,7 @@ clip 56,50 983x950 r 10
     rect 128.50937,57.73 27.14x16.539997 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
     text "M1" @135.50937,69.42 #ffd23f JetBrains Mono 9.5
     clip 163.64937,59.07 783.27246x13.860001 r 0
-      text "reads git, help, jobs, github, tickets, sessions, repos, reviews, usage, editor · acts, asks before starting or stopp…" @163.64937,69.78 #7c7566 JetBrains Mono 10.5
+      text "reads git, help, jobs, pull requests, tickets, sessions, repos, reviews, usage, editor · acts, asks before starting o…" @163.64937,69.78 #7c7566 JetBrains Mono 10.5
     pop
     rect 954.9219,53 46.078125x26 radius 6 stroke 1 #332f27
     text "New" @964.9219,70.365234 #ece6d8 Inter 12
@@ -233,7 +233,7 @@ clip 56,50 983x950 r 10
         text "jobs" @741,516.42 #b3ab99 JetBrains Mono 11
         text "—" @1012.40625,516.42 #b3ab99 JetBrains Mono 11
         rect 727,532.98 6x6 fill #4fe0a0 radius 3
-        text "github" @741,539.93994 #b3ab99 JetBrains Mono 11
+        text "pull requests" @741,539.93994 #b3ab99 JetBrains Mono 11
         text "—" @1012.40625,539.93994 #b3ab99 JetBrains Mono 11
         rect 727,556.5 6x6 fill #4fe0a0 radius 3
         text "tickets" @741,563.45996 #b3ab99 JetBrains Mono 11

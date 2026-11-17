@@ -203,7 +203,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 		return strings.Contains(s.Text(), "One thing waits on you.") && !strings.Contains(s.Text(), "thinking…")
 	})
 	s.WantFrame("what needs me?", "✓ SESSIONS", "rounding", "wants to run make e2e", "1m · this machine", "⌘1",
-		"start session", "asks first", "never", "sessions", "github", "web search", "now")
+		"start session", "asks first", "never", "sessions", "pull requests", "web search", "now")
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		t.Errorf("text drawn past its box:\n%s", strings.Join(o, "\n"))
 	}

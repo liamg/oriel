@@ -272,9 +272,14 @@ func (c *codeSites) sites(h registry.CodeHost) []registry.HostSite {
 
 // ReviewSources are every host's sites, for a host that asks for reviews.
 func (c *codeSites) ReviewSources() []registry.HostSite {
+	return c.Sources(func(h registry.CodeHost) bool { return h.Requested != nil })
+}
+
+// Sources are the sites of every host can says yes to.
+func (c *codeSites) Sources(can func(registry.CodeHost) bool) []registry.HostSite {
 	var out []registry.HostSite
 	for _, h := range registry.CodeHosts(c.h) {
-		if h.Requested != nil {
+		if can(h) {
 			out = append(out, c.sites(h)...)
 		}
 	}

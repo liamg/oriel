@@ -37,6 +37,7 @@ type CodeHost struct {
 	Allow func(host, secret, why string) (undo func())
 
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
+	Authored  func(ctx context.Context, s Site) ([]ReviewRequest, error) // the open pull requests you wrote
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)
 	Checkout  func(ctx context.Context, s Site, url string) (PRCheckout, error)
 	// Submit posts the user's review of someone else's PR. Each of r.Comments goes on its lines, or as near as the host

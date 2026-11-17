@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -20,7 +19,7 @@ type roundTrip func(*http.Request) (*http.Response, error)
 func (f roundTrip) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 // GitHub's code host asks GitHub's API itself, through the window's network as every plugin's requests go, with the
-// site's token; the GitHub service's search refuses an empty one.
+// site's token, for the reviews asking you and the pull requests you wrote.
 func TestGitHubHostAsksThroughTheWindowsNet(t *testing.T) {
 	var mu sync.Mutex
 	var asked []string
@@ -42,12 +41,8 @@ func TestGitHubHostAsksThroughTheWindowsNet(t *testing.T) {
 	if _, err := h.Requested(ctx, h.Sites[0]); err != nil {
 		t.Fatal(err)
 	}
-	g, err := kit.GitHub(s.Registry())
-	if err != nil {
+	if _, err := h.Authored(ctx, h.Sites[0]); err != nil {
 		t.Fatal(err)
-	}
-	if _, err := g.SearchPRs(ctx, " "); err == nil {
-		t.Error("an empty search ran")
 	}
 	mu.Lock()
 	defer mu.Unlock()

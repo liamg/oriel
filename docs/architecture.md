@@ -81,7 +81,7 @@ carry in `host/hostapi`, a leaf the host's parts and the app both import (`app/k
 one that draws, or carries the toolkit's or a plugin's types, in `app/kit`; `Sessions`, which the registry itself asks
 which session is in front, in `registry`; every other in `registry/services`. A lookup's name says how it answers a missing service:
 `XxxOf` answers `(T, bool)`; one that always answers something (`kit.Git`, `kit.Sites`) has no `Of`; and one that
-refuses with an error is named for its part (`kit.SessionCalls`, `kit.GitHub`).
+refuses with an error is named for its part (`kit.SessionCalls`, `kit.ShipCalls`).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
 underneath them: the layout it leaves is saved and kept as it is, its views open, the pages over it close, the

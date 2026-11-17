@@ -18,7 +18,6 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/registry/services"
 )
 
 // GitHubHost is GitHub as a code host, built in on the user's own token: one GraphQL search per list for the Reviews
@@ -49,7 +48,6 @@ func (x *GitHubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gi
 func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.clients = gh.Clients{Client: x.Client, HTTP: h.Net}
-	x.Add(h.Contribute(registry.Service{Name: services.GitHubService, Impl: githubSearch{x}}))
 	x.Add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
 		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN", Aliases: []string{"ssh.github.com"}}}, Path: githubPath, Takes: githubPRPath,
 		Setup: registry.SiteSetup{Secret: "GITHUB_TOKEN", TokenURL: "https://{host}/settings/tokens/new?scopes=repo,read:org&description=Oriel",
@@ -58,7 +56,7 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 		Tokens: registry.TokenSources{Env: []string{"GH_TOKEN", "GITHUB_TOKEN"}, HostedEnv: []string{"GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"},
 			Command: []string{"gh", "auth", "token", "--hostname", "{host}"}, Optional: true},
 		CLIConfig: registry.CLIConfig{Path: "gh/hosts.yml"},
-		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
+		Requested: x.requested, Authored: x.authored, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve,
 		Template: githubTemplate, Owners: githubOwners}))
@@ -72,14 +70,18 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 // on is the client for a GitHub server, with its token, else the one found for it.
 func (x *GitHubHost) on(s registry.Site) gh.Client { return x.clients.On("", nil, s.Host, x.token(s)) }
 
-// githubSearch is the GitHub service: github.com's search, with the token found for it.
-type githubSearch struct{ x *GitHubHost }
-
-func (g githubSearch) SearchPRs(ctx context.Context, query string) ([]gh.Found, error) {
-	if strings.TrimSpace(query) == "" {
-		return nil, errors.New("no search")
+// authored are the open pull requests the site's user wrote.
+func (x *GitHubHost) authored(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
+	found, err := x.on(s).SearchPRs(ctx, gh.SearchMine)
+	if err != nil {
+		return nil, err
 	}
-	return g.x.clients.On("", nil, "", "").SearchPRs(ctx, query)
+	out := make([]registry.ReviewRequest, 0, len(found))
+	for _, f := range found {
+		out = append(out, registry.ReviewRequest{URL: f.URL, Repo: f.Repo, Number: f.Number, Title: f.Title, Author: f.Author, Draft: f.Draft,
+			Opened: f.Created, Updated: f.Updated})
+	}
+	return out, nil
 }
 
 // probe says hostname is a GitHub Enterprise server: its /api/v3/meta answers GitHub's JSON with no token.

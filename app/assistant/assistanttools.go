@@ -72,8 +72,8 @@ func (x *Assistant) tools() []registry.AgentTool {
 			Desc: "Run a saved job now, in a fresh workspace. name is from jobs."},
 		{Name: "repos", ReadOnly: true, Reads: "repos", Run: x.toolRepos,
 			Desc: "The registered repositories: name, path and remote."},
-		{Name: "my_prs", ReadOnly: true, Reads: "github", Run: x.toolPRs(gh.SearchMine),
-			Desc: "The user's open pull requests across GitHub: number, title, repo, url, draft, when last updated, and the session on it if there is one."},
+		{Name: "my_prs", ReadOnly: true, Reads: "pull requests", Run: x.toolPRs,
+			Desc: "The user's open pull requests on every code host: number, title, repo, url, draft, when last updated, and the session on it if there is one."},
 		{Name: "usage", ReadOnly: true, Reads: "usage", Run: x.toolUsage,
 			Desc: "The user's plan usage for each agent and account: how much of each limit window is used and when it resets."},
 		{Name: "where", ReadOnly: true, Reads: "editor", Run: x.toolWhere,
@@ -613,29 +613,43 @@ type prLine struct {
 	Session string `json:"session,omitempty"` // the open session on it
 }
 
-func (x *Assistant) toolPRs(query string) func(registry.Ctx, registry.Args) (any, error) {
-	return func(ctx registry.Ctx, _ registry.Args) (any, error) {
-		g, err := kit.GitHub(x.h)
-		if err != nil {
-			return nil, err
+// toolPRs is the assistant's my_prs: the user's open pull requests on each code host site that lists them, and why
+// a site has none.
+func (x *Assistant) toolPRs(ctx registry.Ctx, _ registry.Args) (any, error) {
+	sites := kit.Sites(x.h)
+	sources := sites.Sources(func(h registry.CodeHost) bool { return h.Authored != nil })
+	if len(sources) == 0 {
+		return "No code host here lists the user's pull requests.", nil
+	}
+	out := []prLine{}
+	var notes []string
+	for _, s := range sources {
+		if !sites.Keyed(s) {
+			notes = append(notes, "No "+s.Label()+" token is set yet: the user sets it in Settings › Secrets.")
+			continue
 		}
-		found, err := g.SearchPRs(ctx, query)
+		var found []registry.ReviewRequest
+		err := registry.Call(func() (err error) { found, err = s.Authored(ctx, s.Site); return err })
 		if err != nil {
-			return nil, err
+			sites.Refuse(s, err)
+			notes = append(notes, s.Label()+": "+err.Error())
+			continue
 		}
-		out := []prLine{}
 		for _, f := range found {
 			l := prLine{Number: f.Number, Title: f.Title, Repo: f.Repo, URL: f.URL, Author: f.Author, Draft: f.Draft}
 			if !f.Updated.IsZero() {
 				l.Updated = f.Updated.Format(time.RFC3339)
 			}
-			if s, ok := x.reviewOf(f.URL); ok {
-				l.Session = string(s.ID)
+			if se, ok := x.reviewOf(f.URL); ok {
+				l.Session = string(se.ID)
 			}
 			out = append(out, l)
 		}
-		return out, nil
 	}
+	if len(notes) > 0 && len(out) == 0 {
+		return strings.Join(notes, "\n"), nil
+	}
+	return out, nil
 }
 
 func (x *Assistant) toolUsage(registry.Ctx, registry.Args) (any, error) {

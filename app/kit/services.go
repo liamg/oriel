@@ -68,13 +68,14 @@ func (noSites) URL(string) (registry.HostSite, bool) { return registry.HostSite{
 func (noSites) Remote(string) (registry.HostSite, string, bool) {
 	return registry.HostSite{}, "", false
 }
-func (noSites) Named(string) (string, bool)             { return "", false }
-func (noSites) Remember(string, string, string) error   { return errors.New("no code sites") }
-func (noSites) ReviewSources() []registry.HostSite      { return nil }
-func (noSites) Keyed(registry.HostSite) bool            { return false }
-func (noSites) Warm(context.Context, registry.HostSite) {}
-func (noSites) Refuse(registry.HostSite, error) bool    { return false }
-func (noSites) TrustedUser(string) bool                 { return false }
+func (noSites) Named(string) (string, bool)                              { return "", false }
+func (noSites) Remember(string, string, string) error                    { return errors.New("no code sites") }
+func (noSites) ReviewSources() []registry.HostSite                       { return nil }
+func (noSites) Sources(func(registry.CodeHost) bool) []registry.HostSite { return nil }
+func (noSites) Keyed(registry.HostSite) bool                             { return false }
+func (noSites) Warm(context.Context, registry.HostSite)                  {}
+func (noSites) Refuse(registry.HostSite, error) bool                     { return false }
+func (noSites) TrustedUser(string) bool                                  { return false }
 func (noSites) Probe(context.Context, string) (registry.HostSite, bool) {
 	return registry.HostSite{}, false
 }
