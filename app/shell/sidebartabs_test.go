@@ -11,7 +11,6 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/ui/layout"
 )
 
 // A file from another project opens in the one tab strip, led by its project's colour, its tooltip and
@@ -25,10 +24,7 @@ func TestSidebarTabsAcrossProjects(t *testing.T) {
 	if got := apptest.OpenProject(s); got != "admin-ui" {
 		t.Errorf("opening api's file moved the sidebar to %q", got)
 	}
-	var tabs []layout.ViewRef
-	for _, v := range s.Host().Layout().Shown() {
-		tabs = append(tabs, v)
-	}
+	tabs := s.Host().Layout().Shown()
 	leaf := s.Host().Layout().Find(tabs[0]).Leaf
 	if len(leaf.Tabs) != 2 {
 		t.Fatalf("one tab strip: %v", leaf.Tabs)

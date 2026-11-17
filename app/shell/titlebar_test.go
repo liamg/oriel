@@ -336,8 +336,7 @@ func TestTheTabInFrontJoinsTheWindowUnderIt(t *testing.T) {
 	s := workspaceWithTabs(t, 3)
 	img := raster.Render(s.List(), s.Size(), 1, s.UI().Theme().C(theme.BgBase))
 	at := func(x, y float32) render.Color {
-		c := img.At(int(x), int(y)).(color.RGBA)
-		return render.Color{R: c.R, G: c.G, B: c.B, A: c.A}
+		return render.Color(img.At(int(x), int(y)).(color.RGBA))
 	}
 	front := s.Within("Sessions", "pricing-rounding").Bounds
 	behind := s.Within("Sessions", "review #4410").Bounds

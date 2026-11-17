@@ -359,7 +359,7 @@ func markdownTable(c *ui.Ctx, key any, b mdBlock, width float32, body ui.TextSty
 
 // mdAligned builds a block's text, aligned as its HTML says: centred or to the right, or as it falls.
 func mdAligned(c *ui.Ctx, key any, align string, width float32, text func(c *ui.Ctx, key any)) {
-	cross := ui.Start
+	var cross ui.Align
 	switch align {
 	case "center":
 		cross = ui.Center

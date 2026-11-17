@@ -17,8 +17,8 @@ func TestRemoteURLReadOnceUntilTheConfigChanges(t *testing.T) {
 	r := gittest.New(t)
 	set := func(url string) {
 		t.Helper()
-		if out, err := exec.Command("git", "-C", r.Dir, "remote", "add", "origin", url).CombinedOutput(); err != nil {
-			if out, err = exec.Command("git", "-C", r.Dir, "remote", "set-url", "origin", url).CombinedOutput(); err != nil {
+		if _, err := exec.Command("git", "-C", r.Dir, "remote", "add", "origin", url).CombinedOutput(); err != nil {
+			if out, err := exec.Command("git", "-C", r.Dir, "remote", "set-url", "origin", url).CombinedOutput(); err != nil {
 				t.Fatalf("%v: %s", err, out)
 			}
 		}

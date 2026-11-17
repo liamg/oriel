@@ -94,7 +94,8 @@ func (x *Reviews) AIReview(ctx context.Context, r hostapi.AIReviewReq) (_ string
 		}
 		return "", errors.New("there's no change to review")
 	}
-	pack, ok := agent.Pack{}, false
+	var pack agent.Pack
+	var ok bool
 	if r.Pack != "" {
 		pack, ok = agent.Pack{Name: hostapi.AIReviewPack, Skill: hostapi.AIReviewPack, Text: r.Pack, Tools: []string{"finding", "projects"}}, true
 	} else {

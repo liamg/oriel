@@ -566,10 +566,7 @@ func (x *Lua) inspectView(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	var secs []registry.InspectSection
-	for _, s := range registry.ContributionsOf[registry.InspectSection](x.h) {
-		secs = append(secs, s)
-	}
+	secs := slices.Clone(registry.ContributionsOf[registry.InspectSection](x.h))
 	slices.SortFunc(secs, func(a, b registry.InspectSection) int { return a.Order - b.Order })
 	size := c.Size()
 	at := render.Point{X: size.X / 2, Y: size.Y / 2}
