@@ -341,8 +341,7 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 				rc.Box("label", ui.Style{}, func(rc *ui.Ctx) {
 					rc.Text("t", label, t)
 					if it.Strike {
-						w := rc.Shaper().Shape(label, t.Font).Advance
-						rc.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: t.Color, Float: &ui.Float{At: render.Point{Y: .5}}}, nil)
+						strike(rc, label, t, .5)
 					}
 				})
 				if it.Note != "" {
