@@ -36,9 +36,9 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 	return nil
 }
 
-//oriel:api doc="Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability. One that changes who may do what (installing plugins or accepting their consent, settings, secrets, updates) is yours alone: a plugin can't run it." optional=args
+//oriel:api doc="Run a command by its id, with arguments. A command that does what a capability guards needs that capability: running a program (a terminal, the tests, the debugger) exec, for that program; committing, staging, pushing or raising a pull request git; saving or editing buffers and files editor.write; pasting clipboard; answering an agent's ask gate; starting or stopping a session session.control; prompting an agent agent.prompt. A command its args run after it ({then}) needs what that one needs. One that changes who may do what (installing plugins or accepting their consent, settings, secrets, code hosts, updates, running Lua as your config) is yours alone: a plugin can't run it." optional=args
 func (r Root) Run(id string, args script.Table) error {
-	if err := r.a.commandGrant(id); err != nil {
+	if err := r.a.commandGrant(id, registry.Args(args)); err != nil {
 		return err
 	}
 	return r.a.Host.Run(context.Background(), id, registry.Args(args))
@@ -49,6 +49,13 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 	o, f, err := optsAndFn(opts, fn)
 	if err != nil {
 		return fmt.Errorf("%s: %w", event, err)
+	}
+	for _, e := range r.a.Host.Events() {
+		if e.Name == event && e.Grant != "" {
+			if err := r.a.Check(plugin.Capability(e.Grant), ""); err != nil {
+				return fmt.Errorf("%s: %w", event, err)
+			}
+		}
 	}
 	prio, _ := o["priority"].(float64)
 	h := registry.Hook{Event: event, Pattern: str(o, "pattern"), Priority: int(prio), Kind: registry.HookKind(str(o, "kind")), Label: str(o, "desc"),

@@ -53,6 +53,9 @@ type Commands interface {
 	// The rail and the start view dim what isn't; the omnibox leaves it out.
 	Available(id string, args Args) bool
 	Commands() []Command // the registration that wins for each id, sorted by id; shared, not to be changed
+	// CommandFor is the registration that wins for id, loading the lazy plugin that holds it first, as Run would:
+	// what a check of who may run it reads.
+	CommandFor(id string) (Command, bool)
 }
 
 // Keys are the keymaps.
@@ -245,6 +248,10 @@ func (a Args) Strings(k string) []string {
 	return out
 }
 
+// Open is the Grant of a command any plugin may run: it opens, shows or moves through something, and does nothing a
+// capability guards.
+const Open = "open"
+
 type Command struct {
 	ID    string // "git.commit"
 	Title string
@@ -255,8 +262,12 @@ type Command struct {
 	// When makes it available only while the session in front's kind can do this (registry.FrontCan).
 	When Capability
 	// Grant is the plugin capability ("gate", "session.control") a plugin must hold to run it with oriel.run: what
-	// the command does that the API's own calls guard. "" for none.
+	// the command does that the API's own calls guard. Open says on purpose that any plugin may run it; every
+	// built-in command says one or the other, or is UserOnly. A plugin's own command with neither is open.
 	Grant string
+	// GrantOn is what Grant is checked against for args, as the capability's scope reads it: the program an exec
+	// runs. nil checks the capability whole.
+	GrantOn func(args Args) string
 	// UserOnly is a command no plugin may run, whatever it holds: what changes who may do what (installing plugins
 	// and accepting their consent, settings, secrets, updates). The user's own keys, clicks and config still run it.
 	UserOnly bool
@@ -534,6 +545,15 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
 	}
 	return err
+}
+
+func (r *reg) CommandFor(id string) (Command, bool) {
+	if ph := r.commandHolder(id); ph != nil { // what stands for it until then is the placeholder's, not the command
+		_ = r.provide(ph) // a load that fails leaves the stand-in, whose run says why
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.commands.top(id)
 }
 
 func (r *reg) RunEx(ctx Ctx, name, line string, bang bool) error {
