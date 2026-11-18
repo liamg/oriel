@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/text"
 )
 
@@ -293,13 +294,40 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	m.mu.Lock()
 	m.closed = true
 	m.mu.Unlock()
-	var errs []error
-	for _, c := range m.Clients() {
-		if !exited(c) {
-			if err := c.Shutdown(ctx); err != nil {
-				errs = append(errs, err)
-			}
+	return shutdown(ctx, m.Clients())
+}
+
+// StopUnder stops the servers whose root is in dir, or is dir, and forgets them and their documents: the servers a
+// directory nothing uses any more had running. A file of it opened later starts its server again.
+func (m *Manager) StopUnder(ctx context.Context, dir string) {
+	m.mu.Lock()
+	var stop []*Client
+	for k, c := range m.clients {
+		if pathx.Inside(k.root, dir) {
+			stop = append(stop, c)
+			delete(m.clients, k)
 		}
 	}
+	for path, d := range m.docs {
+		if pathx.Inside(d.key.root, dir) {
+			delete(m.docs, path)
+		}
+	}
+	m.mu.Unlock()
+	_ = shutdown(ctx, stop)
+}
+
+// shutdown stops the servers side by side, so one that's slow to go doesn't hold up the rest's turn, and each still
+// running when ctx ends is killed.
+func shutdown(ctx context.Context, cs []*Client) error {
+	var wg sync.WaitGroup
+	errs := make([]error, len(cs))
+	for i, c := range cs {
+		if exited(c) {
+			continue
+		}
+		wg.Go(func() { errs[i] = c.Shutdown(ctx) })
+	}
+	wg.Wait()
 	return errors.Join(errs...)
 }

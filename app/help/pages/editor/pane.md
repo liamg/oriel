@@ -47,6 +47,10 @@ A file whose language has a server installed (gopls, typescript-language-server,
 others) gets one, started for its project root. Its state is in the status line, its errors and warnings are marked
 in the file and listed in Problems, and its stderr goes to the log.
 
+A server keeps running while the window is on another directory, so coming back finds it ready. A session's servers
+stop when the session ends (archived or deleted), and every server stops when Oriel quits: one that doesn't answer
+within two seconds is killed, with whatever it started.
+
 A server is looked for in the project's `node_modules/.bin` (or a workspace's above it) first, then on your `PATH`,
 then where Oriel installed it. When a file's language has servers but none is found, a notice says so, once: with
 **Install** when Oriel can install one here (npm for typescript-language-server, vtsls, pyright, and the YAML, JSON

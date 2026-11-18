@@ -12,7 +12,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/procgroup"
 )
+
+// killGroup runs the command in a process group of its own, and stops the whole group when the run is cancelled:
+// go test and npx start children of their own.
+func killGroup(c *exec.Cmd) {
+	procgroup.Own(c)
+	c.Cancel = func() error { return procgroup.Kill(c) }
+}
 
 // waitDelay is how long a run waits, after its command exits, for children still holding its output.
 var waitDelay = 3 * time.Second
