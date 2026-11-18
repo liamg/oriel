@@ -118,7 +118,7 @@ func (f fixture) run(t *testing.T, script string, environ ...string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	argv, _, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOpts{Environ: environ, Config: f.cfg,
-		Provider: "claude", Agent: &claude.Provider{}})
+		Provider: "claude", Agent: &claude.Provider{}}, nil) // ORIEL_SANDBOX_BIN names the in-sandbox binary
 	if err != nil {
 		t.Fatal(err)
 	}
