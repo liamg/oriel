@@ -1,6 +1,6 @@
 ---
 id: errors
-covers: [app.notifications, log, problems, statusline.left.50-counts]
+covers: [app.notifications, log, problems, status-line.left.50-counts]
 related: [shell/help, editor/pane]
 ---
 

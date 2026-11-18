@@ -116,7 +116,7 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 	}
 	if to.place == "" && from.place != "" {
 		if p, ok := uireg.PlaceByName(x.h, from.place); ok && p.Close != nil {
-			registry.Try(func() { p.Close() })
+			registry.IgnorePanic(func() { p.Close() })
 		}
 	}
 	switch to.session {

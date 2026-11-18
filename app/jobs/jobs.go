@@ -169,7 +169,7 @@ func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.ConsoleSide+"10-job", uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "job", Fn: func(c *ui.Ctx) { x.consoleSide(c, core.SessionID(vc.Instance)) }}
 	})))
-	x.Add(h.View(kit.OverlayPrefix+"jobs.form", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "jobform", Fn: x.dialog} })))
+	x.Add(h.View(kit.OverlayPrefix+"job-form", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "jobform", Fn: x.dialog} })))
 	return nil
 }
 

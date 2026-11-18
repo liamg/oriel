@@ -25,6 +25,11 @@ type NewBranchReq struct {
 
 // NextPRReq moves one project of a session on from its PR: Done is that PR as its code host has it, and Head the
 // commit it was at, whose commits count as the PR's even once it's squashed and its branch deleted.
+// UpdatePRReq fetches a review session's pull request again (ShipCalls.UpdatePR).
+type UpdatePRReq struct {
+	Session core.SessionID `json:"session"`
+}
+
 type NextPRReq struct {
 	Session core.SessionID `json:"session"`
 	Project string         `json:"project"`
@@ -61,12 +66,12 @@ type ManifestEntry struct {
 }
 
 type ManifestPR struct {
-	Branch   string    `json:"branch"`
-	Number   int       `json:"number"`
-	URL      string    `json:"url"`
-	Title    string    `json:"title"`
-	State    string    `json:"state"`
-	ClosedAt time.Time `json:"closedAt"`
+	Branch   string       `json:"branch"`
+	Number   int          `json:"number"`
+	URL      string       `json:"url"`
+	Title    string       `json:"title"`
+	State    core.PRState `json:"state"`
+	ClosedAt time.Time    `json:"closedAt"`
 }
 
 // The workspace layout is crit's, unchanged: a directory holding the manifest, its own git repo

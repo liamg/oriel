@@ -285,20 +285,20 @@ func (x *Update) checkNow(asked bool) {
 		x.setCard(true)
 	}
 	if began {
-		plugin.Go(x.h, "an update check", func() { x.checked(asked) })
+		plugin.Go(x.h, "an update check", func() { x.runCheck(asked) })
 	}
 }
 
 // check asks for a newer release, unless a check or install is running.
 func (x *Update) check(asked bool) {
 	if x.begin("Checking for updates") {
-		x.checked(asked)
+		x.runCheck(asked)
 	}
 }
 
-// checked runs a check begun. One the user asked for opens the card whatever it finds; one on the timer downloads a
+// runCheck runs a check begun. One the user asked for opens the card whatever it finds; one on the timer downloads a
 // newer release first, then offers it (ask) or installs it for the next restart (automatic).
-func (x *Update) checked(asked bool) {
+func (x *Update) runCheck(asked bool) {
 	u := x.updater()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	m, err := u.Check(ctx, x.channel())

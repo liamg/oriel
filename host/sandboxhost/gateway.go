@@ -250,7 +250,7 @@ func (g gatewayHost) AddProject(ctx context.Context, repo string) (gateway.Added
 	if err != nil {
 		return gateway.Added{}, err
 	}
-	if err := g.b.d.AddRepo(ctx, g.b.id, core.RepoID(repo)); err != nil {
+	if err := g.b.d.AddRepo(ctx, hostapi.AddRepoReq{Session: g.b.id, Repo: core.RepoID(repo)}); err != nil {
 		return gateway.Added{}, err
 	}
 	se, err := g.b.session()

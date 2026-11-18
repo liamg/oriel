@@ -69,7 +69,7 @@ func sourceLoading(s uireg.PickerSource) bool {
 		return false
 	}
 	busy := false
-	registry.Try(func() { busy = s.Loading() })
+	registry.IgnorePanic(func() { busy = s.Loading() })
 	return busy
 }
 
@@ -191,7 +191,7 @@ func (p *Picker) build(c *ui.Ctx) {
 	if p.open && len(g.hits) > 0 && s.Hover != nil {
 		if key := s.ID + "\x00" + g.hits[p.sel].item.ID; key != p.hovered {
 			p.hovered = key
-			registry.Try(func() { s.Hover(g.hits[p.sel].item) })
+			registry.IgnorePanic(func() { s.Hover(g.hits[p.sel].item) })
 		}
 	}
 	if !p.open {
@@ -227,7 +227,7 @@ func (p *Picker) build(c *ui.Ctx) {
 					c.Column("preview", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(14), Clip: true, Role: ui.RoleRegion, Label: "Preview"}, func(c *ui.Ctx) {
 						if len(g.hits) > 0 && s.Preview != nil {
 							var n ui.Node
-							if err := registry.Call(func() error { n = s.Preview(g.hits[p.sel].item); return nil }); err == nil && n != nil {
+							if err := registry.RecoverAsError(func() error { n = s.Preview(g.hits[p.sel].item); return nil }); err == nil && n != nil {
 								c.Node(n)
 							}
 						}
@@ -293,7 +293,7 @@ func (p *Picker) act(a uireg.PickerAction, g group) {
 		}
 	}
 	p.close(false)
-	if err := registry.Call(func() error { return a.Run(context.Background(), items) }); err != nil {
+	if err := registry.RecoverAsError(func() error { return a.Run(context.Background(), items) }); err != nil {
 		kit.NotifyFailure(p.h, core.Notice{ID: "picker.action", Source: "picker", AutoClear: true}, fmt.Errorf("%s: %w", a.Title, err))
 	}
 }
@@ -302,7 +302,7 @@ func (p *Picker) act(a uireg.PickerAction, g group) {
 func (p *Picker) close(cancelled bool) {
 	p.open, p.hovered = false, ""
 	if s, ok := p.src(); ok && cancelled && s.Cancel != nil {
-		registry.Try(func() { s.Cancel() })
+		registry.IgnorePanic(func() { s.Cancel() })
 	}
 }
 
@@ -328,7 +328,7 @@ func (p *Picker) run(s uireg.PickerSource, h hit) {
 	if run == nil {
 		return
 	}
-	if err := registry.Call(func() error { return run(context.Background(), h.item) }); err != nil {
+	if err := registry.RecoverAsError(func() error { return run(context.Background(), h.item) }); err != nil {
 		kit.NotifyFailure(p.h, core.Notice{ID: "picker.run", Source: s.Source, AutoClear: true}, err)
 	}
 }
@@ -342,7 +342,7 @@ func (p *Picker) step(back bool) {
 		}
 	}
 	if s, ok := p.src(); ok && s.Cancel != nil {
-		registry.Try(func() { s.Cancel() })
+		registry.IgnorePanic(func() { s.Cancel() })
 	}
 	p.hovered = ""
 	i := slices.Index(ids, p.source)

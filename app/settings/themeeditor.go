@@ -122,7 +122,7 @@ func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.Add(h.View(kit.OverlayPrefix+"theme", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "theme", Fn: e.build}
 	})))
-	e.Add(h.View(kit.OverlayPrefix+"themepick", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	e.Add(h.View(kit.OverlayPrefix+"theme-pick", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "themepick", Fn: e.buildPick}
 	})))
 	return nil
@@ -243,7 +243,7 @@ func (e *ThemeEditor) themeName() string {
 // when the theme has [dark] and [light] tables, else none.
 func (e *ThemeEditor) target() (path string, v theme.Variant, err error) {
 	name := e.themeName()
-	srcs, _ := e.h.Themes()
+	srcs := e.h.Themes()
 	for i := len(srcs) - 1; i >= 0 && path == ""; i-- {
 		if srcs[i].Name() != name {
 			continue
@@ -273,7 +273,7 @@ func (e *ThemeEditor) target() (path string, v theme.Variant, err error) {
 			return "", "", err
 		}
 		name = local
-		srcs, _ = e.h.Themes()
+		srcs = e.h.Themes()
 	}
 	e.liveFor(path)
 	st, err := theme.Stack(srcs, name)
@@ -521,7 +521,7 @@ func (e *ThemeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 
 // base is the theme the current one extends, if any.
 func (e *ThemeEditor) base() string {
-	srcs, _ := e.h.Themes()
+	srcs := e.h.Themes()
 	st, err := theme.Stack(srcs, e.themeName())
 	if err != nil || len(st) < 2 {
 		return ""
@@ -632,7 +632,7 @@ func (e *ThemeEditor) baseTheme(v theme.Variant) *theme.Resolved {
 			return t
 		}
 	}
-	srcs, _ := e.h.Themes()
+	srcs := e.h.Themes()
 	st, err := theme.Stack(srcs, b)
 	if err != nil {
 		return nil
@@ -704,7 +704,7 @@ func (e *ThemeEditor) tomlLine(c *ui.Ctx, th *theme.Resolved, i int, l string) {
 // file is the theme file edits go to, without making one: its path and contents, or nothing yet.
 func (e *ThemeEditor) file() (string, []byte) {
 	name := e.themeName()
-	srcs, _ := e.h.Themes()
+	srcs := e.h.Themes()
 	for i := len(srcs) - 1; i >= 0; i-- {
 		if srcs[i].Name() != name {
 			continue

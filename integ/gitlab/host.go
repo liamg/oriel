@@ -50,7 +50,7 @@ func (c Client) Requested(ctx context.Context) ([]registry.ReviewRequest, error)
 }
 
 // reviewState is a reviewer's state on GitLab as the Reviews page says it.
-func reviewState(s string) string {
+func reviewState(s string) registry.ReviewState {
 	switch s {
 	case "approved":
 		return registry.ReviewApproved
@@ -88,8 +88,8 @@ func (c Client) Lookup(ctx context.Context, url string) (registry.ReviewDetail, 
 		return d, err
 	}
 	for _, rv := range rs {
-		state := map[string]string{"approved": "approved", "requested_changes": "changes", "reviewed": "commented"}[rv.State]
-		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: rv.User.Username, State: cmp.Or(state, "requested")})
+		state := map[string]registry.ReviewState{"approved": registry.ReviewApproved, "requested_changes": registry.ReviewChanges, "reviewed": registry.ReviewCommented}[rv.State]
+		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: rv.User.Username, State: cmp.Or(state, registry.ReviewRequested)})
 	}
 	diffs, err := c.Diffs(ctx, path, iid)
 	if err != nil {
@@ -125,7 +125,7 @@ var draftPrefix = regexp.MustCompile(`(?i)^\s*(\[draft\]|draft:|\(draft\))\s*`)
 // prOf is a merge request as Oriel's code host tells it: its title without the draft mark.
 func prOf(m MR) *registry.PR {
 	p := &registry.PR{Number: m.IID, ID: fmt.Sprint(m.ID), Title: draftPrefix.ReplaceAllString(m.Title, ""), Body: m.Description, URL: m.WebURL,
-		Author: m.Author.Username, State: "open", Draft: m.Draft, Branch: m.SourceBranch, Base: m.TargetBranch, Head: m.SHA}
+		Author: m.Author.Username, State: core.PROpen, Draft: m.Draft, Branch: m.SourceBranch, Base: m.TargetBranch, Head: m.SHA}
 	switch m.State {
 	case "merged":
 		p.State, p.Merged = "closed", true
@@ -266,7 +266,7 @@ func (c Client) pipelineChecks(ctx context.Context, path string, pipeline int) (
 }
 
 // checkState is a job's status as a check's.
-func checkState(j Job) string {
+func checkState(j Job) registry.CheckState {
 	switch j.Status {
 	case "success":
 		return registry.CheckOK

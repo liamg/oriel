@@ -72,7 +72,7 @@ func persist(h plugin.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 	if !can {
 		return nil, false
 	}
-	registry.Try(func() { st, ok = p.Persist(v.Instance) })
+	registry.IgnorePanic(func() { st, ok = p.Persist(v.Instance) })
 	return st, ok
 }
 
@@ -147,7 +147,7 @@ func (l *layoutPlugin) restore(h plugin.Host) {
 		var inst string
 		err := fmt.Errorf("%s keeps no state", v.ID)
 		if can && kept {
-			err = registry.Call(func() (e error) { inst, e = p.Revive(st); return e })
+			err = registry.RecoverAsError(func() (e error) { inst, e = p.Revive(st); return e })
 		}
 		if err != nil {
 			h.Log().Info("a view didn't come back", "view", old.String(), "err", err)

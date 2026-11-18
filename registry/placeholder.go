@@ -127,7 +127,7 @@ func (r *reg) Placeholder(p Placeholder) Disposable {
 func (r *reg) provide(ph *placeholder) error {
 	ph.once.Do(func() {
 		ph.drop()
-		ph.err = Call(ph.p.Provide)
+		ph.err = RecoverAsError(ph.p.Provide)
 		if ph.err != nil {
 			ph.err = fmt.Errorf("loading %s: %w", ph.p.Name, ph.err)
 		}

@@ -190,7 +190,7 @@ func (e *Explorer) fileMenu() []registry.MenuItem {
 		item("explorer.duplicate", "Duplicate", "files.edit", 4, "explorer.duplicate", nil, ro),
 		item("explorer.delete", "Delete…", "files.edit", 5, "explorer.delete", nil, ro),
 		item("explorer.path.copy", "Copy path", "files.path", 6, "explorer.path.copy", nil, nil),
-		item("explorer.copy-relative-path", "Copy relative path", "files.path", 7, "explorer.path.copy", registry.Args{"relative": true}, nil),
+		item("explorer.relative_path.copy", "Copy relative path", "files.path", 7, "explorer.path.copy", registry.Args{"relative": true}, nil),
 		item("explorer.reveal", reveal, "files.path", 8, "system.reveal", nil, nil),
 	}
 }

@@ -48,7 +48,7 @@ func Languages(r registry.Registry) *syntax.Set {
 
 // LanguageSetFrom makes r's languages into a syntax.Set; its owner closes it.
 func LanguageSetFrom(r registry.Registry) *syntax.Set {
-	ls, _ := r.Languages()
+	ls := r.Languages()
 	var out []*syntax.Language
 	for _, l := range ls {
 		out = append(out, &syntax.Language{Name: l.Name, Extensions: l.Extensions, Filenames: l.Filenames, Shebangs: l.Shebangs,

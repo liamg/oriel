@@ -356,7 +356,7 @@ func (x *Reviews) notifyNew(s registry.HostSite, before, now []registry.ReviewRe
 		return
 	}
 	teams := x.optBool("reviews.count_teams")
-	was := map[string]string{}
+	was := map[string]registry.ReviewState{}
 	for _, r := range before {
 		was[r.URL] = r.State
 	}
@@ -710,7 +710,10 @@ func (x *Reviews) source() uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			r, _ := it.Data.(reviewRow)
+			r, ok := uireg.PickerData[reviewRow](it)
+			if !ok {
+				return nil
+			}
 			return &ui.Func{Key: "review", Fn: func(c *ui.Ctx) {
 				th := c.Theme()
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
@@ -734,7 +737,10 @@ func (x *Reviews) source() uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			r, _ := it.Data.(reviewRow)
+			r, ok := uireg.PickerData[reviewRow](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
 			return x.start(ctx, r)
 		},
 	}
@@ -750,17 +756,17 @@ func askedWhom(r registry.ReviewRequest) string {
 
 // reviewLine is a request as the assistant reads it.
 type reviewLine struct {
-	Number  int    `json:"number"`
-	Title   string `json:"title"`
-	Repo    string `json:"repo"`
-	URL     string `json:"url"`
-	Author  string `json:"author,omitempty"`
-	Source  string `json:"source"`
-	State   string `json:"state"`
-	Via     string `json:"via,omitempty"`
-	Draft   bool   `json:"draft,omitempty"`
-	Asked   string `json:"asked,omitempty"`
-	Session string `json:"session,omitempty"`
+	Number  int                  `json:"number"`
+	Title   string               `json:"title"`
+	Repo    string               `json:"repo"`
+	URL     string               `json:"url"`
+	Author  string               `json:"author,omitempty"`
+	Source  string               `json:"source"`
+	State   registry.ReviewState `json:"state"`
+	Via     string               `json:"via,omitempty"`
+	Draft   bool                 `json:"draft,omitempty"`
+	Asked   string               `json:"asked,omitempty"`
+	Session string               `json:"session,omitempty"`
 }
 
 // toolReviewRequests is the assistant's review_requests: every source's requests as the page lists them, asked for

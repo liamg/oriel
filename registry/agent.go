@@ -195,7 +195,7 @@ func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (str
 	owner, owned := ownerOf(ctx, r)
 	if t.Confirm != nil {
 		var c Confirmation
-		err := Call(func() (err error) { c, err = t.Confirm(ctx, params); return })
+		err := RecoverAsError(func() (err error) { c, err = t.Confirm(ctx, params); return })
 		if err != nil && !errors.Is(err, ErrGranted) {
 			return "", err
 		}
@@ -206,7 +206,7 @@ func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (str
 		}
 	}
 	var out any
-	err := Call(func() (err error) { out, err = t.Run(ctx, params); return })
+	err := RecoverAsError(func() (err error) { out, err = t.Run(ctx, params); return })
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +223,7 @@ func CallAgentTool(ctx Ctx, r Registry, t AgentTool, params map[string]any) (str
 		all := map[string]any{t.partKey(): out}
 		for _, p := range parts {
 			var v any
-			if err := Call(func() (err error) { v, err = p.Run(ctx, params); return }); err != nil {
+			if err := RecoverAsError(func() (err error) { v, err = p.Run(ctx, params); return }); err != nil {
 				v = map[string]string{"error": err.Error()}
 			}
 			all[p.partKey()] = v

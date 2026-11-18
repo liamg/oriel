@@ -1,6 +1,8 @@
 package prui
 
 import (
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
 	"testing"
 
 	"github.com/liamg/oriel/render"
@@ -10,24 +12,23 @@ import (
 )
 
 // A PR's status is the one thing that matters most about it: merged or closed over anything a reviewer said, then
-// changes requested over an approval, then an approval, then draft, then open. Review states come in either form
-// (GitHub's "APPROVED", a code host's "approved").
+// changes requested over an approval, then an approval, then draft, then open.
 func TestPRStatusOf(t *testing.T) {
 	for _, tt := range []struct {
-		state         string
+		state         core.PRState
 		merged, draft bool
-		reviews       []string
+		reviews       []registry.ReviewState
 		want          string
 	}{
 		{"open", false, false, nil, "Open"},
 		{"open", false, true, nil, "Draft"},
-		{"open", false, false, []string{"APPROVED"}, "Approved"},
-		{"open", false, false, []string{"approved", "commented"}, "Approved"},
-		{"open", false, false, []string{"APPROVED", "CHANGES_REQUESTED"}, "Changes requested"},
-		{"open", false, true, []string{"approved"}, "Approved"},
-		{"closed", true, false, []string{"CHANGES_REQUESTED"}, "Merged"},
+		{"open", false, false, []registry.ReviewState{registry.ReviewApproved}, "Approved"},
+		{"open", false, false, []registry.ReviewState{registry.ReviewApproved, registry.ReviewCommented}, "Approved"},
+		{"open", false, false, []registry.ReviewState{registry.ReviewApproved, registry.ReviewChanges}, "Changes requested"},
+		{"open", false, true, []registry.ReviewState{registry.ReviewApproved}, "Approved"},
+		{"closed", true, false, []registry.ReviewState{registry.ReviewChanges}, "Merged"},
 		{"merged", false, false, nil, "Merged"},
-		{"closed", false, false, []string{"approved"}, "Closed"},
+		{"closed", false, false, []registry.ReviewState{registry.ReviewApproved}, "Closed"},
 		{"", false, false, nil, "Open"},
 	} {
 		if got := PRStatusOf(tt.state, tt.merged, tt.draft, tt.reviews); got.Word != tt.want {
@@ -53,7 +54,7 @@ func TestPRFrameRecoloursTheCards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []PRStatus{PRStatusOf("merged", true, false, nil), PRStatusOf("open", false, false, []string{"approved"}), PRStatusOf("open", false, false, nil)} {
+	for _, s := range []PRStatus{PRStatusOf("merged", true, false, nil), PRStatusOf("open", false, false, []registry.ReviewState{registry.ReviewApproved}), PRStatusOf("open", false, false, nil)} {
 		u := ui.New(headless.Shaper{}, ui.TextStyle{})
 		u.SetTheme(th)
 		var card, review render.Color

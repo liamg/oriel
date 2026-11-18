@@ -26,7 +26,7 @@ func GutterActionFor(r Contributions, path string) (GutterAction, bool) {
 	for _, a := range ContributionsOf[GutterAction](r) {
 		ok := a.When == nil
 		if !ok {
-			Try(func() { ok = a.When(path) })
+			IgnorePanic(func() { ok = a.When(path) })
 		}
 		if ok {
 			out = append(out, a)

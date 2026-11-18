@@ -123,7 +123,7 @@ func TestSessionStatsSnapshot(t *testing.T) {
 	if !s.Showing(stats.StatsSessionView) {
 		t.Fatal("the session stats box's cost didn't open the session's stats")
 	}
-	s.Run("view.close", registry.Args{"id": "agent.console"})
+	s.Run("view.close", registry.Args{"id": "agent-console"})
 	settle(s, x)
 	s.Golden("stats-session")
 	s.WantFrame("pricing-rounding", "COST OVER THE SESSION", "COST PER REPO", "count whole session in each", "MODELS", "TOOLS",

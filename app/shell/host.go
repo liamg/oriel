@@ -45,8 +45,8 @@ func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) registry.Disp
 }
 func (h *pluginHost) Redraw() { h.sh.poke() }
 
-func (h *pluginHost) DecorationsChanged(id string) {
-	h.Registry.DecorationsChanged(id)
+func (h *pluginHost) RefreshDecorations(id string) {
+	h.Registry.RefreshDecorations(id)
 	h.sh.poke()
 }
 

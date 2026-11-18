@@ -50,27 +50,27 @@ func (x *Boxes) SetToolRule(id core.SessionID, tool string, action hostapi.ToolA
 	})
 }
 
-// SetNetRule allows or blocks host[:port] for the rest of session id (hostapi.NetAllow, NetBlock), or drops the session's
-// rule for it ("").
-func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action hostapi.NetAction, private bool) (err error) {
+// SetNetRule allows or blocks r.Host[:r.Port] for the rest of r.Session (hostapi.NetAllow, NetBlock), or drops the
+// session's rule for it ("").
+func (x *Boxes) SetNetRule(r hostapi.NetRuleReq) (err error) {
 	defer x.deps.Env.Recover("SetNetRule", &err)
-	b := x.of(id)
+	b := x.of(r.Session)
 	if b == nil {
-		return fmt.Errorf("session %s isn't sandboxed", id)
+		return fmt.Errorf("session %s isn't sandboxed", r.Session)
 	}
-	host = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(host)), ".")
+	host, port := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(r.Host)), "."), r.Port
 	if host == "" {
 		return errors.New("a network rule needs a host")
 	}
-	switch action {
+	switch r.Action {
 	case hostapi.NetAllow, hostapi.NetBlock:
-		return b.egress.SetRule(host, port, action == hostapi.NetAllow, private)
+		return b.egress.SetRule(egress.Rule{Host: host, Port: port, Allow: r.Action == hostapi.NetAllow, Private: r.Private})
 	case "":
 		return b.egress.UpdateGrants(func(rules []egress.Rule) []egress.Rule {
 			return slices.DeleteFunc(rules, func(r egress.Rule) bool { return r.Host == host && r.Port == port })
 		})
 	}
-	return fmt.Errorf("%q isn't a network rule: allow, block, or none", action)
+	return fmt.Errorf("%q isn't a network rule: allow, block, or none", r.Action)
 }
 
 func (b *Box) permissions(ctx context.Context) hostapi.Permissions {

@@ -45,7 +45,7 @@ func loadFailed(s *apptest.Scene, id string) string {
 }
 
 func themeNamesOf(r registry.Registry) []string {
-	ts, _ := r.Themes()
+	ts := r.Themes()
 	var out []string
 	for _, t := range ts {
 		out = append(out, t.Name())
@@ -89,7 +89,7 @@ help    = ["assets/help/*.md"]
 	if !slices.Equal(packs, []string{"review: Review like a hawk."}) {
 		t.Errorf("prompt packs: %q", packs)
 	}
-	hs, _ := s.Registry().HelpSources()
+	hs := s.Registry().HelpSources()
 	found := false
 	for _, h := range hs {
 		if h.Source == "acme/dusk" {

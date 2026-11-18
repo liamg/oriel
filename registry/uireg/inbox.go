@@ -110,7 +110,7 @@ func InboxCards(r registry.Contributions) []InboxCard {
 			continue
 		}
 		var cs []InboxCard
-		registry.Try(func() { cs = s.Cards() })
+		registry.IgnorePanic(func() { cs = s.Cards() })
 		for _, card := range cs {
 			card.From = s.Name
 			out = append(out, card)

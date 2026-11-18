@@ -56,7 +56,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 				}
 				x.progress(c, se)
 				x.agentVerdict(c, se, width)
-				x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
+				x.review(c, se, src, f, width, done && (full.State == core.PRMerged || full.State == core.PRClosed))
 				x.sent(c, se, width)
 				switch {
 				case !done:
@@ -89,7 +89,7 @@ func reviewedStatus(full registry.ReviewDetail) prui.PRStatus {
 	if full.State == "" {
 		return prui.PRStatus{}
 	}
-	var reviews []string
+	var reviews []registry.ReviewState
 	for _, r := range full.Reviewers {
 		reviews = append(reviews, r.State)
 	}
@@ -123,7 +123,7 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 // pageBanner says when the PR has closed or moved on since the review read it.
 func (x *PRReview) pageBanner(c *ui.Ctx, se core.SessionState, f *reviewForm, full registry.ReviewDetail, p core.Project, done bool) {
 	switch {
-	case done && (full.State == "merged" || full.State == "closed"):
+	case done && (full.State == core.PRMerged || full.State == core.PRClosed):
 		x.banner(c, fmt.Sprintf("This pull request was %s: there's nothing left to review.", full.State), "Archive this review", func() {
 			x.run("session.end", registry.Args{"id": string(se.ID), "how": "archive"})
 		})

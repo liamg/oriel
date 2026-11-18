@@ -471,13 +471,13 @@ func reviewRowLabel(r reviewRow) string {
 }
 
 // ciMark is a request's checks as a glyph and its tone.
-func ciMark(ci string) (string, string) {
+func ciMark(ci registry.CheckState) (string, string) {
 	switch ci {
-	case "ok":
+	case registry.CheckOK:
 		return "✓ ci", "ok"
-	case "failed":
+	case registry.CheckFailed:
 		return "✕ ci", "error"
-	case "running":
+	case registry.CheckRunning:
 		return "◌ ci", "status.working"
 	}
 	return "", ""
@@ -599,7 +599,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 	c.Row("meta", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "st", stateLabel(r), kit.TokenColour(th, stateTone(r), th.C(theme.Accent)), help)
 		if done && full.State != "" {
-			widget.Chip(c, "pr", full.State, prui.PRStateTone(c, full.State), help)
+			widget.Chip(c, "pr", string(full.State), prui.PRStateTone(c, string(full.State)), help)
 		}
 		parts := []widget.AgoPart{{Text: q.Key()}}
 		if q.Author != "" {

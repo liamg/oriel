@@ -18,7 +18,7 @@ import (
 
 // TestRunView is a session's test run as evidence: what ran, who ran it and for which request, its counts,
 // what failed, and what it printed. An instance is "<session>/<run>".
-const TestRunView = "test.run"
+const TestRunView = "test-run"
 
 func (x *Tests) evidence() []registry.Disposable {
 	return []registry.Disposable{

@@ -229,8 +229,8 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 	for _, it := range []registry.MenuItem{
 		{Name: "explain.this.ask", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this.ask"},
 		{Name: "request.review", Label: "Review this", Group: "agent", Order: 20, Command: "request.this.compose", Args: registry.Args{"what": "review"}},
-		{Name: "request.tests", Label: "Write tests for this", Group: "agent", Order: 30, Command: "request.this.compose", Args: registry.Args{"what": "tests"}},
-		{Name: "request.refactor", Label: "Refactor this…", Group: "agent", Order: 40, Command: "request.this.compose", Args: registry.Args{"what": "refactor"}},
+		{Name: "request.tests.compose", Label: "Write tests for this", Group: "agent", Order: 30, Command: "request.this.compose", Args: registry.Args{"what": "tests"}},
+		{Name: "request.refactor.compose", Label: "Refactor this…", Group: "agent", Order: 40, Command: "request.this.compose", Args: registry.Args{"what": "refactor"}},
 	} {
 		it.When, it.Source = registry.MenuWhen{View: kit.EditorView}, "builtin:explain"
 		x.Add(h.Contribute(it))

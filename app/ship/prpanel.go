@@ -109,7 +109,7 @@ func (x *Ship) checksBox(c *ui.Ctx, s shipRead) {
 
 // reviewersOf is who's asked to review a PR or has reviewed it, each with where they stand: approved, changes or
 // waiting.
-func (x *Ship) reviewersOf(id core.SessionID, s shipRead) (who []string, state map[string]string) {
+func (x *Ship) reviewersOf(id core.SessionID, s shipRead) (who []string, state map[string]registry.ReviewState) {
 	state = services.ReviewVerdicts(x.h, id, s.PR.URL)
 	who = slices.Clone(s.PR.Reviewers)
 	for r := range state {

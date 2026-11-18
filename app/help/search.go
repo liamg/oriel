@@ -78,7 +78,7 @@ func (ix *Index) sections() []section {
 	for _, p := range ix.Pages() {
 		cur := section{id: p.ID, title: p.Title, page: p}
 		for _, b := range p.Blocks {
-			if b.Kind == "heading" {
+			if b.Kind == BlockHeading {
 				out = append(out, cur)
 				cur = section{id: p.ID + "#" + b.Anchor, title: b.Text, page: p}
 				continue
@@ -96,13 +96,13 @@ func BlocksText(blocks []Block, expand Expand) string {
 	for _, b := range blocks {
 		var s string
 		switch b.Kind {
-		case "heading":
+		case BlockHeading:
 			s = strings.Repeat("#", b.Level) + " " + b.Text
-		case "para":
+		case BlockPara:
 			s = b.Text
-		case "list":
+		case BlockList:
 			s = "- " + strings.Join(b.Items, "\n- ")
-		case "code":
+		case BlockCode:
 			s = "```\n" + b.Text + "\n```"
 		default:
 			if expand != nil {

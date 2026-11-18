@@ -227,7 +227,7 @@ func MergeReviewers(rs []registry.PRReviewer) []registry.PRReviewer {
 		case !seen:
 			at[r.Login] = len(out)
 			out = append(out, r)
-		case out[i].State == "requested" || r.State == "requested":
+		case out[i].State == registry.ReviewRequested || r.State == registry.ReviewRequested:
 			out[i].State = registry.ReviewReRequested
 		default:
 			out[i].State = r.State // the later review

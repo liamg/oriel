@@ -52,10 +52,10 @@ L.view.override("dashboard", function()
 end)
 
 -- a segment in the title bar, and one in the status line
-L.view.override("titlebar.right.40-deploys", function()
+L.view.override("title-bar.right.40-deploys", function()
   return L.ui.indicator{ label = "DEPLOY", value = #deploys, tone = "warn" }
 end)
-L.view.override("statusline.right.50-ci", function()
+L.view.override("status-line.right.50-ci", function()
   return L.ui.row{ L.ui.text("CI", "dim"), L.ui.text("✓ main", "ok") }
 end)
 

@@ -1,6 +1,6 @@
 ---
 id: shell/tabs
-covers: [app.titlebar]
+covers: [app.title-bar]
 related: [shell/omnibox, errors]
 ---
 

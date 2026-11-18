@@ -3,6 +3,7 @@ package review
 import (
 	"cmp"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"image/color"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ func prStatusBoxes(c *ui.Ctx, s prStatus) {
 		if !s.done {
 			prui.PRLine(c, "state", "doing", "State", "asking")
 		} else {
-			prui.PRLine(c, "state", prStateLine(full.State), "State", cmp.Or(full.State, "unknown"))
+			prui.PRLine(c, "state", prStateLine(full.State), "State", cmp.Or(string(full.State), "unknown"))
 			state, note := mergeLine(full.Mergeable)
 			prui.PRLine(c, "mergeable", state, "Mergeable", note)
 		}
@@ -64,9 +65,9 @@ func prStatusBoxes(c *ui.Ctx, s prStatus) {
 }
 
 // prStateLine is a PR's state as a line's state: open is fine, closed is done with, unknown is to find out.
-func prStateLine(state string) string {
+func prStateLine(state core.PRState) string {
 	switch state {
-	case "open", "merged":
+	case core.PROpen, core.PRMerged:
 		return "ok"
 	}
 	return "todo"

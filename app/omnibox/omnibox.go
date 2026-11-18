@@ -184,7 +184,7 @@ func (o *Omnibox) build(c *ui.Ctx) {
 					if len(flat) > 0 && flat[o.sel].src.Preview != nil {
 						h := flat[o.sel]
 						var n ui.Node
-						if err := registry.Call(func() error { n = h.src.Preview(h.item); return nil }); err == nil && n != nil {
+						if err := registry.RecoverAsError(func() error { n = h.src.Preview(h.item); return nil }); err == nil && n != nil {
 							c.Node(n)
 						}
 					}
@@ -259,7 +259,7 @@ func (o *Omnibox) run(h hit) {
 	if h.src.Run == nil {
 		return
 	}
-	if err := registry.Call(func() error { return h.src.Run(context.Background(), h.item) }); err != nil {
+	if err := registry.RecoverAsError(func() error { return h.src.Run(context.Background(), h.item) }); err != nil {
 		kit.NotifyFailure(o.h, core.Notice{ID: "omnibox.run", Source: h.src.Source, AutoClear: true}, err)
 	}
 }

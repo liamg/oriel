@@ -85,7 +85,7 @@ func (a *APIs) viewCtx(vc uireg.ViewCtx) script.Table {
 //oriel:api name=decorations cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }." optional=fn
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.refresh(name). Takes its spec too: { name, run = fn }." optional=fn
 func (d Decor) Provider(spec any, fn *script.Fn) error {
 	name, fn, err := specOr(spec, fn, "name")
 	if err != nil {
@@ -138,9 +138,9 @@ func luaSign(t script.Table, line int, text string) uireg.Decoration {
 	return d
 }
 
-//oriel:api doc="Says the decorations provider name gives have changed, so it's asked again: what they're made from moved."
-func (d Decor) Changed(name string) {
-	d.a.Host.DecorationsChanged(name)
+//oriel:api doc="Asks the decorations provider name for its decorations again: what they're made from moved."
+func (d Decor) Refresh(name string) {
+	d.a.Host.RefreshDecorations(name)
 }
 
 //oriel:api name=agent cap=agent.tools doc="What agents are offered and asked, and the agents themselves: a plugin brings an agent with oriel.agent.provider, served by a process of its own over the Oriel agent protocol ([agent-protocol.md](agent-protocol.md)) or by a bridge such as the bundled ACP one."
@@ -353,7 +353,7 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 				answer = out
 			}
 			if f.Label != nil {
-				registry.Try(func() { label = f.Label(session) })
+				registry.IgnorePanic(func() { label = f.Label(session) })
 			}
 		}
 		g.a.Host.Do(func() { g.a.callOnce(fn, answer, msg, label) })
@@ -463,11 +463,15 @@ func (s Session) id(id string) core.SessionID {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
-func (h HUD) Indicator(name string, build any, opts script.Table, where string) error {
+//oriel:api doc="An indicator in a slot: title-bar.right, status-line.left, status-line.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
+func (h HUD) Indicator(spec any, build any, opts script.Table, where string) error {
+	name, build, opts, err := indicatorSpec(spec, build, opts)
+	if err != nil {
+		return fmt.Errorf("oriel.hud.indicator: %w", err)
+	}
 	every, err := durationOf(opts["every"])
 	if err != nil {
-		return fmt.Errorf("hud indicator %s: every: %w", name, err)
+		return fmt.Errorf("oriel.hud.indicator %s: every: %w", name, err)
 	}
 	fn, _ := build.(*script.Fn)
 	if fn == nil {
@@ -499,6 +503,24 @@ func (h HUD) Indicator(name string, build any, opts script.Table, where string) 
 	}
 	h.a.own(h.a.Host.Contribute(ind))
 	return nil
+}
+
+// indicatorSpec is an indicator's (name, build, opts), given as those or as one spec table holding them all.
+func indicatorSpec(spec, build any, opts script.Table) (string, any, script.Table, error) {
+	switch v := spec.(type) {
+	case string:
+		if build == nil {
+			return "", nil, nil, fmt.Errorf("%s: no build function or nodes", v)
+		}
+		return v, build, opts, nil
+	case script.Table:
+		name := str(v, "name")
+		if name == "" || v["build"] == nil {
+			return "", nil, nil, errors.New("its spec needs a name and a build: { name, build = fn or nodes, slot, … }")
+		}
+		return name, v["build"], v, nil
+	}
+	return "", nil, nil, fmt.Errorf("a name or a spec table { name, build = fn, … }, not %T", spec)
 }
 
 //oriel:api doc="Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes."

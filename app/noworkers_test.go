@@ -66,7 +66,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 	}
 	check("the assistant's prompt", apptest.PluginOf[*assistant.Assistant](s, "assistant").Prompt())
 	var srcs []help.Source
-	hs, _ := s.Registry().HelpSources()
+	hs := s.Registry().HelpSources()
 	for _, h := range hs {
 		srcs = append(srcs, help.Source{Name: h.Source, FS: h.FS})
 	}

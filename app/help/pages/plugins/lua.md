@@ -30,7 +30,7 @@ under the line.
 ## UI {#ui}
 
 `L.view.override(id, fn)` registers a view: a new one (a panel, opened with `view.open` in a dock, a split or a
-tab), a segment of the title bar or status line (`titlebar.right.*`, `statusline.left.*`, `statusline.right.*`),
+tab), a segment of the title bar or status line (`title-bar.right.*`, `status-line.left.*`, `status-line.right.*`),
 or a built-in it replaces. `fn` returns `L.ui` nodes: `row` and `column` (with `gap` and `pad`), `text`, `spacer`,
 `indicator`, `ring` (a dial with a short label in it), `list`, `button` (`on_click` runs Lua), `input`, `toggle` and `select` (their `on_change` gets the new value),
 and `mode`. `oriel.ui.state(key, initial)` is a table kept across redraws, for what a view shows. Tab moves between

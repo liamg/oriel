@@ -26,7 +26,9 @@ func (x *PRReview) fetch(ctx registry.Ctx, a registry.Args) error {
 		return err
 	}
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "review.pr.fetch." + string(se.ID), Doing: "Fetching " + kit.Label(se)},
-		func(ctx context.Context) (map[string]hostapi.PRMove, error) { return w.UpdatePR(ctx, se.ID) },
+		func(ctx context.Context) (map[string]hostapi.PRMove, error) {
+			return w.UpdatePR(ctx, hostapi.UpdatePRReq{Session: se.ID})
+		},
 		func(_ registry.Ctx, moved map[string]hostapi.PRMove) error {
 			x.forget(reviewPR(se))
 			for _, m := range moved {
@@ -71,7 +73,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	}
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		moved, err := w.UpdatePR(ctx, id)
+		moved, err := w.UpdatePR(ctx, hostapi.UpdatePRReq{Session: id})
 		cancel()
 		x.mu.Lock()
 		delete(x.fetching, id)

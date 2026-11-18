@@ -623,7 +623,7 @@ clip 20,109.110016 816x516.78 r 8
   rect 20,536.17 816x1 fill #24221d
   text "VIEWS" @34,554.86 #7c7566 JetBrains Mono 9.5
   clip 160,545.17 220x15.179993 r 0
-    text "app.titlebar" @160,556.89996 #ece6d8 JetBrains Mono 11.5
+    text "app.title-bar" @160,556.89996 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,545.17 418x15.179993 r 0
   pop
@@ -635,7 +635,7 @@ clip 20,109.110016 816x516.78 r 8
   pop
   text "builtin:layout" @729.6875,575.56995 #ffd23f JetBrains Mono 11
   clip 160,583.52997 220x15.179993 r 0
-    text "app.statusline" @160,595.25995 #ece6d8 JetBrains Mono 11.5
+    text "app.status-line" @160,595.25995 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,583.52997 292.71875x15.179993 r 0
   pop

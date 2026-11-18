@@ -258,7 +258,7 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (conversation.
 	if err != nil {
 		return nil, err
 	}
-	spec := hostapi.UtilitySpec{Name: kit.AssistantAgent, Provider: kit.Unless(x.str("assistant.provider"), "auto"), Model: x.str("assistant.model"),
+	spec := hostapi.UtilitySpec{Name: kit.AssistantAgent, Provider: kit.BlankIfDefault(x.str("assistant.provider"), "auto"), Model: x.str("assistant.model"),
 		Pack: x.Prompt(), Prompt: first, Web: x.bool("assistant.web")}
 	u, err := c.StartUtility(context.Background(), spec)
 	if err != nil {

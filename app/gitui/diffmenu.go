@@ -15,7 +15,7 @@ const diffLineSubject = "diff.line"
 // lineMenu is a diff line's right-click menu; the right-click selects the line, so each acts on it.
 func (x *Diff) lineMenu() []registry.MenuItem {
 	return []registry.MenuItem{
-		{Name: "diff.line.source", Label: "Open in file", Key: "o", Group: "file", Order: 10, Command: "diff.source.open"},
+		{Name: "diff.source.open", Label: "Open in file", Key: "o", Group: "file", Order: 10, Command: "diff.source.open"},
 		{Name: "diff.line.comment", Label: "Comment…", Key: "gc", Group: "thread", Order: 20, Command: "diff.comment"},
 		{Name: "diff.line.ask", Label: "Ask the agent…", Key: "ga", Group: "thread", Order: 21, Command: "diff.comment", Args: registry.Args{"to": "agent"}},
 		{Name: "diff.line.explain", Label: "Explain", Key: "?", Group: "thread", Order: 22, Command: "diff.explain"},

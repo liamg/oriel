@@ -69,7 +69,7 @@ func (UI) Text(s any, style string) script.Table {
 func (UI) Spacer() script.Table { return script.Table{"type": "spacer"} }
 
 //oriel:api doc="The editor's mode, as the built-in status line shows it." returns=table
-func (UI) Mode() script.Table { return script.Table{"type": "view", "id": "statusline.left.00-mode"} }
+func (UI) Mode() script.Table { return script.Table{"type": "view", "id": "status-line.left.00-mode"} }
 
 //oriel:api doc="An indicator: { label, value, bar (0 to 1), warn (the bar's warning level), tone (ok, warn, error), dot (a status dot before the value: ok, warn, error, accent, dim), id }." returns=table
 func (UI) Indicator(spec script.Table) script.Table {

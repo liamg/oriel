@@ -30,7 +30,7 @@ import (
 // the session host answers (StatsQuery, SessionStats, UsageHistory), and the ways to them: the sidebar's global
 // entries, the title bar's indicators, the session stats box's cost, the start view's links and the omnibox.
 const (
-	StatsSessionView = "stats.session.open"
+	StatsSessionView = "stats-session"
 	StatsKeyMode     = "stats"
 	UsageKeyMode     = "usage"
 	SplitOption      = "stats.split_sessions"
@@ -823,7 +823,7 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 				}
 				note := ""
 				if e.Note != nil {
-					registry.Try(func() { note = e.Note("") })
+					registry.IgnorePanic(func() { note = e.Note("") })
 				}
 				out = append(out, uireg.PickerItem{ID: e.Name, Label: e.Title, Detail: note, Icon: "▸", Key: kit.BoundKey(h, e.Command, e.Args),
 					Data: e})
@@ -831,7 +831,10 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 			return out
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			e := it.Data.(uireg.RailEntry)
+			e, ok := uireg.PickerData[uireg.RailEntry](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
 			return h.Run(ctx, e.Command, e.Args)
 		},
 	}

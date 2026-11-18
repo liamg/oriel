@@ -1,6 +1,7 @@
 package prui
 
 import (
+	"github.com/liamg/oriel/core"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -21,19 +22,19 @@ type PRStatus struct {
 // PRStatusOf is a PR's status from its state ("open", "closed", "merged"), whether it's merged or a draft, and its
 // reviewers' latest verdicts (GitHub's "APPROVED" or a code host's registry.ReviewApproved…): merged or closed over
 // anything a reviewer said, changes requested over an approval, then approved, draft, open.
-func PRStatusOf(state string, merged, draft bool, reviews []string) PRStatus {
+func PRStatusOf(state core.PRState, merged, draft bool, reviews []registry.ReviewState) PRStatus {
 	switch {
-	case merged || state == "merged":
+	case merged || state == core.PRMerged:
 		return PRStatus{"Merged", "merged", theme.StatusPermission}
-	case state == "closed":
+	case state == core.PRClosed:
 		return PRStatus{"Closed", "prclosed", theme.Error}
 	}
 	approved := false
 	for _, r := range reviews {
-		switch strings.ToLower(r) {
-		case "changes_requested", registry.ReviewChanges:
+		switch r {
+		case registry.ReviewChanges:
 			return PRStatus{"Changes requested", "changes", theme.Warn}
-		case "approved":
+		case registry.ReviewApproved:
 			approved = true
 		}
 	}

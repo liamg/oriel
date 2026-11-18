@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"github.com/liamg/oriel/core"
 	"net/http"
 	"regexp"
 	"slices"
@@ -253,23 +254,31 @@ func ParseRemote(remote string) (host, path string, ok bool) {
 
 // PR is a pull request (a merge request on GitLab) as a code host tells it.
 type PR struct {
-	Number    int      `json:"number"`
-	ID        string   `json:"id,omitempty"` // the host's own id, when calls need it
-	Title     string   `json:"title"`
-	Body      string   `json:"body,omitempty"`
-	URL       string   `json:"url,omitempty"`
-	Author    string   `json:"author,omitempty"`
-	State     string   `json:"state,omitempty"` // open or closed
-	Draft     bool     `json:"draft,omitempty"`
-	Merged    bool     `json:"merged,omitempty"`
-	Branch    string   `json:"branch,omitempty"` // the one it merges from
-	Base      string   `json:"base,omitempty"`
-	Head      string   `json:"head,omitempty"`      // the commit it's at
-	Reviewers []string `json:"reviewers,omitempty"` // asked for: logins, and org/team for a team
+	Number    int          `json:"number"`
+	ID        string       `json:"id,omitempty"` // the host's own id, when calls need it
+	Title     string       `json:"title"`
+	Body      string       `json:"body,omitempty"`
+	URL       string       `json:"url,omitempty"`
+	Author    string       `json:"author,omitempty"`
+	State     core.PRState `json:"state,omitempty"` // core.PROpen or core.PRClosed
+	Draft     bool         `json:"draft,omitempty"`
+	Merged    bool         `json:"merged,omitempty"` // a closed one was merged
+	Branch    string       `json:"branch,omitempty"` // the one it merges from
+	Base      string       `json:"base,omitempty"`
+	Head      string       `json:"head,omitempty"`      // the commit it's at
+	Reviewers []string     `json:"reviewers,omitempty"` // asked for: logins, and org/team for a team
 }
 
 // Open says the PR can still be merged.
-func (p *PR) Open() bool { return p != nil && p.State == "open" && !p.Merged }
+func (p *PR) Open() bool { return p != nil && p.State == core.PROpen && !p.Merged }
+
+// Ended is where a PR stands with merged folded in: core.PROpen, core.PRClosed or core.PRMerged.
+func (p *PR) Ended() core.PRState {
+	if p.Merged {
+		return core.PRMerged
+	}
+	return p.State
+}
 
 // ReviewThread is a review thread on a pull request as its code host has it: on a line of a file, or, with no ID, the
 // PR's conversation.
@@ -281,7 +290,7 @@ type ReviewThread struct {
 	Outdated bool         `json:"outdated,omitempty"`
 	Resolved *bool        `json:"resolved,omitempty"` // nil when the host doesn't say
 	Reviewer string       `json:"reviewer,omitempty"`
-	State    string       `json:"state,omitempty"` // the reviewer's: ReviewChanges, ReviewApproved, ReviewCommented
+	State    ReviewState  `json:"state,omitempty"` // the reviewer's: ReviewChanges, ReviewApproved or ReviewCommented
 	URL      string       `json:"url,omitempty"`
 	Comments []ReviewNote `json:"comments"`
 	// Reviewers are, on the conversation (no ID), each reviewer's latest verdict: those who left no comment too.
@@ -310,23 +319,26 @@ type NewPR struct {
 	Draft  bool   `json:"draft,omitempty"`
 }
 
+// CheckState is where a check on a pull request stands.
+type CheckState string
+
 // Check states.
 const (
-	CheckOK      = "ok"
-	CheckFailed  = "failed"
-	CheckRunning = "running"
-	CheckQueued  = "queued"
-	CheckSkipped = "skipped"
+	CheckOK      CheckState = "ok"
+	CheckFailed  CheckState = "failed"
+	CheckRunning CheckState = "running"
+	CheckQueued  CheckState = "queued"
+	CheckSkipped CheckState = "skipped"
 )
 
 // Check is a check on a pull request's head.
 type Check struct {
-	Name      string    `json:"name"`
-	State     string    `json:"state"` // CheckOK, CheckFailed…
-	URL       string    `json:"url,omitempty"`
-	Started   time.Time `json:"started,omitzero"`
-	Completed time.Time `json:"completed,omitzero"`
-	Detail    string    `json:"detail,omitempty"` // a failing one's: the line of its log that says why
+	Name      string     `json:"name"`
+	State     CheckState `json:"state"`
+	URL       string     `json:"url,omitempty"`
+	Started   time.Time  `json:"started,omitzero"`
+	Completed time.Time  `json:"completed,omitzero"`
+	Detail    string     `json:"detail,omitempty"` // a failing one's: the line of its log that says why
 }
 
 // Pending says it hasn't finished.

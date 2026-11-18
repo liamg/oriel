@@ -85,13 +85,15 @@ type Settings interface {
 // Themes are the themes.
 type Themes interface {
 	Theme(s theme.Source) Disposable
-	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
+	Themes() []theme.Source // in registration order, a later theme with the same name winning
+	ThemesGen() int         // a generation that moves when they change
 }
 
 // Languages are the languages files are read as.
 type Languages interface {
 	Language(l Language) Disposable
-	Languages() ([]Language, int) // the language that wins each name, in the order they were registered, and a generation
+	Languages() []Language // the language that wins each name, in the order they were registered
+	LanguagesGen() int     // a generation that moves when they change
 }
 
 // Events are the hooks and the events they hear.
@@ -116,16 +118,18 @@ type Contributions interface {
 // Help are the help pages.
 type Help interface {
 	HelpPage(s HelpSource) Disposable
-	HelpSources() ([]HelpSource, int)
+	HelpSources() []HelpSource // every contributor's pages, in registration order
+	HelpSourcesGen() int       // a generation that moves when they change
 }
 
 // Diagnostics are the problems and line coverage found in files.
 type Diagnostics interface {
 	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
 	SetDiagnostics(owner, file string, ds []Diagnostic)
-	// Diagnostics are every diagnostic by file, then line, and a generation that moves when they change;
-	// DiagnosticsFor are one file's. Both are shared until they change: callers mustn't change them.
-	Diagnostics() ([]Diagnostic, int)
+	// Diagnostics are every diagnostic by file, then line; DiagnosticsFor are one file's. Both are shared until they
+	// change: callers mustn't change them. DiagnosticsGen is a generation that moves when they change.
+	Diagnostics() []Diagnostic
+	DiagnosticsGen() int
 	DiagnosticsFor(file string) []Diagnostic
 	// SetCoverage replaces owner's line coverage for file: hits by 0-based line, 0 for a line never run. nil clears it.
 	SetCoverage(owner, file string, hits map[int]int)
@@ -405,8 +409,8 @@ var builtinOptions = []OptionSpec{
 	{Name: "keymap.leader", Type: Key, Default: " ", Scopes: ScopeUser, Source: "builtin:registry",
 		Help: "What <Leader> stands for in keymaps, read when each keymap is defined."},
 	{Name: "keymap.timeout", Type: Bool, Default: true, Scopes: ScopeUser, Aliases: []string{"timeout", "to"}, Source: "builtin:registry",
-		Help: "Stop waiting for the rest of a mapped key sequence after keymap.timeoutlen."},
-	{Name: "keymap.timeoutlen", Type: Duration, Default: time.Second, Scopes: ScopeUser, Aliases: []string{"timeoutlen", "tm"}, Source: "builtin:registry",
+		Help: "Stop waiting for the rest of a mapped key sequence after keymap.timeout_length."},
+	{Name: "keymap.timeout_length", Type: Duration, Default: time.Second, Scopes: ScopeUser, Aliases: []string{"timeoutlen", "tm"}, Source: "builtin:registry",
 		Help: "How long to wait for a mapped key sequence to complete."},
 	{Name: "hooks.budget", Type: Duration, Default: 2 * time.Millisecond, Scopes: ScopeUser, Source: "builtin:registry",
 		Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."},
@@ -507,14 +511,20 @@ func (r *reg) Theme(s theme.Source) Disposable {
 	})
 }
 
-func (r *reg) Themes() ([]theme.Source, int) {
+func (r *reg) Themes() []theme.Source {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]theme.Source, len(r.themes))
 	for i, e := range r.themes {
 		out[i] = e.value
 	}
-	return out, r.themeGen
+	return out
+}
+
+func (r *reg) ThemesGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.themeGen
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {
@@ -546,7 +556,7 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	if err := CheckArgs(c, args); err != nil {
 		return err
 	}
-	err := Call(func() error { return c.Run(ctx, args) })
+	err := RecoverAsError(func() error { return c.Run(ctx, args) })
 	// Only this command's own panic is its fault: one wrapped from a command it ran was the inner one's.
 	if p, ok := err.(*Panic); ok {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
@@ -614,7 +624,7 @@ func (r *reg) Available(id string, args Args) bool {
 		return true
 	}
 	ok = false
-	Try(func() { ok = c.Available(args) })
+	IgnorePanic(func() { ok = c.Available(args) })
 	return ok
 }
 
@@ -675,7 +685,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	for _, e := range ContributionsOf[ExclusiveKeys](r) {
 		active := true
 		if e.Active != nil {
-			Try(func() { active = e.Active() })
+			IgnorePanic(func() { active = e.Active() })
 		}
 		if !active {
 			continue
@@ -708,7 +718,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 		if allow != nil {
 			lent := false
 			if f.km != nil && exact == nil {
-				Try(func() { lent = allow(*f.km) })
+				IgnorePanic(func() { lent = allow(*f.km) })
 			}
 			if lent {
 				exact = f.km

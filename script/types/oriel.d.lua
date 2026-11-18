@@ -99,11 +99,11 @@ function oriel.now() end
 ---@param fn any
 function oriel.on(event, opts, fn) end
 
---- Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now.
----@param name string
----@param spec table
----@param fn function
-function oriel.placeholder(name, spec, fn) end
+--- Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now. Takes its spec too: { name, commands, keys, …, run = fn }.
+---@param first any
+---@param spec? table
+---@param fn? function
+function oriel.placeholder(first, spec, fn) end
 
 --- A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 ---@param path string
@@ -195,14 +195,14 @@ function oriel.coverage.set(owner, file, hits) end
 ---@class oriel.decorations
 oriel.decorations = {}
 
---- Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
----@param name string
-function oriel.decorations.changed(name) end
-
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }.
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.refresh(name). Takes its spec too: { name, run = fn }.
 ---@param spec any
 ---@param fn? function
 function oriel.decorations.provider(spec, fn) end
+
+--- Asks the decorations provider name for its decorations again: what they're made from moved.
+---@param name string
+function oriel.decorations.refresh(name) end
 
 ---@class oriel.diagnostics
 oriel.diagnostics = {}
@@ -254,11 +254,11 @@ function oriel.http.request(spec, fn) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
----@param name string
+--- An indicator in a slot: title-bar.right, status-line.left, status-line.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+---@param spec any
 ---@param build any
 ---@param opts? table
-function oriel.hud.indicator(name, build, opts) end
+function oriel.hud.indicator(spec, build, opts) end
 
 --- Builds the indicator name again now.
 ---@param name string

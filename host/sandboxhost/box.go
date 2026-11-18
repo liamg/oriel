@@ -478,7 +478,7 @@ func (b *Box) ApproveEgress(ctx context.Context, host string, port int) (egress.
 				h, p = scope[:i], n
 			}
 		}
-		if err := b.egress.SetRule(h, p, true, false); err != nil {
+		if err := b.egress.SetRule(egress.Rule{Host: h, Port: p, Allow: true}); err != nil {
 			b.notSaved("Network: "+scope, err)
 		}
 		return egress.Answer{Key: egress.Once}, nil

@@ -58,7 +58,7 @@ func (f ThreadFoot) ContributionName() string { return f.Name }
 func DrawThreadFeet(r registry.Contributions, c *ui.Ctx, session, thread string, where ThreadWhere, width float32) {
 	for _, f := range registry.ContributionsOf[ThreadFoot](r) {
 		if f.Draw != nil {
-			_ = registry.Call(func() error { f.Draw(c, session, thread, where, width); return nil })
+			_ = registry.RecoverAsError(func() error { f.Draw(c, session, thread, where, width); return nil })
 		}
 	}
 }

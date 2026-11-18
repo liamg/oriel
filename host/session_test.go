@@ -509,14 +509,14 @@ func TestAForkRunsOnTheAskersContext(t *testing.T) {
 	by := time.Now().Add(time.Hour)
 	ctx, cancel := context.WithDeadline(context.Background(), by)
 	defer cancel()
-	if _, err := r.w.Fork(ctx, id, "why?"); err != nil {
+	if _, err := r.w.Fork(ctx, hostapi.ForkReq{Session: id, Prompt: "why?"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := a.ForkDeadline(); !got.Equal(by) {
 		t.Errorf("the fork's deadline = %v, want the asker's %v", got, by)
 	}
 	cancel()
-	if _, err := r.w.Fork(ctx, id, "why?"); !errors.Is(err, context.Canceled) {
+	if _, err := r.w.Fork(ctx, hostapi.ForkReq{Session: id, Prompt: "why?"}); !errors.Is(err, context.Canceled) {
 		t.Errorf("a fork on an ended context = %v, want it cancelled", err)
 	}
 }
@@ -752,7 +752,7 @@ func TestRunningProcessesDontHoldTheTurn(t *testing.T) {
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{Running: running})
 	r.eventually(id, "the carry-on to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 2 })
-	if err := r.w.StopProcess(context.Background(), id, "1001"); err != nil {
+	if err := r.w.StopProcess(context.Background(), hostapi.StopProcessReq{Session: id, Process: "1001"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := a.Stopped(); !slices.Equal(got, []string{"1001"}) {
@@ -768,7 +768,7 @@ func TestRunningProcessesDontHoldTheTurn(t *testing.T) {
 	if got := r.session(id).Agent.Processes; len(got) != 0 {
 		t.Errorf("a stopped agent still lists %+v", got)
 	}
-	if err := r.w.StopProcess(context.Background(), id, "1002"); err == nil {
+	if err := r.w.StopProcess(context.Background(), hostapi.StopProcessReq{Session: id, Process: "1002"}); err == nil {
 		t.Error("a stopped agent stopped a process")
 	}
 }
@@ -778,7 +778,7 @@ func TestStopProcessNeedsAProviderThatCan(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("start")
 	a.WaitSent(t)
-	if err := r.w.StopProcess(context.Background(), id, "1001"); err == nil {
+	if err := r.w.StopProcess(context.Background(), hostapi.StopProcessReq{Session: id, Process: "1001"}); err == nil {
 		t.Error("a provider that can't stop processes stopped one")
 	}
 	if got := a.Stopped(); len(got) != 0 {

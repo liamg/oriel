@@ -47,13 +47,13 @@ func (s *session) onRequest(r *jsonrpc.Request) {
 	switch r.Method {
 	case "item/commandExecution/requestApproval":
 		if !main {
-			_ = r.Reply(map[string]any{"decision": "decline"}, nil)
+			_ = r.Reply(approvalReply{Decision: decline}, nil)
 			return
 		}
 		s.commandApproval(r, p)
 	case "item/fileChange/requestApproval":
 		if !main {
-			_ = r.Reply(map[string]any{"decision": "decline"}, nil)
+			_ = r.Reply(approvalReply{Decision: decline}, nil)
 			return
 		}
 		s.fileApproval(r, p)
@@ -65,11 +65,11 @@ func (s *session) onRequest(r *jsonrpc.Request) {
 		s.userInput(r, p)
 	case "mcpServer/elicitation/request":
 		if p.ServerName == "oriel" {
-			_ = r.Reply(map[string]any{"action": "accept", "content": map[string]any{}}, nil)
+			_ = r.Reply(elicitationReply{Action: "accept", Content: map[string]any{}}, nil)
 			return
 		}
 		if !main {
-			_ = r.Reply(map[string]any{"action": "decline"}, nil)
+			_ = r.Reply(elicitationReply{Action: "decline"}, nil)
 			return
 		}
 		s.elicitation(r, p)
@@ -79,22 +79,22 @@ func (s *session) onRequest(r *jsonrpc.Request) {
 }
 
 // refuse declines a request for the guard rails, and tells the turn why.
-func (s *session) refuse(r *jsonrpc.Request, p request, decline map[string]any, reason string) {
-	_ = r.Reply(decline, nil)
+func (s *session) refuse(r *jsonrpc.Request, p request, reply any, reason string) {
+	_ = r.Reply(reply, nil)
 	go s.tell(p.ThreadID, p.TurnID, "Denied by Oriel: "+reason)
 }
 
 // approval answers an approval request with Decision d: accepted, for the session with Always, else declined, with
 // the denial's note told to the turn.
 func (s *session) approval(r *jsonrpc.Request, p request, d agent.Decision) error {
-	decision := "decline"
+	answer := decline
 	switch {
 	case d.Allow && d.Always:
-		decision = "acceptForSession"
+		answer = acceptForSession
 	case d.Allow:
-		decision = "accept"
+		answer = accept
 	}
-	if err := r.Reply(map[string]any{"decision": decision}, nil); err != nil {
+	if err := r.Reply(approvalReply{Decision: answer}, nil); err != nil {
 		return err
 	}
 	if !d.Allow && strings.TrimSpace(d.Note) != "" {
@@ -110,7 +110,7 @@ func (s *session) commandApproval(r *jsonrpc.Request, p request) {
 	}
 	input := jsonOf(in)
 	if d := guard.Check(s.spec, "Bash", input); d.Deny {
-		s.refuse(r, p, map[string]any{"decision": "decline"}, d.Reason)
+		s.refuse(r, p, approvalReply{Decision: decline}, d.Reason)
 		return
 	}
 	perm := agent.Permission{Tool: "Bash", Summary: p.Command, Input: input, Rule: commandRule(p.Amendment)}
@@ -134,15 +134,14 @@ func (s *session) fileApproval(r *jsonrpc.Request, p request) {
 		paths = append(paths, c.Path)
 	}
 	s.mu.Unlock()
-	decline := map[string]any{"decision": "decline"}
 	for _, f := range append(paths, p.GrantRoot) {
 		if d := guard.Protected(s.spec, f); d.Deny {
-			s.refuse(r, p, decline, d.Reason)
+			s.refuse(r, p, approvalReply{Decision: decline}, d.Reason)
 			return
 		}
 	}
 	if (s.spec.Policy == agent.PolicyLight || s.spec.Policy == agent.PolicyAuto) && p.GrantRoot == "" {
-		_ = r.Reply(map[string]any{"decision": "accept"}, nil)
+		_ = r.Reply(approvalReply{Decision: accept}, nil)
 		return
 	}
 	perm := agent.Permission{Tool: "Edit", Summary: strings.Join(paths, ", ")}
@@ -225,7 +224,7 @@ func (s *session) elicitation(r *jsonrpc.Request, p request) {
 	}
 	s.mu.Unlock()
 	if d := guard.Check(s.spec, tool, args); d.Deny {
-		s.refuse(r, p, map[string]any{"action": "decline"}, d.Reason)
+		s.refuse(r, p, elicitationReply{Action: "decline"}, d.Reason)
 		return
 	}
 	perm := agent.Permission{Tool: tool, Summary: p.Message, Input: r.Params}

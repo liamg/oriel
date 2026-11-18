@@ -79,10 +79,16 @@ func (r *reg) index() *diagIndex {
 	return x
 }
 
-func (r *reg) Diagnostics() ([]Diagnostic, int) {
+func (r *reg) Diagnostics() []Diagnostic {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.index().all, r.diagGen
+	return r.index().all
+}
+
+func (r *reg) DiagnosticsGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.diagGen
 }
 
 func (r *reg) DiagnosticsFor(file string) []Diagnostic {

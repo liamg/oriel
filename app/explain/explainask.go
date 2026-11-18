@@ -46,7 +46,7 @@ func (x *Explain) keep(key string, req registry.ExplainRequest) {
 		md, by, err := registry.Explain(ctx, x.h, req)
 		label := ""
 		if by.Label != nil {
-			registry.Try(func() { label = by.Label() })
+			registry.IgnorePanic(func() { label = by.Label() })
 		}
 		x.h.Do(func() {
 			x.mu.Lock()
@@ -147,7 +147,7 @@ func (x *Explain) request(cd *explainCard, i int) {
 		md, by, err := registry.Explain(ctx, x.h, req)
 		label := by.Name
 		if by.Label != nil {
-			registry.Try(func() { label = by.Label() })
+			registry.IgnorePanic(func() { label = by.Label() })
 		}
 		x.h.Do(func() {
 			x.mu.Lock()

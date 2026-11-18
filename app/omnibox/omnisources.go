@@ -47,7 +47,10 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			cmd := it.Data.(registry.Command)
+			cmd, ok := uireg.PickerData[registry.Command](it)
+			if !ok {
+				return nil
+			}
 			return &ui.Func{Key: "command", Fn: func(c *ui.Ctx) {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					draw.PreviewHead(c, "command", ui.TextStyle{Color: c.Theme().C(theme.Accent)}, it.Label)

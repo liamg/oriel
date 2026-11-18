@@ -31,7 +31,7 @@ func (r *reg) Language(l Language) Disposable {
 	})
 }
 
-func (r *reg) Languages() ([]Language, int) {
+func (r *reg) Languages() []Language {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	type winner struct {
@@ -53,5 +53,11 @@ func (r *reg) Languages() ([]Language, int) {
 	for i, w := range ws {
 		out[i] = w.l
 	}
-	return out, r.langGen
+	return out
+}
+
+func (r *reg) LanguagesGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.langGen
 }

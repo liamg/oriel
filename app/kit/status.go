@@ -19,8 +19,8 @@ var StatusOrder = []core.Status{core.StatusNeedsYou, core.StatusPermission, core
 // StatusName is a status as words: "needs you".
 func StatusName(s core.Status) string { return strings.ReplaceAll(string(s), "_", " ") }
 
-// Why is what a session's status is about, shortly: what it asks, what it's running, when it last replied.
-func Why(s core.SessionState, now time.Time) string {
+// StatusDetail is what a session's status is about, shortly: what it asks, what it's running, when it last replied.
+func StatusDetail(s core.SessionState, now time.Time) string {
 	switch s.Status {
 	case core.StatusPermission, core.StatusNeedsYou:
 		if len(s.Asks) > 0 {

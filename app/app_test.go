@@ -45,7 +45,7 @@ func (c *counter) Activate(_ context.Context, h plugin.Host) error {
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "x", Command: "counter.add"})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "g", Command: "counter.add"})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "gx", Command: "counter.add", Args: registry.Args{"n": 10}})
-	if err := h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
+	if err := h.Options().Set("keymap.timeout_length", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
 		return err
 	}
 	view := kit.RootView
@@ -155,7 +155,7 @@ func TestChordsWaitForTheirTimeout(t *testing.T) {
 	b := boot(t, &counter{})
 	b.waitText(t, "count 0")
 	b.win.Send(render.KeyEvent{Key: "g"})
-	b.waitText(t, "count 1") // g alone, once keymap.timeoutlen passes
+	b.waitText(t, "count 1") // g alone, once keymap.timeout_length passes
 	b.win.Send(render.KeyEvent{Key: "g"})
 	b.win.Send(render.KeyEvent{Key: "x"})
 	b.waitText(t, "count 11")

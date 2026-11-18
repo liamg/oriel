@@ -157,13 +157,13 @@ func (s *Session) UpdateGrants(f func([]Rule) []Rule) error {
 	return nil
 }
 
-// SetRule allows or blocks a destination for the rest of the session, from
-// a row of the network log.
-func (s *Session) SetRule(host string, port int, allow, private bool) error {
-	host = normHost(host)
+// SetRule allows or blocks a destination for the rest of the session, from a row of the network log: r replaces the
+// session's rule for its host and port. Private counts only on an allow.
+func (s *Session) SetRule(r Rule) error {
+	r.Host, r.Private, r.Source = normHost(r.Host), r.Allow && r.Private, ""
 	return s.UpdateGrants(func(rules []Rule) []Rule {
-		rules = slices.DeleteFunc(rules, func(x Rule) bool { return x.Host == host && x.Port == port })
-		return append(rules, Rule{Host: host, Port: port, Allow: allow, Private: allow && private})
+		rules = slices.DeleteFunc(rules, func(x Rule) bool { return x.Host == r.Host && x.Port == r.Port })
+		return append(rules, r)
 	})
 }
 

@@ -111,7 +111,7 @@ func TestRunStatuses(t *testing.T) {
 	ctx := context.Background()
 
 	id, tid, a := run()
-	if err := r.w.AddRepo(ctx, id, core.RepoID(r.repo.Dir)); err != nil {
+	if err := r.w.AddRepo(ctx, hostapi.AddRepoReq{Session: id, Repo: core.RepoID(r.repo.Dir)}); err != nil {
 		t.Fatal(err)
 	}
 	r.setNow(r.now().Add(22 * time.Minute))
@@ -241,7 +241,7 @@ func TestDeleteThrowsARunAway(t *testing.T) {
 	ctx := context.Background()
 	id, _ := r.w.RunJob(ctx, j.Name)
 	r.agent()
-	if err := r.w.AddRepo(ctx, id, core.RepoID(r.repo.Dir)); err != nil {
+	if err := r.w.AddRepo(ctx, hostapi.AddRepoReq{Session: id, Repo: core.RepoID(r.repo.Dir)}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)

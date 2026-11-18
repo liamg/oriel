@@ -83,7 +83,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Placeholder(c.String(0), c.Table(1), c.Fn(2), c.Where())
+				return nil, x.Placeholder(c.Any(0), c.Table(1), c.Fn(2), c.Where())
 			},
 			"read": func(c *script.Args) ([]any, error) {
 				return x.Read(c.String(0))
@@ -205,18 +205,18 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Decor{a: a}
 		vm.Bind("decorations", map[string]script.GoFunc{
-			"changed": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
-					return nil, err
-				}
-				x.Changed(c.String(0))
-				return nil, nil
-			},
 			"provider": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
 				return nil, x.Provider(c.Any(0), c.Fn(1))
+			},
+			"refresh": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				x.Refresh(c.String(0))
+				return nil, nil
 			},
 		})
 	}
@@ -292,7 +292,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Indicator(c.String(0), c.Any(1), c.Table(2), c.Where())
+				return nil, x.Indicator(c.Any(0), c.Any(1), c.Table(2), c.Where())
 			},
 			"refresh": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {

@@ -380,12 +380,12 @@ func (l *loop) timed(fn func()) {
 // watchThemes watches every registered theme source, again whenever they change: a plugin or the theme editor
 // can add one at any time.
 func (l *loop) watchThemes() {
-	srcs, gen := l.reg.Themes()
+	gen := l.reg.ThemesGen() // before the list: a change between the two reads again next time
 	if gen == l.themeGen {
 		return
 	}
 	l.unwatchThemes()
-	for _, src := range srcs {
+	for _, src := range l.reg.Themes() {
 		l.unwatch = append(l.unwatch, src.Watch(l.retheme))
 	}
 	l.themeGen = gen
@@ -429,7 +429,7 @@ func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
 			variant = theme.Light
 		}
 	}
-	srcs, _ := reg.Themes()
+	srcs := reg.Themes()
 	r, err := theme.ResolveNamed(srcs, name, variant)
 	if err == nil {
 		return r, nil
@@ -570,7 +570,7 @@ func (l *loop) ready(k *registry.Keymap) bool {
 	for _, c := range l.reg.Commands() {
 		if c.ID == k.Command && c.Available != nil {
 			ok := true
-			registry.Try(func() { ok = c.Available(k.Args) })
+			registry.IgnorePanic(func() { ok = c.Available(k.Args) })
 			return ok
 		}
 	}

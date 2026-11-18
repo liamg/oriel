@@ -39,7 +39,7 @@ import (
 const syncPoll = 30 * time.Second
 
 // StatusView is the status line's segment: "PR 1 changes requested".
-const StatusView = "statusline.left.70-reviews"
+const StatusView = "status-line.left.70-reviews"
 
 type Mirror struct {
 	kit.Disposer
@@ -77,7 +77,7 @@ type prRead struct {
 	host    registry.CodeHost
 	repo    registry.CodeRepo
 	pr      registry.PR
-	reviews map[string]string // reviewer → registry.ReviewChanges, ReviewApproved, ReviewCommented
+	reviews map[string]registry.ReviewState // reviewer → registry.ReviewChanges, ReviewApproved, ReviewCommented
 }
 
 // prCached is a branch's PR as its code host last answered, and when.
@@ -88,7 +88,7 @@ type prCached struct {
 
 // ended says every PR the sync read is closed or merged.
 func (m read) ended() bool {
-	return len(m.prs) > 0 && !slices.ContainsFunc(m.prs, func(p prRead) bool { return p.pr.State != "closed" && !p.pr.Merged })
+	return len(m.prs) > 0 && !slices.ContainsFunc(m.prs, func(p prRead) bool { return p.pr.State != core.PRClosed && !p.pr.Merged })
 }
 
 func (x *Mirror) Manifest() plugin.Manifest { return plugin.Manifest{ID: "mirror"} }
@@ -274,7 +274,7 @@ func (x *Mirror) resolveHost(id core.SessionID, t core.Thread) {
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
 		defer cancel()
-		err := registry.Call(func() error { return p.host.Resolve(ctx, p.repo, p.pr, rt, want) })
+		err := registry.RecoverAsError(func() error { return p.host.Resolve(ctx, p.repo, p.pr, rt, want) })
 		if err == nil {
 			err = c.MarkHostResolved(hostapi.ResolveReq{Session: id, Thread: t.ID, Resolved: want})
 		}
@@ -415,7 +415,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 			continue
 		}
 		var ts []registry.ReviewThread
-		if err := registry.Call(func() (err error) { ts, err = h.Threads(ctx, repo, *pr); return err }); err != nil {
+		if err := registry.RecoverAsError(func() (err error) { ts, err = h.Threads(ctx, repo, *pr); return err }); err != nil {
 			sites.Refuse(hs, err)
 			errs = append(errs, fmt.Errorf("%s: %w", p.Name, err))
 			continue
@@ -423,7 +423,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 		req := hostapi.MirrorReviewReq{Session: se.ID, Project: p.Name, Host: h.Name, Repo: name, PR: pr.Number, URL: pr.URL, Author: pr.Author}
 		for _, t := range ts {
 			rt := hostapi.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,
-				Reviewer: t.Reviewer, State: t.State, URL: t.URL}
+				Reviewer: t.Reviewer, State: string(t.State), URL: t.URL}
 			for _, n := range t.Comments {
 				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
 					Trusted: n.Member || sites.TrustedUser(n.Author), Mine: n.Mine, Written: n.Written})
@@ -456,7 +456,7 @@ func (x *Mirror) branchPR(ctx context.Context, id core.SessionID, h registry.Cod
 		return c.pr, nil
 	}
 	var pr *registry.PR
-	if err := registry.Call(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err }); err != nil {
+	if err := registry.RecoverAsError(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err }); err != nil {
 		return nil, err
 	}
 	x.mu.Lock()
@@ -472,7 +472,7 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 		return nil, "", fmt.Errorf("%s can't look a pull request up", h.Label())
 	}
 	var d registry.ReviewDetail
-	if err := registry.Call(func() (err error) { d, err = h.Lookup(ctx, hs.Site, link); return err }); err != nil {
+	if err := registry.RecoverAsError(func() (err error) { d, err = h.Lookup(ctx, hs.Site, link); return err }); err != nil {
 		return nil, "", err
 	}
 	n := d.Request.Number
@@ -482,8 +482,8 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 	if n == 0 || d.Request.Repo == "" {
 		return nil, "", fmt.Errorf("%s isn't one of %s's pull requests", link, h.Label())
 	}
-	pr := &registry.PR{Number: n, URL: link, Author: d.Request.Author, Head: d.Commit, Merged: d.State == "merged", State: "open"}
-	if d.State == "closed" || d.State == "merged" {
+	pr := &registry.PR{Number: n, URL: link, Author: d.Request.Author, Head: d.Commit, Merged: d.State == core.PRMerged, State: core.PROpen}
+	if d.State == core.PRClosed || d.State == core.PRMerged {
 		pr.State = "closed"
 	}
 	return pr, d.Request.Repo, nil
@@ -491,9 +491,9 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 
 // verdicts are each reviewer's latest among a PR's review threads and its conversation's reviewers: approved or
 // changes over commented.
-func verdicts(ts []registry.ReviewThread) map[string]string {
-	out := map[string]string{}
-	add := func(who, state string) {
+func verdicts(ts []registry.ReviewThread) map[string]registry.ReviewState {
+	out := map[string]registry.ReviewState{}
+	add := func(who string, state registry.ReviewState) {
 		if who == "" || state == "" || state == registry.ReviewCommented && out[who] != "" {
 			return
 		}
@@ -579,7 +579,7 @@ func (x *Mirror) forward(a registry.Args) error {
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		_, err := c.ForwardHost(ctx, hostapi.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID}, func(ctx context.Context, t core.Thread, body string) (posted string, err error) {
-			err = registry.Call(func() (err error) { posted, err = p.host.Reply(ctx, p.repo, p.pr, hostThread(t), body); return err })
+			err = registry.RecoverAsError(func() (err error) { posted, err = p.host.Reply(ctx, p.repo, p.pr, hostThread(t), body); return err })
 			return posted, err
 		})
 		cancel()
@@ -657,7 +657,7 @@ func (x *Mirror) head(c *ui.Ctx, session, thread string) {
 	if g.Reviewer != "" {
 		widget.Chip(c, "who", "@"+g.Reviewer, th.C(prui.TReviewAccent), "git/github#threads")
 	}
-	if word, tok := prui.ReviewWord(g.State); word != "" {
+	if word, tok := prui.ReviewWord(registry.ReviewState(g.State)); word != "" {
 		widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
 	}
 	if !t.Open() {
@@ -755,7 +755,7 @@ func (x *Mirror) comment(c *ui.Ctx, session, thread, comment string, width float
 // reviews is the PRReviewsService from what the last sync of each session's PRs found.
 type reviews struct{ x *Mirror }
 
-func (r reviews) Reviews(id core.SessionID, url string) map[string]string {
+func (r reviews) Reviews(id core.SessionID, url string) map[string]registry.ReviewState {
 	m, ok := r.x.read(id)
 	if !ok {
 		return nil
@@ -775,14 +775,14 @@ func (x *Mirror) statusSegment(c *ui.Ctx) {
 	if !ok || len(m.prs) == 0 {
 		return
 	}
-	counts := map[string]int{}
+	counts := map[registry.ReviewState]int{}
 	for _, p := range m.prs {
 		for _, s := range p.reviews {
 			counts[s]++
 		}
 	}
 	var parts []string
-	for _, s := range []string{registry.ReviewChanges, registry.ReviewApproved} {
+	for _, s := range []registry.ReviewState{registry.ReviewChanges, registry.ReviewApproved} {
 		if n := counts[s]; n > 0 {
 			word, _ := prui.ReviewWord(s)
 			parts = append(parts, fmt.Sprintf("%d %s", n, word))

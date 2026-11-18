@@ -29,7 +29,7 @@ import (
 )
 
 // ChangedUnitsView is the Changed units panel: every unit the branch touched, with its explain status.
-const ChangedUnitsView = "explain.units"
+const ChangedUnitsView = "changed-units"
 
 // fileUnits are a version of a file's explain units, and the ones its changes against the branch's base touch.
 type fileUnits struct {

@@ -271,7 +271,7 @@ func (x *Inbox) dismiss(k string) error {
 	fn := r.card.Dismissed
 	x.mu.Unlock()
 	if fn != nil {
-		registry.Try(func() { fn() })
+		registry.IgnorePanic(func() { fn() })
 	}
 	return nil
 }
@@ -505,7 +505,7 @@ func (x *Inbox) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 func (x *Inbox) draw(c *ui.Ctx, r *inboxRow, p uireg.CardPlace) {
 	if r.card.Draw != nil {
 		draw := r.card.Draw
-		if err := registry.Call(func() error { draw(c, "card", p); return nil }); err != nil {
+		if err := registry.RecoverAsError(func() error { draw(c, "card", p); return nil }); err != nil {
 			c.Text("err", r.card.Title+": "+err.Error(), widget.MonoFont(10, c.Theme().C(theme.Error)))
 		}
 		return
@@ -555,7 +555,7 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 	}
 	a := cd.Actions[res.Action]
 	if a.Run != nil {
-		registry.Try(func() { a.Run() })
+		registry.IgnorePanic(func() { a.Run() })
 		return
 	}
 	if a.Command != "" {
@@ -651,7 +651,7 @@ func (x *Inbox) choose(r *inboxRow, toggle bool) {
 	}
 	x.mu.Unlock()
 	if open := r.card.Open; open != nil && r.waiting() {
-		registry.Try(func() { open() })
+		registry.IgnorePanic(func() { open() })
 	}
 }
 

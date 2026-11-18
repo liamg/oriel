@@ -74,7 +74,7 @@ func (x *Consent) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Command(c))
 	}
 	x.Add(h.Keymap(registry.Keymap{Mode: ConsentKeyMode, Keys: "<D-CR>", Command: "plugins.consent.accept", Desc: "Install"}))
-	x.Add(h.View(kit.OverlayPrefix+"plugins.consent", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	x.Add(h.View(kit.OverlayPrefix+"plugin-consent", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "consent", Fn: x.view}
 	})))
 	return nil

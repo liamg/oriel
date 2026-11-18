@@ -394,17 +394,14 @@ func (s *session) Send(ctx context.Context, in agent.Input) error {
 		s.held = ""
 	}
 	s.mu.Unlock()
-	input := []map[string]any{{"type": "text", "text": text}}
+	input := []inputItem{textInput(text)}
 	for _, img := range in.Images {
-		input = append(input, map[string]any{"type": "localImage", "path": img})
+		input = append(input, inputItem{Type: "localImage", Path: img})
 	}
 	if in.Urgent && running != "" {
-		return s.rpc.Call(ctx, "turn/steer", map[string]any{"threadId": id, "input": input, "expectedTurnId": running}, nil)
+		return s.rpc.Call(ctx, "turn/steer", turnParams{ThreadID: id, Input: input, ExpectedTurnID: running}, nil)
 	}
-	params := map[string]any{"threadId": id, "input": input}
-	if s.spec.Effort != "" {
-		params["effort"] = s.spec.Effort
-	}
+	params := turnParams{ThreadID: id, Input: input, Effort: s.spec.Effort}
 	var r struct {
 		Turn struct {
 			ID string `json:"id"`
@@ -512,8 +509,7 @@ func (s *session) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
 			_ = s.rpc.Call(ctx, "thread/unsubscribe", map[string]any{"threadId": r.Thread.ID}, nil)
 		}()
 	}()
-	input := []map[string]any{{"type": "text", "text": f.Prompt}}
-	turn := map[string]any{"threadId": r.Thread.ID, "input": input, "environments": []any{}}
+	turn := turnParams{ThreadID: r.Thread.ID, Input: []inputItem{textInput(f.Prompt)}, Environments: &[]any{}}
 	if err := s.rpc.Call(ctx, "turn/start", turn, nil); err != nil {
 		return "", fmt.Errorf("codex turn/start: %w", err)
 	}
@@ -555,9 +551,7 @@ func (s *session) ask(answer func(agent.Decision) error) string {
 func (s *session) tell(threadID, turnID, text string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := s.rpc.Call(ctx, "turn/steer", map[string]any{
-		"threadId": threadID, "expectedTurnId": turnID, "input": []map[string]any{{"type": "text", "text": text}},
-	}, nil)
+	err := s.rpc.Call(ctx, "turn/steer", turnParams{ThreadID: threadID, ExpectedTurnID: turnID, Input: []inputItem{textInput(text)}}, nil)
 	if err != nil {
 		s.mu.Lock()
 		s.held = text

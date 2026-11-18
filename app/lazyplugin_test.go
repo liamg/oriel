@@ -210,3 +210,19 @@ end)`})
 		t.Errorf("MineNow didn't load and run; notices: %v", noticeTexts(s.Store().State().Notifications))
 	}
 }
+
+// oriel.placeholder takes its spec table too, as the other contributions do: { name, commands, …, run = fn }.
+func TestLuaPlaceholderSpecTable(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.WriteConfig(map[string]string{"init.lua": `oriel.placeholder({ name = "mine", commands = { "Mine*" }, run = function()
+  oriel.command("MineNow", function() oriel.notify("mine") end)
+end })`})
+	s.ReloadLua()
+	if x := lua(s); x.Err() != nil {
+		t.Fatal(x.Err())
+	}
+	s.Run("MineNow", nil)
+	if noticed(s, "mine") != 1 {
+		t.Errorf("MineNow didn't load and run; notices: %v", noticeTexts(s.Store().State().Notifications))
+	}
+}

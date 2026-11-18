@@ -37,6 +37,9 @@ type InputOpts struct {
 	Secret bool
 	// DefaultFocus makes it where focus goes when what it's in opens (ui.Style.DefaultFocus): a dialog's first field.
 	DefaultFocus bool
+	// TakeFocus moves the focus to it this frame: set it once, when something moves the focus here after its view
+	// opened (a dialog's mode changed, so this is its first field now). A view never sets it every frame.
+	TakeFocus bool
 	// Step makes it a number field that assistive technology can increment and decrement by Step.
 	Step float64
 	// Files takes what a paste offers besides text (copied files, a picture) and files dropped on the field, and
@@ -211,6 +214,9 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 		x = &fieldExtra{}
 	}
 	id := c.Next(key)
+	if o.TakeFocus {
+		c.RequestFocus(id)
+	}
 	ff := &fieldFrame{c: c, id: id, in: c.Interaction(id), st: ui.State[inputState](c, id), o: o, x: x,
 		font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, multi: o.Lines > 1 && !o.Secret, runes: []rune(*text)}
 	ff.sync(*text)

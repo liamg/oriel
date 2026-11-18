@@ -86,10 +86,14 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 	return nil
 }
 
-//oriel:api doc="Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now."
-func (r Root) Placeholder(name string, spec script.Table, fn *script.Fn, where string) error {
-	if fn == nil {
-		return fmt.Errorf("%s: no function", name)
+//oriel:api doc="Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now. Takes its spec too: { name, commands, keys, …, run = fn }." optional=spec,fn
+func (r Root) Placeholder(first any, spec script.Table, fn *script.Fn, where string) error {
+	if t, ok := first.(script.Table); ok { // the spec table alone: its name and run in it
+		spec, fn = t, nil
+	}
+	name, fn, err := specOr(first, fn, "name")
+	if err != nil {
+		return fmt.Errorf("oriel.placeholder: %w", err)
 	}
 	lz := plugin.Lazy{Commands: plugin.Strings(spec["commands"]), Events: plugin.Strings(spec["events"]), Keys: plugin.Strings(spec["keys"]),
 		Filetypes: plugin.Strings(spec["filetypes"]), Omnibox: plugin.Strings(spec["omnibox"]), Views: plugin.Strings(spec["views"])}
@@ -291,7 +295,7 @@ func (r Root) JSONDecode(s string) (any, error) {
 
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."
 func (r Root) Statusline(fn *script.Fn, where string) error {
-	return View(r).Override("app.statusline", fn, where)
+	return View(r).Override("app.status-line", fn, where)
 }
 
 // mustGetwd is the process's directory, where a program named by a relative path runs without a cwd.

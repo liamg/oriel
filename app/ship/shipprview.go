@@ -145,7 +145,7 @@ func prStateWord(pr *registry.PR) string {
 	switch {
 	case pr.Merged:
 		return "merged"
-	case pr.State == "closed":
+	case pr.State == core.PRClosed:
 		return "closed"
 	case pr.Draft:
 		return "draft"

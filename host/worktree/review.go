@@ -53,8 +53,9 @@ func fetchPR(ctx context.Context, repo, from, ref string) error {
 
 // UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
 // the projects that moved.
-func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]hostapi.PRMove, err error) {
+func (x *Worktrees) UpdatePR(ctx context.Context, r hostapi.UpdatePRReq) (_ map[string]hostapi.PRMove, err error) {
 	defer x.env.Recover("UpdatePR", &err)
+	id := r.Session
 	se, err := x.st.Session(id)
 	if err != nil {
 		return nil, err

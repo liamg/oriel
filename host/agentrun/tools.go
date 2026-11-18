@@ -450,7 +450,7 @@ func (h *session) toolAddProject(ctx context.Context, raw json.RawMessage) (stri
 	if err != nil {
 		return "", err
 	}
-	if err := h.r.deps.AddRepo(ctx, h.id, core.RepoID(ref)); err != nil {
+	if err := h.r.deps.AddRepo(ctx, hostapi.AddRepoReq{Session: h.id, Repo: core.RepoID(ref)}); err != nil {
 		return "", err
 	}
 	se, err := h.r.st.Session(h.id)

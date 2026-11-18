@@ -237,7 +237,7 @@ func (o *Overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 		ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 		defer cancel()
 		var n ui.Node
-		err := registry.Call(func() (err error) { n, err = p.Compute(ctx, dir); return err })
+		err := registry.RecoverAsError(func() (err error) { n, err = p.Compute(ctx, dir); return err })
 		o.h.Do(func() { res.node, res.err, res.done = n, err, true })
 	})
 }
@@ -394,7 +394,7 @@ func (o *Overview) scanOf(ctx context.Context, dir string) *scan {
 
 // langIndex maps file extensions and names to the registered languages' names.
 func langIndex(h plugin.Host) func(name string) string {
-	langs, _ := h.Languages()
+	langs := h.Languages()
 	byExt, byName := map[string]string{}, map[string]string{}
 	for _, l := range langs {
 		for _, e := range l.Extensions {

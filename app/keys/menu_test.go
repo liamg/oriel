@@ -102,7 +102,7 @@ func TestBuiltinMenuEntries(t *testing.T) {
 	for _, c := range s.Registry().Contributions("menu.item") {
 		names = append(names, c.ContributionName())
 	}
-	for _, want := range []string{"editor.copy-path", "pane.move", "pane.close"} {
+	for _, want := range []string{"editor.path.copy", "pane.move", "pane.close"} {
 		if !slices.Contains(names, want) {
 			t.Errorf("no built-in %s in %v", want, names)
 		}

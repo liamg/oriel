@@ -90,7 +90,8 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 					return err
 				}
 				return x.change(id, func(w hostapi.SandboxCalls) error {
-					return w.SetNetRule(id, h, port, hostapi.NetAction(noneAsEmpty(a.String("action"))), a.Bool("private"))
+					return w.SetNetRule(hostapi.NetRuleReq{Session: id, Host: h, Port: port, Action: hostapi.NetAction(noneAsEmpty(a.String("action"))),
+						Private: a.Bool("private")})
 				})
 			}},
 	} {

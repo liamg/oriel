@@ -42,7 +42,7 @@ func (p *Problems) Activate(_ context.Context, h plugin.Host) error {
 	}}))
 	p.Add(h.View("problems", problemsView{p}))
 	p.Add(h.Decoration("diagnostics", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
-		_, gen := h.Diagnostics()
+		gen := h.DiagnosticsGen()
 		return gen
 	}, Make: p.decorations}))
 	return nil
@@ -89,7 +89,7 @@ func (p *Problems) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 type problemsView struct{ p *Problems }
 
 func (v problemsView) Title(string) string {
-	if ds, _ := v.p.h.Diagnostics(); len(ds) > 0 {
+	if ds := v.p.h.Diagnostics(); len(ds) > 0 {
 		return fmt.Sprintf("Problems %d", len(ds))
 	}
 	return "Problems"
@@ -99,7 +99,7 @@ func (v problemsView) Build(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "probl
 
 func (p *Problems) view(c *ui.Ctx) {
 	th := c.Theme()
-	ds, _ := p.h.Diagnostics()
+	ds := p.h.Diagnostics()
 	mono := func(size float32, col theme.TokenID) ui.TextStyle {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: th.C(col)}
 	}

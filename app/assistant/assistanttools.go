@@ -146,7 +146,7 @@ func clipLine(s string, n int) string {
 }
 
 func (x *Assistant) lineOf(st core.State, s core.SessionState, now time.Time) sessionLine {
-	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: kit.Why(s, now),
+	l := sessionLine{ID: string(s.ID), Name: s.Name, Kind: string(s.Kind), Status: string(s.Status), Why: kit.StatusDetail(s, now),
 		Branch: s.Branch, Prompt: clipLine(s.Prompt, 200), Ticket: s.Ticket,
 		Stopped: s.Agent.Provider != "" && !s.Agent.Live()}
 	for _, p := range s.Projects {
@@ -631,7 +631,7 @@ func (x *Assistant) toolPRs(ctx registry.Ctx, _ registry.Args) (any, error) {
 			continue
 		}
 		var found []registry.ReviewRequest
-		err := registry.Call(func() (err error) { found, err = s.Authored(ctx, s.Site); return err })
+		err := registry.RecoverAsError(func() (err error) { found, err = s.Authored(ctx, s.Site); return err })
 		if err != nil {
 			sites.Refuse(s, err)
 			notes = append(notes, s.Label()+": "+err.Error())

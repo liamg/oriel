@@ -148,7 +148,7 @@ func TestREPLError(t *testing.T) {
 	if text := s.Text(); !strings.Contains(text, "init.lua:2: in function 'boom'") {
 		t.Errorf("the trace isn't under the input:\n%s", text)
 	}
-	if ds, _ := s.Registry().Diagnostics(); len(ds) != 1 || ds[0].Line != 1 || !strings.HasSuffix(ds[0].File, "init.lua") {
+	if ds := s.Registry().Diagnostics(); len(ds) != 1 || ds[0].Line != 1 || !strings.HasSuffix(ds[0].File, "init.lua") {
 		t.Errorf("a REPL call into the config marks its line: %+v", ds)
 	}
 }

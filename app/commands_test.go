@@ -419,3 +419,23 @@ func argValue(e ast.Expr) any {
 
 // present is a literal arg whose value's type isn't known from its source: the key is there, its type unchecked.
 type present struct{}
+
+// A built-in right-click menu item is named like the command it mirrors: noun[.noun].verb, lower-case dotted words,
+// a word's parts joined by _ (explorer.relative_path.copy, tab.others.close).
+func TestMenuItemNamesFollowTheConvention(t *testing.T) {
+	s, _ := commandScene(t)
+	var off []string
+	n := 0
+	for _, m := range registry.ContributionsOf[registry.MenuItem](s.Registry()) {
+		n++
+		if !conventional(m.Name) {
+			off = append(off, m.Name)
+		}
+	}
+	if n < 10 {
+		t.Fatalf("found %d menu items: the list missed them", n)
+	}
+	if len(off) > 0 {
+		t.Errorf("%d menu items aren't named as noun[.noun].verb:\n  %s", len(off), strings.Join(off, "\n  "))
+	}
+}

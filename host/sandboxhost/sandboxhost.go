@@ -35,7 +35,7 @@ type Deps struct {
 	// Repos are the registered checkouts.
 	Repos func() []core.Repo
 	// AddRepo brings a repo into a session.
-	AddRepo func(ctx context.Context, id core.SessionID, ref core.RepoID) error
+	AddRepo func(ctx context.Context, r hostapi.AddRepoReq) error
 	// Note puts an item in a running session's transcript.
 	Note func(id core.SessionID, it core.Item)
 	// SetAgent changes a running session's agent state.

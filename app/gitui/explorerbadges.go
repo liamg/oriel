@@ -27,7 +27,7 @@ func (e *Explorer) readBadges() {
 			continue
 		}
 		var counts map[string]int
-		_ = registry.Call(func() error { counts = b.Counts(e.session()); return nil })
+		_ = registry.RecoverAsError(func() error { counts = b.Counts(e.session()); return nil })
 		if len(counts) > 0 {
 			e.badges = append(e.badges, fileBadge{b, counts})
 		}

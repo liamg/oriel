@@ -98,7 +98,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	s.Until("the running row", func() bool { return runShown(s, hostapi.RunRunning) })
 
 	ctx := context.Background()
-	if err := lw.W.AddRepo(ctx, se.ID, core.RepoID(lw.Repo)); err != nil {
+	if err := lw.W.AddRepo(ctx, hostapi.AddRepoReq{Session: se.ID, Repo: core.RepoID(lw.Repo)}); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Bumped 3 deps in pricing; its tests pass."})

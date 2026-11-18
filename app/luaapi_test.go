@@ -138,7 +138,7 @@ func TestLuaDiagnostics(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severity = "warning", message = "unused" } })
 `)
-	ds, _ := s.Registry().Diagnostics()
+	ds := s.Registry().Diagnostics()
 	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "init.lua:lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
@@ -157,16 +157,16 @@ L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severit
 			t.Errorf("%s: %q", src, err)
 		}
 	}
-	if ds, _ := s.Registry().Diagnostics(); len(ds) != 1 {
+	if ds := s.Registry().Diagnostics(); len(ds) != 1 {
 		t.Errorf("bad input cleared or changed them: %+v", ds)
 	}
 	s.Lua(`L.diagnostics.set("lint", "/p/a.go", {})`)
-	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
+	if ds := s.Registry().Diagnostics(); len(ds) != 0 {
 		t.Errorf("an empty list didn't clear them: %+v", ds)
 	}
 	s.WriteConfig(map[string]string{"init.lua": ""})
 	s.ReloadLua()
-	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
+	if ds := s.Registry().Diagnostics(); len(ds) != 0 {
 		t.Errorf("after a reload: %+v", ds)
 	}
 }
@@ -319,7 +319,7 @@ func TestLuaTatAndStatusRule(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.hud.indicator("deploys", function()
   return L.ui.indicator{ label = "DEPLOY", value = 3 }
-end, { slot = "titlebar.right", every = "30s" })
+end, { slot = "title-bar.right", every = "30s" })
 L.status.rule("red", function(sess) if sess.red then return "error" end end)
 `)
 	var indicator uireg.Indicator
@@ -328,7 +328,7 @@ L.status.rule("red", function(sess) if sess.red then return "error" end end)
 			indicator = ind
 		}
 	}
-	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
+	if indicator.Slot != "title-bar.right" || indicator.Every.Seconds() != 30 {
 		t.Errorf("indicator %+v", indicator)
 	}
 	// every takes seconds as other duration options do, and a value that's neither raises.
@@ -390,7 +390,7 @@ func TestLuaLanguage(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.language.add{ name = "mylang", extensions = { "myl" }, queries = { highlights = "(identifier) @variable" } }
 `)
-	langs, _ := s.Registry().Languages()
+	langs := s.Registry().Languages()
 	i := slices.IndexFunc(langs, func(l registry.Language) bool { return l.Name == "mylang" })
 	if i < 0 || !slices.Equal(langs[i].Extensions, []string{"myl"}) || langs[i].Queries["highlights"] == "" || langs[i].Source != "init.lua:2" {
 		t.Errorf("languages: %+v", langs)
@@ -526,4 +526,25 @@ L.on("BufWritePre", function() end)
 	s.Until("both answers", func() bool {
 		return luaconfig.Show(s.Lua(`L.last`)[0]) == `"last\n"` && luaconfig.Show(s.Lua(`L.before`)[0]) == `"before\n"`
 	})
+}
+
+// oriel.hud.indicator takes its spec table too: { name, build = fn or nodes, slot, every, … }.
+func TestLuaIndicatorSpecTable(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+L.hud.indicator({ name = "deploys", slot = "title-bar.right", every = "30s", build = function()
+  return L.ui.indicator{ label = "DEPLOY", value = 3 }
+end })
+`)
+	var indicator uireg.Indicator
+	for _, ind := range uireg.Indicators(s.Registry(), uireg.SlotTitleBar) {
+		if ind.Name == "deploys" {
+			indicator = ind
+		}
+	}
+	if indicator.Slot != "title-bar.right" || indicator.Every.Seconds() != 30 {
+		t.Fatalf("indicator %+v", indicator)
+	}
+	if n, err := indicator.Build(nil); err != nil || n == nil {
+		t.Errorf("building it: %v", err)
+	}
 }

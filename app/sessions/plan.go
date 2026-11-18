@@ -120,7 +120,7 @@ func (x *Plan) commands() []registry.Command {
 
 func (x *Plan) views() map[string]uireg.View {
 	return map[string]uireg.View{
-		kit.OverlayPrefix + "plan.work.start": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+		kit.OverlayPrefix + "start-work": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 			return &ui.Func{Key: "startwork", Fn: x.startWorkView}
 		}),
 		PlanView:     planView{x},

@@ -72,7 +72,7 @@ func contribTitle(kind string) string {
 	return "Error"
 }
 
-// contribName is a contribution as a sentence names it: "Permission hook", "app.statusline view".
+// contribName is a contribution as a sentence names it: "Permission hook", "app.status-line view".
 func contribName(kind, id string) string {
 	if kind == registry.KindHook {
 		event, _, _ := strings.Cut(id, "#")

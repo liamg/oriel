@@ -549,7 +549,7 @@ func (x *Ship) projectState(project, _ string) []uireg.StatePart {
 }
 
 // ciOf is the checks in one word: fail if any failed, else pending if any are running, else pass; "" for none.
-func ciOf(cs []registry.Check) string {
+func ciOf(cs []registry.Check) registry.CheckState {
 	if len(cs) == 0 {
 		return ""
 	}

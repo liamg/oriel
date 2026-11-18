@@ -37,7 +37,7 @@ of model use per rolling week.
 	}
 	kinds := ""
 	for _, b := range p.Blocks {
-		kinds += b.Kind + " "
+		kinds += string(b.Kind) + " "
 	}
 	if kinds != "heading live para list code heading " {
 		t.Errorf("blocks: %s", kinds)

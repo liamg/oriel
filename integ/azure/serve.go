@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"io"
 	"regexp"
 	"slices"
@@ -361,7 +362,7 @@ func (s *Server) threads(ctx context.Context, r Repo, n int) ([]registry.ReviewT
 }
 
 // stateOf is a reviewer's vote as their review's state.
-func stateOf(vote int) string {
+func stateOf(vote int) registry.ReviewState {
 	switch {
 	case vote >= 5:
 		return registry.ReviewApproved
@@ -487,12 +488,12 @@ func (s *Server) lookup(ctx context.Context, site Site, raw string) (registry.Re
 		d.Mergeable = "conflicts"
 	}
 	for _, rv := range pr.Reviewers {
-		state := "requested"
+		state := registry.ReviewRequested
 		switch {
 		case rv.Vote >= 5:
-			state = "approved"
+			state = registry.ReviewApproved
 		case rv.Vote < 0:
-			state = "changes"
+			state = registry.ReviewChanges
 		}
 		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: cmp.Or(rv.UniqueName, rv.DisplayName), State: state})
 	}
@@ -547,7 +548,7 @@ func (s *Server) probe(ctx context.Context, host string) (map[string]bool, error
 // prOf is a pull request as a code host tells it.
 func prOf(r Repo, p PullRequest) registry.PR {
 	out := registry.PR{Number: p.ID, ID: p.Repository.ID, Title: p.Title, Body: p.Description, URL: r.Web() + "/pullrequest/" + strconv.Itoa(p.ID),
-		Author: p.CreatedBy.DisplayName, State: "closed", Draft: p.IsDraft, Merged: p.Status == "completed",
+		Author: p.CreatedBy.DisplayName, State: core.PRClosed, Draft: p.IsDraft, Merged: p.Status == "completed",
 		Branch: strings.TrimPrefix(p.Source, "refs/heads/"), Base: strings.TrimPrefix(p.Target, "refs/heads/"), Head: p.LastSource.CommitID}
 	if p.Status == "active" {
 		out.State = "open"

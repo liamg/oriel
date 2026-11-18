@@ -44,7 +44,6 @@ type jobForm struct {
 	day    int // a weekly schedule's, into days
 	custom []string
 	at     string
-	focus  bool
 	busy   bool
 	err    string
 	agents *plugin.Load[[]hostapi.ProviderInfo]
@@ -72,8 +71,7 @@ func (f *jobForm) job() hostapi.Job {
 // formFor is a dialog holding j.
 func formFor(j hostapi.Job) *jobForm {
 	f := &jobForm{name: j.Name, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
-		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmp.Or(j.Schedule.At, "07:00"),
-		focus: true}
+		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmp.Or(j.Schedule.At, "07:00")}
 	for _, d := range j.Schedule.Days {
 		f.custom = append(f.custom, dayName(d))
 		if i := slices.Index(days, d); i >= 0 {
@@ -205,19 +203,17 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 }
 
 // jobField is one of the job form's fields: Tab moves on, Escape closes, ⌘↵ saves and runs.
-func (x *Jobs) jobField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
+func (x *Jobs) jobField(c *ui.Ctx, key string, text *string, o widget.InputOpts) {
 	o.Help, o.TabMoves, o.KeyMode = "agent/jobs#new", true, JobFormKeyMode
-	widget.DialogField(c, key, text, o, focus, x.closeForm, nil)
+	widget.DialogField(c, key, text, o, x.closeForm, nil)
 }
 
 func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 	th := c.Theme()
-	focus := f.focus
-	f.focus = false
 	f.settle(x.h.State())
 	c.Column("title", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		widget.Heading(c, "h", "Title", "from the prompt's first line when empty")
-		x.jobField(c, "title", &f.title, focus, widget.InputOpts{Label: "Title", Placeholder: "a name for the list"})
+		x.jobField(c, "title", &f.title, widget.InputOpts{Label: "Title", Placeholder: "a name for the list", DefaultFocus: true})
 	})
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		widget.Heading(c, "h", "Prompt", "markdown · name the repos it needs")
@@ -270,7 +266,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 			}
 			c.Text("at", "at", widget.MonoFont(11, th.C(theme.FgFaint)))
 			_, err := time.Parse("15:04", strings.TrimSpace(f.at))
-			x.jobField(c, "time", &f.at, false, widget.InputOpts{Label: "At", Placeholder: "07:00", Width: ui.Px(80), Invalid: err != nil,
+			x.jobField(c, "time", &f.at, widget.InputOpts{Label: "At", Placeholder: "07:00", Width: ui.Px(80), Invalid: err != nil,
 				Accept: func(r rune) bool { return r >= '0' && r <= '9' || r == ':' }})
 		})
 	})

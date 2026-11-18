@@ -381,7 +381,7 @@ func (x *PRReview) ended(url string) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	d := x.details[url]
-	return d != nil && d.done && (d.d.State == "closed" || d.d.State == "merged")
+	return d != nil && d.done && (d.d.State == core.PRClosed || d.d.State == core.PRMerged)
 }
 
 func (x *PRReview) forget(url string) {

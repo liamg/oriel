@@ -36,7 +36,7 @@ func (w *Host) autoName(id core.SessionID, was, prompt string) {
 		return
 	}
 	if se.Name == was {
-		if err := w.Rename(id, name); err != nil {
+		if err := w.Rename(hostapi.SessionRenameReq{Session: id, Name: name}); err != nil {
 			w.log.Warn("naming the session", "session", id, "err", err)
 		}
 	}

@@ -2,6 +2,7 @@ package review_test
 
 import (
 	"context"
+	"github.com/liamg/oriel/core"
 	"regexp"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestARefreshAskedMidReadReadsAgain(t *testing.T) {
 		Lookup: func(ctx context.Context, _ registry.Site, _ string) (registry.ReviewDetail, error) {
 			select {
 			case st := <-answers:
-				return registry.ReviewDetail{State: st}, nil
+				return registry.ReviewDetail{State: core.PRState(st)}, nil
 			case <-ctx.Done():
 				return registry.ReviewDetail{}, ctx.Err()
 			}

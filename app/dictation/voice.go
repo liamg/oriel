@@ -202,7 +202,7 @@ func (x *Voice) mic() voice.Mic {
 	if m := x.Config.Mic; m != nil {
 		return m
 	}
-	return voice.Microphone{Recorder: kit.Unless(x.str("voice.recorder"), "oriel")}
+	return voice.Microphone{Recorder: kit.BlankIfDefault(x.str("voice.recorder"), "oriel")}
 }
 
 func (x *Voice) transcriber() voice.Transcriber {

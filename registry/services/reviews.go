@@ -39,14 +39,14 @@ const PRReviewsService = "pr.reviews"
 type PRReviews interface {
 	// Reviews are each reviewer's latest verdict on the PR at url in session id: registry.ReviewChanges,
 	// ReviewApproved or ReviewCommented.
-	Reviews(id core.SessionID, url string) map[string]string
+	Reviews(id core.SessionID, url string) map[string]registry.ReviewState
 }
 
 // ReviewVerdicts are each reviewer's latest verdict on the PR at url in session id, from whichever plugin keeps them.
-func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) map[string]string {
+func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) map[string]registry.ReviewState {
 	if s, ok := registry.ServiceOf[PRReviews](r, PRReviewsService); ok {
-		var out map[string]string
-		registry.Try(func() { out = s.Reviews(id, url) })
+		var out map[string]registry.ReviewState
+		registry.IgnorePanic(func() { out = s.Reviews(id, url) })
 		return out
 	}
 	return nil

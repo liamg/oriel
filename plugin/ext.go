@@ -61,7 +61,7 @@ type Host interface {
 	Redraw()                                       // asks for a frame; safe from any goroutine
 	Do(fn func())                                  // runs fn on the app's loop, before the next frame; safe from any goroutine
 	Pending() Pending                              // keys typed towards a longer mapping or command, for which-key
-	HoldPending()                                  // keeps the pending mapping waiting past keymap.timeoutlen, until the next key
+	HoldPending()                                  // keeps the pending mapping waiting past keymap.timeout_length, until the next key
 	KeyModes() []string                            // the keymap modes a key goes through now, most specific first; nil with no window
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	// ProvideUI gives the window's widgets a service of type t (ui.ProvideType), as ProvideUI[T] does; a later one

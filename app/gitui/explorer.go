@@ -191,7 +191,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	for _, m := range e.fileMenu() {
 		e.Add(h.Contribute(m))
 	}
-	e.Add(h.View(kit.OverlayPrefix+"explorer.ask", e.askOverlay()))
+	e.Add(h.View(kit.OverlayPrefix+"explorer-ask", e.askOverlay()))
 	for i, s := range explorerScopes {
 		e.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<M-%d>", i+1), Command: "explorer.scope.set", Args: registry.Args{"scope": s},
 			Desc: "Explorer: " + s}))

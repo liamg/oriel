@@ -138,7 +138,7 @@ func (x *HUD) node(c *ui.Ctx, ind uireg.Indicator) (ui.Node, error) {
 	x.mu.Unlock()
 	if due {
 		var n ui.Node
-		err := registry.Call(func() (err error) { n, err = ind.Build(context.Background()); return })
+		err := registry.RecoverAsError(func() (err error) { n, err = ind.Build(context.Background()); return })
 		x.h.Report(ind.ContributionKind(), ind.Name, err)
 		b = &builtIndicator{node: n, err: err, at: now}
 		x.mu.Lock()
@@ -243,7 +243,7 @@ func (x *HUD) panels(c *ui.Ctx) {
 				taken += span
 				note := ""
 				if ind.Note != nil {
-					registry.Try(func() { note = ind.Note() })
+					registry.IgnorePanic(func() { note = ind.Note() })
 				}
 				n := x.Node(c, ind)
 				widget.Panel(c, ind.Name, widget.PanelOpts{Title: cmp.Or(ind.Title, ind.Name), Note: note, Help: cmp.Or(ind.Help, kit.HUDHelp+"#panels"),

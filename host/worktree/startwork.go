@@ -14,8 +14,8 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// CanStartWork refuses Start work on a session that has no plan waiting for it, or on branches it can't make.
-func CanStartWork(ctx context.Context, se core.SessionState, branches map[string]string) error {
+// CheckStartWork refuses Start work on a session that has no plan waiting for it, or on branches it can't make.
+func CheckStartWork(ctx context.Context, se core.SessionState, branches map[string]string) error {
 	switch {
 	case !se.StartWork:
 		return errors.New("this session has no plan to start work on")

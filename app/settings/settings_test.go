@@ -348,7 +348,7 @@ type fontShown struct{}
 func (fontShown) Manifest() plugin.Manifest        { return plugin.Manifest{ID: "test/font-shown"} }
 func (fontShown) Deactivate(context.Context) error { return nil }
 func (fontShown) Activate(_ context.Context, h plugin.Host) error {
-	h.View("statusline.right.99-font", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	h.View("status-line.right.99-font", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		v, _, _ := h.Options().Get("editor.font_size", h.Here())
 		return &ui.Text{Text: fmt.Sprintf("font %v", v)}
 	})})

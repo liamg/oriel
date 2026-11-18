@@ -109,7 +109,7 @@ func (g *GitSigns) stale(tree string, paths []string) {
 		}
 	}
 	g.mu.Unlock()
-	g.h.DecorationsChanged("git.hunks")
+	g.h.RefreshDecorations("git.hunks")
 }
 
 // watch stales tree's bases and blames as its status changes, once it's read; the window's tree has WatchWindow.
@@ -127,7 +127,7 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.Add(h.Contribute(registry.Busy{Name: "git-signs", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }}))
 	g.h = h
-	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
+	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.RefreshDecorations("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"scope", "branch", "head", "index"},
@@ -296,7 +296,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 					bh.version, bh.gen, bh.hunks, bh.diffed = version, gen, hs, true
 				}
 				g.mu.Unlock()
-				g.h.DecorationsChanged("git.hunks")
+				g.h.RefreshDecorations("git.hunks")
 			})
 		})
 	}
@@ -329,7 +329,7 @@ func (g *GitSigns) baseOf(f gitFile, src gitSource) *gitBase {
 			g.gens++
 			b.data, b.loaded, b.loading, b.gen = data, true, false, g.gens
 			g.mu.Unlock()
-			g.h.DecorationsChanged("git.hunks")
+			g.h.RefreshDecorations("git.hunks")
 		})
 	})
 	return b
@@ -454,7 +454,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 						b.lines = nil
 					}
 					g.mu.Unlock()
-					g.h.DecorationsChanged("git.hunks")
+					g.h.RefreshDecorations("git.hunks")
 				})
 			})
 		}
@@ -566,7 +566,7 @@ func (g *GitSigns) preview(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 	h, ok := hunkAt(hs, p.Cursor().Line)
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	defer g.h.DecorationsChanged("git.hunks")
+	defer g.h.RefreshDecorations("git.hunks")
 	if cur, on := g.previews[f]; on && (!ok || cur == h.NewStart) {
 		delete(g.previews, f)
 		return nil

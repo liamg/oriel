@@ -66,7 +66,7 @@ func (x *Ship) nextPR(se core.SessionState, p string, done *registry.PR) error {
 	}
 	req := hostapi.NextPRReq{Session: se.ID, Project: p}
 	if done != nil {
-		req.Done = core.PastPR{Number: done.Number, URL: done.URL, Title: done.Title, State: prStateWord(done)}
+		req.Done = core.PastPR{Number: done.Number, URL: done.URL, Title: done.Title, State: done.Ended()}
 		req.Head = done.Head
 	}
 	x.h.Dismiss(nextPRAsk(p))
