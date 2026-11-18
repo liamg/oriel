@@ -73,11 +73,13 @@ func (x *Host) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // on is the client for a GitHub server, with its token, else the one found for it.
-func (x *Host) on(s registry.Site) gh.Client { return x.clients.On("", nil, s.Host, x.token(s)) }
+func (x *Host) on(ctx context.Context, s registry.Site) gh.Client {
+	return x.clients.On(ctx, "", nil, s.Host, x.token(s))
+}
 
 // authored are the open pull requests the site's user wrote.
 func (x *Host) authored(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
-	found, err := x.on(s).SearchPRs(ctx, gh.SearchMine)
+	found, err := x.on(ctx, s).SearchPRs(ctx, gh.SearchMine)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +109,7 @@ func (x *Host) probe(ctx context.Context, hostname string) (bool, error) {
 }
 
 func (x *Host) requested(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
-	queue, err := x.on(s).ReviewQueue(ctx)
+	queue, err := x.on(ctx, s).ReviewQueue(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +174,7 @@ func (x *Host) lookup(ctx context.Context, s registry.Site, url string) (registr
 	if err != nil {
 		return registry.ReviewDetail{}, err
 	}
-	p, err := readPR(ctx, x.on(s), repo, n)
+	p, err := readPR(ctx, x.on(ctx, s), repo, n)
 	if err != nil {
 		return registry.ReviewDetail{}, err
 	}
@@ -311,7 +313,7 @@ func (x *Host) submit(ctx context.Context, s registry.Site, url string, r regist
 	if err != nil {
 		return err
 	}
-	return x.on(s).SubmitReview(ctx, repo, n, in)
+	return x.on(ctx, s).SubmitReview(ctx, repo, n, in)
 }
 
 // react reacts to a GitHub PR with one of the emoji GitHub offers.
@@ -324,7 +326,7 @@ func (x *Host) react(ctx context.Context, s registry.Site, url, emoji string) er
 	if err != nil {
 		return err
 	}
-	return x.on(s).ReactPR(ctx, repo, n, name)
+	return x.on(ctx, s).ReactPR(ctx, repo, n, name)
 }
 
 func (x *Host) unreact(ctx context.Context, s registry.Site, url, emoji string) error {
@@ -336,7 +338,7 @@ func (x *Host) unreact(ctx context.Context, s registry.Site, url, emoji string) 
 	if err != nil {
 		return err
 	}
-	return x.on(s).UnreactPR(ctx, repo, n, name)
+	return x.on(ctx, s).UnreactPR(ctx, repo, n, name)
 }
 
 // githubCheckout is where a review fetches a GitHub PR from: the repo its URL names, and pull/N/head.
@@ -384,12 +386,12 @@ func ghPR(p registry.PR) *gh.PR {
 }
 
 // repo is the client and repo of a project's GitHub repo.
-func (x *Host) repo(r registry.CodeRepo) (gh.Client, gh.Repo, error) {
+func (x *Host) repo(ctx context.Context, r registry.CodeRepo) (gh.Client, gh.Repo, error) {
 	owner, name, ok := strings.Cut(r.Repo, "/")
 	if !ok || owner == "" || name == "" {
 		return nil, gh.Repo{}, fmt.Errorf("%s isn't a GitHub repo", cmp.Or(r.Repo, r.Remote))
 	}
-	return x.on(r.Site), gh.Repo{Owner: owner, Name: name}, nil
+	return x.on(ctx, r.Site), gh.Repo{Owner: owner, Name: name}, nil
 }
 
 // number is a PR's number, refusing a PR without one.
@@ -410,7 +412,7 @@ func (x *Host) token(s registry.Site) string {
 }
 
 func (x *Host) forBranch(ctx context.Context, r registry.CodeRepo, branch string) (*registry.PR, error) {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +421,7 @@ func (x *Host) forBranch(ctx context.Context, r registry.CodeRepo, branch string
 }
 
 func (x *Host) create(ctx context.Context, r registry.CodeRepo, n registry.NewPR) (*registry.PR, error) {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +434,7 @@ func (x *Host) edit(ctx context.Context, r registry.CodeRepo, pr registry.PR, ti
 	if err != nil {
 		return nil, err
 	}
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +446,7 @@ func (x *Host) ready(ctx context.Context, r registry.CodeRepo, pr registry.PR) e
 	if _, err := number(pr); err != nil {
 		return err
 	}
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -456,7 +458,7 @@ func (x *Host) reviewers(ctx context.Context, r registry.CodeRepo, pr registry.P
 	if err != nil {
 		return err
 	}
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -465,7 +467,7 @@ func (x *Host) reviewers(ctx context.Context, r registry.CodeRepo, pr registry.P
 
 // checks are the checks on the PR's branch, the first failing Actions job's with its log's failing line.
 func (x *Host) checks(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.Check, error) {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +495,7 @@ func (x *Host) mergeState(ctx context.Context, r registry.CodeRepo, pr registry.
 	if err != nil {
 		return gh.MergeState{}, err
 	}
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return gh.MergeState{}, err
 	}
@@ -542,7 +544,7 @@ func (x *Host) merge(ctx context.Context, r registry.CodeRepo, pr registry.PR, o
 	if err != nil {
 		return err
 	}
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return err
 	}

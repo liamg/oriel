@@ -28,7 +28,7 @@ type trust struct {
 
 // threads are the PR's review threads and its conversation.
 func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR) ([]registry.ReviewThread, error) {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 
 // reply posts body on a review thread, or in the conversation for t.ID "", as the user, and answers its id.
 func (x *Host) reply(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, body string) (string, error) {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +145,7 @@ func (x *Host) reply(ctx context.Context, r registry.CodeRepo, pr registry.PR, t
 
 // resolve resolves a review thread on GitHub, or reopens it.
 func (x *Host) resolve(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, resolved bool) error {
-	c, repo, err := x.repo(r)
+	c, repo, err := x.repo(ctx, r)
 	if err != nil {
 		return err
 	}

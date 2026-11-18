@@ -106,6 +106,9 @@ func (t *Tokens) For(ctx context.Context, host string) string {
 		find = TokenFor
 	}
 	tok := find(ctx, host)
+	if ctx.Err() != nil { // cut short, not an answer: the next asker looks again
+		return tok
+	}
 	if t.found == nil {
 		t.found = map[string]foundToken{}
 	}
