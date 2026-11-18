@@ -437,11 +437,11 @@ func (x *LSP) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 // lspCommands are the LSP's commands and keys.
 func (x *LSP) lspCommands(h plugin.Host) {
 	for _, c := range []registry.Command{
-		{ID: "lsp.hover.open", Grant: registry.Open, Title: "Show what the language server knows about the symbol under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.hover.open", Grant: registry.Open, Title: "Show what the language server knows about the symbol under the cursor", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.startHover(ctx)
 		}},
-		{ID: "lsp.hover.close", Grant: registry.Open, Title: "Close the hover card", Run: func(registry.Ctx, registry.Args) error { x.hover = nil; return nil }},
-		{ID: "lsp.word.complete", Grant: registry.Open, Title: "Complete the word before the cursor", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lsp.hover.close", Grant: registry.Open, Title: "Close the hover card", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.hover = nil; return nil }},
+		{ID: "lsp.word.complete", Grant: registry.Open, Title: "Complete the word before the cursor", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			_, _, d := x.current()
 			if d == nil || d.client == nil {
 				return fmt.Errorf("no language server for this file")
@@ -449,14 +449,14 @@ func (x *LSP) lspCommands(h plugin.Host) {
 			x.requestCompletion(d, true)
 			return nil
 		}},
-		{ID: "completion.next", Grant: registry.Open, Title: "Highlight the next completion", Run: func(registry.Ctx, registry.Args) error { x.comp.move(1); return nil }},
-		{ID: "completion.prev", Grant: registry.Open, Title: "Highlight the previous completion", Run: func(registry.Ctx, registry.Args) error { x.comp.move(-1); return nil }},
-		{ID: "completion.accept", Grant: string(plugin.CapEditorWrite), Title: "Take the highlighted completion", Run: func(registry.Ctx, registry.Args) error { return x.accept() }},
-		{ID: "completion.cancel", Grant: registry.Open, Title: "Close the completion menu", Run: func(registry.Ctx, registry.Args) error { x.comp.close(); return nil }},
-		{ID: "lsp.code_actions.open", Grant: registry.Open, Title: "Show the code actions at the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "completion.next", Grant: registry.Open, Title: "Highlight the next completion", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.comp.move(1); return nil }},
+		{ID: "completion.prev", Grant: registry.Open, Title: "Highlight the previous completion", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.comp.move(-1); return nil }},
+		{ID: "completion.accept", Grant: string(plugin.CapEditorWrite), Title: "Take the highlighted completion", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.accept() }},
+		{ID: "completion.cancel", Grant: registry.Open, Title: "Close the completion menu", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.comp.close(); return nil }},
+		{ID: "lsp.code_actions.open", Grant: registry.Open, Title: "Show the code actions at the cursor", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.codeActions(ctx)
 		}},
-		{ID: "lsp.restart", Grant: registry.Open, Title: "Restart the language servers", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.restart", Grant: registry.Open, Title: "Restart the language servers", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			for _, c := range x.m.Clients() {
 				if _, err := x.m.Restart(ctx, c); err != nil {
 					return err

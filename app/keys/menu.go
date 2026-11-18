@@ -154,11 +154,8 @@ func (m *Menus) run(it registry.MenuItem) {
 		if it.Run != nil {
 			return it.Run(ctx, at)
 		}
-		args := registry.Args{"view": at.View, "instance": at.Instance, "file": at.File, "subject": at.Subject}
-		for k, v := range it.Args {
-			args[k] = v
-		}
-		return m.h.Run(ctx, it.Command, args)
+		where := registry.Args{"view": at.View, "instance": at.Instance, "file": at.File, "subject": at.Subject}
+		return m.h.Run(ctx, it.Command, registry.ContextArgs(m.h, it.Command, where, it.Args))
 	})
 	if err != nil {
 		kit.NotifyFailure(m.h, core.Notice{ID: "menu." + it.Name, Source: it.Source, AutoClear: true}, fmt.Errorf("%s: %w", it.Label, err))

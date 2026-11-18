@@ -123,18 +123,18 @@ func (x *Lua) Activate(_ context.Context, h plugin.Host) error {
 
 func (x *Lua) commands() []registry.Command {
 	return []registry.Command{
-		{ID: "lua.eval", UserOnly: true, Title: "Run a line of Lua, {args}, or open the Lua REPL", Ex: "lua", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "lua.eval", UserOnly: true, Title: "Run a line of Lua, {args}, or open the Lua REPL", Ex: "lua", Args: []registry.Arg{registry.AnyArg("args")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			if line, _ := a["args"].(string); strings.TrimSpace(line) != "" {
 				x.eval(line)
 				return nil
 			}
 			return x.h.Run(context.Background(), "view.open", registry.Args{"id": "lua", "place": "dock", "edge": "bottom", "title": "Lua", "size": 260})
 		}},
-		{ID: "lua.reload", Grant: registry.Open, Title: "Load init.lua again", Run: func(registry.Ctx, registry.Args) error { x.Reload(true); return nil }},
-		{ID: "hooks.open", Grant: registry.Open, Ex: "Hooks", Title: "List every hook, who registered it and its p99 time", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lua.reload", Grant: registry.Open, Title: "Load init.lua again", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.Reload(true); return nil }},
+		{ID: "hooks.open", Grant: registry.Open, Ex: "Hooks", Title: "List every hook, who registered it and its p99 time", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			return x.h.Run(context.Background(), "view.open", registry.Args{"id": "hooks", "place": "dock", "edge": "right", "title": "Hooks", "size": 640})
 		}},
-		{ID: "inspect.open", Grant: registry.Open, Ex: "Inspect", Title: "What's under the cursor: syntax, highlight, decorations, keymaps and views", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "inspect.open", Grant: registry.Open, Ex: "Inspect", Title: "What's under the cursor: syntax, highlight, decorations, keymaps and views", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.inspect = true
 			x.modes = x.h.KeyModes()
 			if x.modes == nil {

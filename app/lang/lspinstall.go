@@ -92,6 +92,7 @@ func (x *LSP) installCommands(h plugin.Host) {
 		Help: "Say when a file's language has language servers but none is installed, with a button to install one when Oriel can."}))
 	x.Add(h.Command(registry.Command{ID: "lsp.server.install", UserOnly: true, Title: "Install a language server Oriel can't find: {name}, into Oriel's own directory",
 		Available: func(registry.Args) bool { return x.InstallDir != "" },
+		Args:      []registry.Arg{registry.StringArg("name")},
 		Run:       func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("name")) }}))
 }
 

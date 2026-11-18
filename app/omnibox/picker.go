@@ -91,7 +91,7 @@ func (p *Picker) Activate(_ context.Context, h plugin.Host) error {
 	p.Add(h.Command(registry.Command{ID: "picker.open", Grant: registry.Open, Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
 		src := a.String("source")
 		return src == "" || slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src })
-	}, Run: func(_ registry.Ctx, a registry.Args) error {
+	}, Args: []registry.Arg{registry.StringArg("query"), registry.StringArg("source")}, Run: func(_ registry.Ctx, a registry.Args) error {
 		src := a.String("source")
 		if !slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src }) {
 			return fmt.Errorf("no picker source %q", src)
@@ -104,7 +104,7 @@ func (p *Picker) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return nil
 	}}))
-	p.Add(h.Command(registry.Command{ID: "picker.resume", Grant: registry.Open, Title: "Reopen the last picker where it was left", Run: func(registry.Ctx, registry.Args) error {
+	p.Add(h.Command(registry.Command{ID: "picker.resume", Grant: registry.Open, Title: "Reopen the last picker where it was left", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 		if p.source == "" {
 			return fmt.Errorf("no picker yet")
 		}

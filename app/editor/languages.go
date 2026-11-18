@@ -35,7 +35,7 @@ func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(registry.DisposeFunc(set.close))
 	x.Add(registry.DisposeFunc(func() { x.packs = nil }))
 	x.Add(h.Command(registry.Command{ID: "languages.install", UserOnly: true, Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
-		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
+		Args: []registry.Arg{registry.StringArg("path")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
 	for _, l := range syntax.Builtin().Languages() {
 		x.Add(h.Language(registry.Language{Name: l.Name, Extensions: l.Extensions, Filenames: l.Filenames, Shebangs: l.Shebangs,
 			Grammar: l.Grammar, Queries: l.Queries, Source: "builtin:languages"}))
