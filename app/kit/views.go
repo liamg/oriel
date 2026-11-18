@@ -66,13 +66,14 @@ var ViewSlots = []string{"app", "app.overlay", "status-line.left", "status-line.
 // DiffHeader is the prefix of the views a diff's header shows at its right.
 const DiffHeader = "diff.header."
 
-// WindowNow is the window's clock, a test's fixed one; zero before there's a window, so a wait begun then shows at
-// once.
+// WindowNow is the window's clock, a test's fixed one; before there's a window, the registry's, the same clock. A
+// zero time would date a wait begun then from long ago: its loading state would show at once and keep the result
+// back for its least time on screen, on a clock a test only moves on purpose.
 func WindowNow(h plugin.Host) time.Time {
 	if u := h.UI(); u != nil {
 		return u.Now()
 	}
-	return time.Time{}
+	return h.Clock().Now()
 }
 
 // The diff's view prefixes: DiffSide views beside the changed files (authorship), DiffRight views in a column at the

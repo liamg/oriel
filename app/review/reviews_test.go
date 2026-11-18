@@ -51,12 +51,12 @@ func reviewScene(t *testing.T) (*apptest.Scene, *rig.Host, *ghtest.Server, map[s
 	}
 	lw := rig.NewHostWith(t, host.Options{})
 	state := t.TempDir()
-	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
+	// Four weeks after the fake GitHub's pull requests, from the start: the list's first ask is timed by it.
+	s := apptest.New(t, apptest.Options{Now: time.Date(2026, 11, 11, 10, 0, 0, 0, time.UTC), Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
 		apptest.GitHub(hub)(cfg)
 		cfg.StateDir = state // the layout and what plugins keep, as a window's are
 	}})
-	s.Now = time.Date(2026, 11, 11, 10, 0, 0, 0, time.UTC) // four weeks after the fake GitHub's pull requests
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := s.Registry().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
 		t.Fatal(err)

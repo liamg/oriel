@@ -80,8 +80,12 @@ type Options struct {
 	WorkDir  string            // files are relative to it
 	Size     render.Point      // MockupSize if zero
 	Config   func(*app.Config) // changes the config before the app starts: the session host, say
-	ImageNet *http.Client      // what remote images are fetched with; offline if nil
-	FontDirs []string          // where its installed fonts are (ui.font); none if nil
+	// Now is the window's clock as the app starts. Setting Scene.Now later jumps the clock under work already timed
+	// by it: a load begun at the old time reads as long overdue, and what it holds back until a moment later waits
+	// for a clock only Advance moves.
+	Now      time.Time
+	ImageNet *http.Client // what remote images are fetched with; offline if nil
+	FontDirs []string     // where its installed fonts are (ui.font); none if nil
 	// ScriptedFiles gives the app file watchers whose events are only what the test says changed (FilesChanged,
 	// WriteFiles), not the OS's: a count of reads isn't moved by the OS's late events for the test's own setup.
 	ScriptedFiles bool
@@ -119,7 +123,7 @@ func New(t testing.TB, o Options) *Scene {
 	if err := os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
+	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf, Now: o.Now}
 	s.clock = &sceneClock{now: func() time.Time { return s.Now }}
 	cfg := app.Config{
 		Window: app.Window{Store: eventstore.New(), Registry: testRegistry(s.clock), Logs: app.NewLogs(app.LogOpts{}),
