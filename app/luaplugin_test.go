@@ -239,6 +239,58 @@ oriel.keymap.set("n", "<leader>um", mine)
 	}
 }
 
+// A plugin's right-click entry runs as the user when clicked, so it's held to what the plugin could run itself, with
+// no capability of its own: a command needing exec needs exec, and one that's the user's alone, a function of the
+// user's own config, or one not registered yet can't be added. The user's own init.lua adds anything.
+func TestPluginMenuEntriesRunOnlyWhatThePluginMay(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.menu.add{ name = "user.eval", label = "Eval", run = "lua.eval", args = { args = "print(1)" } }
+mine = function() end
+oriel.keymap.set("n", "<leader>um", mine)
+`)
+	added := func(name string) bool {
+		for _, m := range registry.ContributionsOf[registry.MenuItem](s.Registry()) {
+			if m.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+	if !added("user.eval") {
+		t.Fatal("init.lua's menu entry running lua.eval is gone")
+	}
+	var own string
+	for _, k := range s.Registry().Keymaps() {
+		if strings.HasSuffix(k.Keys, "um") {
+			own = k.Command
+		}
+	}
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/menu", Guard: g})
+	add := func(name, cmd, args string) string {
+		return luaErr(t, vm, `oriel.menu.add{ name = "`+name+`", label = "X", run = "`+cmd+`", args = `+args+` }`)
+	}
+	for cmd, want := range map[string]string{
+		"term.open": `"exec" capability`,
+		"lua.eval":  "only you can run lua.eval",
+		own:         "only you can run " + own,
+		"acme.none": "no command acme.none to bind yet",
+	} {
+		if err := add("acme.bad", cmd, `{ cmd = "bash" }`); !strings.Contains(err, want) {
+			t.Errorf("adding an entry running %s: %q, want %q", cmd, err, want)
+		}
+	}
+	if added("acme.bad") {
+		t.Error("a refused entry was added")
+	}
+	if err := add("about.show", "about.toggle", "{}"); err != "" || !added("about.show") {
+		t.Errorf("adding an entry running an open command: %q", err)
+	}
+	g.Grant("acme/menu", []plugin.Grant{{Cap: plugin.CapExec, Scope: []string{"bash"}}})
+	if err := add("terminal.bash.open", "term.open", `{ cmd = "bash" }`); err != "" || !added("terminal.bash.open") {
+		t.Errorf("adding an entry running term.open with exec for bash: %q", err)
+	}
+}
+
 // What changes who may do what is the user's alone: no plugin runs it through oriel.run, whatever it holds, while the
 // user's own config still can. Every command that installs or enables plugins, accepts consent, or changes settings,
 // secrets, jobs, rules or the app itself is the user's own or needs a capability.

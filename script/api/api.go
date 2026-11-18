@@ -157,6 +157,19 @@ func (a *APIs) commandGrant(id string, args registry.Args) error {
 	return nil
 }
 
+// bindable says whether the plugin may hand id with args to the user to run later, from a key it binds or a menu
+// entry it adds: those run as the user, so they're held to what the plugin could run itself. A command not yet
+// registered can't be checked, so it's refused until it is.
+func (a *APIs) bindable(id string, args registry.Args) error {
+	if a.Plugin.Trusted() {
+		return nil
+	}
+	if _, ok := a.Host.CommandFor(id); !ok {
+		return fmt.Errorf("%s: no command %s to bind yet: register it first", a.Plugin.ID, id)
+	}
+	return a.commandGrant(id, args)
+}
+
 type thenCall struct {
 	id   string
 	args registry.Args

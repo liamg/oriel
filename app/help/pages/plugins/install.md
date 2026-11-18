@@ -153,7 +153,8 @@ Read the clipboard: pasting it (`editor.paste`) needs it. Medium risk.
 Bind keys (`oriel.keymap.set`). A key a plugin binds runs as you when pressed, so it may bind only what it could run
 itself: a command already registered, whose capability it holds (`term.open` needs `exec` too), never one that's
 yours alone (`lua.eval`, settings, secrets) or a function of your own config. Your own `init.lua` maps freely.
-Medium risk.
+Medium risk. A plugin's right-click menu entries (`oriel.menu.add`) are held to the same rule, with no capability of
+their own.
 
 ## settings {#settings}
 

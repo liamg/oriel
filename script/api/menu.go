@@ -11,7 +11,7 @@ import (
 //oriel:api name=menu cap=ui
 type Menu struct{ a *APIs }
 
-//oriel:api doc="Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args."
+//oriel:api doc="Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args. A plugin's entry may run only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone."
 func (m Menu) Add(spec script.Table, where string) error {
 	label := str(spec, "label")
 	if label == "" {
@@ -30,6 +30,9 @@ func (m Menu) Add(spec script.Table, where string) error {
 		it.Command = run
 		if a, ok := spec["args"].(script.Table); ok {
 			it.Args = registry.Args(a)
+		}
+		if err := m.a.bindable(run, it.Args); err != nil {
+			return fmt.Errorf("%s: %w", label, err)
 		}
 	case *script.Fn:
 		it.Run = func(_ registry.Ctx, at registry.MenuCtx) error {
