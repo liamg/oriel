@@ -21,9 +21,8 @@ import (
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 	"github.com/liamg/oriel/sandbox/agentsock"
+	"github.com/liamg/oriel/sandbox/sbpl"
 )
-
-const sandboxExec = "/usr/bin/sandbox-exec"
 
 // Seatbelt is the backend; each sandboxed workspace has an egress proxy while its agent runs.
 type Seatbelt struct {
@@ -45,10 +44,7 @@ func Available() error {
 	if runtime.GOOS != "darwin" {
 		return errors.New("seatbelt sandboxes need macOS")
 	}
-	if _, err := os.Stat(sandboxExec); err != nil {
-		return fmt.Errorf("no %s", sandboxExec)
-	}
-	return nil
+	return sbpl.Available()
 }
 
 func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
@@ -148,7 +144,7 @@ func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string,
 	if err := os.WriteFile(profile, []byte(SBPL(p)), 0o600); err != nil {
 		return sandbox.Command{}, err
 	}
-	return sandbox.Command{Argv: append([]string{sandboxExec, "-f", profile}, argv...), Env: environ(env), Dir: cwd, Needs: needs}, nil
+	return sandbox.Command{Argv: append([]string{sbpl.SandboxExec, "-f", profile}, argv...), Env: environ(env), Dir: cwd, Needs: needs}, nil
 }
 
 func (s *Seatbelt) Stop(_ context.Context, root string) error {
@@ -311,12 +307,7 @@ func link(at, target string) error {
 
 // real is p with its paths' symlinks followed, as Seatbelt matches them.
 func real(p Profile) Profile {
-	r := func(s string) string {
-		if e, err := filepath.EvalSymlinks(s); err == nil {
-			return e
-		}
-		return s
-	}
+	r := sbpl.Real
 	for i, h := range p.Hide {
 		p.Hide[i] = r(h)
 	}

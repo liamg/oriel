@@ -15,7 +15,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/registry"
 )
 

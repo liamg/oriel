@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // TestMain fixes the time zone, and the sandbox backends this machine offers.

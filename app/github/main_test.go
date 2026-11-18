@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // TestMain fixes the time zone for every test's times, and runs the sandbox's helper when the sandbox starts this

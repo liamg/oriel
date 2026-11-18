@@ -3,6 +3,8 @@ package seatbelt
 import (
 	"fmt"
 	"strings"
+
+	"github.com/liamg/oriel/sandbox/sbpl"
 )
 
 // Profile is what an agent under Seatbelt may touch.
@@ -51,18 +53,18 @@ func SBPL(p Profile) string {
 	b.WriteString("(allow sysctl-read)\n(allow pseudo-tty)\n(allow ipc-posix*)\n(allow user-preference-read)\n")
 	b.WriteString("(allow mach-lookup")
 	for _, s := range services {
-		fmt.Fprintf(&b, " (global-name %s)", quote(s))
+		fmt.Fprintf(&b, " (global-name %s)", sbpl.Quote(s))
 	}
 	b.WriteString(")\n(allow file-read*)\n")
 	if len(p.Hide) > 0 {
 		b.WriteString("(deny file-read*")
 		for _, h := range p.Hide {
-			fmt.Fprintf(&b, " (subpath %s)", quote(h))
+			fmt.Fprintf(&b, " (subpath %s)", sbpl.Quote(h))
 		}
 		b.WriteString(")\n(allow file-read-metadata)\n")
 	}
 	for _, a := range p.Paths {
-		q := quote(a.Path)
+		q := sbpl.Quote(a.Path)
 		if a.Write {
 			fmt.Fprintf(&b, "(allow file-read* file-write* (subpath %s))\n", q)
 		} else {
@@ -78,10 +80,10 @@ func SBPL(p Profile) string {
 	if len(p.Sockets) > 0 || len(p.Ports) > 0 {
 		b.WriteString("(allow network-outbound")
 		for _, s := range p.Sockets {
-			fmt.Fprintf(&b, " (remote unix-socket (path-literal %s))", quote(s))
+			fmt.Fprintf(&b, " (remote unix-socket (path-literal %s))", sbpl.Quote(s))
 		}
 		for _, port := range p.Ports {
-			fmt.Fprintf(&b, " (remote tcp %s)", quote(fmt.Sprintf("localhost:%d", port)))
+			fmt.Fprintf(&b, " (remote tcp %s)", sbpl.Quote(fmt.Sprintf("localhost:%d", port)))
 		}
 		b.WriteString(")\n")
 	}
@@ -92,9 +94,4 @@ func SBPL(p Profile) string {
 		b.WriteString("(allow network-outbound (remote ip \"localhost:*\"))\n")
 	}
 	return b.String()
-}
-
-// quote is a Seatbelt string: in double quotes, with \ and " escaped.
-func quote(s string) string {
-	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/liamg/oriel/integ"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/sandbox/helper"
 	"github.com/liamg/oriel/sysload"
