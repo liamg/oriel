@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/update"
 )
 
 // statusSegment is "update ready · restart" on the status line once an update is installed, and what the updater
@@ -188,7 +189,15 @@ func updateStepRow(c *ui.Ctx, key any, l updateLine) {
 	})
 }
 
-// cardView is the update card: the newer release, its notes,
+// notesOf is a release's notes as the card shows them: those with nothing say so, as a generated release's notes do.
+func notesOf(m update.Manifest) string {
+	if n := strings.TrimSpace(m.Notes); n != "" {
+		return n
+	}
+	return "No notable changes."
+}
+
+// cardView is the update card: the newer release, the notes of each version the update goes past (newest first),
 // and Update, or Restart once it's installed.
 func (x *Update) cardView(c *ui.Ctx) {
 	x.mu.Lock()
@@ -215,13 +224,21 @@ func (x *Update) cardView(c *ui.Ctx) {
 				sub += " · released " + m.Published.Format("2 Jan 2006")
 			}
 			widget.Heading(c, "h", "WHAT'S NEW", sub)
-			notes := strings.TrimSpace(m.Notes)
-			if notes == "" {
-				notes = "This release has no notes."
+			changes := u.Changes()
+			if len(changes) == 0 {
+				changes = []update.Manifest{m}
 			}
-			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx) {
-				markdown.Text(c, x.h, "md", notes, 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
-			})
+			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}, Gap: 12},
+				func(c *ui.Ctx) {
+					for i, ch := range changes {
+						c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
+							if len(changes) > 1 {
+								c.Text("v", ch.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
+							}
+							markdown.Text(c, x.h, "md", notesOf(ch), 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+						})
+					}
+				})
 		case busy != "":
 		default:
 			widget.Wrap(c, "current", fmt.Sprintf("Oriel %s is the newest on the %s channel.", u.Version, x.channel()), 570,

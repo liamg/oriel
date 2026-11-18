@@ -30,6 +30,12 @@ type Source interface {
 	Open(ctx context.Context, name string) (io.ReadCloser, error)
 }
 
+// History is a source that can list every published release on a channel, newest first: the update card shows the
+// notes of each version an update goes past, not only the newest's. Each is verified before it's read.
+type History interface {
+	Releases(ctx context.Context, channel string) ([]Release, error)
+}
+
 // Dir is a release laid out in a directory: manifest.json, manifest.sig and the artifacts.
 type Dir string
 
@@ -50,6 +56,61 @@ func (d Dir) Open(_ context.Context, name string) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("bad artifact name %q", name)
 	}
 	return os.Open(filepath.Join(string(d), name))
+}
+
+// Dirs is releases laid out one to a directory under it, each as Dir lays one out, the directory named by the version:
+// the newest is Latest.
+type Dirs string
+
+func (d Dirs) Releases(ctx context.Context, channel string) ([]Release, error) {
+	entries, err := os.ReadDir(string(d))
+	if err != nil {
+		return nil, err
+	}
+	var out []Release
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		if rel, err := Dir(filepath.Join(string(d), e.Name())).Latest(ctx, channel); err == nil {
+			out = append(out, rel)
+		}
+	}
+	return out, nil
+}
+
+func (d Dirs) Latest(ctx context.Context, channel string) (Release, error) {
+	dir, err := d.newest()
+	if err != nil {
+		return Release{}, err
+	}
+	return Dir(dir).Latest(ctx, channel)
+}
+
+func (d Dirs) Open(ctx context.Context, name string) (io.ReadCloser, error) {
+	dir, err := d.newest()
+	if err != nil {
+		return nil, err
+	}
+	return Dir(dir).Open(ctx, name)
+}
+
+// newest is the directory named by the highest version.
+func (d Dirs) newest() (string, error) {
+	entries, err := os.ReadDir(string(d))
+	if err != nil {
+		return "", err
+	}
+	best := ""
+	for _, e := range entries {
+		if e.IsDir() && (best == "" || Newer(e.Name(), best)) {
+			best = e.Name()
+		}
+	}
+	if best == "" {
+		return "", fmt.Errorf("no release in %s", string(d))
+	}
+	return filepath.Join(string(d), best), nil
 }
 
 // Write lays rel out in dir, with its artifacts' bytes by name: what CI publishes.
@@ -113,6 +174,45 @@ func (g *GitHub) Latest(ctx context.Context, channel string) (Release, error) {
 		return Release{Manifest: man, Signature: signature}, nil
 	}
 	return Release{}, fmt.Errorf("%s has no %s release", g.Repo, channel)
+}
+
+// Releases is every published release with a manifest, newest first, as Latest picks among them.
+func (g *GitHub) Releases(ctx context.Context, channel string) ([]Release, error) {
+	list, err := g.rest().Releases(ctx, g.Repo, 30)
+	if err != nil {
+		return nil, g.private(ctx, err)
+	}
+	var out []Release
+	for _, rel := range list {
+		if rel.Draft || rel.Prerelease && channel != Nightly {
+			continue
+		}
+		m, okm := rel.Asset(ManifestFile)
+		sig, oks := rel.Asset(SignatureFile)
+		if !okm || !oks {
+			continue
+		}
+		man, err := g.readAsset(ctx, m)
+		if err != nil {
+			return nil, err
+		}
+		signature, err := g.readAsset(ctx, sig)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, Release{Manifest: man, Signature: signature})
+	}
+	return out, nil
+}
+
+// readAsset reads a small file of a release, up to 1MB.
+func (g *GitHub) readAsset(ctx context.Context, a gh.Asset) ([]byte, error) {
+	rc, err := g.rest().OpenAsset(ctx, a)
+	if err != nil {
+		return nil, g.private(ctx, err)
+	}
+	defer func() { _ = rc.Close() }()
+	return io.ReadAll(io.LimitReader(rc, 1<<20))
 }
 
 func (g *GitHub) Open(ctx context.Context, name string) (io.ReadCloser, error) {

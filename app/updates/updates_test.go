@@ -154,6 +154,36 @@ func TestUpdateOptions(t *testing.T) {
 	}
 }
 
+// An update that goes past several versions shows what each changed, newest first, under its version: not only the
+// newest's notes. One whose changes were all internal says so; a release older than the running one isn't shown.
+func TestUpdateCardShowsEveryVersionItGoesPast(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	r.Publish("0.9.0", "## Fixes\n\n- An old fix")
+	r.Publish("1.1.0", "## Features\n\n- **Inbox:** Mark all read")
+	r.Publish("1.2.0", "No notable changes.")
+	r.Publish("2.0.0", "## Fixes\n\n- **LSP:** Language servers stop when their session ends")
+
+	s.Run("update.check", nil)
+	s.Frame()
+	s.Until("the card with the release", func() bool { return strings.Contains(s.Text(), "Oriel 2.0.0") })
+	text := strings.ReplaceAll(s.FullText(), "\n", " ")
+	at := -1
+	for _, want := range []string{"WHAT'S NEW", "2.0.0", "Language servers stop when their session ends", "1.2.0", "No notable changes.",
+		"1.1.0", "Mark all read"} {
+		i := strings.Index(text[at+1:], want)
+		if i < 0 {
+			t.Fatalf("the card lacks %q after what came before it:\n%s", want, text)
+		}
+		at += 1 + i
+	}
+	if strings.Contains(text, "0.9.0") || strings.Contains(text, "An old fix") {
+		t.Errorf("the card shows a release older than the running one:\n%s", text)
+	}
+	s.Lint("the update card over three versions")
+}
+
 func hasNotice(st core.State, id string) bool {
 	for _, n := range st.Notifications {
 		if n.ID == id {

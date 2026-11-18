@@ -28,7 +28,7 @@ func (h heldSource) Latest(ctx context.Context, channel string) (update.Release,
 func TestUpdateCardIsBusyBeforeItOpens(t *testing.T) {
 	r := rig.NewReleases(t)
 	r.Publish("2.0.0", "")
-	held := heldSource{Source: update.Dir(r.Src), release: make(chan struct{})}
+	held := heldSource{Source: update.Dirs(r.Src), release: make(chan struct{})}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		cfg.Updates = &app.Updates{Updater: r.Updater(), Relaunch: r.Relaunch}
 		cfg.Updates.Updater.Source = held
