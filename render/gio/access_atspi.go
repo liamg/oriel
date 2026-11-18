@@ -354,32 +354,66 @@ func atspiFail(msg string) *dbus.Error {
 	return dbus.NewError("org.freedesktop.DBus.Error.Failed", []any{msg})
 }
 
+// atspiMsg and atspiErr are what the D-Bus method tables take and fail with.
+type (
+	atspiMsg = dbus.Message
+	atspiErr = *dbus.Error
+)
+
+// export puts the app's AT-SPI interfaces on the bus, one method table each.
 func (a *atspiApp) export(bus *dbus.Conn) error {
-	type msg = dbus.Message
-	type derr = *dbus.Error
-	node := func(m msg) (atspiTarget, derr) {
-		t, err := a.target(m)
-		if err == nil && t.root {
-			return t, atspiFail("not a node")
+	for iface, table := range map[string]map[string]any{
+		"org.a11y.atspi.Accessible": a.accessibleMethods(), "org.a11y.atspi.Component": a.componentMethods(),
+		"org.a11y.atspi.Action": a.actionMethods(), "org.a11y.atspi.Text": a.textMethods(), "org.a11y.atspi.EditableText": a.editableMethods(),
+		"org.a11y.atspi.Application": {
+			"GetLocale":                func(m atspiMsg, kind uint32) (string, atspiErr) { return "", nil },
+			"GetApplicationBusAddress": func(m atspiMsg) (string, atspiErr) { return "", nil },
+		},
+		"org.freedesktop.DBus.Properties": a.propertyMethods(),
+	} {
+		if err := bus.ExportSubtreeMethodTable(table, atspiPrefix, iface); err != nil {
+			return err
 		}
-		return t, err
 	}
-	text := func(m msg) (atspiTarget, []rune, derr) {
-		t, err := node(m)
-		if err != nil {
-			return t, nil, err
-		}
-		if t.e.node.Role != render.RoleTextBox {
-			return t, nil, atspiFail("not text")
-		}
-		return t, []rune(t.e.node.Value), nil
+	return nil
+}
+
+// node is the call's object, refused when it's the application rather than a node of a window's tree.
+func (a *atspiApp) node(m atspiMsg) (atspiTarget, atspiErr) {
+	t, err := a.target(m)
+	if err == nil && t.root {
+		return t, atspiFail("not a node")
 	}
-	act := func(t atspiTarget, x render.AccessAction) bool {
-		x.ID = t.id
-		return t.ax.act(x)
+	return t, err
+}
+
+// text is the call's object and its text, refused when it isn't a text box.
+func (a *atspiApp) text(m atspiMsg) (atspiTarget, []rune, atspiErr) {
+	t, err := a.node(m)
+	if err != nil {
+		return t, nil, err
 	}
-	accessible := map[string]any{
-		"GetChildAtIndex": func(m msg, i int32) (atspiRef, derr) {
+	if t.e.node.Role != render.RoleTextBox {
+		return t, nil, atspiFail("not text")
+	}
+	return t, []rune(t.e.node.Value), nil
+}
+
+// act does x on t's node, through its window.
+func (a *atspiApp) act(t atspiTarget, x render.AccessAction) bool {
+	x.ID = t.id
+	return t.ax.act(x)
+}
+
+// setText replaces t's text with s.
+func (a *atspiApp) setText(t atspiTarget, s string) bool {
+	return a.act(t, render.AccessAction{Action: render.ActionSetValue, Value: s})
+}
+
+// accessibleMethods are org.a11y.atspi.Accessible's: a node's place in the tree, role, state and attributes.
+func (a *atspiApp) accessibleMethods() map[string]any {
+	methods := map[string]any{
+		"GetChildAtIndex": func(m atspiMsg, i int32) (atspiRef, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return atspiRef{}, err
@@ -390,14 +424,14 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return kids[i], nil
 		},
-		"GetChildren": func(m msg) ([]atspiRef, derr) {
+		"GetChildren": func(m atspiMsg) ([]atspiRef, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return nil, err
 			}
 			return a.children(t), nil
 		},
-		"GetIndexInParent": func(m msg) (int32, derr) {
+		"GetIndexInParent": func(m atspiMsg) (int32, atspiErr) {
 			t, err := a.target(m)
 			switch {
 			case err != nil:
@@ -411,29 +445,29 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return int32(t.ax.tree.index(t.id)), nil
 		},
-		"GetRelationSet": func(m msg) ([]atspiRelation, derr) { return []atspiRelation{}, nil },
-		"GetRole": func(m msg) (uint32, derr) {
+		"GetRelationSet": func(m atspiMsg) ([]atspiRelation, atspiErr) { return []atspiRelation{}, nil },
+		"GetRole": func(m atspiMsg) (uint32, atspiErr) {
 			t, err := a.target(m)
 			if err != nil || t.root {
 				return atspiRoleApplication, err
 			}
 			return atspiRole(t.e.node.Role), nil
 		},
-		"GetRoleName": func(m msg) (string, derr) {
+		"GetRoleName": func(m atspiMsg) (string, atspiErr) {
 			t, err := a.target(m)
 			if err != nil || t.root {
 				return atspiRoleNames[atspiRoleApplication], err
 			}
 			return atspiRoleNames[atspiRole(t.e.node.Role)], nil
 		},
-		"GetState": func(m msg) ([]uint32, derr) {
+		"GetState": func(m atspiMsg) ([]uint32, atspiErr) {
 			t, err := a.target(m)
 			if err != nil || t.root {
 				return atspiStateSet(nil), err
 			}
 			return atspiStateSet(atspiStates(&t.e.node, t.ax.geom().Active)), nil
 		},
-		"GetAttributes": func(m msg) (map[string]string, derr) {
+		"GetAttributes": func(m atspiMsg) (map[string]string, atspiErr) {
 			t, err := a.target(m)
 			out := map[string]string{"toolkit": "oriel"}
 			if err == nil && !t.root && t.e.node.Description != "" {
@@ -441,8 +475,8 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return out, err
 		},
-		"GetApplication": func(m msg) (atspiRef, derr) { return atspiRef{a.self, atspiRoot}, nil },
-		"GetInterfaces": func(m msg) ([]string, derr) {
+		"GetApplication": func(m atspiMsg) (atspiRef, atspiErr) { return atspiRef{a.self, atspiRoot}, nil },
+		"GetInterfaces": func(m atspiMsg) ([]string, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return nil, err
@@ -453,18 +487,23 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			return atspiInterfaces(&t.e.node), nil
 		},
 	}
-	accessible["GetLocalizedRoleName"] = accessible["GetRoleName"]
-	component := map[string]any{
-		"Contains": func(m msg, x, y int32, coord uint32) (bool, derr) {
-			t, err := node(m)
+	methods["GetLocalizedRoleName"] = methods["GetRoleName"]
+	return methods
+}
+
+// componentMethods are org.a11y.atspi.Component's: where a node is and what's at a point.
+func (a *atspiApp) componentMethods() map[string]any {
+	methods := map[string]any{
+		"Contains": func(m atspiMsg, x, y int32, coord uint32) (bool, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return false, err
 			}
 			_, in := a.at(t, x, y, coord)
 			return in, nil
 		},
-		"GetAccessibleAtPoint": func(m msg, x, y int32, coord uint32) (atspiRef, derr) {
-			t, err := node(m)
+		"GetAccessibleAtPoint": func(m atspiMsg, x, y int32, coord uint32) (atspiRef, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return atspiRef{}, err
 			}
@@ -473,14 +512,14 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return atspiRef{a.self, atspiNull}, nil
 		},
-		"GetExtents": func(m msg, coord uint32) (atspiRect, derr) {
+		"GetExtents": func(m atspiMsg, coord uint32) (atspiRect, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return atspiRect{}, err
 			}
 			return a.extents(t, coord), nil
 		},
-		"GetPosition": func(m msg, coord uint32) (int32, int32, derr) {
+		"GetPosition": func(m atspiMsg, coord uint32) (int32, int32, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return 0, 0, err
@@ -488,7 +527,7 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			r := a.extents(t, coord)
 			return r.X, r.Y, nil
 		},
-		"GetSize": func(m msg) (int32, int32, derr) {
+		"GetSize": func(m atspiMsg) (int32, int32, atspiErr) {
 			t, err := a.target(m)
 			if err != nil {
 				return 0, 0, err
@@ -496,27 +535,32 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			r := a.extents(t, 1)
 			return r.W, r.H, nil
 		},
-		"GetLayer": func(m msg) (uint32, derr) {
-			t, err := node(m)
+		"GetLayer": func(m atspiMsg) (uint32, atspiErr) {
+			t, err := a.node(m)
 			if err == nil && t.id == 0 {
 				return 7, nil // ATSPI_LAYER_WINDOW
 			}
 			return 3, err // ATSPI_LAYER_WIDGET
 		},
-		"GetMDIZOrder": func(m msg) (int16, derr) { return 0, nil },
-		"GrabFocus": func(m msg) (bool, derr) {
-			t, err := node(m)
+		"GetMDIZOrder": func(m atspiMsg) (int16, atspiErr) { return 0, nil },
+		"GrabFocus": func(m atspiMsg) (bool, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return false, err
 			}
-			return act(t, render.AccessAction{Action: render.ActionFocus}), nil
+			return a.act(t, render.AccessAction{Action: render.ActionFocus}), nil
 		},
-		"GetAlpha": func(m msg) (float64, derr) { return 1, nil },
-		"ScrollTo": func(m msg, kind uint32) (bool, derr) { return false, nil },
+		"GetAlpha": func(m atspiMsg) (float64, atspiErr) { return 1, nil },
+		"ScrollTo": func(m atspiMsg, kind uint32) (bool, atspiErr) { return false, nil },
 	}
-	action := map[string]any{
-		"GetName": func(m msg, i int32) (string, derr) {
-			t, err := node(m)
+	return methods
+}
+
+// actionMethods are org.a11y.atspi.Action's: what a node can do, and doing it.
+func (a *atspiApp) actionMethods() map[string]any {
+	methods := map[string]any{
+		"GetName": func(m atspiMsg, i int32) (string, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return "", err
 			}
@@ -525,10 +569,10 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return "", nil
 		},
-		"GetDescription": func(m msg, i int32) (string, derr) { return "", nil },
-		"GetKeyBinding":  func(m msg, i int32) (string, derr) { return "", nil },
-		"GetActions": func(m msg) ([]atspiAction, derr) {
-			t, err := node(m)
+		"GetDescription": func(m atspiMsg, i int32) (string, atspiErr) { return "", nil },
+		"GetKeyBinding":  func(m atspiMsg, i int32) (string, atspiErr) { return "", nil },
+		"GetActions": func(m atspiMsg) ([]atspiAction, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return nil, err
 			}
@@ -538,8 +582,8 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return out, nil
 		},
-		"DoAction": func(m msg, i int32) (bool, derr) {
-			t, err := node(m)
+		"DoAction": func(m atspiMsg, i int32) (bool, atspiErr) {
+			t, err := a.node(m)
 			if err != nil {
 				return false, err
 			}
@@ -547,13 +591,18 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			if i < 0 || int(i) >= len(as) {
 				return false, nil
 			}
-			return act(t, render.AccessAction{Action: as[i]}), nil
+			return a.act(t, render.AccessAction{Action: as[i]}), nil
 		},
 	}
-	action["GetLocalizedName"] = action["GetName"]
-	textAt := func(granular bool, dir int) func(m msg, off int32, kind uint32) (string, int32, int32, derr) {
-		return func(m msg, off int32, kind uint32) (string, int32, int32, derr) {
-			t, _, err := text(m)
+	methods["GetLocalizedName"] = methods["GetName"]
+	return methods
+}
+
+// textMethods are org.a11y.atspi.Text's: a text box's text, caret and selection.
+func (a *atspiApp) textMethods() map[string]any {
+	textAt := func(granular bool, dir int) func(m atspiMsg, off int32, kind uint32) (string, int32, int32, atspiErr) {
+		return func(m atspiMsg, off int32, kind uint32) (string, int32, int32, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return "", 0, 0, err
 			}
@@ -562,19 +611,16 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 		}
 	}
 	sel := func(t atspiTarget, start, end int32) bool {
-		return act(t, render.AccessAction{Action: render.ActionSelect, Selection: render.TextRange{Start: int(start), End: int(end)}})
+		return a.act(t, render.AccessAction{Action: render.ActionSelect, Selection: render.TextRange{Start: int(start), End: int(end)}})
 	}
-	setText := func(t atspiTarget, s string) bool {
-		return act(t, render.AccessAction{Action: render.ActionSetValue, Value: s})
-	}
-	noAttrs := func(m msg) (map[string]string, derr) { return map[string]string{}, nil }
-	textIface := map[string]any{
+	noAttrs := func(m atspiMsg) (map[string]string, atspiErr) { return map[string]string{}, nil }
+	methods := map[string]any{
 		"GetStringAtOffset":   textAt(true, 0),
 		"GetTextAtOffset":     textAt(false, 0),
 		"GetTextBeforeOffset": textAt(false, -1),
 		"GetTextAfterOffset":  textAt(false, 1),
-		"GetText": func(m msg, start, end int32) (string, derr) {
-			_, rs, err := text(m)
+		"GetText": func(m atspiMsg, start, end int32) (string, atspiErr) {
+			_, rs, err := a.text(m)
 			if err != nil {
 				return "", err
 			}
@@ -584,79 +630,79 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			start = min(max(start, 0), end)
 			return string(rs[start:end]), nil
 		},
-		"SetCaretOffset": func(m msg, off int32) (bool, derr) {
-			t, _, err := text(m)
+		"SetCaretOffset": func(m atspiMsg, off int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return false, err
 			}
 			return sel(t, off, off), nil
 		},
-		"GetCharacterAtOffset": func(m msg, off int32) (int32, derr) {
-			_, rs, err := text(m)
+		"GetCharacterAtOffset": func(m atspiMsg, off int32) (int32, atspiErr) {
+			_, rs, err := a.text(m)
 			if err != nil || off < 0 || int(off) >= len(rs) {
 				return 0, err
 			}
 			return rs[off], nil
 		},
-		"GetAttributeValue": func(m msg, off int32, name string) (string, derr) { return "", nil },
-		"GetAttributes": func(m msg, off int32) (map[string]string, int32, int32, derr) {
-			_, rs, err := text(m)
+		"GetAttributeValue": func(m atspiMsg, off int32, name string) (string, atspiErr) { return "", nil },
+		"GetAttributes": func(m atspiMsg, off int32) (map[string]string, int32, int32, atspiErr) {
+			_, rs, err := a.text(m)
 			return map[string]string{}, 0, int32(len(rs)), err
 		},
-		"GetAttributeRun": func(m msg, off int32, defaults bool) (map[string]string, int32, int32, derr) {
-			_, rs, err := text(m)
+		"GetAttributeRun": func(m atspiMsg, off int32, defaults bool) (map[string]string, int32, int32, atspiErr) {
+			_, rs, err := a.text(m)
 			return map[string]string{}, 0, int32(len(rs)), err
 		},
 		"GetDefaultAttributes":   noAttrs,
 		"GetDefaultAttributeSet": noAttrs,
-		"GetCharacterExtents": func(m msg, off int32, coord uint32) (int32, int32, int32, int32, derr) {
-			t, _, err := text(m)
+		"GetCharacterExtents": func(m atspiMsg, off int32, coord uint32) (int32, int32, int32, int32, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return 0, 0, 0, 0, err
 			}
 			r := a.extents(t, coord)
 			return r.X, r.Y, r.W, r.H, nil
 		},
-		"GetRangeExtents": func(m msg, start, end int32, coord uint32) (int32, int32, int32, int32, derr) {
-			t, _, err := text(m)
+		"GetRangeExtents": func(m atspiMsg, start, end int32, coord uint32) (int32, int32, int32, int32, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return 0, 0, 0, 0, err
 			}
 			r := a.extents(t, coord)
 			return r.X, r.Y, r.W, r.H, nil
 		},
-		"GetOffsetAtPoint": func(m msg, x, y int32, coord uint32) (int32, derr) { return -1, nil },
-		"GetNSelections": func(m msg) (int32, derr) {
-			t, _, err := text(m)
+		"GetOffsetAtPoint": func(m atspiMsg, x, y int32, coord uint32) (int32, atspiErr) { return -1, nil },
+		"GetNSelections": func(m atspiMsg) (int32, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil || t.e.node.Selection.Start == t.e.node.Selection.End {
 				return 0, err
 			}
 			return 1, nil
 		},
-		"GetSelection": func(m msg, n int32) (int32, int32, derr) {
-			t, _, err := text(m)
+		"GetSelection": func(m atspiMsg, n int32) (int32, int32, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil || n != 0 {
 				return 0, 0, err
 			}
 			s := t.e.node.Selection
 			return int32(min(s.Start, s.End)), int32(max(s.Start, s.End)), nil
 		},
-		"AddSelection": func(m msg, start, end int32) (bool, derr) {
-			t, _, err := text(m)
+		"AddSelection": func(m atspiMsg, start, end int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return false, err
 			}
 			return sel(t, start, end), nil
 		},
-		"SetSelection": func(m msg, n, start, end int32) (bool, derr) {
-			t, _, err := text(m)
+		"SetSelection": func(m atspiMsg, n, start, end int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil || n != 0 {
 				return false, err
 			}
 			return sel(t, start, end), nil
 		},
-		"RemoveSelection": func(m msg, n int32) (bool, derr) {
-			t, _, err := text(m)
+		"RemoveSelection": func(m atspiMsg, n int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil || n != 0 {
 				return false, err
 			}
@@ -664,37 +710,47 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			return sel(t, c, c), nil
 		},
 	}
-	editable := map[string]any{
-		"SetTextContents": func(m msg, s string) (bool, derr) {
-			t, _, err := text(m)
+	return methods
+}
+
+// editableMethods are org.a11y.atspi.EditableText's: changing a text box's text.
+func (a *atspiApp) editableMethods() map[string]any {
+	methods := map[string]any{
+		"SetTextContents": func(m atspiMsg, s string) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return false, err
 			}
-			return setText(t, s), nil
+			return a.setText(t, s), nil
 		},
-		"InsertText": func(m msg, at int32, s string, n int32) (bool, derr) {
-			t, _, err := text(m)
+		"InsertText": func(m atspiMsg, at int32, s string, n int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return false, err
 			}
 			if rs := []rune(s); n >= 0 && int(n) < len(rs) {
 				s = string(rs[:n])
 			}
-			return setText(t, spliced(t.e.node.Value, int(at), int(at), s)), nil
+			return a.setText(t, spliced(t.e.node.Value, int(at), int(at), s)), nil
 		},
-		"DeleteText": func(m msg, start, end int32) (bool, derr) {
-			t, _, err := text(m)
+		"DeleteText": func(m atspiMsg, start, end int32) (bool, atspiErr) {
+			t, _, err := a.text(m)
 			if err != nil {
 				return false, err
 			}
-			return setText(t, spliced(t.e.node.Value, int(start), int(end), "")), nil
+			return a.setText(t, spliced(t.e.node.Value, int(start), int(end), "")), nil
 		},
-		"CopyText":  func(m msg, start, end int32) derr { return nil },
-		"CutText":   func(m msg, start, end int32) (bool, derr) { return false, nil },
-		"PasteText": func(m msg, at int32) (bool, derr) { return false, nil },
+		"CopyText":  func(m atspiMsg, start, end int32) atspiErr { return nil },
+		"CutText":   func(m atspiMsg, start, end int32) (bool, atspiErr) { return false, nil },
+		"PasteText": func(m atspiMsg, at int32) (bool, atspiErr) { return false, nil },
 	}
-	props := map[string]any{
-		"Get": func(m msg, iface, name string) (dbus.Variant, derr) {
+	return methods
+}
+
+// propertyMethods are org.freedesktop.DBus.Properties': the interfaces' properties, and setting the few that can be set.
+func (a *atspiApp) propertyMethods() map[string]any {
+	methods := map[string]any{
+		"Get": func(m atspiMsg, iface, name string) (dbus.Variant, atspiErr) {
 			all, err := a.props(m, iface)
 			if err != nil {
 				return dbus.Variant{}, err
@@ -705,8 +761,8 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 			}
 			return v, nil
 		},
-		"GetAll": func(m msg, iface string) (map[string]dbus.Variant, derr) { return a.props(m, iface) },
-		"Set": func(m msg, iface, name string, v dbus.Variant) derr {
+		"GetAll": func(m atspiMsg, iface string) (map[string]dbus.Variant, atspiErr) { return a.props(m, iface) },
+		"Set": func(m atspiMsg, iface, name string, v dbus.Variant) atspiErr {
 			t, err := a.target(m)
 			if err != nil {
 				return err
@@ -723,29 +779,16 @@ func (a *atspiApp) export(bus *dbus.Conn) error {
 				cur, _ := strconv.ParseFloat(t.e.node.Value, 64)
 				switch {
 				case want > cur:
-					act(t, render.AccessAction{Action: render.ActionIncrement})
+					a.act(t, render.AccessAction{Action: render.ActionIncrement})
 				case want < cur:
-					act(t, render.AccessAction{Action: render.ActionDecrement})
+					a.act(t, render.AccessAction{Action: render.ActionDecrement})
 				}
 				return nil
 			}
 			return dbus.NewError("org.freedesktop.DBus.Error.PropertyReadOnly", []any{name})
 		},
 	}
-	for iface, table := range map[string]map[string]any{
-		"org.a11y.atspi.Accessible": accessible, "org.a11y.atspi.Component": component,
-		"org.a11y.atspi.Action": action, "org.a11y.atspi.Text": textIface, "org.a11y.atspi.EditableText": editable,
-		"org.a11y.atspi.Application": {
-			"GetLocale":                func(m msg, kind uint32) (string, derr) { return "", nil },
-			"GetApplicationBusAddress": func(m msg) (string, derr) { return "", nil },
-		},
-		"org.freedesktop.DBus.Properties": props,
-	} {
-		if err := bus.ExportSubtreeMethodTable(table, atspiPrefix, iface); err != nil {
-			return err
-		}
-	}
-	return nil
+	return methods
 }
 
 // props are an interface's properties on the call's object.
