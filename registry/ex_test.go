@@ -12,11 +12,11 @@ import (
 func TestExNameRunsItsCommand(t *testing.T) {
 	r := registry.New()
 	var got []registry.Args
-	r.Command(registry.Command{ID: "debug.watch.add", Ex: "Watch", ExArg: "expression", Run: func(_ registry.Ctx, a registry.Args) error {
+	r.Command(registry.Command{ID: "debug.watch.add", Ex: []string{"Watch"}, ExArg: "expression", Run: func(_ registry.Ctx, a registry.Args) error {
 		got = append(got, a)
 		return nil
 	}})
-	r.Command(registry.Command{ID: "term.open", Ex: "term", Run: func(_ registry.Ctx, a registry.Args) error {
+	r.Command(registry.Command{ID: "term.open", Ex: []string{"term"}, Run: func(_ registry.Ctx, a registry.Args) error {
 		got = append(got, a)
 		return nil
 	}})
@@ -49,7 +49,7 @@ func TestExNameLoadsItsPlaceholder(t *testing.T) {
 	var ran string
 	r.Placeholder(registry.Placeholder{Name: "acme/stats", Commands: []string{"stats.open", "Stats"}, Provide: func() error {
 		provided++
-		r.Command(registry.Command{ID: "stats.open", Ex: "Stats", Run: func(_ registry.Ctx, a registry.Args) error {
+		r.Command(registry.Command{ID: "stats.open", Ex: []string{"Stats"}, Run: func(_ registry.Ctx, a registry.Args) error {
 			ran = a.String("args")
 			return nil
 		}})
@@ -60,5 +60,23 @@ func TestExNameLoadsItsPlaceholder(t *testing.T) {
 	}
 	if provided != 1 || ran != "7d" {
 		t.Errorf("provided %d times, ran with %q", provided, ran)
+	}
+}
+
+// A command can have several ex names, as vim's :ls, :buffers and :files all list the buffers.
+func TestEveryExNameRunsItsCommand(t *testing.T) {
+	r := registry.New()
+	n := 0
+	r.Command(registry.Command{ID: "buffers.pick", Ex: []string{"ls", "buffers", "files"}, Run: func(registry.Ctx, registry.Args) error {
+		n++
+		return nil
+	}})
+	for _, name := range []string{"ls", "buffers", "files"} {
+		if err := r.RunEx(context.Background(), name, "", false); err != nil {
+			t.Fatalf(":%s: %v", name, err)
+		}
+	}
+	if n != 3 {
+		t.Errorf("ran %d times, want 3", n)
 	}
 }

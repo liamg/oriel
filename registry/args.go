@@ -74,7 +74,7 @@ func CheckArgs(c Command, args Args) error {
 			if v != nil && !c.Args[i].Type.takes(v) {
 				return &ArgError{Command: c.ID, Key: k, Why: fmt.Sprintf("is %s, want %s", describe(v), cmpType(c.Args[i].Type))}
 			}
-		case more, k == "bang" && c.Ex != "", v == nil:
+		case more, k == "bang" && len(c.Ex) > 0, v == nil:
 		default:
 			return &ArgError{Command: c.ID, Key: k, Why: "isn't one it takes" + takesList(c.Args)}
 		}
@@ -89,7 +89,7 @@ func CheckArgs(c Command, args Args) error {
 
 // Takes says c takes the argument key: it names it, takes more, or declares nothing.
 func (c Command) Takes(key string) bool {
-	return c.Args == nil || key == "bang" && c.Ex != "" ||
+	return c.Args == nil || key == "bang" && len(c.Ex) > 0 ||
 		slices.ContainsFunc(c.Args, func(a Arg) bool { return a.Name == key || a.Name == MoreArgs.Name })
 }
 

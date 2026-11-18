@@ -105,7 +105,7 @@ func (x *Repos) commands() []registry.Command {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	dialogOpen := func(registry.Args) bool { return x.dialog != nil }
 	return []registry.Command{
-		{ID: "repos.open", Grant: registry.Open, Title: "The Repos page, at a {repo}", Available: has, Ex: "Repos", ExArg: "repo",
+		{ID: "repos.open", Grant: registry.Open, Title: "The Repos page, at a {repo}", Available: has, Ex: []string{"Repos"}, ExArg: "repo",
 			Args: []registry.Arg{registry.StringArg("repo")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(core.RepoID(a.String("repo"))) }},
 		{ID: "repos.new", Grant: registry.Open, Title: "Add a repo: the dialog, with {mode} (directory or clone), {path}, {url}, {parent} or {name} filled in, and {note} saying why over them; {then} is a list of {command, args} run with {repo} once it's added",
 			Available: has, Args: []registry.Arg{registry.StringArg("mode"), registry.StringArg("name"), registry.StringArg("note"), registry.StringArg("parent"), registry.StringArg("path"), registry.AnyArg("repo"), registry.AnyArg("then"), registry.StringArg("url")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.newDialog(a) }},

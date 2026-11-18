@@ -23,6 +23,12 @@ type Host interface {
 	Command(name, args string, bang bool) bool
 }
 
+// ExOwner is a Host that shows some ex commands in its own views (:ls its switcher, :copen its results panel):
+// OwnsEx says it runs name ahead of the engine's own command of that name.
+type ExOwner interface {
+	OwnsEx(name string) bool
+}
+
 // BeforeWriter is a Host that changes a buffer or its file's format just before the buffer is written: trims
 // trailing white space, sets the line endings (vim's BufWritePre). An error stops the write, and is its message.
 type BeforeWriter interface {

@@ -120,8 +120,10 @@ parts joined by `_`, never `-` (`term.host.open`, `review.pr.submit`, `term.last
 fixed set (`commandVerbs` in `app/commands_test.go`): `open`, `close` and `toggle`, not `show` and `hide`; `confirm`
 and `cancel` for a dialog's buttons. An ex command's name (`:Settings`, `:term`) is an alias of the command it runs,
 not an id of its own: the command's `Ex` (`registry.Command`), with what's typed after it handed over as the argument
-its `ExArg` names (`args` when it names none). `:Watch len(xs)` runs `debug.watch.add` with `expression`. A plugin
-gives its own the same way (`oriel.command(id, fn, { ex = "Hi" })`); one whose id is a single word (`Hello`) is
+its `ExArg` names (`args` when it names none). `:Watch len(xs)` runs `debug.watch.add` with `expression`. A command
+may have several (`buffers.pick`'s are `ls`, `buffers` and `files`), and one named by a vim command runs ahead of the
+engine's own, so the window shows `:ls` and `:copen` in its own views and a plugin can take them over. A plugin gives
+its own the same way (`oriel.command(id, fn, { ex = "Hi" })`, or a list); one whose id is a single word (`Hello`) is
 its own ex name.
 
 Two tests in `app` hold this. `TestCommandNamesFollowTheConvention` fails on a built-in command off the convention.

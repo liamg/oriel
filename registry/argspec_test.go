@@ -12,7 +12,7 @@ import (
 func TestRunChecksDeclaredArgs(t *testing.T) {
 	r := New()
 	var got Args
-	r.Command(Command{ID: "file.open", Ex: "Open", Args: []Arg{
+	r.Command(Command{ID: "file.open", Ex: []string{"Open"}, Args: []Arg{
 		{Name: "path", Type: ArgString, Required: true},
 		{Name: "line", Type: ArgInt},
 		{Name: "split", Type: ArgBool},

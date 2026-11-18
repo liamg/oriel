@@ -75,7 +75,7 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 	remoteImages()
 	x.Add(h.Options().Watch(RemoteImagesOption, remoteImages))
 	x.Add(registry.DisposeFunc(func() { x.Pictures.SetRemote(true) }))
-	x.Add(h.Command(registry.Command{ID: "markdown.preview", Grant: registry.Open, Ex: "MarkdownPreview", Title: "Preview the markdown file in the focused window, or edit it again",
+	x.Add(h.Command(registry.Command{ID: "markdown.preview", Grant: registry.Open, Ex: []string{"MarkdownPreview"}, Title: "Preview the markdown file in the focused window, or edit it again",
 		Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "editor.presenter.open", registry.Args{"name": "markdown"})
 		}}))

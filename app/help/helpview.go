@@ -59,7 +59,7 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 		v.Add(h.HelpPage(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
 	for _, c := range []registry.Command{
-		{ID: "help.open", Grant: registry.Open, Title: "Open a help page: {id}, page#anchor, or the one on a {topic}", Ex: "help", ExArg: "topic", Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("topic")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "help.open", Grant: registry.Open, Title: "Open a help page: {id}, page#anchor, or the one on a {topic}", Ex: []string{"help"}, ExArg: "topic", Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("topic")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := a.String("id"); id != "" {
 				return v.show(id)
 			}

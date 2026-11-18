@@ -188,7 +188,7 @@ func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 func (s *Settings) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	return []registry.Command{
-		{ID: "settings.open", Grant: registry.Open, Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: "Settings", ExArg: "query",
+		{ID: "settings.open", Grant: registry.Open, Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: []string{"Settings"}, ExArg: "query",
 			Args: []registry.Arg{registry.AnyArg("query"), registry.AnyArg("section")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				if sec := str(a, "section"); sec != "" {
 					s.open, s.section, s.query = true, sec, str(a, "query")

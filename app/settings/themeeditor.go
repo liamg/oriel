@@ -131,7 +131,7 @@ func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 func (e *ThemeEditor) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return strings.TrimSpace(s) }
 	return []registry.Command{
-		{ID: "theme.edit", Grant: registry.Open, Title: "Open the theme editor; :Theme pick to pick from the window, :Theme {name} to switch", Ex: "Theme",
+		{ID: "theme.edit", Grant: registry.Open, Title: "Open the theme editor; :Theme pick to pick from the window, :Theme {name} to switch", Ex: []string{"Theme"},
 			Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				switch arg := str(a, "args"); arg {
 				case "":

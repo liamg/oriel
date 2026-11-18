@@ -215,7 +215,7 @@ func (x *Stats) commands() []registry.Command {
 			}
 			return x.setSplit(ctx, on)
 		}},
-		{ID: "usage.open", Grant: registry.Open, Title: "Open the Usage page: each provider's plan windows", Ex: "Usage", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
+		{ID: "usage.open", Grant: registry.Open, Title: "Open the Usage page: each provider's plan windows", Ex: []string{"Usage"}, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
 		{ID: "usage.refresh", Grant: registry.Open, Title: "Read every provider's plan windows again", Available: has, Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.refreshUsage(ctx)
 		}},
@@ -226,7 +226,7 @@ func (x *Stats) commands() []registry.Command {
 func (x *Stats) pageCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "stats.open", Grant: registry.Open, Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside); :Stats takes them as repo=api 7d session group=model",
-			Ex: "Stats", Args: []registry.Arg{registry.ListArg("account"), registry.StringArg("args"), registry.StringArg("group"), registry.ListArg("kind"), registry.ListArg("model"), registry.ListArg("origin"), registry.ListArg("provider"), registry.StringArg("range"), registry.ListArg("repo"), registry.ListArg("session")}, Run: func(ctx registry.Ctx, a registry.Args) error {
+			Ex: []string{"Stats"}, Args: []registry.Arg{registry.ListArg("account"), registry.StringArg("args"), registry.StringArg("group"), registry.ListArg("kind"), registry.ListArg("model"), registry.ListArg("origin"), registry.ListArg("provider"), registry.StringArg("range"), registry.ListArg("repo"), registry.ListArg("session")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				if line := a.String("args"); line != "" {
 					return x.ex(ctx, line)
 				}

@@ -101,22 +101,14 @@ func (h *editorHost) Quit() {
 	}
 }
 
+// OwnsEx says a command's Ex names name, so the window's own view of it runs rather than the engine's: :ls opens the
+// buffer picker, :copen the quickfix list, :messages the log.
+func (h *editorHost) OwnsEx(name string) bool {
+	return slices.ContainsFunc(h.x.h.Commands(), func(c registry.Command) bool { return slices.Contains(c.Ex, name) })
+}
+
 func (h *editorHost) Command(name, args string, bang bool) bool {
 	ctx := context.Background()
-	run := func(id string, a registry.Args) bool {
-		if err := h.x.h.Run(ctx, id, a); err != nil {
-			kit.NotifyError(h.x.h, "editor.command", err, true)
-		}
-		return true
-	}
-	switch name {
-	case "ls", "buffers", "files":
-		return run("buffers.pick", nil)
-	case "copen", "cwindow", "lopen", "lwindow":
-		return run("quickfix.open", nil)
-	case "messages":
-		return run("log.open", nil)
-	}
 	err := h.x.h.RunEx(ctx, name, args, bang)
 	if registry.IsNoCommand(err, name) { // a command whose id is the word: a plugin's :Hello
 		err = h.x.h.Run(ctx, name, registry.Args{"args": args, "bang": bang})

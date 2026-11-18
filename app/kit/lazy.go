@@ -14,9 +14,7 @@ func LazyOn(cmds []registry.Command, keys []registry.Keymap) plugin.Lazy {
 	for _, c := range cmds {
 		lz.Commands = append(lz.Commands, c.ID)
 		lz.Titles[c.ID] = c.Title
-		if c.Ex != "" {
-			lz.Commands = append(lz.Commands, c.Ex)
-		}
+		lz.Commands = append(lz.Commands, c.Ex...)
 	}
 	for _, k := range keys {
 		if k.Command != "" {

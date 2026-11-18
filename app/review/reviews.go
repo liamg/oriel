@@ -165,7 +165,7 @@ func (x *Reviews) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "reviews.open", Grant: registry.Open, Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: "Reviews", ExArg: "source", Args: []registry.Arg{registry.StringArg("source")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "reviews.open", Grant: registry.Open, Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: []string{"Reviews"}, ExArg: "source", Args: []registry.Arg{registry.StringArg("source")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("source"))
 		}},
 		{ID: "reviews.refresh", Grant: registry.Open, Title: "Ask every review source for the pull requests waiting on you again now", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {

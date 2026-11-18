@@ -95,7 +95,7 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 	if ok, err := e.fileCmd(name, args, bang); ok {
 		return err
 	}
-	if hostCommands[name] && e.host.Command(name, strings.TrimSpace(args), bang) {
+	if o, ok := e.host.(ExOwner); ok && o.OwnsEx(name) && e.host.Command(name, strings.TrimSpace(args), bang) {
 		return nil
 	}
 	switch name {
@@ -197,11 +197,6 @@ func (e *Engine) runCommand(v *view, r exRange, name, args string) error {
 	}
 	return errUnknownCommand.with(strings.TrimSpace(name + args))
 }
-
-// hostCommands are the ex commands the IDE shows in its own views when it has them: the buffer switcher, the
-// results panel and the notification history.
-var hostCommands = map[string]bool{"ls": true, "buffers": true, "files": true, "copen": true, "cwindow": true,
-	"lopen": true, "lwindow": true, "messages": true}
 
 // splitCommand splits a command line after its range into the command name and its arguments.
 func splitCommand(s string) (string, string) {
