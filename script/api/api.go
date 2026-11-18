@@ -239,7 +239,8 @@ func (a *APIs) anon(fn *script.Fn) string {
 	a.n++
 	id := fmt.Sprintf("lua.%d", a.n)
 	a.mu.Unlock()
-	a.own(a.Host.Command(registry.Command{ID: id, Title: "Lua function at " + fn.Source, Source: fn.Source,
+	// A function of the user's own config runs as them: no plugin binds or runs it.
+	a.own(a.Host.Command(registry.Command{ID: id, Title: "Lua function at " + fn.Source, Source: fn.Source, UserOnly: a.Plugin.Trusted(),
 		Run: func(_ registry.Ctx, args registry.Args) error {
 			_, err := a.VM.Call(fn, map[string]any(args))
 			return err

@@ -57,10 +57,31 @@ func syncPlugins(s *apptest.Scene, t *testing.T) {
 // lazyScene installs acme/hi from a path with lazy in its manifest, and a file to edit.
 func lazyScene(t *testing.T, lazy, init string) (*apptest.Scene, string) {
 	t.Helper()
-	dir := writePlugin(t, map[string]string{"oriel.toml": "id = \"acme/hi\"\nversion = \"1.0.0\"\nlazy = " + lazy + "\n", "init.lua": init})
+	return lazySceneAsking(t, lazy, "", init)
+}
+
+// lazySceneAsking is lazyScene with the plugin asking for permissions (a [permissions] table's lines), accepted as
+// the user would on its consent screen.
+func lazySceneAsking(t *testing.T, lazy, permissions, init string) (*apptest.Scene, string) {
+	t.Helper()
+	manifest := "id = \"acme/hi\"\nversion = \"1.0.0\"\nlazy = " + lazy + "\n"
+	if permissions != "" {
+		manifest += "[permissions]\n" + permissions + "\n"
+	}
+	dir := writePlugin(t, map[string]string{"oriel.toml": manifest, "init.lua": init})
 	s, settings := catalogScene(t, "")
 	rig.WriteFile(t, settings, "[ui]\ntheme = \"oriel\"\n\n[plugins]\n\"acme/hi\" = { path = \""+dir+"\" }\n")
 	syncPlugins(s, t)
+	if permissions != "" {
+		card, ok := s.InboxCard("plugins", "acme/hi")
+		if !ok || len(card.Actions) == 0 {
+			t.Fatalf("no consent card for acme/hi; notices: %v", noticeTexts(s.Store().State().Notifications))
+		}
+		s.Run(card.Actions[0].Command, card.Actions[0].Args)
+		s.Frame()
+		s.Run("plugins.consent.accept", nil)
+		s.Until("acme/hi accepted", func() bool { return catalogOf(s).State("acme/hi") == "waits for first use" })
+	}
 	if hiLoaded(s) {
 		t.Fatal("a lazy plugin loaded at start")
 	}
@@ -128,7 +149,7 @@ func TestLazyPluginLoadsOnItsEvent(t *testing.T) {
 
 // The same for a key.
 func TestLazyPluginLoadsOnItsKey(t *testing.T) {
-	s, file := lazyScene(t, `{ keys = ["<leader>H"] }`, `oriel.keymap.set({"n"}, "<leader>H", function() oriel.notify("key") end)`)
+	s, file := lazySceneAsking(t, `{ keys = ["<leader>H"] }`, "keymap = { why = \"its key\" }", `oriel.keymap.set({"n"}, "<leader>H", function() oriel.notify("key") end)`)
 	s.OpenFile(file)
 	pressKeys(s, t, " H")
 	if !hiLoaded(s) || noticed(s, "key") != 1 {

@@ -329,7 +329,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Keymap{a: a}
 		vm.Bind("keymap", map[string]script.GoFunc{
 			"set": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
+				if err := a.check("keymap"); err != nil {
 					return nil, err
 				}
 				return nil, x.Set(c.Strings(0), c.String(1), c.Any(2), c.Table(3), c.Where())

@@ -23,7 +23,7 @@ A contribution is given as its spec table: { name, run = fn, order, … } (oriel
 - `oriel.log(msg, lvl)` (`ui`): Write to Oriel's log: level is debug, info, warn or error.
 - `oriel.notify(msg, lvl)` (`ui`): Tell the user something, through the one path every notice takes: level is info, warn, error or question (it waits in the inbox until dismissed).
 - `oriel.now()` (`ui`): The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.
-- `oriel.on(event, opts?, fn)` (`ui`): Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
+- `oriel.on(event, opts?, fn)` (`ui`): Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it; vetoing, rewriting or deciding needs the gate capability. opts: pattern (a glob over the event's file), priority, desc.
 - `oriel.placeholder(first, spec?, fn?)` (`ui`): Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now. Takes its spec too: { name, commands, keys, …, run = fn }.
 - `oriel.read(path)` (capability by target): A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 - `oriel.run(id, args?)` (`ui`): Run a command by its id, with arguments. A command that does what a capability guards needs that capability: running a program (a terminal, the tests, the debugger) exec, for that program; committing, staging, pushing or raising a pull request git; saving or editing buffers and files editor.write; pasting clipboard; answering an agent's ask gate; starting or stopping a session session.control; prompting an agent agent.prompt. A command its args run after it ({then}) needs what that one needs. One that changes who may do what (installing plugins or accepting their consent, settings, secrets, code hosts, updates, running Lua as your config) is yours alone: a plugin can't run it.
@@ -92,7 +92,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.keymap
 
-- `oriel.keymap.set(modes, lhs, rhs, opts?)` (`ui`): Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
+- `oriel.keymap.set(modes, lhs, rhs, opts?)` (`keymap`): Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping). A plugin needs the keymap capability, and may bind only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.
 
 ## oriel.language
 

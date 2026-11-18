@@ -131,8 +131,8 @@ needs `exec` too.
 
 ## gate {#gate}
 
-`veto` and `decide` hooks: block commits and answer permission prompts. **Critical**: answering permission prompts
-automatically is privilege escalation. While granted, the HUD says how many plugins can answer prompts.
+Veto, rewrite and decide hooks: block or change commits, pull requests and saves, and answer permission prompts.
+**Critical**: answering permission prompts automatically is privilege escalation. While granted, the HUD says how many plugins can answer prompts.
 
 ## session.control {#session-control}
 
@@ -147,6 +147,13 @@ yours alone. High risk.
 ## clipboard {#clipboard}
 
 Read the clipboard: pasting it (`editor.paste`) needs it. Medium risk.
+
+## keymap {#keymap}
+
+Bind keys (`oriel.keymap.set`). A key a plugin binds runs as you when pressed, so it may bind only what it could run
+itself: a command already registered, whose capability it holds (`term.open` needs `exec` too), never one that's
+yours alone (`lua.eval`, settings, secrets) or a function of your own config. Your own `init.lua` maps freely.
+Medium risk.
 
 ## settings {#settings}
 

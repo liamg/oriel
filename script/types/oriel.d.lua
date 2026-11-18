@@ -93,7 +93,7 @@ function oriel.notify(msg, lvl) end
 ---@return number
 function oriel.now() end
 
---- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
+--- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it; vetoing, rewriting or deciding needs the gate capability. opts: pattern (a glob over the event's file), priority, desc.
 ---@param event string
 ---@param opts? any
 ---@param fn any
@@ -283,7 +283,7 @@ function oriel.inbox.remove(id) end
 ---@class oriel.keymap
 oriel.keymap = {}
 
---- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
+--- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping). A plugin needs the keymap capability, and may bind only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.
 ---@param modes string|string[]
 ---@param lhs string
 ---@param rhs any
