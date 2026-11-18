@@ -93,7 +93,7 @@ function oriel.notify(msg, lvl) end
 ---@return number
 function oriel.now() end
 
---- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
+--- Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it; vetoing, rewriting or deciding needs the gate capability. opts: pattern (a glob over the event's file), priority, desc.
 ---@param event string
 ---@param opts? any
 ---@param fn any

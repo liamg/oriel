@@ -49,7 +49,7 @@ func (r Root) Run(id string, args script.Table) error {
 	return r.a.Host.Run(context.Background(), id, registry.Args(args))
 }
 
-//oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc." optional=opts
+//oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it; vetoing, rewriting or deciding needs the gate capability. opts: pattern (a glob over the event's file), priority, desc." optional=opts
 func (r Root) On(event string, opts any, fn any, where string) error {
 	o, f, err := optsAndFn(opts, fn)
 	if err != nil {
@@ -74,11 +74,14 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 		if err != nil {
 			return registry.Verdict{}, err
 		}
-		v := verdict(out, ev)
-		if v.Veto || v.Decided {
+		v, rewrite := verdict(out)
+		if v.Veto || v.Decided || v.Rewrote {
 			if err := r.a.Check(plugin.CapGate, event); err != nil {
-				return registry.Verdict{}, err
+				return registry.Verdict{}, err // the event goes on as it was
 			}
+		}
+		if v.Rewrote {
+			fromTable(rewrite, ev)
 		}
 		return v, nil
 	}
@@ -101,10 +104,11 @@ func (r Root) Placeholder(first any, spec script.Table, fn *script.Fn, where str
 	return nil
 }
 
-// verdict is what a Lua hook returned: false and a reason vetoes, a table rewrites the event, anything else decides.
-func verdict(out []any, ev any) registry.Verdict {
+// verdict is what a Lua hook returned: false and a reason vetoes, a table rewrites the event (the table it's
+// rewritten to, applied once the hook may), anything else decides.
+func verdict(out []any) (registry.Verdict, script.Table) {
 	if len(out) == 0 || out[0] == nil || out[0] == true {
-		return registry.Verdict{}
+		return registry.Verdict{}, nil
 	}
 	switch v := out[0].(type) {
 	case bool:
@@ -112,12 +116,11 @@ func verdict(out []any, ev any) registry.Verdict {
 		if len(out) > 1 {
 			reason, _ = out[1].(string)
 		}
-		return registry.Verdict{Veto: true, Reason: reason}
+		return registry.Verdict{Veto: true, Reason: reason}, nil
 	case script.Table:
-		fromTable(v, ev)
-		return registry.Verdict{Rewrote: true}
+		return registry.Verdict{Rewrote: true}, v
 	default:
-		return registry.Verdict{Decided: true, Value: v}
+		return registry.Verdict{Decided: true, Value: v}, nil
 	}
 }
 

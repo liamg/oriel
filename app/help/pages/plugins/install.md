@@ -131,8 +131,8 @@ needs `exec` too.
 
 ## gate {#gate}
 
-`veto` and `decide` hooks: block commits and answer permission prompts. **Critical**: answering permission prompts
-automatically is privilege escalation. While granted, the HUD says how many plugins can answer prompts.
+Veto, rewrite and decide hooks: block or change commits, pull requests and saves, and answer permission prompts.
+**Critical**: answering permission prompts automatically is privilege escalation. While granted, the HUD says how many plugins can answer prompts.
 
 ## session.control {#session-control}
 

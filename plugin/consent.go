@@ -182,7 +182,7 @@ func Explain(g Grant) string {
 	case CapAgentProvider:
 		return "be an agent sessions run: it's given your prompts and acts in your workspaces"
 	case CapGate:
-		return "veto and decide hooks: block commits and answer permission prompts automatically"
+		return "veto, decide and rewrite hooks: block or change commits, PRs and saves, and answer permission prompts automatically"
 	case CapSessionControl:
 		return "start, stop and resume sessions"
 	case CapGit:

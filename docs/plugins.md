@@ -133,7 +133,8 @@ end)
 
 `opts.pattern` is a glob over the event's file (`{ pattern = "*.go" }`), `opts.priority` orders hooks, and `desc` is
 what `:Hooks` shows. Returning nothing observes. Returning `false, reason` vetoes, a changed `ev` rewrites, any other
-value decides; vetoing or deciding needs the `gate` capability. Other events include `BufRead`, `BufWritePre`,
+value decides; vetoing, rewriting or deciding needs the `gate` capability (without it the hook errors and the event
+goes on as it was). Other events include `BufRead`, `BufWritePre`,
 `Commit`, `CommentSend` and `Permission` (see the sample `init.lua` in [configuration.md](configuration.md)).
 
 Hooks run on the UI loop: keep them quick. One that panics, or errors 3 times in a row, is turned off.

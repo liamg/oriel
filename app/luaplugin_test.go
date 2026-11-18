@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"github.com/liamg/oriel/app/ship"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -159,6 +160,30 @@ func TestPluginAPIsNeedWhatTheyHandOver(t *testing.T) {
 		if err := luaErr(t, vm, src); err != "" {
 			t.Errorf("granted, %s: %q", src, err)
 		}
+	}
+}
+
+// A plugin's hook rewriting an event needs gate, as vetoing or deciding one does: without it the hook errors and
+// the commit goes on with the message it had.
+func TestPluginRewritesNeedTheGateCapability(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/tidy", Guard: g})
+	if err := luaErr(t, vm, `oriel.on("ShipCommit", function(ev) ev.message = ev.message .. " (tidied)"; return ev end)`); err != "" {
+		t.Fatal(err)
+	}
+	commit := &ship.ShipCommit{Message: "fix: routes"}
+	if _, errs := s.Registry().Fire(context.Background(), "ShipCommit", "", commit); len(errs) == 0 ||
+		!strings.Contains(errs[0].Error(), `"gate" capability isn't declared`) {
+		t.Errorf("an ungranted rewrite: errors %v", errs)
+	}
+	if commit.Message != "fix: routes" {
+		t.Errorf("an ungranted hook rewrote the commit message to %q", commit.Message)
+	}
+	g.Grant("acme/tidy", []plugin.Grant{{Cap: plugin.CapGate}})
+	commit = &ship.ShipCommit{Message: "fix: routes"}
+	if _, errs := s.Registry().Fire(context.Background(), "ShipCommit", "", commit); len(errs) != 0 || commit.Message != "fix: routes (tidied)" {
+		t.Errorf("granted gate, the rewrite: %q, errors %v", commit.Message, errs)
 	}
 }
 
