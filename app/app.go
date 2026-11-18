@@ -64,9 +64,6 @@ type (
 	VoiceConfig = dictation.VoiceConfig
 )
 
-// OverviewView is the project overview, which a test hides: its temporary paths would change every run.
-const OverviewView = shell.OverviewView
-
 // Run opens a window and runs the app until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config) error {
 	return shell.Run(ctx, be, cfg.Window, cfg.builtins)

@@ -132,7 +132,7 @@ func (l *layoutPlugin) newPanes(h plugin.Host) panes.Panes {
 		case l.sh.heading.Load() != nil:
 			id = OpeningView
 		case l.sh.cfg.WorkDir != "":
-			id = OverviewView
+			id = kit.OverviewView
 		}
 		if v, ok := h.ViewByID(id); ok {
 			c.Column(id, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) { c.Node(v.Build(uireg.ViewCtx{})) })

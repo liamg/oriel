@@ -93,10 +93,10 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 			st.sel.file = files[0].Path
 			st.open[files[0].Path] = true
 		}
-		right := x.slotIDs(DiffRight, st.root)
-		if len(x.slotIDs(DiffSide, st.root)) > 0 {
+		right := x.slotIDs(kit.DiffRight, st.root)
+		if len(x.slotIDs(kit.DiffSide, st.root)) > 0 {
 			c.Column("side", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles), ScrollY: true}, func(c *ui.Ctx) {
-				x.slots(c, DiffSide, st.root, 230)
+				x.slots(c, kit.DiffSide, st.root, 230)
 			})
 		}
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
@@ -106,7 +106,7 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 		})
 		if len(right) > 0 {
 			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
-				x.slots(c, DiffRight, st.root, 360)
+				x.slots(c, kit.DiffRight, st.root, 360)
 			})
 		}
 	})
@@ -181,11 +181,11 @@ func (x *Diff) slotIDs(prefix, root string) []string {
 	return out
 }
 
-// slots draws the views registered under a prefix, each built for the diff's repo. DiffRight's share the column's
+// slots draws the views registered under a prefix, each built for the diff's repo. kit.DiffRight's share the column's
 // height, each scrolling what it holds.
 func (x *Diff) slots(c *ui.Ctx, prefix, root string, width float32) {
 	h := ui.Size{}
-	if prefix == DiffRight {
+	if prefix == kit.DiffRight {
 		h = ui.Flex(1)
 	}
 	for _, id := range x.slotIDs(prefix, root) {

@@ -29,8 +29,7 @@ import (
 // Plan mode's views: a plan doc rendered, with its threads in the margin, and the docs beside it with the
 // plan's source, projects and readiness.
 const (
-	PlanView     = "plan"
-	PlanDocsView = kit.PlanDocsView
+	PlanView = "plan"
 )
 
 var tPlanMark = theme.Declare("plan.mark", "amber")
@@ -123,8 +122,8 @@ func (x *Plan) views() map[string]uireg.View {
 		kit.OverlayPrefix + "start-work": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 			return &ui.Func{Key: "startwork", Fn: x.startWorkView}
 		}),
-		PlanView:     planView{x},
-		PlanDocsView: planDocsView{x},
+		PlanView:         planView{x},
+		kit.PlanDocsView: planDocsView{x},
 	}
 }
 
@@ -170,7 +169,7 @@ func (x *Plan) open(ctx context.Context, doc string) error {
 	for _, v := range x.h.Layout().Visible() {
 		shown[v.ID] = true
 	}
-	if !shown[PlanDocsView] {
+	if !shown[kit.PlanDocsView] {
 		if err := x.h.Run(ctx, "view.open", planDocsArgs()); err != nil {
 			return err
 		}
@@ -592,7 +591,7 @@ func (x *Plan) document(c *ui.Ctx, vc uireg.ViewCtx, se core.SessionState, st *p
 
 // planDocsArgs are view.open's args for the Plan docs panel: in the sidebar, alone and fixed.
 func planDocsArgs() registry.Args {
-	return kit.SidebarArgs("view.open", registry.Args{"id": PlanDocsView, "place": "dock", "edge": "left", "size": 260, "title": "Plan docs"})
+	return kit.SidebarArgs("view.open", registry.Args{"id": kit.PlanDocsView, "place": "dock", "edge": "left", "size": 260, "title": "Plan docs"})
 }
 
 // markdownTitle is src's first level-1 heading as the window's markdown service reads it.

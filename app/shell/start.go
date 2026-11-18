@@ -24,14 +24,11 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// StartView is what the main area shows with nothing open: no directory and no session.
-// OverviewView is what it shows with a directory or session open but no view in it. OpeningView is what it
+// StartView is what the main area shows with nothing open: no directory and no session. OpeningView is what it
 // shows while the window is about to open again on another directory or session.
 const (
-	StartView          = "app.start"
-	OverviewView       = kit.OverviewView
-	OpeningView        = "app.opening"
-	OverviewPanelsView = kit.OverviewPanelsView
+	StartView   = "app.start"
+	OpeningView = "app.opening"
 )
 
 var (

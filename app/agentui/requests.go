@@ -29,12 +29,9 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// The requests' views: the list, one request's conversation, and the summary at the right.
-const (
-	RequestsView = kit.RequestsView
-	RequestView  = kit.RequestView
-	SummaryView  = "requests-summary"
-)
+// SummaryView is the requests' summary at the right of the list and a request's conversation (kit.RequestsView,
+// kit.RequestView).
+const SummaryView = "requests-summary"
 
 // Their key modes: the list and the conversation, and the composer.
 const (
@@ -138,7 +135,7 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,
-		When: registry.MenuWhen{View: RequestView, Help: panes.HelpTab}, Command: "request.rename"}))
+		When: registry.MenuWhen{View: kit.RequestView, Help: panes.HelpTab}, Command: "request.rename"}))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
@@ -208,7 +205,7 @@ func (x *Requests) commands() []registry.Command {
 				}
 				st.sel, st.writing = t.ID, false
 				st.rename.Start(t.Heading())
-				return x.h.Run(ctx, "view.open", registry.Args{"id": RequestView, "place": "tab"})
+				return x.h.Run(ctx, "view.open", registry.Args{"id": kit.RequestView, "place": "tab"})
 			}},
 		{ID: "request.queued.edit", Grant: string(plugin.CapAgentPrompt), Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}, {urgent} interrupting the turn, {btw} asking a fork on the side instead; with no {body}, edit it in the composer",
 			Available: inFront, Args: []registry.Arg{registry.StringArg("body"), registry.BoolArg("btw"), registry.StringArg("comment"), registry.StringArg("id"), registry.StringArg("thread"), registry.BoolArg("urgent")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, false) }},
@@ -299,7 +296,7 @@ func (x *Requests) keymaps() []registry.Keymap {
 }
 
 func (x *Requests) views() map[string]uireg.View {
-	return map[string]uireg.View{RequestsView: requestsList{x}, RequestView: requestView{x}, SummaryView: summaryView{x}}
+	return map[string]uireg.View{kit.RequestsView: requestsList{x}, kit.RequestView: requestView{x}, SummaryView: summaryView{x}}
 }
 
 // front is the session in front.
@@ -414,11 +411,11 @@ func (x *Requests) move(d int) {
 // openRequest shows the request view in the main area.
 func (x *Requests) openRequest(ctx context.Context) error {
 	for _, v := range x.h.Layout().Visible() {
-		if v.ID == RequestView {
+		if v.ID == kit.RequestView {
 			return nil
 		}
 	}
-	return x.h.Run(ctx, "view.open", registry.Args{"id": RequestView, "place": "tab"})
+	return x.h.Run(ctx, "view.open", registry.Args{"id": kit.RequestView, "place": "tab"})
 }
 
 // newRequest starts writing a request that isn't a thread yet.
@@ -665,7 +662,7 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 
 // requestsArgs are view.toggle's args for the Requests panel, as the rail and its key run it.
 func requestsArgs() registry.Args {
-	return kit.SidebarArgs("view.toggle", registry.Args{"id": RequestsView, "place": "dock", "edge": "left", "title": "Requests"})
+	return kit.SidebarArgs("view.toggle", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "title": "Requests"})
 }
 
 // setThread sets a thread's status: resolved by default.
@@ -750,7 +747,7 @@ func (x *Requests) editQueued(_ registry.Ctx, a registry.Args, del bool) error {
 	st.sel, st.writing = t.ID, false
 	d := x.draftFor(st, t.ID)
 	*d = draft{text: t.Comments[i].Body, editing: r.Comment, compose: true, urgent: t.Urgent}
-	return x.h.Run(context.Background(), "view.open", registry.Args{"id": RequestView, "place": "tab"})
+	return x.h.Run(context.Background(), "view.open", registry.Args{"id": kit.RequestView, "place": "tab"})
 }
 
 // lastQueued is the newest comment of yours in t the agent hasn't had, or "".

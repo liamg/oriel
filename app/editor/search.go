@@ -29,13 +29,6 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// SearchView is project search: a PCRE2 query over the work dir's files, its
-// matches streamed in by file, and a replace that shows its diff (ReplaceView) before it writes anything.
-const (
-	SearchView  = kit.SearchView
-	ReplaceView = kit.ReplaceView
-)
-
 var (
 	tSearchMatch   = theme.DeclareOn("search.match", "alpha(accent, 25%)", "bg.surface")
 	tSearchRemoved = theme.Declare("search.removed", "error")
@@ -121,7 +114,7 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 				p.query = q
 			}
 			for _, v := range h.Layout().Visible() {
-				if v.ID == SearchView {
+				if v.ID == kit.SearchView {
 					return nil
 				}
 			}
@@ -158,8 +151,8 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		p.Add(h.Command(c))
 	}
-	p.Add(h.View(SearchView, searchView{p}))
-	p.Add(h.View(ReplaceView, replaceView{p}))
+	p.Add(h.View(kit.SearchView, searchView{p}))
+	p.Add(h.View(kit.ReplaceView, replaceView{p}))
 	p.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-S-f>", Command: "project.panel.toggle", Args: registry.Args{"name": "search"}, Desc: "Search the project"}))
 	return nil
 }
@@ -578,7 +571,7 @@ func (p *Search) showPlan(ctx registry.Ctx, q search.Query, repl string, plan []
 // show opens the diff of plan, which Apply makes.
 func (p *Search) show(ctx registry.Ctx, plan *editPlan) error {
 	p.plan = plan
-	return p.h.Run(ctx, "view.open", registry.Args{"id": ReplaceView, "place": "tab", "title": "Preview"})
+	return p.h.Run(ctx, "view.open", registry.Args{"id": kit.ReplaceView, "place": "tab", "title": "Preview"})
 }
 
 // apply makes the previewed replace: open buffers are changed in the buffer, as one undoable step each; other files
@@ -608,7 +601,7 @@ func (p *Search) apply(ctx registry.Ctx) error {
 		n += f.Count
 	}
 	p.plan = nil
-	p.h.Layout().Close(layoutRef(ReplaceView))
+	p.h.Layout().Close(layoutRef(kit.ReplaceView))
 	if plan.after != nil {
 		plan.after()
 	}
@@ -646,7 +639,7 @@ func (p *Search) buildPreview(c *ui.Ctx) {
 			}
 			if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: "files/search#replace"}) {
 				p.plan = nil
-				p.h.Layout().Close(layoutRef(ReplaceView))
+				p.h.Layout().Close(layoutRef(kit.ReplaceView))
 			}
 		})
 		c.Column("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 14, ScrollY: true}, func(c *ui.Ctx) {
