@@ -1,4 +1,5 @@
-package kit
+// Package imagex decodes the pictures Oriel shows: PNG, JPEG, GIF, WebP, BMP and ICO, and a PNG's pixel density.
+package imagex
 
 import (
 	"bytes"
@@ -17,18 +18,18 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
-// imageExts are the files DecodeImage decodes, by extension, and the format each is.
+// imageExts are the files Decode decodes, by extension, and the format each is.
 var imageExts = map[string]string{".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg", ".gif": "gif", ".webp": "webp", ".bmp": "bmp", ".ico": "ico"}
 
-// IsImage reports whether path is a picture by its extension: one DecodeImage decodes, or an SVG.
+// IsImage reports whether path is a picture by its extension: one Decode decodes, or an SVG.
 func IsImage(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))
 	_, ok := imageExts[ext]
 	return ok || ext == ".svg"
 }
 
-// DecodeImage decodes a PNG, JPEG, GIF, WebP, BMP or ICO image.
-func DecodeImage(b []byte) (image.Image, string, error) {
+// Decode decodes a PNG, JPEG, GIF, WebP, BMP or ICO image.
+func Decode(b []byte) (image.Image, string, error) {
 	if len(b) >= 6 && binary.LittleEndian.Uint16(b) == 0 && binary.LittleEndian.Uint16(b[2:]) == 1 {
 		img, err := decodeICO(b)
 		return img, "ico", err
@@ -89,9 +90,9 @@ func decodeICO(b []byte) (image.Image, error) {
 	return img, nil
 }
 
-// pngDensity is a PNG's pixels per point from its pHYs chunk: a whole number for 144 DPI and up, else 0. 72 and 96
+// PNGDensity is a PNG's pixels per point from its pHYs chunk: a whole number for 144 DPI and up, else 0. 72 and 96
 // DPI are both a screen's own pixels, so only a Retina-style density counts.
-func pngDensity(b []byte) float32 {
+func PNGDensity(b []byte) float32 {
 	const sig = 8
 	for i := sig; i+8 <= len(b); {
 		n, typ := int(binary.BigEndian.Uint32(b[i:])), string(b[i+4:i+8])

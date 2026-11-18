@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/imagex"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -67,7 +68,7 @@ var mediaKinds = map[string]string{".mp4": "video", ".mov": "video", ".webm": "v
 // isMedia reports whether the image plugin shows path: an image, a file of a kind that isn't text, or one whose start
 // holds a NUL byte.
 func isMedia(path string) bool {
-	if kit.IsImage(path) || mediaKinds[strings.ToLower(filepath.Ext(path))] != "" {
+	if imagex.IsImage(path) || mediaKinds[strings.ToLower(filepath.Ext(path))] != "" {
 		return true
 	}
 	f, err := os.Open(path)
@@ -106,7 +107,7 @@ func (x *Images) file(c *ui.Ctx, path string) *viewedFile {
 		return f
 	}
 	f.size = fi.Size()
-	if kit.IsImage(path) {
+	if imagex.IsImage(path) {
 		pc := kit.PicturesOf(c).File(path)
 		f.img, f.doc, f.format, f.err, f.loading = pc.Img, pc.Doc, pc.Format, pc.Err, pc.Loading
 	}
@@ -155,7 +156,7 @@ func (x *Images) card(c *ui.Ctx, path string, f *viewedFile) {
 	switch {
 	case errors.Is(f.err, fs.ErrNotExist):
 		why = "The file isn't there any more."
-	case f.err != nil && kit.IsImage(path):
+	case f.err != nil && imagex.IsImage(path):
 		why = "It can't be read as an image: " + f.err.Error()
 	case strings.Contains(kind, "video") || strings.Contains(kind, "audio"):
 		why = "Oriel doesn't play " + mediaKinds[strings.ToLower(filepath.Ext(path))] + "."

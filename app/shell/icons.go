@@ -5,6 +5,7 @@ import (
 	"image"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/imagex"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -50,7 +51,7 @@ func contributedIcon(r registry.Registry, pictures *kit.Pictures, name string, c
 		if img, ok := from.(image.Image); ok {
 			src = img
 		} else {
-			src, pc.Format, pc.Err = kit.DecodeImage(ic.Data)
+			src, pc.Format, pc.Err = imagex.Decode(ic.Data)
 		}
 		if pc.Err == nil {
 			pc.Img = tinted(src, col)
