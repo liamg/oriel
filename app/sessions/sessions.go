@@ -36,6 +36,8 @@ type Sessions struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	starts    atomic.Int64 // session.start's runs, naming each one's slow work
+	// startingWork are the sessions Start work is under way for, on the loop: their worktrees' move lands on the work.
+	startingWork map[core.SessionID]bool
 }
 
 // openedKey keeps the directory a session's kind's opening commands last ran on: they run again only on another.
@@ -44,7 +46,7 @@ const openedKey = "session.opened"
 func (x *Sessions) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessions"} }
 
 func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
-	x.h = h
+	x.h, x.startingWork = h, map[core.SessionID]bool{}
 	ctx, cancel := context.WithCancel(context.Background())
 	x.ctx, x.cancel = ctx, cancel
 	x.contributeKinds(h)
@@ -93,7 +95,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 			}
 		case core.ProjectsChanged:
 			if ev.ID == x.focused() {
-				h.Do(func() { x.follow(ev.ID) }) // its worktrees moved: Start work
+				h.Do(func() { x.landOnWork(ev.ID); x.follow(ev.ID) }) // its worktrees moved: Start work
 			}
 		case core.AgentChanged:
 			was := working[ev.ID]
@@ -182,7 +184,12 @@ func (x *Sessions) commands() []registry.Command {
 			Args:      []registry.Arg{registry.AnyArg("branches"), registry.AnyArg("clear"), registry.StringArg("effort"), registry.AnyArg("fresh"), registry.StringArg("id"), registry.StringArg("model"), registry.StringArg("network"), registry.AnyArg("sandbox")},
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.work.start", "Starting work on", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
-					return w.StartWork(ctx, startWorkReq(id, a))
+					h.Do(func() { x.startingWork[id] = true })
+					err := w.StartWork(ctx, startWorkReq(id, a))
+					if err != nil {
+						h.Do(func() { delete(x.startingWork, id) })
+					}
+					return err
 				})(ctx, a)
 			}},
 		{ID: "session.model.set", Grant: string(plugin.CapSessionControl), Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
@@ -290,6 +297,23 @@ func (x *Sessions) slowSession(command, doing string, fn func(context.Context, h
 		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: command + "." + string(id), Doing: doing + " " + x.label(id)},
 			func(ctx context.Context) (struct{}, error) { return struct{}{}, fn(ctx, w, id) }, nil)
 	})
+}
+
+// landOnWork opens, once the window is on session id's worktrees, what Start work hands over: the Requests panel and
+// the plan's request, which the agent was just told to build it in. Only a move Start work made lands there.
+func (x *Sessions) landOnWork(id core.SessionID) {
+	if !x.startingWork[id] {
+		return
+	}
+	delete(x.startingWork, id)
+	calls := []kit.Call{{Command: "view.open", Args: kit.SidebarArgs("view.open",
+		registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "title": "Requests"})}}
+	if se, ok := x.h.Session(id); ok {
+		if t := se.Snapshot().PlanThread(); t != "" {
+			calls = append(calls, kit.Call{Command: "request.open", Args: registry.Args{"thread": string(t)}})
+		}
+	}
+	kit.After(x.h, id, calls)
 }
 
 // label is how session id is named to the user.

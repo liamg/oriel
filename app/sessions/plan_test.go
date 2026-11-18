@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -280,4 +281,42 @@ func TestAResolvedLineTakesANewThreadInTheWindow(t *testing.T) {
 
 	w.ClickText("Round each line in minor units, ties to even.")
 	w.Latest("a new thread on the line", func(f headless.Frame) bool { return strings.Contains(f.Text(), "New thread") })
+}
+
+// Start work lands on the work: the window on the worktree, the Requests panel showing, and the plan's request (the
+// one the agent was just told to build it in) open, as a new session opens on its first request.
+func TestStartWorkOpensItsRequest(t *testing.T) {
+	w, a, lw := planSession(t)
+	se := planNow(t, w)
+	if err := os.WriteFile(filepath.Join(se.Dir, "PLAN.md"), []byte(planMarkdown), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a.Emit(agent.TurnStart{})
+	rig.Answered(t, w.Store, a)
+	a.Emit(agent.TurnEnd{})
+	w.WaitText("Ready: every")
+
+	w.ClickText("Start work")
+	w.WaitText("START WORK")
+	w.TypeKeys("<D-CR>")
+	w.WaitGone("START WORK")
+	lw.Fake.WaitStarted(t)
+	st := w.UntilState("work started", func(st core.State) bool {
+		s, _ := st.Session(apptest.Named(st, "rounding"))
+		return s != nil && s.Snapshot().Started
+	})
+	s, _ := st.Session(apptest.Named(st, "rounding"))
+	work := s.Snapshot()
+	p, _ := work.Primary()
+	w.WaitProject(p.Dir)
+	thread := work.PlanThread()
+	if thread == "" {
+		t.Fatal("the work has no request")
+	}
+	w.WaitFor("the Requests panel and the plan's request open", func() bool {
+		return kit.Showing(w.Host, kit.RequestsView, "") && kit.Showing(w.Host, kit.RequestView, "")
+	})
+	w.WaitFrame("the request's Start work comment on screen", func(s string) bool {
+		return apptest.HasAll(s, "REQUESTS", "Start work", p.Dir)
+	})
 }
