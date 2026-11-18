@@ -116,6 +116,12 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok })
 	a, _ := keyAsk(se)
+	// The ask comes after a while whatever git is doing; cancel once the signing program is running, so its stopping is
+	// what's checked.
+	waitfor.Poll(t, "the signing program running", func() bool {
+		b, err := os.ReadFile(pidAt)
+		return err == nil && strings.HasSuffix(string(b), "\n") // its whole pid written
+	})
 	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
