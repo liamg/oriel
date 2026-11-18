@@ -97,7 +97,7 @@ in front.
 
 So a plugin asks where the window is when it needs to know, never once as it starts: `Host.Here()` is the session
 and project in front, `kit.WindowDir` the directory, and the shell's `Parts.DirState` a state file kept for it; all
-are safe off the loop. What it keeps per directory it keeps by directory (a language server per root, a directory's
+are safe off the loop. What it keeps per directory it keeps by directory (a language server per root, until its session ends; a directory's
 breakpoints or saved terminal screens), so coming back finds it. One that must swap something as the window moves
 does it on `DirChanged` (`kit.OnDirChanged`; `oriel.on("DirChanged", fn)` in Lua), which fires once the window is on
 the new directory and before its layout comes back; a view opened from that hook is replaced by the layout, so open

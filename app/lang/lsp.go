@@ -52,10 +52,11 @@ type LSP struct {
 	m          *lsp.Manager
 	work       work.Work
 
-	mu       sync.Mutex
-	docs     map[string]*lspDoc // by path
-	statuses map[string]lsp.Status
-	gen      int // moves with each request the UI starts, so a late answer to an old one is dropped
+	mu          sync.Mutex
+	docs        map[string]*lspDoc          // by path
+	sessionDirs map[core.SessionID][]string // the directories of each session not ended, as last seen
+	statuses    map[string]lsp.Status
+	gen         int // moves with each request the UI starts, so a late answer to an old one is dropped
 
 	comp      completion
 	sig       *signature
@@ -181,10 +182,18 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "When language servers start: project, as soon as a project with their root files (go.mod, Cargo.toml…) opens, so the first request doesn't wait; or file, when one of their files first opens."}))
 	h.Do(x.warm) // once every plugin has contributed its servers
-	// The servers started for the directory the window left keep running, for its buffers still open; finding the
-	// new one's reads the disk, so it's off the loop.
+	// The servers started for the directory the window left keep running, for its buffers still open and so coming
+	// back finds them; finding the new one's reads the disk, so it's off the loop.
 	x.Add(kit.OnDirChanged(h, "language servers for the directory", func(kit.DirChanged) {
 		x.work.Go(func(context.Context) { x.warm() })
+	}))
+	// A session that ends (archived or deleted) takes its directories' servers with it.
+	x.sessionDirs = liveSessionDirs(h.State())
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
+		switch ev.(type) {
+		case core.SessionOpened, core.SessionSynced, core.ProjectsChanged, core.SessionArchived, core.SessionClosed:
+			x.sessionsChanged(h.State())
+		}
 	}))
 	x.Add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows}))
 	x.Add(h.Picker(x.callsSource()))
