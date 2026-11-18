@@ -73,10 +73,10 @@ func (x *Secrets) Activate(_ context.Context, h plugin.Host) error {
 func (x *Secrets) commands() []registry.Command {
 	open := func(a registry.Args) bool { return x.dlg != nil }
 	return []registry.Command{
-		{ID: "secrets.set", UserOnly: true, Title: "Set a secret plugins name: {name}, its value typed into a dialog", Ex: "Secret", ExArg: "name", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "secrets.set", UserOnly: true, Title: "Set a secret plugins name: {name}, its value typed into a dialog", Ex: "Secret", ExArg: "name", Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.open(a.String("name"))
 		}},
-		{ID: "secrets.delete", UserOnly: true, Title: "Delete a secret: {name}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "secrets.delete", UserOnly: true, Title: "Delete a secret: {name}", Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			name := a.String("name")
 			if name == "" {
 				return fmt.Errorf("secrets.delete needs a name")
@@ -84,7 +84,7 @@ func (x *Secrets) commands() []registry.Command {
 			return x.h.Secrets().SetSecret(name, "")
 		}},
 		{ID: "secrets.dialog.save", UserOnly: true, Title: "Save the secret the dialog holds", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { x.save(); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.save(); return nil }},
 	}
 }
 

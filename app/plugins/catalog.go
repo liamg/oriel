@@ -254,12 +254,12 @@ func (x *Catalog) commands() []registry.Command {
 	h := x.h
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return v }
 	return []registry.Command{
-		{ID: "plugins.sync", UserOnly: true, Title: "Install and load what [plugins] lists now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "plugins.sync", UserOnly: true, Title: "Install and load what [plugins] lists now", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.kick()
 			return nil
 		}},
 		{ID: "plugins.install", UserOnly: true, Title: "Install {id}: one line in [plugins] at {scope} (user by default), a {version} range or a {git} or {path} source",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.AnyArg("git"), registry.AnyArg("id"), registry.AnyArg("path"), registry.AnyArg("scope"), registry.AnyArg("version")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				var v any = cmp.Or(str(a, "version"), "*")
 				switch {
 				case str(a, "git") != "":
@@ -271,24 +271,24 @@ func (x *Catalog) commands() []registry.Command {
 					"scope": cmp.Or(str(a, "scope"), "user")})
 			}},
 		{ID: "plugins.uninstall", UserOnly: true, Title: "Uninstall {id}: its line leaves [plugins] at {scope} (user by default)",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.AnyArg("id"), registry.AnyArg("scope")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				return h.Run(context.Background(), "settings.reset", registry.Args{"name": PluginsOption, "key": str(a, "id"),
 					"scope": cmp.Or(str(a, "scope"), "user")})
 			}},
-		{ID: "plugins.review", Grant: registry.Open, Title: "Open the consent screen for {id}, which waits for it", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.review", Grant: registry.Open, Title: "Open the consent screen for {id}, which waits for it", Args: []registry.Arg{registry.AnyArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.review(str(a, "id"))
 		}},
-		{ID: "plugins.accept", UserOnly: true, Title: "Record consent to the plugin waiting in {dir}, and load it", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.accept", UserOnly: true, Title: "Record consent to the plugin waiting in {dir}, and load it", Args: []registry.Arg{registry.AnyArg("dir")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.accept(str(a, "dir"))
 		}},
-		{ID: "plugins.update", UserOnly: true, Title: "Update {id} to the newest version its range allows", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.update", UserOnly: true, Title: "Update {id} to the newest version its range allows", Args: []registry.Arg{registry.AnyArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			x.mu.Lock()
 			x.updates[str(a, "id")] = true
 			x.mu.Unlock()
 			x.kick()
 			return nil
 		}},
-		{ID: "plugins.refresh", Grant: registry.Open, Title: "Fetch the plugin registries' indexes now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "plugins.refresh", Grant: registry.Open, Title: "Fetch the plugin registries' indexes now", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.work.Go(x.refresh)
 			return nil
 		}},

@@ -92,13 +92,13 @@ func (x *Prompts) section(c *ui.Ctx) {
 func (x *Prompts) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "prompts.open", Grant: registry.Open, Title: "Open the Prompts page, at a prompt by {id}: style.code, pack.work, part.drafts…", Ex: "Prompts", ExArg: "id",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(a.String("id")) }},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(a.String("id")) }},
 		{ID: "prompts.set", Grant: string(plugin.CapAgentPrompt), Title: "Save your version of a prompt: {id}, {text}; empty text or the default goes back to the default",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.set(x.target(a), a.String("text")) }},
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("text")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.set(x.target(a), a.String("text")) }},
 		{ID: "prompts.reset", Grant: string(plugin.CapAgentPrompt), Title: "Put a prompt back to its default: {id}, the selected one by default",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.set(x.target(a), "") }},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.set(x.target(a), "") }},
 		{ID: "prompts.save", Grant: string(plugin.CapAgentPrompt), Title: "Save the Prompts page's text for the selected prompt", Available: func(registry.Args) bool { return x.open },
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := x.target(a)
 				d, ok := x.drafts[id]
 				if !ok {
@@ -107,7 +107,7 @@ func (x *Prompts) commands() []registry.Command {
 				return x.set(id, d)
 			}},
 		{ID: "prompts.edit", Grant: registry.Open, Title: "Edit a prompt's file in the editor: {id}, the selected one by default; made from the default the first time",
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.edit(ctx, x.target(a)) }},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.edit(ctx, x.target(a)) }},
 	}
 }
 

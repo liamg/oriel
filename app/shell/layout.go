@@ -203,7 +203,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 		return ok || held
 	}
 	return []registry.Command{
-		{ID: "view.open", Grant: registry.Open, Title: "Open a view: {id, instance, place, edge, side, size, beside, title, project}; alone, in a dock, closes what was there; fixed, it can't be dragged away", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.open", Grant: registry.Open, Title: "Open a view: {id, instance, place, edge, side, size, beside, title, project}; alone, in a dock, closes what was there; fixed, it can't be dragged away", Available: viewRegistered, Args: []registry.Arg{registry.BoolArg("alone"), registry.StringArg("beside"), registry.StringArg("edge"), registry.BoolArg("fixed"), registry.StringArg("id"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("project"), registry.StringArg("side"), registry.FloatArg("size"), registry.StringArg("title")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			id := a.String("id")
 			if _, ok := viewFor(h, id); !ok {
 				return fmt.Errorf("no view %q", id)
@@ -221,7 +221,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			return l.root.Open(layout.ViewRef{ID: id, Instance: a.String("instance"), Title: a.String("title"), Project: a.String("project")}, place, o)
 		}},
 		{ID: "view.toggle", Grant: registry.Open, Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.BoolArg("alone"), registry.StringArg("beside"), registry.StringArg("edge"), registry.BoolArg("fixed"), registry.StringArg("id"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("project"), registry.StringArg("side"), registry.FloatArg("size"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				if s, ok := l.matching(a, l.root.Visible()); ok {
 					if uireg.PlaceShown(h) {
 						// Open under a page: asked for, it's revealed, not put away.
@@ -233,7 +233,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 				}
 				return h.Run(ctx, "view.open", a)
 			}},
-		{ID: "view.close", Grant: registry.Open, Title: "Close a view: the focused one, or {id, instance, project}; with {docked}, only one outside the main area or a page on Home", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "view.close", Grant: registry.Open, Title: "Close a view: the focused one, or {id, instance, project}; with {docked}, only one outside the main area or a page on Home", Args: []registry.Arg{registry.BoolArg("docked"), registry.StringArg("id"), registry.StringArg("instance"), registry.StringArg("project")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := a.String("id"); id != "" {
 				if v, ok := l.matching(a, l.root.All()); ok {
 					l.root.Close(v)
@@ -250,44 +250,44 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			l.root.Close(v)
 			return nil
 		}},
-		{ID: "layout.move", Grant: registry.Open, Title: "Move the focused view", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.move", Grant: registry.Open, Title: "Move the focused view", Args: []registry.Arg{registry.StringArg("edge"), registry.StringArg("place"), registry.StringArg("side")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			v, err := focused()
 			if err != nil {
 				return err
 			}
 			return l.root.Move(v, layout.Placement(a.String("place")), layout.Opts{Edge: layout.Edge(a.String("edge")), Side: layout.Side(a.String("side"))})
 		}},
-		{ID: "layout.zoom", Grant: registry.Open, Title: "Zoom the focused view (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "layout.zoom", Grant: registry.Open, Title: "Zoom the focused view (toggle)", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			v, err := focused()
 			if err == nil {
 				l.root.ToggleZoom(v)
 			}
 			return err
 		}},
-		{ID: "layout.focus", Grant: registry.Open, Title: "Focus the view in a direction", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.focus", Grant: registry.Open, Title: "Focus the view in a direction", Args: []registry.Arg{registry.StringArg("dir")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			l.root.FocusDir(layout.Dir(a.String("dir")), l.rects)
 			return nil
 		}},
-		{ID: "layout.dock.toggle", Grant: registry.Open, Title: "Toggle a dock", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.dock.toggle", Grant: registry.Open, Title: "Toggle a dock", Args: []registry.Arg{registry.StringArg("edge")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			l.root.ToggleDock(layout.Edge(a.String("edge")))
 			return nil
 		}},
-		{ID: "layout.equalize", Grant: registry.Open, Title: "Even out the splits", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "layout.equalize", Grant: registry.Open, Title: "Even out the splits", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			l.root.Equalize()
 			return nil
 		}},
-		{ID: "layout.save", Grant: registry.Open, Title: "Save the layout by name", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.save", Grant: registry.Open, Title: "Save the layout by name", Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			l.snaps[a.String("name")] = l.root.Save()
 			return nil
 		}},
-		{ID: "layout.load", Grant: registry.Open, Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "layout.load", Grant: registry.Open, Title: "Restore a saved layout", Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			s, ok := l.snaps[a.String("name")]
 			if !ok {
 				return fmt.Errorf("no layout %q", a.String("name"))
 			}
 			return l.root.Load(s)
 		}},
-		{ID: "layout.menu.open", Grant: registry.Open, Title: "Move the focused view…", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "layout.menu.open", Grant: registry.Open, Title: "Move the focused view…", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			l.menu, l.asked = !l.menu, false
 			return nil
 		}},

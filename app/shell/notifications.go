@@ -109,7 +109,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Log", "size": 360})
 	}
 	for _, c := range []registry.Command{
-		{ID: "log.open", Grant: registry.Open, Title: "Open the log at an entry, or set its {level} (:Log level debug)", Ex: "Log", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "log.open", Grant: registry.Open, Title: "Open the log at an entry, or set its {level} (:Log level debug)", Ex: "Log", Args: []registry.Arg{registry.StringArg("args"), registry.StringArg("level"), registry.AnyArg("seq"), registry.StringArg("severity")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			lv := a.String("level")
 			if f := strings.Fields(a.String("args")); len(f) == 2 && f[0] == "level" {
 				lv = f[1]
@@ -124,18 +124,18 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			n.sh.cfg.Logs.Level.Set(l)
 			return nil
 		}},
-		{ID: "log.copy", Grant: registry.Open, Title: "Copy the open log entry, or what the log shows", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "log.copy", Grant: registry.Open, Title: "Copy the open log entry, or what the log shows", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			kit.CopyText(n.h, n.panel.copyText())
 			return nil
 		}},
-		{ID: "log.report.copy", Grant: registry.Open, Title: "Copy a report for a bug", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "log.report.copy", Grant: registry.Open, Title: "Copy a report for a bug", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			kit.CopyText(n.h, n.sh.report(""))
 			return nil
 		}},
-		{ID: "events.open", Grant: registry.Open, Title: "Show the live core event stream", Ex: "Events", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "events.open", Grant: registry.Open, Title: "Show the live core event stream", Ex: "Events", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": "events", "place": "dock", "edge": "bottom", "title": "Events"})
 		}},
-		{ID: "notice.dismiss", Grant: registry.Open, Title: "Dismiss a notice's toast, by {seq} or every one with {id}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "notice.dismiss", Grant: registry.Open, Title: "Dismiss a notice's toast, by {seq} or every one with {id}", Args: []registry.Arg{registry.StringArg("id"), registry.AnyArg("seq")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			seq, ok := argSeq(a)
 			if id := a.String("id"); !ok && id != "" {
 				h.Dismiss(id)
@@ -151,7 +151,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return fmt.Errorf("no notification %d", seq)
 		}},
-		{ID: "contribution.enable", UserOnly: true, Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "contribution.enable", UserOnly: true, Title: "Turn a contribution that was turned off back on", Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("kind")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			kind, id := a.String("kind"), a.String("id")
 			h.TurnOn(kind, id)
 			h.Notify(core.Notice{ID: "turned-on." + kind + "." + id, Severity: core.SevInfo, Source: "core", Text: fmt.Sprintf("%s %s is back on", kind, id)})

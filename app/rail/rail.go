@@ -214,6 +214,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
 		{ID: "project.open", Grant: registry.Open, Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
 			Available: func(a registry.Args) bool { _, ok := r.target(a); return ok },
+			Args:      []registry.Arg{registry.AnyArg("index"), registry.StringArg("project")},
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				p, ok := r.target(a)
 				if !ok {
@@ -226,7 +227,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				_, ok := r.target(registry.Args{"project": a.String("project")})
 				return ok
 			},
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.IntArg("index"), registry.StringArg("project")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				w := kit.ProjectsHere(h)
 				p, ok := w.Project(a.String("project"))
 				if !ok || w.Session == nil {
@@ -239,6 +240,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 			}},
 		{ID: "project.fold", Grant: registry.Open, Title: "Fold the open project's panels away in the sidebar, or unfold them: {folded}; with neither, switch",
 			Available: func(registry.Args) bool { w := kit.ProjectsHere(h); return w.Session != nil && w.Many() },
+			Args:      []registry.Arg{registry.AnyArg("folded")},
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				w := kit.ProjectsHere(h)
 				if w.Session == nil {
@@ -255,7 +257,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				e, ok := r.entry(a.String("name"))
 				return ok && h.Available(e.Command, e.ArgsFor(r.scopeOf(a)))
 			},
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("project")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				e, ok := r.entry(a.String("name"))
 				if !ok {
 					return fmt.Errorf("no project entry %q", a.String("name"))
@@ -263,7 +265,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				return r.run(ctx, e, r.scopeOf(a))
 			}},
 		{ID: "sidebar.form.set", Grant: registry.Open, Title: "Make this window's sidebar {form}: wide or narrow; with neither, switch",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("form")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				f := a.String("form")
 				if f == "" {
 					f = map[string]string{"wide": "narrow", "narrow": "wide"}[r.formNow(kit.ProjectsHere(h))]

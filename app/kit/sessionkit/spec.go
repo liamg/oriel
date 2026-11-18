@@ -40,6 +40,15 @@ var specText = []struct {
 	{"backend", func(s *core.SessionSpec) *string { return &s.Sandbox.Backend }},
 }
 
+// StartArgs are the args SpecFrom reads, as a command that takes a session spec declares them, then more.
+func StartArgs(more ...registry.Arg) []registry.Arg {
+	out := []registry.Arg{registry.StringArg("kind"), registry.BoolArg("sandbox"), registry.BoolArg("custom_image"), registry.ListArg("repos")}
+	for _, t := range specText {
+		out = append(out, registry.StringArg(t.key))
+	}
+	return append(out, more...)
+}
+
 // SpecFrom is a session spec from session.start's args.
 func SpecFrom(a registry.Args) core.SessionSpec {
 	s := core.SessionSpec{Kind: core.Kind(a.String("kind")),

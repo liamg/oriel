@@ -52,19 +52,19 @@ func (o *uiOptions) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ui"
 
 func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range []registry.Command{
-		{ID: "ui.focus.next", Grant: registry.Open, Title: "Move keyboard focus to the next control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, 1) }},
-		{ID: "ui.focus.prev", Grant: registry.Open, Title: "Move keyboard focus to the previous control", Run: func(registry.Ctx, registry.Args) error { return o.focus(h, -1) }},
+		{ID: "ui.focus.next", Grant: registry.Open, Title: "Move keyboard focus to the next control", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return o.focus(h, 1) }},
+		{ID: "ui.focus.prev", Grant: registry.Open, Title: "Move keyboard focus to the previous control", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return o.focus(h, -1) }},
 	} {
 		o.Add(h.Command(c))
 	}
 	for _, c := range []registry.Command{
-		{ID: "ui.drag", Grant: registry.Open, Title: "Pick up what's focused to drag it, or drop what's held on it", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "ui.drag", Grant: registry.Open, Title: "Pick up what's focused to drag it, or drop what's held on it", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if u := h.UI(); u != nil {
 				u.DragKey()
 			}
 			return nil
 		}},
-		{ID: "ui.drag.cancel", Grant: registry.Open, Title: "Put down what's being dragged", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "ui.drag.cancel", Grant: registry.Open, Title: "Put down what's being dragged", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if u := h.UI(); u != nil {
 				u.CancelDrag()
 			}
@@ -101,9 +101,9 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "ui.zoom.in", Grant: registry.Open, Title: "Make the UI bigger", Run: step(1)},
-		{ID: "ui.zoom.out", Grant: registry.Open, Title: "Make the UI smaller", Run: step(-1)},
-		{ID: "ui.zoom.reset", Grant: registry.Open, Title: "Put the UI back to its size", Run: step(0)},
+		{ID: "ui.zoom.in", Grant: registry.Open, Title: "Make the UI bigger", Args: registry.NoArgs, Run: step(1)},
+		{ID: "ui.zoom.out", Grant: registry.Open, Title: "Make the UI smaller", Args: registry.NoArgs, Run: step(-1)},
+		{ID: "ui.zoom.reset", Grant: registry.Open, Title: "Put the UI back to its size", Args: registry.NoArgs, Run: step(0)},
 	} {
 		o.Add(h.Command(c))
 	}

@@ -231,7 +231,7 @@ func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "quit", Fn: x.drainView}
 	})))
 	x.Add(h.Command(registry.Command{ID: "app.quit", UserOnly: true, Title: "Quit Oriel, handing its agents over",
-		Run: func(registry.Ctx, registry.Args) error {
+		Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if q, ok := services.QuitOf(h); ok {
 				q.Quit()
 			}
@@ -239,6 +239,7 @@ func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 		}}))
 	x.Add(h.Command(registry.Command{ID: "app.quit.confirm", UserOnly: true, Title: "Quit now, not waiting for the agents' turns",
 		Available: func(registry.Args) bool { return x.draining.Load() != nil },
+		Args:      registry.NoArgs,
 		Run: func(registry.Ctx, registry.Args) error {
 			if r := x.draining.Load(); r != nil {
 				r.goNow()

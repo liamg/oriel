@@ -15,7 +15,7 @@ import (
 func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
 	x.Add(h.Command(registry.Command{ID: "session.quick.start", Grant: string(plugin.CapSessionControl),
 		Title:     "Quick session: a work session on the defaults New session's Start uses, with no repos and no prompt",
-		Available: has, Run: func(registry.Ctx, registry.Args) error { x.quick(); return nil }}))
+		Available: has, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.quick(); return nil }}))
 	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-N>", Command: "session.quick.start", Desc: "Quick Session"}))
 	x.Add(h.Contribute(uireg.StartEntry{Name: "session.quick.start", Icon: "agent", Title: "Quick Session",
 		Desc: "A work session on your defaults, no repos and no questions", Command: "session.quick.start", Order: 15}))

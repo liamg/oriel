@@ -43,12 +43,12 @@ func (x *About) Manifest() plugin.Manifest { return plugin.Manifest{ID: "about"}
 func (x *About) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	for _, c := range []registry.Command{
-		{ID: "about.toggle", Grant: registry.Open, Title: "Show the About card under the logo, or put it away", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "about.toggle", Grant: registry.Open, Title: "Show the About card under the logo, or put it away", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.open = !x.open
 			return nil
 		}},
-		{ID: "about.close", Grant: registry.Open, Title: "Put the About card away", Run: func(registry.Ctx, registry.Args) error { x.open = false; return nil }},
-		{ID: "about.website.open", Grant: registry.Open, Title: "Open Oriel's website in the browser", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "about.close", Grant: registry.Open, Title: "Put the About card away", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.open = false; return nil }},
+		{ID: "about.website.open", Grant: registry.Open, Title: "Open Oriel's website in the browser", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			return kit.OpenURL(x.h, RepoURL)
 		}},
 	} {

@@ -111,14 +111,14 @@ func (x *Catalog) pageCommands(h plugin.Host) {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "plugins.open", Grant: registry.Open, Title: "Open the Plugins page at a {tab}: installed, updates or registry", Ex: "Plugins", ExArg: "tab", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.open", Grant: registry.Open, Title: "Open the Plugins page at a {tab}: installed, updates or registry", Ex: "Plugins", ExArg: "tab", Args: []registry.Arg{registry.StringArg("tab")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			open(a.String("tab"))
 			return nil
 		}},
-		{ID: "plugins.disable", UserOnly: true, Title: "Turn off {id}, a plugin bundled with Oriel", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "plugins.disable", UserOnly: true, Title: "Turn off {id}, a plugin bundled with Oriel", Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.turnBundled(ctx, a.String("id"), false)
 		}},
-		{ID: "plugins.enable", UserOnly: true, Title: "Turn {id}, a plugin bundled with Oriel, back on", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "plugins.enable", UserOnly: true, Title: "Turn {id}, a plugin bundled with Oriel, back on", Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.turnBundled(ctx, a.String("id"), true)
 		}},
 	} {

@@ -133,9 +133,9 @@ func (x *Sessions) commands() []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "session.start", Grant: string(plugin.CapSessionControl), Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} opens its tab behind the one in front; {then} is a list of {command, args} run once the window is on it",
-			Available: has, Run: x.startCommand},
+			Available: has, Args: sessionkit.StartArgs(registry.BoolArg("background"), registry.ListArg("then")), Run: x.startCommand},
 		{ID: "session.opens.run", Grant: string(plugin.CapSessionControl), Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) its first time in front, however it got there, when the window shows nothing in its main area",
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, ok := x.h.Session(core.SessionID(a.String("id")))
 				if !ok || len(x.h.Layout().Shown()) > 0 {
 					return nil
@@ -162,7 +162,7 @@ func (x *Sessions) commands() []registry.Command {
 				return errors.Join(errs...)
 			}},
 		{ID: "session.open", Grant: string(plugin.CapSessionControl), Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived; {then} is a list of {command, args} run once the window is on it",
-			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
+			Available: has, Args: []registry.Arg{registry.StringArg("id"), registry.AnyArg("then")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				then, err := kit.CallsOf(a["then"])
 				if err != nil {
 					return err
@@ -170,17 +170,18 @@ func (x *Sessions) commands() []registry.Command {
 				return x.open(ctx, core.SessionID(a.String("id")), then)
 			}},
 		{ID: "session.dir.open", Grant: string(plugin.CapSessionControl), Title: "Bring the direct session on {dir} to the front: its own, with no agent, started if it hasn't one", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.openDirect(ctx, a.String("dir")) }},
+			Args: []registry.Arg{registry.StringArg("dir")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.openDirect(ctx, a.String("dir")) }},
 		{ID: "session.resume", Grant: string(plugin.CapSessionControl), Title: "Resume a session: pick one", Available: has,
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
 		{ID: "session.stop", Grant: string(plugin.CapSessionControl), Title: "Stop the agent of {id}, or the session in front", Available: named,
-			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Grant: string(plugin.CapSessionControl), Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
-			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
 		{ID: "session.work.start", Grant: string(plugin.CapSessionControl), Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
+			Args:      []registry.Arg{registry.AnyArg("branches"), registry.AnyArg("clear"), registry.StringArg("effort"), registry.AnyArg("fresh"), registry.StringArg("id"), registry.StringArg("model"), registry.StringArg("network"), registry.AnyArg("sandbox")},
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.work.start", "Starting work on", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
@@ -188,28 +189,29 @@ func (x *Sessions) commands() []registry.Command {
 			}},
 		{ID: "session.model.set", Grant: string(plugin.CapSessionControl), Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
+			Args:      []registry.Arg{registry.StringArg("effort"), registry.StringArg("id"), registry.StringArg("model")},
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.model.set", "Switching the agent of", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.Configure(ctx, hostapi.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
 		{ID: "session.interrupt", Grant: string(plugin.CapSessionControl), Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
-			Run: x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
 		{ID: "session.rename", Grant: string(plugin.CapSessionControl), Title: "Rename {id}, or the session in front: {name}", Available: named,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("name")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.Rename(id, a.String("name"))
 				})(ctx, a)
 			}},
 		{ID: "session.repo.add", Grant: string(plugin.CapSessionControl), Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("repo")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.repo.add", "Adding "+a.String("repo")+" to", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
 				})(ctx, a)
 			}},
 		{ID: "project.add", Grant: string(plugin.CapSessionControl), Title: "Add a project to the session in front: pick a registered repo, or type a checkout's path",
 			When: core.AddProjects, Available: focused,
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "projects.add"})
 			}},
 	}
