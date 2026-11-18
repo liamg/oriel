@@ -11,7 +11,7 @@ import (
 
 // show writes a buffer with its cursor as "|" and a selection in "[" "]".
 func show(ed *edit.Editor) string {
-	s := ed.Buf().String()
+	s := ed.Buffer().Snapshot().String()
 	c := ed.Cursors()[0]
 	if r, ok := c.Selection(); ok {
 		return s[:r.Start] + "[" + s[r.Start:r.End] + "]" + s[r.End:]
@@ -87,8 +87,8 @@ func TestPlainClipboard(t *testing.T) {
 	ed.SetClipboard(c)
 	st = Engine{}.Attach(ed)
 	st.Key("<D-x>")
-	if c.s != "b\n" || ed.Buf().String() != "a\nc" {
-		t.Errorf("cut with no selection takes the line: %q, buffer %q", c.s, ed.Buf().String())
+	if c.s != "b\n" || ed.Buffer().Snapshot().String() != "a\nc" {
+		t.Errorf("cut with no selection takes the line: %q, buffer %q", c.s, ed.Buffer().Snapshot().String())
 	}
 	if r := st.Key("<D-s>"); r.Command != "editor.save" {
 		t.Errorf("⌘S = %+v", r)

@@ -231,4 +231,4 @@ func (e *Engine) Buffers() string {
 }
 
 // Buf is the current window's text.
-func (e *Engine) Buf() text.Snapshot { return e.ed.Buf() }
+func (e *Engine) Buf() text.Snapshot { return e.ed.Buffer().Snapshot() }

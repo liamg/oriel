@@ -273,14 +273,14 @@ func (e *Engine) adjustMarks(buf *buffer, ch text.Change) {
 
 // undo is u (redo false) and CTRL-R, putting the cursor where vim does.
 func (e *Engine) undo(redo bool) {
-	seq := e.ed.UndoSeq()
+	seq := e.ed.Buffer().UndoSeq()
 	var ch text.Change
 	var ok bool
 	if redo {
-		ch, ok = e.ed.Redo()
-		seq = e.ed.UndoSeq()
+		ch, ok = e.ed.Buffer().Redo()
+		seq = e.ed.Buffer().UndoSeq()
 	} else {
-		ch, ok = e.ed.Undo()
+		ch, ok = e.ed.Buffer().Undo()
 	}
 	if !ok {
 		if redo {
@@ -301,7 +301,7 @@ func (e *Engine) undo(redo bool) {
 // undoTime is g- and g+: move n steps back or forward in the order the changes were made, whatever branch
 // they are on. The cursor goes where the last undo or redo on the way leaves it.
 func (e *Engine) undoTime(forward bool, n int) {
-	seq := e.ed.UndoSeq()
+	seq := e.ed.Buffer().UndoSeq()
 	target := seq - n
 	if forward {
 		target = seq + n
@@ -315,7 +315,7 @@ func (e *Engine) undoTime(forward bool, n int) {
 	ancestors := map[int]bool{}
 	for s := seq; ; {
 		ancestors[s] = true
-		p, ok := e.ed.UndoParent(s)
+		p, ok := e.ed.Buffer().UndoParent(s)
 		if !ok {
 			break
 		}
@@ -325,14 +325,14 @@ func (e *Engine) undoTime(forward bool, n int) {
 	if ancestors[target] {
 		// Only undoing: the last step undone is the one just above target.
 		for s := seq; s != target; {
-			p, _ := e.ed.UndoParent(s)
+			p, _ := e.ed.Buffer().UndoParent(s)
 			if p == target {
 				last = s
 			}
 			s = p
 		}
 	}
-	ch, err := e.ed.UndoTo(target)
+	ch, err := e.ed.Buffer().UndoTo(target)
 	if err != nil {
 		return
 	}

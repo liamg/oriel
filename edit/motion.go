@@ -133,7 +133,7 @@ func byteCol(line []byte, want int) int {
 // leaving each cursor after its text.
 func (e *Editor) Replace(s string, g text.UndoGroup) error {
 	cs := e.Cursors()
-	snap := e.Buf()
+	snap := e.buf.Snapshot()
 	rs := make([]text.Replace, len(cs))
 	for i, c := range cs {
 		r, ok := c.Selection()

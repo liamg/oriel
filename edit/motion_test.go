@@ -13,7 +13,7 @@ func TestReplaceMultiCursor(t *testing.T) {
 	if err := e.Replace("XY", 0); err != nil {
 		t.Fatal(err)
 	}
-	if got := string(e.Buf().Bytes()); got != "XYhelloXY world" {
+	if got := string(e.Buffer().Snapshot().Bytes()); got != "XYhelloXY world" {
 		t.Fatalf("text %q", got)
 	}
 	got := e.Cursors()
@@ -29,7 +29,7 @@ func TestReplaceSelections(t *testing.T) {
 	if err := e.Replace("Z", 0); err != nil {
 		t.Fatal(err)
 	}
-	if got := string(e.Buf().Bytes()); got != "Z Z" {
+	if got := string(e.Buffer().Snapshot().Bytes()); got != "Z Z" {
 		t.Fatalf("text %q", got)
 	}
 	got := e.Cursors()

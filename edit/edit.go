@@ -79,10 +79,9 @@ func (e *Editor) Open(buf *text.Buffer) *Editor {
 	return &Editor{buf: buf, author: e.author, cursors: []Cursor{{}}, shared: e.shared}
 }
 
-// Buffer is the buffer the editor edits.
+// Buffer is the buffer the editor edits: its text, undo history, anchors and changes are the buffer's. What the
+// editor adds is its author on an edit (Do), its cursors and its registers.
 func (e *Editor) Buffer() *text.Buffer { return e.buf }
-
-func (e *Editor) Buf() text.Snapshot { return e.buf.Snapshot() }
 
 // Cursors returns the cursors, primary first.
 func (e *Editor) Cursors() []Cursor {
@@ -101,17 +100,6 @@ func (e *Editor) SetCursors(cs []Cursor) {
 func (e *Editor) Do(rs []text.Replace, g text.UndoGroup) (text.Change, error) {
 	return e.buf.Apply(text.Edit{Ranges: rs, Author: e.author, Group: g})
 }
-
-func (e *Editor) NewGroup() text.UndoGroup                       { return e.buf.NewGroup() }
-func (e *Editor) Undo() (text.Change, bool)                      { return e.buf.Undo() }
-func (e *Editor) Redo() (text.Change, bool)                      { return e.buf.Redo() }
-func (e *Editor) UndoSeq() int                                   { return e.buf.UndoSeq() }
-func (e *Editor) UndoParent(seq int) (int, bool)                 { return e.buf.UndoParent(seq) }
-func (e *Editor) UndoTo(seq int) (text.Change, error)            { return e.buf.UndoTo(seq) }
-func (e *Editor) Anchor(off int, b text.Bias) text.AnchorID      { return e.buf.Anchor(off, b) }
-func (e *Editor) Resolve(id text.AnchorID) (int, bool)           { return e.buf.Resolve(id) }
-func (e *Editor) Release(id text.AnchorID)                       { e.buf.Release(id) }
-func (e *Editor) Subscribe(fn func(text.Change)) (cancel func()) { return e.buf.Subscribe(fn) }
 
 // SetClipboard makes "+ and "* the system clipboard (and the primary selection); nil makes them ordinary registers.
 func (e *Editor) SetClipboard(c Clipboard) {

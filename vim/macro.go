@@ -100,7 +100,7 @@ func (e *Engine) playRegister(reg rune, count int) {
 func (e *Engine) feed(fn func()) {
 	if e.feeding == 0 {
 		e.failed = false
-		e.outerGroup = e.ed.NewGroup()
+		e.outerGroup = e.ed.Buffer().NewGroup()
 	}
 	e.feeding++
 	defer func() {
