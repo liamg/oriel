@@ -147,7 +147,7 @@ func (c DecorationCtx) RefreshAt(t time.Time) {
 
 // DecorationProvider gives the decorations of the lines in view. Decorate asks again only when the buffer's text,
 // the lines in view or where they're drawn change, when the provider says its decorations have
-// (Decorations.DecorationsChanged), or at a time it asked for (DecorationCtx.RefreshAt).
+// (Decorations.RefreshDecorations), or at a time it asked for (DecorationCtx.RefreshAt).
 type DecorationProvider interface {
 	Decorations(ctx DecorationCtx) []Decoration
 }
@@ -190,14 +190,14 @@ type decorState struct {
 
 func (r *reg) Decoration(id string, p DecorationProvider) registry.Disposable {
 	d := r.Contribute(NamedProvider{id, p})
-	r.DecorationsChanged(id)
+	r.RefreshDecorations(id)
 	return registry.DisposeFunc(func() {
 		d.Dispose()
-		r.DecorationsChanged(id)
+		r.RefreshDecorations(id)
 	})
 }
 
-func (r *reg) DecorationsChanged(id string) {
+func (r *reg) RefreshDecorations(id string) {
 	r.decor.mu.Lock()
 	defer r.decor.mu.Unlock()
 	r.decor.gen[id]++
@@ -277,7 +277,7 @@ func (r *reg) Decorate(ctx DecorationCtx) map[int][]Decoration {
 		}
 		var key any
 		if k, ok := prov.DecorationProvider.(DecorationKeyer); ok {
-			if err := registry.Call(func() error { key = k.DecorationKey(ctx); return nil }); err != nil {
+			if err := registry.RecoverAsError(func() error { key = k.DecorationKey(ctx); return nil }); err != nil {
 				r.TurnOff(registry.KindDecoration, prov.ID, err)
 				delete(asked, prov.ID)
 				continue
@@ -289,7 +289,7 @@ func (r *reg) Decorate(ctx DecorationCtx) map[int][]Decoration {
 			a = &decorAsked{buf: ctx.Buffer, version: version, top: ctx.Top, bot: ctx.Bottom, gen: gens[i], key: key}
 			pctx := ctx
 			pctx.refresh = &a.until
-			if err := registry.Call(func() error { a.ds = prov.Decorations(pctx); return nil }); err != nil {
+			if err := registry.RecoverAsError(func() error { a.ds = prov.Decorations(pctx); return nil }); err != nil {
 				r.TurnOff(registry.KindDecoration, prov.ID, err)
 				delete(asked, prov.ID)
 				continue

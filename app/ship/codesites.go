@@ -223,7 +223,7 @@ func (c *codeSites) Probe(ctx context.Context, hostname string) (registry.HostSi
 			undo = h.Allow(hostname, "", "probing "+hostname+" for "+h.Label())
 		}
 		var yes bool
-		if registry.Call(func() (err error) { yes, err = h.Setup.Probe(ctx, hostname); return err }) == nil && yes {
+		if registry.RecoverAsError(func() (err error) { yes, err = h.Setup.Probe(ctx, hostname); return err }) == nil && yes {
 			undo()
 			if err := c.Remember(hostname, h.Name, ""); err != nil {
 				c.h.Log().Warn("remembering a code host", "host", hostname, "err", err)

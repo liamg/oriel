@@ -201,7 +201,7 @@ func (x *AIReview) run(a registry.Args) error {
 	if x.asked[se.ID] {
 		return nil
 	}
-	req := hostapi.AIReviewReq{Session: se.ID, Provider: kit.Unless(opt("review.ai.provider"), "auto"), Model: kit.Unless(opt("review.ai.model"), "default"),
+	req := hostapi.AIReviewReq{Session: se.ID, Provider: kit.BlankIfDefault(opt("review.ai.provider"), "auto"), Model: kit.BlankIfDefault(opt("review.ai.model"), "default"),
 		Full: a.Bool("full")}
 	if b, err := os.ReadFile(x.promptPath()); err == nil {
 		p, err := packs.FromText(string(b), hostapi.AIReviewPack)

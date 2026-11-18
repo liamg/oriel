@@ -151,6 +151,6 @@ func (x *LSP) retry() {
 	x.installs.mu.Lock()
 	x.installs.told = nil
 	x.installs.mu.Unlock()
-	x.h.DecorationsChanged("lsp")
+	x.h.RefreshDecorations("lsp")
 	x.work.Go(func(context.Context) { x.warm() })
 }

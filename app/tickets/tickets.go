@@ -421,7 +421,7 @@ func (x *Tickets) trackerCall(tr registry.TicketTracker, what string, fn func(ct
 	x.work.Go(func(ctx context.Context) {
 		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		if err := registry.Call(func() error { return fn(ctx) }); err != nil {
+		if err := registry.RecoverAsError(func() error { return fn(ctx) }); err != nil {
 			x.h.Log().Warn("tickets: "+tr.Label()+" couldn't "+what, "err", err)
 		}
 	})

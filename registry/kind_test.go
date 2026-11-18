@@ -122,7 +122,7 @@ func TestCardChips(t *testing.T) {
 // A session is done when a SessionDone contribution says why; one that panics says nothing.
 func TestSessionDone(t *testing.T) {
 	r := registry.New()
-	if why := registry.Done(r, core.SessionState{ID: "a"}); why != "" {
+	if why := registry.DoneReason(r, core.SessionState{ID: "a"}); why != "" {
 		t.Errorf("with nothing to ask, done = %q", why)
 	}
 	r.Contribute(registry.SessionDone{Name: "boom", Done: func(core.SessionState) string { panic("no") }})
@@ -132,10 +132,10 @@ func TestSessionDone(t *testing.T) {
 		}
 		return ""
 	}})
-	if why := registry.Done(r, core.SessionState{ID: "a"}); why != "merged" {
+	if why := registry.DoneReason(r, core.SessionState{ID: "a"}); why != "merged" {
 		t.Errorf("done = %q", why)
 	}
-	if why := registry.Done(r, core.SessionState{ID: "b"}); why != "" {
+	if why := registry.DoneReason(r, core.SessionState{ID: "b"}); why != "" {
 		t.Errorf("b done = %q", why)
 	}
 }

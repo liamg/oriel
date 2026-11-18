@@ -54,14 +54,14 @@ func Explain(ctx context.Context, reg Registry, r ExplainRequest) (string, Expla
 		return "", Explainer{}, errors.New("nothing can explain yet: it needs an agent")
 	}
 	var md string
-	err := Call(func() (err error) { md, err = es[0].Explain(ctx, r); return err })
+	err := RecoverAsError(func() (err error) { md, err = es[0].Explain(ctx, r); return err })
 	return md, es[0], err
 }
 
 // WrittenBy is the explainer's byline, or "written by " and its label (or name).
 func (e Explainer) WrittenBy() string {
 	var s string
-	Try(func() {
+	IgnorePanic(func() {
 		switch {
 		case e.Byline != nil:
 			s = e.Byline()
@@ -69,6 +69,7 @@ func (e Explainer) WrittenBy() string {
 			s = "written by " + e.Label()
 		}
 	})
+
 	if s == "" {
 		s = "written by " + e.Name
 	}
@@ -121,7 +122,7 @@ type EditorWindow struct {
 // Shown is whether the action is on in w, and the icon and label it shows then.
 func (a EditorAction) Shown(w EditorWindow) (on bool, icon, label string) {
 	if a.On != nil {
-		Try(func() { on = a.On(w) })
+		IgnorePanic(func() { on = a.On(w) })
 	}
 	icon, label = a.Icon, a.Label
 	if on && a.IconOn != "" {
@@ -142,7 +143,7 @@ func EditorActions(r Contributions, path string) []EditorAction {
 	for _, a := range ContributionsOf[EditorAction](r) {
 		ok := a.When == nil
 		if !ok {
-			Try(func() { ok = a.When(path) })
+			IgnorePanic(func() { ok = a.When(path) })
 		}
 		if ok {
 			out = append(out, a)

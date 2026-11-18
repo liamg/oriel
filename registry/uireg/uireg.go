@@ -31,8 +31,8 @@ type Views interface {
 type Decorations interface {
 	Decoration(id string, p DecorationProvider) registry.Disposable
 	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
-	// DecorationsChanged says provider id's decorations have changed, so Decorate asks it again everywhere.
-	DecorationsChanged(id string)
+	// RefreshDecorations asks provider id for its decorations again everywhere: what they're made from changed.
+	RefreshDecorations(id string)
 	// Decorate is every provider's decorations of ctx's lines [Top, Bottom), by line, each line's in priority order:
 	// what a provider gave last, until its inputs change (DecorationProvider). One that panics is turned off.
 	Decorate(ctx DecorationCtx) map[int][]Decoration

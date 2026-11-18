@@ -175,7 +175,7 @@ func (x *Debug) inferred() (dap.LaunchConfig, bool) {
 	for _, s := range x.adapters() {
 		if s.Debugs(lang.Name) && s.Infer != nil {
 			var c dap.LaunchConfig
-			registry.Try(func() { c, ok = s.Infer(path) })
+			registry.IgnorePanic(func() { c, ok = s.Infer(path) })
 			if ok {
 				return c, true
 			}

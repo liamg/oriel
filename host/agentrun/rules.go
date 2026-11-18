@@ -78,8 +78,8 @@ func (r *allRules) edit(fn func([]core.Rule) ([]core.Rule, error)) error {
 // Rules are the rules for all sessions.
 func (x *Runner) Rules() []core.Rule { return x.rules.all() }
 
-// RulesChanged puts the rules for all sessions in the state.
-func (x *Runner) RulesChanged() {
+// EmitRules puts the rules for all sessions in the state.
+func (x *Runner) EmitRules() {
 	_ = x.st.Emit(core.RulesChanged{Rules: x.rules.all()})
 }
 
@@ -104,7 +104,7 @@ func (x *Runner) AddRule(kind core.AskKind, rule string) (err error) {
 	if err != nil {
 		return err
 	}
-	x.RulesChanged()
+	x.EmitRules()
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (x *Runner) RemoveRule(kind core.AskKind, rule string) (err error) {
 	if err != nil {
 		return err
 	}
-	x.RulesChanged()
+	x.EmitRules()
 	return nil
 }
 

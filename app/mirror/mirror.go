@@ -274,7 +274,7 @@ func (x *Mirror) resolveHost(id core.SessionID, t core.Thread) {
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
 		defer cancel()
-		err := registry.Call(func() error { return p.host.Resolve(ctx, p.repo, p.pr, rt, want) })
+		err := registry.RecoverAsError(func() error { return p.host.Resolve(ctx, p.repo, p.pr, rt, want) })
 		if err == nil {
 			err = c.MarkHostResolved(hostapi.ResolveReq{Session: id, Thread: t.ID, Resolved: want})
 		}
@@ -415,7 +415,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 			continue
 		}
 		var ts []registry.ReviewThread
-		if err := registry.Call(func() (err error) { ts, err = h.Threads(ctx, repo, *pr); return err }); err != nil {
+		if err := registry.RecoverAsError(func() (err error) { ts, err = h.Threads(ctx, repo, *pr); return err }); err != nil {
 			sites.Refuse(hs, err)
 			errs = append(errs, fmt.Errorf("%s: %w", p.Name, err))
 			continue
@@ -456,7 +456,7 @@ func (x *Mirror) branchPR(ctx context.Context, id core.SessionID, h registry.Cod
 		return c.pr, nil
 	}
 	var pr *registry.PR
-	if err := registry.Call(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err }); err != nil {
+	if err := registry.RecoverAsError(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err }); err != nil {
 		return nil, err
 	}
 	x.mu.Lock()
@@ -472,7 +472,7 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 		return nil, "", fmt.Errorf("%s can't look a pull request up", h.Label())
 	}
 	var d registry.ReviewDetail
-	if err := registry.Call(func() (err error) { d, err = h.Lookup(ctx, hs.Site, link); return err }); err != nil {
+	if err := registry.RecoverAsError(func() (err error) { d, err = h.Lookup(ctx, hs.Site, link); return err }); err != nil {
 		return nil, "", err
 	}
 	n := d.Request.Number
@@ -579,7 +579,7 @@ func (x *Mirror) forward(a registry.Args) error {
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		_, err := c.ForwardHost(ctx, hostapi.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID}, func(ctx context.Context, t core.Thread, body string) (posted string, err error) {
-			err = registry.Call(func() (err error) { posted, err = p.host.Reply(ctx, p.repo, p.pr, hostThread(t), body); return err })
+			err = registry.RecoverAsError(func() (err error) { posted, err = p.host.Reply(ctx, p.repo, p.pr, hostThread(t), body); return err })
 			return posted, err
 		})
 		cancel()

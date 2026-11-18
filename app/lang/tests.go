@@ -218,7 +218,7 @@ func (x *Tests) controlCommands() []registry.Command {
 		}},
 		{ID: "test.coverage.toggle", Grant: registry.Open, Title: "Show or hide the coverage gutter", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.showCov = !x.showCov
-			x.h.DecorationsChanged("tests")
+			x.h.RefreshDecorations("tests")
 			return nil
 		}},
 		{ID: "test.watch", Grant: string(plugin.CapExec), Title: "Re-run the tests a save affects (toggle)", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
@@ -644,7 +644,7 @@ func (x *Tests) start(req testrun.Request) error {
 		live.Scope = append(live.Scope, it.Key())
 	}
 	x.live = live
-	defer x.h.DecorationsChanged("tests")
+	defer x.h.RefreshDecorations("tests")
 	if req.By == testrun.ByUser {
 		r := req
 		x.last = &r
@@ -656,7 +656,7 @@ func (x *Tests) start(req testrun.Request) error {
 			live.Apply(e)
 		}
 		x.mu.Unlock()
-		x.h.DecorationsChanged("tests")
+		x.h.RefreshDecorations("tests")
 	})
 	if err != nil {
 		x.mu.Lock()
@@ -675,7 +675,7 @@ func (x *Tests) start(req testrun.Request) error {
 				x.exec, x.live = nil, nil
 			}
 			x.mu.Unlock()
-			x.h.DecorationsChanged("tests")
+			x.h.RefreshDecorations("tests")
 			if run == nil {
 				if err != nil {
 					kit.NotifyError(x.h, "tests.run", err, false)
@@ -694,7 +694,7 @@ func (x *Tests) start(req testrun.Request) error {
 				x.showCov = true
 			}
 			x.saveHistory()
-			x.h.DecorationsChanged("tests")
+			x.h.RefreshDecorations("tests")
 		})
 	})
 	return nil

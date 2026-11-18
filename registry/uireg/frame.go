@@ -69,7 +69,7 @@ func FrameFor(r registry.Contributions, w Window) (Frame, bool) {
 	for _, f := range fs {
 		ok := f.When == nil
 		if !ok {
-			registry.Try(func() { ok = f.When(w) })
+			registry.IgnorePanic(func() { ok = f.When(w) })
 		}
 		if ok {
 			return f, true

@@ -128,7 +128,7 @@ func RequestedReviews(ctx context.Context, s HostSite) ([]ReviewRequest, error) 
 		return nil, nil
 	}
 	var out []ReviewRequest
-	if err := Call(func() (err error) { out, err = s.Requested(ctx, s.Site); return err }); err != nil {
+	if err := RecoverAsError(func() (err error) { out, err = s.Requested(ctx, s.Site); return err }); err != nil {
 		return nil, err
 	}
 	for i := range out {
@@ -146,7 +146,7 @@ func LookupReview(ctx context.Context, s HostSite, url string) (ReviewDetail, er
 		return ReviewDetail{}, nil
 	}
 	var d ReviewDetail
-	err := Call(func() (err error) { d, err = s.Lookup(ctx, s.Site, strings.TrimSpace(url)); return err })
+	err := RecoverAsError(func() (err error) { d, err = s.Lookup(ctx, s.Site, strings.TrimSpace(url)); return err })
 	d.Request.Source = s.Label()
 	return d, err
 }
@@ -180,7 +180,7 @@ func SubmitReview(ctx context.Context, s HostSite, url string, r ReviewSubmit) e
 	if s.Submit == nil {
 		return fmt.Errorf("%s can't take a review from Oriel", s.Label())
 	}
-	return Call(func() error { return s.Submit(ctx, s.Site, strings.TrimSpace(url), r) })
+	return RecoverAsError(func() error { return s.Submit(ctx, s.Site, strings.TrimSpace(url), r) })
 }
 
 // ReactToPR reacts to url's pull request on s with emoji.
@@ -188,7 +188,7 @@ func ReactToPR(ctx context.Context, s HostSite, url, emoji string) error {
 	if s.React == nil {
 		return fmt.Errorf("%s can't take a reaction from Oriel", s.Label())
 	}
-	return Call(func() error { return s.React(ctx, s.Site, strings.TrimSpace(url), emoji) })
+	return RecoverAsError(func() error { return s.React(ctx, s.Site, strings.TrimSpace(url), emoji) })
 }
 
 // UnreactToPR takes back the user's emoji reaction to url's pull request on s.
@@ -196,13 +196,13 @@ func UnreactToPR(ctx context.Context, s HostSite, url, emoji string) error {
 	if s.Unreact == nil {
 		return fmt.Errorf("%s can't take a reaction back from Oriel", s.Label())
 	}
-	return Call(func() error { return s.Unreact(ctx, s.Site, strings.TrimSpace(url), emoji) })
+	return RecoverAsError(func() error { return s.Unreact(ctx, s.Site, strings.TrimSpace(url), emoji) })
 }
 
 // CheckoutFor asks s where url's pull request is fetched from.
 func CheckoutFor(ctx context.Context, s HostSite, url string) (PRCheckout, error) {
 	var c PRCheckout
-	err := Call(func() (err error) { c, err = s.Checkout(ctx, s.Site, strings.TrimSpace(url)); return err })
+	err := RecoverAsError(func() (err error) { c, err = s.Checkout(ctx, s.Site, strings.TrimSpace(url)); return err })
 	return c, err
 }
 

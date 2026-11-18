@@ -674,7 +674,7 @@ func (x *Debug) stateOf(file string, i int) (dap.BreakpointState, bool) {
 }
 
 // changed says the breakpoints or the session moved on: the decorations are made again, and a frame drawn.
-func (x *Debug) changed() { x.h.DecorationsChanged("debug") }
+func (x *Debug) changed() { x.h.RefreshDecorations("debug") }
 
 // decorationKey is what the session's part of the decorations is made from, as the adapter's answers land.
 func (x *Debug) decorationKey(ctx uireg.DecorationCtx) any {

@@ -174,7 +174,7 @@ func (g guardedView) Build(vc ViewCtx) ui.Node {
 		return offNode(g.id, err)
 	}
 	var n ui.Node
-	if err := registry.Call(func() error { n = g.v.Build(vc); return nil }); err != nil {
+	if err := registry.RecoverAsError(func() error { n = g.v.Build(vc); return nil }); err != nil {
 		g.r.TurnOff(registry.KindView, g.id, err)
 		return offNode(g.id, err)
 	}
@@ -213,7 +213,7 @@ func (g guardedView) Title(instance string) (title string) {
 	if !ok {
 		return ""
 	}
-	registry.Try(func() { title = t.Title(instance) })
+	registry.IgnorePanic(func() { title = t.Title(instance) })
 	return title
 }
 

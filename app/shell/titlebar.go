@@ -68,7 +68,7 @@ type sessionTabs struct {
 func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "session-tabs"} }
 
 func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
-	focus := func(id core.SessionID, then ...kit.Call) error { return kit.Focus(h, id, then) }
+	focus := func(id core.SessionID, then ...kit.Call) error { return kit.FrontSession(h, id, then) }
 	t.Add(h.Command(registry.Command{ID: "session.focus", Grant: registry.Open, Title: "Focus a session: {n} counting from 1, or {id}; {then} is a list of {command, args} run once the window is on it", Args: []registry.Arg{registry.AnyArg("id"), registry.IntArg("n"), registry.AnyArg("then")}, Run: func(_ registry.Ctx, a registry.Args) error {
 		if id, _ := a["id"].(string); id != "" {
 			then, err := kit.CallsOf(a["then"])

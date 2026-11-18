@@ -173,7 +173,7 @@ func (w *Host) StartWork(ctx context.Context, r hostapi.StartWorkReq) (err error
 	if err != nil {
 		return err
 	}
-	if err := worktree.CanStartWork(ctx, se, r.Branches); err != nil {
+	if err := worktree.CheckStartWork(ctx, se, r.Branches); err != nil {
 		return err
 	}
 	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {

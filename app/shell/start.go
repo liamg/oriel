@@ -562,7 +562,7 @@ func (s *start) links(c *ui.Ctx, from int, links []startRow) {
 // entryNote is an entry's figure, or "".
 func entryNote(e *uireg.StartEntry) (note string) {
 	if e.Note != nil {
-		registry.Try(func() { note = e.Note() })
+		registry.IgnorePanic(func() { note = e.Note() })
 	}
 	return note
 }

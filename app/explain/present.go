@@ -117,7 +117,7 @@ func (st *presentState) build(h plugin.Host, p kit.Presentation, snap text.Snaps
 		return b
 	}
 	ctx := &uireg.PresentCtx{Path: p.Path, Name: p.Name, Lines: strings.Split(strings.TrimSuffix(snap.String(), "\n"), "\n"), Width: width}
-	err := registry.Call(func() error { p.Presenter.Build(ctx); return nil })
+	err := registry.RecoverAsError(func() error { p.Presenter.Build(ctx); return nil })
 	if err != nil {
 		h.Report(registry.KindView, "presenter."+p.Presenter.Name, err)
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 // Decorate asks a provider again only when what its decorations are made from changes: the buffer's text, the lines
-// in view, its key, its word (DecorationsChanged), or a time it asked for.
+// in view, its key, its word (RefreshDecorations), or a time it asked for.
 func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 	r := uireg.New()
 	buf := text.New([]byte("a\nb\nc\n"), text.Author{})
@@ -46,10 +46,10 @@ func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 	step("an edit", 2)
 	key = 2
 	step("its key", 3)
-	r.DecorationsChanged("p")
+	r.RefreshDecorations("p")
 	step("its word", 4)
 	refresh = now.Add(time.Second)
-	r.DecorationsChanged("p")
+	r.RefreshDecorations("p")
 	step("asking for a refresh", 5)
 	if !woken.Equal(refresh) {
 		t.Errorf("woken for %v, want %v", woken, refresh)

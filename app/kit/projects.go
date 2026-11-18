@@ -194,7 +194,7 @@ func ViewFile(h plugin.Host, v layout.ViewRef) string {
 		return ""
 	}
 	file := ""
-	registry.Try(func() { file, _ = l.Location(v.Instance) })
+	registry.IgnorePanic(func() { file, _ = l.Location(v.Instance) })
 	return file
 }
 

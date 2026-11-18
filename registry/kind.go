@@ -107,7 +107,7 @@ func Can(r Contributions, k core.Kind, c Capability) bool {
 	sk, ok := KindOf(r, k)
 	ok2 := false
 	if ok {
-		Try(func() { ok2 = sk.Can(c) })
+		IgnorePanic(func() { ok2 = sk.Can(c) })
 	}
 	return ok2
 }
@@ -116,7 +116,7 @@ func Can(r Contributions, k core.Kind, c Capability) bool {
 func Label(r Contributions, se core.SessionState) string {
 	out := string(se.Kind)
 	if sk, ok := KindOf(r, se.Kind); ok {
-		Try(func() { out = sk.Label(se) })
+		IgnorePanic(func() { out = sk.Label(se) })
 	}
 	return out
 }
@@ -135,10 +135,10 @@ func (c CardChips) ContributionName() string { return c.Name }
 func Chips(r Contributions, se core.SessionState) []Chip {
 	var out []Chip
 	if sk, ok := KindOf(r, se.Kind); ok {
-		Try(func() { out = sk.Chips(se) })
+		IgnorePanic(func() { out = sk.Chips(se) })
 	}
 	for _, cc := range ContributionsOf[CardChips](r) {
-		Try(func() { out = append(out, cc.Chips(se)...) })
+		IgnorePanic(func() { out = append(out, cc.Chips(se)...) })
 	}
 	return out
 }
@@ -154,11 +154,11 @@ type SessionDone struct {
 func (SessionDone) ContributionKind() string   { return "session.done" }
 func (d SessionDone) ContributionName() string { return d.Name }
 
-// Done is why se looks finished, the first SessionDone contribution's answer that isn't ""; "" for not finished.
-func Done(r Contributions, se core.SessionState) string {
+// DoneReason is why se looks finished, the first SessionDone contribution's answer that isn't ""; "" for not finished.
+func DoneReason(r Contributions, se core.SessionState) string {
 	for _, d := range ContributionsOf[SessionDone](r) {
 		why := ""
-		Try(func() { why = d.Done(se) })
+		IgnorePanic(func() { why = d.Done(se) })
 		if why != "" {
 			return why
 		}
@@ -177,12 +177,12 @@ type SessionUnsaved struct {
 func (SessionUnsaved) ContributionKind() string   { return "session.unsaved" }
 func (u SessionUnsaved) ContributionName() string { return u.Name }
 
-// Unsaved is what ending se would lose, each SessionUnsaved contribution's answer that isn't "".
-func Unsaved(r Contributions, se core.SessionState) []string {
+// UnsavedReasons is what ending se would lose, each SessionUnsaved contribution's answer that isn't "".
+func UnsavedReasons(r Contributions, se core.SessionState) []string {
 	var out []string
 	for _, u := range ContributionsOf[SessionUnsaved](r) {
 		what := ""
-		Try(func() { what = u.Unsaved(se) })
+		IgnorePanic(func() { what = u.Unsaved(se) })
 		if what != "" {
 			out = append(out, what)
 		}
@@ -198,7 +198,7 @@ func FrontSession(r Contributions) (core.SessionState, bool) {
 	}
 	var se core.SessionState
 	ok = false
-	Try(func() { se, ok = s.Front() })
+	IgnorePanic(func() { se, ok = s.Front() })
 	return se, ok
 }
 
@@ -210,7 +210,7 @@ func SessionByID(r Contributions, id core.SessionID) (core.SessionState, bool) {
 	}
 	var se core.SessionState
 	ok = false
-	Try(func() { se, ok = s.Get(id) })
+	IgnorePanic(func() { se, ok = s.Get(id) })
 	return se, ok
 }
 

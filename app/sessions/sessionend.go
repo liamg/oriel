@@ -156,7 +156,7 @@ func (x *End) close(id core.SessionID) error {
 	s, _ := x.h.State().Session(id)
 	x.ask.closing = true
 	se := s.Snapshot()
-	if why := registry.Done(x.h, se); why != "" {
+	if why := registry.DoneReason(x.h, se); why != "" {
 		x.ask.done, x.ask.deleteBranch = why, true
 	}
 	if registry.Can(x.h, se.Kind, core.DeletesOnEnd) {
@@ -458,7 +458,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 
 // lossesOf is lossesOf for se, asking its kind and the plugins.
 func (x *End) lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch bool) []loss {
-	return lossesOf(se, ships, deleteBranch, registry.Can(x.h, se.Kind, core.Ships), registry.Unsaved(x.h, se))
+	return lossesOf(se, ships, deleteBranch, registry.Can(x.h, se.Kind, core.Ships), registry.UnsavedReasons(x.h, se))
 }
 
 // losses draws lossesOf, or that nothing is lost.

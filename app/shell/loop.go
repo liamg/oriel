@@ -570,7 +570,7 @@ func (l *loop) ready(k *registry.Keymap) bool {
 	for _, c := range l.reg.Commands() {
 		if c.ID == k.Command && c.Available != nil {
 			ok := true
-			registry.Try(func() { ok = c.Available(k.Args) })
+			registry.IgnorePanic(func() { ok = c.Available(k.Args) })
 			return ok
 		}
 	}

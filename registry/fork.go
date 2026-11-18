@@ -45,7 +45,7 @@ func Fork(ctx context.Context, reg Registry, r ForkRequest) (string, Forker, err
 		return "", Forker{}, errors.New("nothing can answer a side question yet: it needs an agent")
 	}
 	var out string
-	err := Call(func() (err error) { out, err = fs[0].Fork(ctx, r); return err })
+	err := RecoverAsError(func() (err error) { out, err = fs[0].Fork(ctx, r); return err })
 	return out, fs[0], err
 }
 
@@ -56,6 +56,6 @@ func ForkLabel(reg Contributions, session string) string {
 		return ""
 	}
 	var out string
-	Try(func() { out = fs[0].Label(session) })
+	IgnorePanic(func() { out = fs[0].Label(session) })
 	return out
 }

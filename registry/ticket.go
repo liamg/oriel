@@ -112,7 +112,7 @@ func TrackerFor(r Contributions, key string) (TicketTracker, bool) {
 // LookupTicket asks t for key's ticket, its Tracker filled in.
 func LookupTicket(ctx context.Context, t TicketTracker, key string) (Ticket, error) {
 	var tk Ticket
-	err := Call(func() (err error) { tk, err = t.Lookup(ctx, strings.TrimSpace(key)); return err })
+	err := RecoverAsError(func() (err error) { tk, err = t.Lookup(ctx, strings.TrimSpace(key)); return err })
 	if err != nil {
 		return Ticket{}, err
 	}
@@ -126,7 +126,7 @@ func AssignedTickets(ctx context.Context, t TicketTracker) ([]Ticket, error) {
 		return nil, nil
 	}
 	var out []Ticket
-	err := Call(func() (err error) { out, err = t.Assigned(ctx); return err })
+	err := RecoverAsError(func() (err error) { out, err = t.Assigned(ctx); return err })
 	if err != nil {
 		return nil, err
 	}

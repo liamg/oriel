@@ -97,10 +97,10 @@ func TestCapabilitiesGateCommands(t *testing.T) {
 func TestLuaSessionDone(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Lua(`L.session.done("incident", function(se) if se.name == "pager" then return "The page is resolved." end end)`)
-	if why := registry.Done(s.Registry(), core.SessionState{Name: "pager"}); why != "The page is resolved." {
+	if why := registry.DoneReason(s.Registry(), core.SessionState{Name: "pager"}); why != "The page is resolved." {
 		t.Errorf("done = %q", why)
 	}
-	if why := registry.Done(s.Registry(), core.SessionState{Name: "other"}); why != "" {
+	if why := registry.DoneReason(s.Registry(), core.SessionState{Name: "other"}); why != "" {
 		t.Errorf("another session's done = %q", why)
 	}
 }
@@ -120,10 +120,10 @@ func TestLuaPositionalContributionsTakeASpecTable(t *testing.T) {
 		s.Lua(line)
 	}
 	se := core.SessionState{Name: "pager"}
-	if why := registry.Done(s.Registry(), se); why != "The page is resolved." {
+	if why := registry.DoneReason(s.Registry(), se); why != "The page is resolved." {
 		t.Errorf("done = %q", why)
 	}
-	if what := registry.Unsaved(s.Registry(), se); len(what) != 1 || what[0] != "Your notes aren't saved." {
+	if what := registry.UnsavedReasons(s.Registry(), se); len(what) != 1 || what[0] != "Your notes aren't saved." {
 		t.Errorf("unsaved = %q", what)
 	}
 	if chips := registry.Chips(s.Registry(), se); len(chips) != 1 || chips[0].Text != "P1" {

@@ -237,7 +237,7 @@ func (o *Overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 		ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 		defer cancel()
 		var n ui.Node
-		err := registry.Call(func() (err error) { n, err = p.Compute(ctx, dir); return err })
+		err := registry.RecoverAsError(func() (err error) { n, err = p.Compute(ctx, dir); return err })
 		o.h.Do(func() { res.node, res.err, res.done = n, err, true })
 	})
 }

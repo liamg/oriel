@@ -38,7 +38,7 @@ func RunSlow[T any](ctx registry.Ctx, h Host, s Slow, work func(context.Context)
 		h.Do(func() {
 			release()
 			if err == nil && land != nil {
-				err = registry.Call(func() error { return land(bg, v) })
+				err = registry.RecoverAsError(func() error { return land(bg, v) })
 			}
 			switch {
 			case waited:
@@ -55,11 +55,12 @@ func RunSlow[T any](ctx registry.Ctx, h Host, s Slow, work func(context.Context)
 
 // guarded is fn with a panic turned into an error.
 func guarded[T any](fn func() (T, error)) (v T, err error) {
-	err = registry.Call(func() error {
+	err = registry.RecoverAsError(func() error {
 		var ferr error
 		v, ferr = fn()
 		return ferr
 	})
+
 	return v, err
 }
 

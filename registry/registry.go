@@ -546,7 +546,7 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	if err := CheckArgs(c, args); err != nil {
 		return err
 	}
-	err := Call(func() error { return c.Run(ctx, args) })
+	err := RecoverAsError(func() error { return c.Run(ctx, args) })
 	// Only this command's own panic is its fault: one wrapped from a command it ran was the inner one's.
 	if p, ok := err.(*Panic); ok {
 		r.faults.fault(Fault{Kind: KindCommand, ID: id, Source: c.Source, Err: p})
@@ -614,7 +614,7 @@ func (r *reg) Available(id string, args Args) bool {
 		return true
 	}
 	ok = false
-	Try(func() { ok = c.Available(args) })
+	IgnorePanic(func() { ok = c.Available(args) })
 	return ok
 }
 
@@ -675,7 +675,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	for _, e := range ContributionsOf[ExclusiveKeys](r) {
 		active := true
 		if e.Active != nil {
-			Try(func() { active = e.Active() })
+			IgnorePanic(func() { active = e.Active() })
 		}
 		if !active {
 			continue
@@ -708,7 +708,7 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 		if allow != nil {
 			lent := false
 			if f.km != nil && exact == nil {
-				Try(func() { lent = allow(*f.km) })
+				IgnorePanic(func() { lent = allow(*f.km) })
 			}
 			if lent {
 				exact = f.km

@@ -182,9 +182,9 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 	}
 	str := func(name string) string { s, _ := get(name).(string); return s }
 	// The settings' defaults are the sandbox's own, which it takes as nothing set: seatbelt warns only of what is.
-	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: kit.Unless(str("sandbox.image"), baseImage),
-		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: kit.Unless(str("sandbox.memory"), defaultMemory),
-		GoCacheMax: kit.Unless(str("sandbox.go_cache_max"), defaultGoCache), Loopback: str("sandbox.loopback")}
+	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: kit.BlankIfDefault(str("sandbox.image"), baseImage),
+		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: kit.BlankIfDefault(str("sandbox.memory"), defaultMemory),
+		GoCacheMax: kit.BlankIfDefault(str("sandbox.go_cache_max"), defaultGoCache), Loopback: str("sandbox.loopback")}
 	cfg.Egress = sandbox.EgressRules(list("sandbox.egress"))
 	cfg.Rules = sandbox.PolicyRules(list("sandbox.rules"))
 	cfg.Servers, _ = mcpServers(get("sandbox.servers"))
@@ -205,7 +205,7 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 		e, _ := egress.([]string)
 		r, _ := rules.([]string)
 		i, _ := image.(string)
-		i = kit.Unless(i, baseImage)
+		i = kit.BlankIfDefault(i, baseImage)
 		p, ok := sandbox.NewProjectConfig(e, r, i)
 		if !ok {
 			continue

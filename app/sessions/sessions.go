@@ -118,7 +118,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 // came to the front, run after that one's, would take the window away from it.
 func (x *Sessions) follow(id core.SessionID) {
 	if x.focused() == id {
-		kit.Follow(x.h, id)
+		kit.FollowSession(x.h, id)
 	}
 }
 
@@ -466,7 +466,7 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 		return "", err
 	}
 	if k, ok := registry.KindOf(x.h, spec.Kind); ok {
-		if err := registry.Call(func() error { return k.Prepare(ctx, &spec) }); err != nil {
+		if err := registry.RecoverAsError(func() error { return k.Prepare(ctx, &spec) }); err != nil {
 			return "", err
 		}
 	}
@@ -485,7 +485,7 @@ func (x *Sessions) front(id core.SessionID, background bool, then []kit.Call) er
 	if background {
 		return x.h.Apply(core.TabOpened{ID: id})
 	}
-	return kit.Focus(x.h, id, then)
+	return kit.FrontSession(x.h, id, then)
 }
 
 // open brings a session to the front, resuming it if it's stopped, and runs then once the window is on it: after it
@@ -495,7 +495,7 @@ func (x *Sessions) open(ctx context.Context, id core.SessionID, then []kit.Call)
 	if !ok {
 		return core.NoSession(id)
 	}
-	front := func() error { return kit.Focus(x.h, id, then) }
+	front := func() error { return kit.FrontSession(x.h, id, then) }
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {
 		w, err := x.host()
 		if err != nil {
@@ -576,10 +576,11 @@ func gatewayTools(h plugin.Host) []hostapi.GatewayTool {
 	for _, t := range registry.ContributionsOf[registry.GatewayTool](h) {
 		out = append(out, hostapi.GatewayTool{Name: t.Name, Desc: t.Desc, InputSchema: t.InputSchema, ReadOnly: t.ReadOnly,
 			Run: func(ctx context.Context, c hostapi.GatewayCall) (out string, err error) {
-				err = registry.Call(func() (err error) {
+				err = registry.RecoverAsError(func() (err error) {
 					out, err = t.Run(ctx, registry.GatewayCall{Session: string(c.Session), Project: c.Project, Dir: c.Dir, Env: c.Env, Args: c.Args})
 					return err
 				})
+
 				return out, err
 			}})
 	}

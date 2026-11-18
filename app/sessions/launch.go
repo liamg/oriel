@@ -54,7 +54,7 @@ func landAtLaunch(h plugin.Host) {
 			return
 		}
 		log.Info("launch: back on the session in front", "session", id, "was in front", id == st.Focus, "dir", kit.SessionDir(se.Snapshot()))
-		kit.Follow(h, id)
+		kit.FollowSession(h, id)
 	})
 }
 

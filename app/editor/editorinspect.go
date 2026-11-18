@@ -82,7 +82,7 @@ func (x *Editor) inspectDecorations() []registry.InspectRow {
 	var out []registry.InspectRow
 	for _, prov := range x.h.DecorationProviders() {
 		var ds []uireg.Decoration
-		if registry.Call(func() error { ds = prov.Decorations(ctx); return nil }) != nil {
+		if registry.RecoverAsError(func() error { ds = prov.Decorations(ctx); return nil }) != nil {
 			continue
 		}
 		for _, d := range ds {

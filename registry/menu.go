@@ -85,7 +85,7 @@ func MenuItems(r Contributions, at MenuCtx) []MenuItem {
 		if m.Trouble != nil {
 			var t Trouble
 			var ok bool
-			Try(func() { t, ok = m.Trouble(at) })
+			IgnorePanic(func() { t, ok = m.Trouble(at) })
 			if !ok {
 				continue
 			}

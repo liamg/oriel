@@ -46,7 +46,7 @@ type PRReviews interface {
 func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) map[string]string {
 	if s, ok := registry.ServiceOf[PRReviews](r, PRReviewsService); ok {
 		var out map[string]string
-		registry.Try(func() { out = s.Reviews(id, url) })
+		registry.IgnorePanic(func() { out = s.Reviews(id, url) })
 		return out
 	}
 	return nil

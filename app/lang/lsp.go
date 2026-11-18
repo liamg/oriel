@@ -97,7 +97,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "lsp", Busy: x.work.Busy}))
 	x.h = h
 	x.docs, x.statuses = map[string]*lspDoc{}, map[string]lsp.Status{}
-	x.typing = work.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.DecorationsChanged("lsp") }, Clock: h.Clock()}
+	x.typing = work.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.RefreshDecorations("lsp") }, Clock: h.Clock()}
 	for _, s := range lsp.Builtins() {
 		s.Source = "builtin:lsp"
 		x.Add(h.Contribute(reglang.LSPServer(s)))

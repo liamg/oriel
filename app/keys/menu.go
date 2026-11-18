@@ -133,7 +133,7 @@ func (m *Menus) build(c *ui.Ctx) {
 		}
 		e := widget.MenuItem{Label: it.Label, Shortcut: it.Key, Help: widget.ContextMenuHelp}
 		if it.Disabled != nil {
-			_ = registry.Call(func() error { e.Detail = it.Disabled(m.at); return nil })
+			_ = registry.RecoverAsError(func() error { e.Detail = it.Disabled(m.at); return nil })
 			e.Disabled = e.Detail != ""
 		}
 		entries = append(entries, e)
@@ -150,13 +150,14 @@ func (m *Menus) build(c *ui.Ctx) {
 
 func (m *Menus) run(it registry.MenuItem) {
 	at, ctx := m.at, context.Background()
-	err := registry.Call(func() error {
+	err := registry.RecoverAsError(func() error {
 		if it.Run != nil {
 			return it.Run(ctx, at)
 		}
 		where := registry.Args{"view": at.View, "instance": at.Instance, "file": at.File, "subject": at.Subject}
 		return m.h.Run(ctx, it.Command, registry.ContextArgs(m.h, it.Command, where, it.Args))
 	})
+
 	if err != nil {
 		kit.NotifyFailure(m.h, core.Notice{ID: "menu." + it.Name, Source: it.Source, AutoClear: true}, fmt.Errorf("%s: %w", it.Label, err))
 	}

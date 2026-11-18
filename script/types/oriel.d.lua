@@ -195,14 +195,14 @@ function oriel.coverage.set(owner, file, hits) end
 ---@class oriel.decorations
 oriel.decorations = {}
 
---- Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
----@param name string
-function oriel.decorations.changed(name) end
-
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }.
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.refresh(name). Takes its spec too: { name, run = fn }.
 ---@param spec any
 ---@param fn? function
 function oriel.decorations.provider(spec, fn) end
+
+--- Asks the decorations provider name for its decorations again: what they're made from moved.
+---@param name string
+function oriel.decorations.refresh(name) end
 
 ---@class oriel.diagnostics
 oriel.diagnostics = {}

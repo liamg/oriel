@@ -157,7 +157,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 			}
 			a.pr, a.methods, a.blockers = pr, methods.Allowed, blockers
 			want, _ := registry.Option[string](x.h.Options(), "ship.merge_method", registry.At{Project: sessionProjectDir(se, p), Session: string(se.ID)})
-			pick := methods.Pick(kit.Unless(want, "repo"))
+			pick := methods.Pick(kit.BlankIfDefault(want, "repo"))
 			a.method = max(0, slices.Index(a.methods, pick))
 			ev := &ShipMerge{Session: string(se.ID), Project: p, Number: pr.Number, URL: pr.URL, Title: pr.Title, Method: pick}
 			if v, _ := x.h.Fire(context.Background(), "ShipMerge", pr.URL, ev); v.Veto {
@@ -180,7 +180,7 @@ func (x *Ship) mergeRead(ctx context.Context, se core.SessionState, s shipRead, 
 	}
 	var methods registry.MergeMethods
 	if h.MergeMethods != nil {
-		if err := registry.Call(func() (err error) { methods, err = h.MergeMethods(ctx, repo, *pr); return err }); err != nil {
+		if err := registry.RecoverAsError(func() (err error) { methods, err = h.MergeMethods(ctx, repo, *pr); return err }); err != nil {
 			return registry.PR{}, methods, nil, err
 		}
 	}
@@ -189,7 +189,7 @@ func (x *Ship) mergeRead(ctx context.Context, se core.SessionState, s shipRead, 
 	}
 	var blockers []registry.MergeBlocker
 	if h.Blockers != nil {
-		if err := registry.Call(func() (err error) { blockers, err = h.Blockers(ctx, repo, *pr); return err }); err != nil {
+		if err := registry.RecoverAsError(func() (err error) { blockers, err = h.Blockers(ctx, repo, *pr); return err }); err != nil {
 			return registry.PR{}, methods, nil, err
 		}
 	}
@@ -291,7 +291,7 @@ func (x *Ship) confirmMerge() error {
 		o.Method = a.methods[a.method]
 	}
 	return x.step(a.se.ID, a.s.Project, "Merging", func(ctx context.Context, _ hostapi.ShipCalls) error {
-		if err := registry.Call(func() error { return h.Merge(ctx, repo, pr, o) }); err != nil {
+		if err := registry.RecoverAsError(func() error { return h.Merge(ctx, repo, pr, o) }); err != nil {
 			return err
 		}
 		x.mergedHere(a.se.ID, a.s, pr)

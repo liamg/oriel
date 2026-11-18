@@ -72,7 +72,7 @@ func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 			draw.StatusMark(c, "mark", s.Status, 9)
 			c.Text("n", kit.Label(s), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("w", kit.Why(s, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("w", kit.StatusDetail(s, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}).Clicked {
 			kit.RunOrNotify(h, "shell", "session.focus", registry.Args{"id": string(s.ID)})
 		}

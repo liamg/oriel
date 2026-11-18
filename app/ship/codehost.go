@@ -132,10 +132,10 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 // conventions are the template and code owners the project's checkout at dir gives, as its code host reads them.
 func conventions(ctx context.Context, h registry.CodeHost, dir string, changed []string) (t registry.PRTemplate, owners []string) {
 	if h.Template != nil {
-		_ = registry.Call(func() (err error) { t, err = h.Template(ctx, dir); return err })
+		_ = registry.RecoverAsError(func() (err error) { t, err = h.Template(ctx, dir); return err })
 	}
 	if h.Owners != nil && len(changed) > 0 {
-		_ = registry.Call(func() (err error) { owners, err = h.Owners(ctx, dir, changed); return err })
+		_ = registry.RecoverAsError(func() (err error) { owners, err = h.Owners(ctx, dir, changed); return err })
 	}
 	return t, owners
 }
@@ -168,7 +168,7 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	case pr != nil:
 		g.pr = pr
 		if h.Checks != nil {
-			if err := registry.Call(func() (err error) { g.checks, err = h.Checks(ctx, repo, *pr); return err }); err != nil {
+			if err := registry.RecoverAsError(func() (err error) { g.checks, err = h.Checks(ctx, repo, *pr); return err }); err != nil {
 				g.err = err
 			}
 		}
@@ -194,7 +194,7 @@ func (x *Ship) forBranch(ctx context.Context, h registry.CodeHost, repo registry
 		return nil, registry.ErrNotOffered
 	}
 	var pr *registry.PR
-	err := registry.Call(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err })
+	err := registry.RecoverAsError(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err })
 	if err == nil {
 		x.sawPR(repo, branch, pr.Open())
 	}
@@ -249,7 +249,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 			return fmt.Errorf("%s can't edit a %s: %w", h.Label(), h.Said().Short, registry.ErrNotOffered)
 		}
 		open, body := *pr, withoutLinkedPRs(r.Body)
-		err = registry.Call(func() (err error) { pr, err = h.Edit(ctx, repo, open, r.Title, body); return err })
+		err = registry.RecoverAsError(func() (err error) { pr, err = h.Edit(ctx, repo, open, r.Title, body); return err })
 	} else {
 		if s.Base == "" {
 			return fmt.Errorf("%s has no base branch for the %s", s.Project, h.Said().Short)
@@ -258,7 +258,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 			return err
 		}
 		n := registry.NewPR{Title: r.Title, Body: withoutLinkedPRs(r.Body), Branch: s.Branch, Base: s.Base, Draft: r.Draft}
-		err = registry.Call(func() (err error) { pr, err = h.Create(ctx, repo, n); return err })
+		err = registry.RecoverAsError(func() (err error) { pr, err = h.Create(ctx, repo, n); return err })
 	}
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	x.cache.mu.Unlock()
 	x.showRaised(se.ID, s.Project, *pr)
 	if len(r.Reviewers) > 0 && h.RequestReviewers != nil {
-		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
+		if err := registry.RecoverAsError(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
 			return err
 		}
 	}
@@ -354,7 +354,7 @@ func (x *Ship) markReady(ctx context.Context, se core.SessionState, s shipRead) 
 	if !pr.Open() {
 		return fmt.Errorf("%s has no open %s", s.Project, h.Said().Long)
 	}
-	return registry.Call(func() error { return h.Ready(ctx, s.codeRepo(se.ID), *pr) })
+	return registry.RecoverAsError(func() error { return h.Ready(ctx, s.codeRepo(se.ID), *pr) })
 }
 
 // renameGuard refuses to rename a branch its PR is open on: the PR would be left on the old one.

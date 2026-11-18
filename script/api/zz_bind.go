@@ -205,18 +205,18 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Decor{a: a}
 		vm.Bind("decorations", map[string]script.GoFunc{
-			"changed": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
-					return nil, err
-				}
-				x.Changed(c.String(0))
-				return nil, nil
-			},
 			"provider": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
 				return nil, x.Provider(c.Any(0), c.Fn(1))
+			},
+			"refresh": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				x.Refresh(c.String(0))
+				return nil, nil
 			},
 		})
 	}

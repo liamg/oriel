@@ -147,7 +147,7 @@ func New(opts Options) (*Host, error) {
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	w.EmitChanged()
-	w.RulesChanged()
+	w.EmitRules()
 	w.resumeHandedOver()
 	return w, nil
 }
