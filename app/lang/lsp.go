@@ -189,7 +189,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows}))
 	x.Add(h.Picker(x.callsSource()))
 	x.Add(h.View(kit.OverlayPrefix+"lsp", lspOverlay{x}))
-	x.Add(h.View("statusline.left.60-lsp", lspStatus{x}))
+	x.Add(h.View("status-line.left.60-lsp", lspStatus{x}))
 	return nil
 }
 

@@ -97,7 +97,7 @@ func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.StartEntry{Name: "repos", Icon: "repos", Title: "Repos", Desc: "Your checkouts: add, clean up, tag", Command: "repos.open",
 		Order: 75, Link: true, Note: x.count}))
 	x.Add(h.View(kit.OverlayPrefix+"repos", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "repos", Fn: x.page} })))
-	x.Add(h.View(kit.OverlayPrefix+"repos.new", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "reposnew", Fn: x.dialogView} })))
+	x.Add(h.View(kit.OverlayPrefix+"new-repo", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "reposnew", Fn: x.dialogView} })))
 	return nil
 }
 

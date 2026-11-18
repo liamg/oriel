@@ -97,7 +97,7 @@ end)
 L.hud.indicator("deploys", function()
   local n = L.json_decode(L.http.get("https://deploy.internal/api/pending")).count
   return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
-end, { slot = "titlebar.right", every = "30s" })
+end, { slot = "title-bar.right", every = "30s" })
 
 L.view.override("requests", function(s)            -- replace a built-in panel
   return L.ui.list(s.threads:filter("open"):sort("age"), require("my.thread_row"))
@@ -179,7 +179,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `lsp.missing_notice` | true: say when a file's language has servers but none is installed, offering to install one | app | |
 | `keymap.leader` | Space | app | |
 | `keymap.timeout` | true | app | `timeout`, `to` |
-| `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` |
+| `keymap.timeout_length` | 1s | app | `timeoutlen`, `tm` |
 | `hooks.budget` | 2ms: how long a hook may take, on two calls running, before it's a warning | app | |
 | `ui.font` | empty (Inter): the font the UI's text is set in, a family installed on the machine | app | |
 | `ui.font_mono` | empty (JetBrains Mono): the fixed-width font, for the editor, terminals and labels set in it. Characters either font lacks come from Oriel's bundled symbol fonts and colour emoji (Twemoji, up to Emoji 17), then the machine's fonts | app | |

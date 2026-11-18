@@ -70,7 +70,7 @@ func (x *CodeSites) activateSetup(h plugin.Host) {
 		x.Add(h.Command(c))
 	}
 	x.Add(h.Keymap(registry.Keymap{Mode: SetupKeyMode, Keys: "<Esc>", Command: "code.setup.cancel", Desc: "Cancel"}))
-	x.Add(h.View(kit.OverlayPrefix+"code.setup", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	x.Add(h.View(kit.OverlayPrefix+"code-setup", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "code.setup", Fn: x.setupView}
 	})))
 }

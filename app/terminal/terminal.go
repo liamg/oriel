@@ -48,7 +48,7 @@ const (
 // Terminals are the window's terminals: a PTY each, Ghostty's VT parsing what it prints, drawn by the terminal view.
 type Terminals struct {
 	kit.Disposer
-	SavedAt   func() string  // where the screens are kept for the window's directory
+	StateFile func() string  // where the screens are kept for the window's directory
 	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
 	h         plugin.Host
 	state     *kit.StateFile // the saved screens of the directory the window is on
@@ -109,7 +109,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved, Leave: x.leave})
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.StateFile, Load: x.loadSaved, Leave: x.leave})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(h.Option(registry.OptionSpec{Name: "terminal.shell", Type: registry.String, Default: "$SHELL", Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "The program a new terminal runs, with its arguments; $VARS expand, so $SHELL is your login shell."}))

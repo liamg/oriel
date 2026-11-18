@@ -33,7 +33,7 @@ import (
 const (
 	RequestsView = kit.RequestsView
 	RequestView  = kit.RequestView
-	SummaryView  = "requests.summary"
+	SummaryView  = "requests-summary"
 )
 
 // Their key modes: the list and the conversation, and the composer.
@@ -139,7 +139,7 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,
 		When: registry.MenuWhen{View: RequestView, Help: panes.HelpTab}, Command: "request.rename"}))
-	x.Add(h.Contribute(registry.MenuItem{Name: "requests.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
+	x.Add(h.Contribute(registry.MenuItem{Name: "request.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
 	x.Add(h.Decoration("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))

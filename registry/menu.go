@@ -10,7 +10,7 @@ import (
 // MenuItem is an entry in the right-click menu: the built-ins' and plugins' alike. It shows where When
 // matches, in its Group, ordered by Order then label; Help is always last.
 type MenuItem struct {
-	Name    string // unique among menu items: "editor.copy-path", "init.lua:12"
+	Name    string // unique among menu items: "editor.path.copy", "init.lua:12"
 	Label   string
 	Key     string // a shortcut shown beside it
 	Group   string // items group by this, groups in the order of their first item's Order

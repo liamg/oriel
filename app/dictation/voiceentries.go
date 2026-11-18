@@ -21,7 +21,7 @@ type VoiceEntries struct {
 
 // NewVoiceEntries are v's entries.
 func NewVoiceEntries(v *Voice) *VoiceEntries {
-	return &VoiceEntries{Entries: kit.Entries{ID: "voice.entries", Options: voiceOptions()}, Voice: v}
+	return &VoiceEntries{Entries: kit.Entries{ID: "voice-entries", Options: voiceOptions()}, Voice: v}
 }
 
 func (x *VoiceEntries) Activate(ctx context.Context, h plugin.Host) error {

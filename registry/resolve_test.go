@@ -89,7 +89,7 @@ func TestResolveTimeout(t *testing.T) {
 
 	// ref:   nvim/options.txt *'timeoutlen'*
 	// quote: "Time in milliseconds to wait for a mapped sequence to complete."
-	if err := r.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 300*time.Millisecond); err != nil {
+	if err := r.Options().Set("keymap.timeout_length", registry.LayerUser, registry.At{}, 300*time.Millisecond); err != nil {
 		t.Fatal(err)
 	}
 	res.Feed([]string{"n"}, "q", t0)

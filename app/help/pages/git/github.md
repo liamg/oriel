@@ -1,6 +1,6 @@
 ---
 id: git/github
-covers: [review.threads.sync, review.draft.forward, review.draft.edit, review.draft.save, statusline.left.70-reviews, code.trusted_users]
+covers: [review.threads.sync, review.draft.forward, review.draft.edit, review.draft.save, status-line.left.70-reviews, code.trusted_users]
 related: [git/ship, agent/requests, files/diff]
 ---
 

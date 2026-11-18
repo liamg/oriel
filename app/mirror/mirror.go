@@ -39,7 +39,7 @@ import (
 const syncPoll = 30 * time.Second
 
 // StatusView is the status line's segment: "PR 1 changes requested".
-const StatusView = "statusline.left.70-reviews"
+const StatusView = "status-line.left.70-reviews"
 
 type Mirror struct {
 	kit.Disposer

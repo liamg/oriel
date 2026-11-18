@@ -163,7 +163,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.View(NotificationsView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "toasts", Fn: n.toasts}
 	})))
-	n.Add(h.View("statusline.left.50-counts", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	n.Add(h.View("status-line.left.50-counts", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "status", Fn: n.status}
 	})}))
 	n.Add(h.Contribute(uireg.InboxSource{Name: "notices", Cards: n.inboxCards}))

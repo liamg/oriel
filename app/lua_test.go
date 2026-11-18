@@ -156,7 +156,7 @@ func TestInspect(t *testing.T) {
 	s.Frame()
 	s.Frame()
 	text := strings.ReplaceAll(s.Text(), "\n", " ")
-	for _, want := range []string{":INSPECT", "TREE-SITTER", "source_file", "HIGHLIGHT", "KEYMAPS HERE", "VIEWS", "app.statusline"} {
+	for _, want := range []string{":INSPECT", "TREE-SITTER", "source_file", "HIGHLIGHT", "KEYMAPS HERE", "VIEWS", "app.status-line"} {
 		if !strings.Contains(text, want) {
 			t.Errorf(":Inspect lacks %q:\n%s", want, text)
 		}

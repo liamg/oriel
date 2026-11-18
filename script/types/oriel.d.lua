@@ -254,7 +254,7 @@ function oriel.http.request(spec, fn) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+--- An indicator in a slot: title-bar.right, status-line.left, status-line.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
 ---@param build any
 ---@param opts? table

@@ -12,16 +12,16 @@ import (
 
 // The window's views, which a plugin may replace.
 const (
-	RootView       = "app.root"       // fills the window
-	StatusLineView = "app.statusline" // along the bottom
-	// TitleBarView is the bar across the top: the logo, the session tabs, and segments named titlebar.right.* (the
+	RootView       = "app.root"        // fills the window
+	StatusLineView = "app.status-line" // along the bottom
+	// TitleBarView is the bar across the top: the logo, the session tabs, and segments named title-bar.right.* (the
 	// usage and bus indicators) at its right.
-	TitleBarView = "app.titlebar"
-	// The status line's segments are views named for their side and place: statusline.left.00-mode,
-	// statusline.right.90-position. Any plugin adds one by registering a view so named; they sit in name order. A
+	TitleBarView = "app.title-bar"
+	// The status line's segments are views named for their side and place: status-line.left.00-mode,
+	// status-line.right.90-position. Any plugin adds one by registering a view so named; they sit in name order. A
 	// segment with nothing to show builds no node, and takes no room.
-	StatusLeft  = "statusline.left."
-	StatusRight = "statusline.right."
+	StatusLeft  = "status-line.left."
+	StatusRight = "status-line.right."
 	// RailView is the project sidebar down the window's left edge: each project's header and, under the
 	// open one, its panels; then the session's entries. Wide, or narrow as an icon strip.
 	RailView = "app.rail"
@@ -30,11 +30,11 @@ const (
 	// OverviewView is the project overview, which the window shows with a directory or session open but no view in it.
 	OverviewView = "app.overview"
 	// OverviewPanelsView is a directory's overview panels alone, the directory its instance: the Repos page's stats.
-	OverviewPanelsView = "app.overview.panels"
+	OverviewPanelsView = "app.overview-panels"
 	// AgentConsoleView is a session's agent console.
-	AgentConsoleView = "agent.console"
+	AgentConsoleView = "agent-console"
 	// ConsoleSide prefixes the views a plugin adds to the agent console's right column.
-	ConsoleSide = "agent.console.side."
+	ConsoleSide = "agent-console.side."
 	// RequestsView is the Requests list: every thread of the session in front, by where it stands.
 	RequestsView = "requests"
 	// RequestView is a thread's own tab: the request, its comments and the reply box.
@@ -43,20 +43,25 @@ const (
 	TicketView = "ticket"
 	// PermissionsView is what the session in front's sandboxed agent may do: the asks waiting on you, each gateway
 	// tool and network rule in force with where it comes from, and every connection it made or tried.
-	PermissionsView = "agent.permissions"
+	PermissionsView = "agent-permissions"
 	// ExplorerView is the Explorer: the work tree in three scopes, Changed, Uncommitted and All.
 	ExplorerView = "explorer"
 	// DiffView is a repo's branch diff: one instance per work tree.
 	DiffView = "diff"
 	// PlanDocsView is a planning session's plan documents.
-	PlanDocsView = "plan.docs"
+	PlanDocsView = "plan-docs"
 	// SearchView is project search.
 	SearchView = "search"
 	// TerminalView is a terminal: one instance per terminal.
 	TerminalView = "terminal"
 	// ReplaceView is a change to files shown as a diff before it's made, by Apply (edits.preview): a replace, a rename.
-	ReplaceView = "search.replace"
+	ReplaceView = "search-replace"
 )
+
+// ViewSlots are the slots a view fills by its id: the slot's name, a dot, then the view's own name
+// (status-line.left.00-mode, app.overlay.omnibox). Any other view id is a name alone. Names are kebab-case.
+var ViewSlots = []string{"app", "app.overlay", "status-line.left", "status-line.right", "title-bar.right", "agent-console.side",
+	"diff.header", "diff.side", "diff.right"}
 
 // DiffHeader is the prefix of the views a diff's header shows at its right.
 const DiffHeader = "diff.header."

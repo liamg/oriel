@@ -99,27 +99,27 @@ func TestTabDragKeepsTheView(t *testing.T) {
 		steps []func(s *apptest.Scene)
 		want  string // the layout's dump holds this
 	}{
-		{"onto the agent console's dock", []func(*apptest.Scene){toDock}, "dock bottom open=true [agent.console *editor#1]"},
+		{"onto the agent console's dock", []func(*apptest.Scene){toDock}, "dock bottom open=true [agent-console *editor#1]"},
 		{"onto the dock and back into main", []func(*apptest.Scene){toDock, dragTab("a.go", mainAt(.5, .5))}, "leaf [editor#2 *editor#1]"},
 		{"onto the right window edge", []func(*apptest.Scene){dragTab("a.go", func(s *apptest.Scene) render.Point {
 			return render.Point{X: window(s).X - 4, Y: window(s).Y / 2}
 		})}, "dock right open=true [*editor#1]"},
 		{"onto the left window edge, then the bottom dock", []func(*apptest.Scene){
 			dragTab("a.go", func(s *apptest.Scene) render.Point { return render.Point{X: 4, Y: window(s).Y / 2} }), toDock},
-			"dock bottom open=true [agent.console *editor#1]"},
+			"dock bottom open=true [agent-console *editor#1]"},
 		{"split right", []func(*apptest.Scene){dragTab("a.go", mainAt(.9, .5))}, "split h [1 1]"},
 		{"split below, then back into the other's tabs", []func(*apptest.Scene){
 			dragTab("a.go", mainAt(.5, .9)), dragTab("a.go", mainAt(.5, .2))},
 			"leaf [editor#2 *editor#1]"},
 		{"into a float, then the bottom dock", []func(*apptest.Scene){
 			dragTab("a.go", func(s *apptest.Scene) render.Point { return render.Point{X: 600, Y: 10} }), toDock},
-			"dock bottom open=true [agent.console *editor#1]"},
+			"dock bottom open=true [agent-console *editor#1]"},
 		{"main emptied into the dock, then filled again", []func(*apptest.Scene){
 			dragTab("b.go", centreOf("Bottom dock")), toDock, dragTab("a.go", mainAt(.5, .5))},
 			"leaf [*editor#1]"},
 		{"the console split beside it, then a.go clicked", []func(*apptest.Scene){
 			dragTab("Agent", mainAt(.9, .5)), func(s *apptest.Scene) { s.Click(tabPoint(s, "a.go"), 0); s.Frames(2) }},
-			"leaf [*agent.console]"},
+			"leaf [*agent-console]"},
 		{"split right, then onto the other's tab strip", []func(*apptest.Scene){
 			dragTab("a.go", mainAt(.9, .5)), dragTab("a.go", func(s *apptest.Scene) render.Point { return tabPoint(s, "b.go") })},
 			"leaf [editor#2 *editor#1]"},

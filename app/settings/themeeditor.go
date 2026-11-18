@@ -122,7 +122,7 @@ func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.Add(h.View(kit.OverlayPrefix+"theme", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "theme", Fn: e.build}
 	})))
-	e.Add(h.View(kit.OverlayPrefix+"themepick", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	e.Add(h.View(kit.OverlayPrefix+"theme-pick", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "themepick", Fn: e.buildPick}
 	})))
 	return nil

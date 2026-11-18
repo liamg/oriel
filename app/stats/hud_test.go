@@ -135,11 +135,11 @@ builds = 0
 L.hud.indicator("loads", function()
   builds = builds + 1
   return L.ui.indicator{ label = "BUILDS", value = builds }
-end, { slot = "statusline.right", on = { "MachineChanged" } })
+end, { slot = "status-line.right", on = { "MachineChanged" } })
 L.hud.indicator("deploys", function()
   builds = builds + 100
   return L.ui.indicator{ label = "DEPLOY", value = builds }
-end, { slot = "titlebar.right", every = "30s" })
+end, { slot = "title-bar.right", every = "30s" })
 L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none" }, { slot = "hud.today" })
 `)
 	s.Now = apptest.At(14, 0, 0)

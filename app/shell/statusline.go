@@ -39,7 +39,7 @@ func (s *statusLine) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-// slot draws a slot of a bar: the views named slot.<order>-<name> (titlebar.right.40-usage) and the indicators in
+// slot draws a slot of a bar: the views named slot.<order>-<name> (title-bar.right.40-usage) and the indicators in
 // slot, together in order.
 func slot(c *ui.Ctx, h plugin.Host, slot string, vc uireg.ViewCtx) {
 	type part struct {

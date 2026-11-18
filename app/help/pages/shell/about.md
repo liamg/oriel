@@ -16,5 +16,5 @@ About card:
 
 Escape, a click outside it, or its `✕` puts the card away.
 
-The brand is the `titlebar.brand` indicator slot: a plugin can turn off the built-in `about` indicator and put its
+The brand is the `title-bar.brand` indicator slot: a plugin can turn off the built-in `about` indicator and put its
 own there.

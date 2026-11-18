@@ -143,10 +143,10 @@ Hooks run on the UI loop: keep them quick. One that panics, or errors 3 times in
 ```lua
 L.hud.indicator("saves", function()
   return L.ui.text(L.option["plugin.saves.label"] .. " " .. #saved(), "dim")
-end, { slot = "statusline.right" })
+end, { slot = "status-line.right" })
 ```
 
-The slot is one of `titlebar.right`, `statusline.left`, `statusline.right`, `hud` or `hud.today`. The
+The slot is one of `title-bar.right`, `status-line.left`, `status-line.right`, `hud` or `hud.today`. The
 build function returns `oriel.ui` nodes, and runs again every `opts.every`, on each event in `opts.on`, and on
 `oriel.hud.refresh(name)`, which the hook and the option above call.
 

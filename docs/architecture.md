@@ -158,7 +158,14 @@ option; one that declares none takes anything.
 
 A built-in plugin's id is kebab-case (`stats-page`, `session-end`, `which-key`), as a third-party manifest's
 `<owner>/<name>` parts are: never dotted, which reads as a command. It shows as `builtin:<id>` on the Plugins page.
-`TestBuiltinPluginIDsAreKebabCase` holds it.
+`TestBuiltinPluginIDsAreKebabCase` holds it, for every built-in the window starts with.
+
+### View ids
+
+A view id is a kebab-case name (`agent-console`, `pull-request`, `search-replace`). A view that fills a slot is the
+slot's name, a dot, then its own kebab-case name: `app.overlay.theme-pick`, `status-line.left.05-explain`,
+`diff.right.50-ai-review`. The slots are `kit.ViewSlots`; the dots only ever separate a slot from what fills it, so
+no view id reads as a command id. `TestBuiltinViewIDsFollowTheConvention` holds it.
 
 ## Freshness
 

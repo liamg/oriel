@@ -1,6 +1,6 @@
 ---
 id: files/search
-covers: [search, search.replace]
+covers: [search, search-replace]
 related: [files/explorer, shell/pickers]
 ---
 

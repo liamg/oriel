@@ -44,8 +44,8 @@ Since midnight: tokens, cost, the share served from the cache, and requests open
 
 ## Indicators {#indicators}
 
-Indicators are small live readouts in fixed slots: the title bar's right (`titlebar.right`), the status line's sides
-(`statusline.left`, `statusline.right`), the HUD's panels (`hud`) and the Today panel (`hud.today`). The status line's
+Indicators are small live readouts in fixed slots: the title bar's right (`title-bar.right`), the status line's sides
+(`status-line.left`, `status-line.right`), the HUD's panels (`hud`) and the Today panel (`hud.today`). The status line's
 **CPU** shows this machine's, all of it, in the warning colour from 80%. Click it for the
 [Performance](shell/performance) page: what Oriel and the processes it started cost.
 
@@ -54,7 +54,7 @@ Indicators are small live readouts in fixed slots: the title bar's right (`title
 ```lua
 oriel.hud.indicator("deploys", function()
   return oriel.ui.indicator{ label = "DEPLOY", value = 4, tone = "warn" }
-end, { slot = "titlebar.right", every = "30s" })
+end, { slot = "title-bar.right", every = "30s" })
 oriel.hud.set("deploys", oriel.ui.indicator{ label = "DEPLOY", value = 0 })   -- show this now
 oriel.hud.refresh("deploys")                                                  -- or build it again now
 ```

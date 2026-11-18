@@ -164,7 +164,7 @@ func (r *Resolver) arm(now time.Time) {
 	r.deadline = time.Time{}
 	if len(r.pending) > 0 {
 		if on, _ := Option[bool](r.reg.Options(), "keymap.timeout", At{}); on {
-			d, _ := Option[time.Duration](r.reg.Options(), "keymap.timeoutlen", At{})
+			d, _ := Option[time.Duration](r.reg.Options(), "keymap.timeout_length", At{})
 			r.deadline = now.Add(d)
 		}
 	}

@@ -35,7 +35,7 @@ func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "context-menu", Fn: m.build}
 	})))
 	for _, it := range []registry.MenuItem{
-		{Name: "editor.copy-path", Label: "Copy path", Group: "edit", Order: 10, When: registry.MenuWhen{View: kit.EditorView}, Source: "builtin:menus",
+		{Name: "editor.path.copy", Label: "Copy path", Group: "edit", Order: 10, When: registry.MenuWhen{View: kit.EditorView}, Source: "builtin:menus",
 			Run: func(_ registry.Ctx, at registry.MenuCtx) error {
 				kit.CopyText(m.h, at.File)
 				return nil
@@ -49,10 +49,10 @@ func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 				return m.h.Run(ctx, "view.close", registry.Args{"id": at.View, "instance": at.Instance, "project": at.Project})
 			}},
-		m.closeTabs("tab.close-others", "Close Others", 92, func(i, at int) bool { return i != at }),
-		m.closeTabs("tab.close-left", "Close to the Left", 93, func(i, at int) bool { return i < at }),
-		m.closeTabs("tab.close-right", "Close to the Right", 94, func(i, at int) bool { return i > at }),
-		m.closeTabs("tab.close-all", "Close All", 95, func(int, int) bool { return true }),
+		m.closeTabs("tab.others.close", "Close Others", 92, func(i, at int) bool { return i != at }),
+		m.closeTabs("tab.left.close", "Close to the Left", 93, func(i, at int) bool { return i < at }),
+		m.closeTabs("tab.right.close", "Close to the Right", 94, func(i, at int) bool { return i > at }),
+		m.closeTabs("tab.all.close", "Close All", 95, func(int, int) bool { return true }),
 	} {
 		m.Add(h.Contribute(it))
 	}

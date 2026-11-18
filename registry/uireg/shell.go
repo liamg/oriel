@@ -295,7 +295,7 @@ func SettingsSections(r registry.Contributions) []SettingsSection {
 type Indicator struct {
 	Name  string // unique among indicators: "deploys"
 	Slot  string // SlotTitleBar, SlotTitleBrand, SlotStatusLeft, SlotStatusRight, SlotHUD, or a slot a panel draws: SlotHUDToday, SlotInboxFoot
-	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
+	Order int    // in its slot, among the slot's views: title-bar.right.40-usage is 40
 	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
 	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
 	Title, Help string
@@ -310,10 +310,10 @@ type Indicator struct {
 
 // The slots indicators go in.
 const (
-	SlotTitleBar    = "titlebar.right"
-	SlotTitleBrand  = "titlebar.brand" // the title bar's left, before the session tabs: the logo
-	SlotStatusLeft  = "statusline.left"
-	SlotStatusRight = "statusline.right"
+	SlotTitleBar    = "title-bar.right"
+	SlotTitleBrand  = "title-bar.brand" // the title bar's left, before the session tabs: the logo
+	SlotStatusLeft  = "status-line.left"
+	SlotStatusRight = "status-line.right"
 	SlotHUD         = "hud"        // the HUD's panels
 	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: a plugin's lines
 	SlotInboxFoot   = "inbox.foot" // the Inbox panel's foot: agentbus's presence

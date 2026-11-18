@@ -22,7 +22,7 @@ const NewSessionHelp = "shell/tabs#new"
 const EndHelp = "shell/tabs#end"
 
 // TitleRight prefixes the names of the views a feature puts at the title bar's right.
-const TitleRight = "titlebar.right."
+const TitleRight = "title-bar.right."
 
 var TOmniBg = theme.Declare("omnibox.bg", "bg.surface")
 

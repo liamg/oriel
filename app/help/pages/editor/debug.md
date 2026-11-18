@@ -1,6 +1,6 @@
 ---
 id: editor/debug
-covers: [debug, statusline.left.66-debug]
+covers: [debug, status-line.left.66-debug]
 related: [editor/pane, layout/panes]
 ---
 

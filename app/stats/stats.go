@@ -30,7 +30,7 @@ import (
 // the session host answers (StatsQuery, SessionStats, UsageHistory), and the ways to them: the sidebar's global
 // entries, the title bar's indicators, the session stats box's cost, the start view's links and the omnibox.
 const (
-	StatsSessionView = "stats.session.open"
+	StatsSessionView = "stats-session"
 	StatsKeyMode     = "stats"
 	UsageKeyMode     = "usage"
 	SplitOption      = "stats.split_sessions"

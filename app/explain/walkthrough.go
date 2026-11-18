@@ -26,7 +26,7 @@ import (
 
 // Explain this change: a walkthrough of the branch's change, step by step across its files and projects.
 const (
-	ExplainChangeView    = "explain.change"
+	ExplainChangeView    = "walkthrough"
 	ExplainChangeKeyMode = "explain.change"
 )
 
@@ -92,7 +92,7 @@ func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.View(ExplainChangeView, walkView{x}))
-	x.Add(h.View("statusline.left.05-explain", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	x.Add(h.View("status-line.left.05-explain", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		if f := h.Layout().Focus; f == nil || f.ID != ExplainChangeView || !x.ready() {
 			return nil
 		}

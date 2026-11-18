@@ -330,7 +330,7 @@ func (x *Editor) keymaps() []registry.Keymap {
 func (x *Editor) views() map[string]uireg.View {
 	out := map[string]uireg.View{
 		kit.EditorView:            editorView{x},
-		"statusline.left.00-mode": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} }),
+		"status-line.left.00-mode": uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} }),
 	}
 	for name, fn := range map[string]func(*ui.Ctx){"80-file": x.fileSegment, "85-wrap": x.wrapSegment, "90-position": x.positionSegment} {
 		out[kit.StatusRight+name] = uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {

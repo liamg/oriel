@@ -178,7 +178,7 @@ func DebugEntries() *kit.Entries {
 	for _, s := range dap.Builtins() {
 		adapters = append(adapters, reglang.DebugAdapter(s))
 	}
-	return &kit.Entries{ID: "debug.entries",
+	return &kit.Entries{ID: "debug-entries",
 		Options: append([]registry.OptionSpec{{Name: InlineValuesOption, Section: "editor", Type: registry.Bool, Default: true,
 			Scopes: registry.ScopeUser | registry.ScopeProject, Help: "While the debugger is paused, show the frame's variables after the lines that name them."}},
 			accessOptions()...),
@@ -208,7 +208,7 @@ func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.agentTools()
 	x.Add(h.View(DebugView, debugView{x}))
-	x.Add(h.View("statusline.left.66-debug", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "debug", Fn: x.statusSegment} })))
+	x.Add(h.View("status-line.left.66-debug", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "debug", Fn: x.statusSegment} })))
 	return nil
 }
 

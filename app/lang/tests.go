@@ -44,9 +44,9 @@ var (
 // the lines and in the Tests panel, failures inline at their assertion, watch mode and a coverage gutter.
 type Tests struct {
 	kit.Disposer
-	HistoryFile func() string // where the runs are kept for the window's directory
-	h           plugin.Host
-	state       *kit.StateFile // the runs of the directory the window is on
+	StateFile func() string // where the runs are kept for the window's directory
+	h         plugin.Host
+	state     *kit.StateFile // the runs of the directory the window is on
 
 	set     *testrun.Set
 	history *testrun.History
@@ -93,7 +93,7 @@ func (x *Tests) Manifest() plugin.Manifest {
 
 // TestsEntries are the tests' from the start: the rail entry, without its counts until they load, and its key.
 func TestsEntries() *kit.Entries {
-	return &kit.Entries{ID: "tests.entries", Contribs: []registry.Contribution{testsRail(nil)},
+	return &kit.Entries{ID: "tests-entries", Contribs: []registry.Contribution{testsRail(nil)},
 		Keymaps: []registry.Keymap{{Mode: "global", Keys: "<D-T>", Command: "project.panel.toggle", Args: registry.Args{"name": "tests"}, Desc: "Tests"}}}
 }
 
@@ -109,7 +109,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.set.Languages = func() *syntax.Set { return kit.Languages(h) }
 	x.Add(registry.DisposeFunc(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.StateFile, Load: x.loadHistory})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
 	x.Add(kit.Git(h).WatchWindow(func(root string, paths []string) {
@@ -168,7 +168,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	for _, d := range x.evidence() {
 		x.Add(d)
 	}
-	x.Add(h.View("statusline.left.65-tests", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "tests", Fn: x.statusSegment} })))
+	x.Add(h.View("status-line.left.65-tests", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "tests", Fn: x.statusSegment} })))
 	return nil
 }
 

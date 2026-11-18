@@ -44,7 +44,7 @@ func (w *WhichKey) Activate(_ context.Context, h plugin.Host) error {
 	w.h = h
 	w.Add(h.Option(registry.OptionSpec{Name: "whichkey.enabled", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Show what keys can follow a prefix, after a short pause."}))
-	w.Add(h.View(kit.OverlayPrefix+"whichkey", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	w.Add(h.View(kit.OverlayPrefix+"which-key", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "whichkey", Fn: w.build}
 	})))
 	return nil

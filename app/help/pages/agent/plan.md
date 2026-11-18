@@ -1,6 +1,6 @@
 ---
 id: agent/plan
-covers: [plan, plan.docs]
+covers: [plan, plan-docs]
 related: [agent/requests, agent/launcher, agent/console]
 ---
 

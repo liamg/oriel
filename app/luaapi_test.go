@@ -319,7 +319,7 @@ func TestLuaTatAndStatusRule(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 L.hud.indicator("deploys", function()
   return L.ui.indicator{ label = "DEPLOY", value = 3 }
-end, { slot = "titlebar.right", every = "30s" })
+end, { slot = "title-bar.right", every = "30s" })
 L.status.rule("red", function(sess) if sess.red then return "error" end end)
 `)
 	var indicator uireg.Indicator
@@ -328,7 +328,7 @@ L.status.rule("red", function(sess) if sess.red then return "error" end end)
 			indicator = ind
 		}
 	}
-	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
+	if indicator.Slot != "title-bar.right" || indicator.Every.Seconds() != 30 {
 		t.Errorf("indicator %+v", indicator)
 	}
 	// every takes seconds as other duration options do, and a value that's neither raises.
