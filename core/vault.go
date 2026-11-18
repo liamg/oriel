@@ -1,15 +1,6 @@
 package core
 
-import (
-	"encoding/json"
-	"errors"
-	"os"
-	"path/filepath"
-	"slices"
-	"sync"
-
-	"github.com/liamg/oriel/internal/atomicfile"
-)
+import "slices"
 
 // Sealed is an event holding text its log mustn't keep: Seal is the event as the log has it, and that text by key;
 // Unseal puts the text back from get.
@@ -18,57 +9,11 @@ type Sealed interface {
 	Unseal(get func(key string) (string, bool)) Event
 }
 
-// Vault keeps the text sealed events take out of their log, in a file of its own that is never shared.
-type Vault struct {
-	path string
-	mu   sync.Mutex
-	m    map[string]string
-}
-
-// OpenVault is the vault in the file at path, empty while there's none.
-func OpenVault(path string) (*Vault, error) {
-	v := &Vault{path: path, m: map[string]string{}}
-	b, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return v, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(b, &v.m); err != nil {
-		return nil, err
-	}
-	return v, nil
-}
-
-func (v *Vault) Get(key string) (string, bool) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	s, ok := v.m[key]
-	return s, ok
-}
-
-// Put keeps texts, writing the file when one is new or changed.
-func (v *Vault) Put(texts map[string]string) error {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	changed := false
-	for k, s := range texts {
-		if old, ok := v.m[k]; !ok || old != s {
-			v.m[k], changed = s, true
-		}
-	}
-	if !changed {
-		return nil
-	}
-	b, err := json.Marshal(v.m)
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(v.path), 0o700); err != nil {
-		return err
-	}
-	return atomicfile.WriteSecret(v.path, b)
+// Vault keeps the text sealed events take out of their log, somewhere of its own that is never shared.
+type Vault interface {
+	Get(key string) (string, bool)
+	// Put keeps texts by key.
+	Put(texts map[string]string) error
 }
 
 // sealThreads are threads with each redacted comment's body taken out into texts.
