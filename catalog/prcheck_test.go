@@ -126,7 +126,7 @@ func TestPRCommentCapabilityDiff(t *testing.T) {
 		"- `net:acme.atlassian.net`: HTTPS to acme.atlassian.net only\n",
 		"- `agent.tools:jira_ticket` **(new)**",
 		"- `gate` **(new)**",
-		"> ⚠ **gate**: this plugin can veto and decide hooks",
+		"> ⚠ **gate**: this plugin can veto, decide and rewrite hooks",
 	} {
 		if !strings.Contains(head, want) {
 			t.Errorf("the comment's lead doesn't have %q:\n%s", want, rep.Comment)
