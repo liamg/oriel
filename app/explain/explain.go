@@ -173,10 +173,10 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 	cardOpen := func(registry.Args) bool { return x.card != nil }
 	for _, c := range []registry.Command{
 		{ID: "explain.unit.ask", Grant: string(plugin.CapAgentPrompt), Title: "Explain the code unit at the cursor, or at {file}'s {line}; again widens to the unit around it",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.explainUnit(a) }},
-		{ID: "explain.selection.ask", Grant: string(plugin.CapAgentPrompt), Title: "Explain the Visual selection", Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
+			Args: []registry.Arg{registry.StringArg("file"), registry.IntArg("line")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.explainUnit(a) }},
+		{ID: "explain.selection.ask", Grant: string(plugin.CapAgentPrompt), Title: "Explain the Visual selection", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
 		{ID: "explain.this.ask", Grant: string(plugin.CapAgentPrompt), Title: "Explain this: the selection, or the unit at the cursor",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: registry.NoArgs, Run: func(_ registry.Ctx, a registry.Args) error {
 				if ed, ok := services.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
 					return x.explainSelection()
 				}
@@ -184,30 +184,33 @@ func (x *Explain) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{ID: registry.ExplainCommand, Grant: string(plugin.CapAgentPrompt), Title: "Explain something: {file}'s {line} through {end_line} (a card between its lines), or {text} or {context}; with {subject}, {kind} and {depth} (brief, detailed, why); with a {key}, the answer is kept for where it was asked",
 			Available: func(registry.Args) bool { return len(registry.Explainers(h)) > 0 },
+			Args:      registry.TroubleArgs(registry.StringArg("depth"), registry.StringArg("key"), registry.StringArg("text")),
 			Run:       func(_ registry.Ctx, a registry.Args) error { return x.ask(a) }},
 		{ID: registry.FixCommand, Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent to fix something: a request with its {subject} and {context} attached, about {file}:{line}; {fix} is what it says",
 			Available: func(registry.Args) bool { return h.Available("request.new", nil) },
+			Args:      registry.TroubleArgs(),
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.fix(ctx, a) }},
 		{ID: "explain.widen", Grant: string(plugin.CapAgentPrompt), Title: "Explain the unit around the one explained", Available: cardOpen,
-			Run: func(registry.Ctx, registry.Args) error { x.step(-1); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.step(-1); return nil }},
 		{ID: "explain.narrow", Grant: string(plugin.CapAgentPrompt), Title: "Explain the unit inside the one explained", Available: cardOpen,
-			Run: func(registry.Ctx, registry.Args) error { x.step(1); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.step(1); return nil }},
 		{ID: "explain.depth.set", Grant: string(plugin.CapAgentPrompt), Title: "Explain at a {depth}: brief, detailed, or why (with its history)", Available: cardOpen,
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.setDepth(a.String("depth")) }},
+			Args: []registry.Arg{registry.StringArg("depth")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.setDepth(a.String("depth")) }},
 		{ID: "explain.refresh", Grant: string(plugin.CapAgentPrompt), Title: "Explain the unit again, as it reads now", Available: cardOpen,
-			Run: func(registry.Ctx, registry.Args) error { return x.refresh() }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.refresh() }},
 		{ID: "explain.follow_up.ask", Grant: string(plugin.CapAgentPrompt), Title: "Ask a follow-up to the explanation: a new request with it attached", Available: cardOpen,
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.followUp(ctx) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.followUp(ctx) }},
 		{ID: "explain.pin", Grant: string(plugin.CapAgentPrompt), Title: "Pin the explanation as a note: a resolved thread on its lines", Available: cardOpen,
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.pin(ctx) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.pin(ctx) }},
 		{ID: "explain.close", Grant: registry.Open, Title: "Close the explain card", Available: cardOpen,
-			Run: func(registry.Ctx, registry.Args) error { x.closeCard(); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.closeCard(); return nil }},
 		{ID: "explain.units.toggle", Grant: registry.Open, Title: "Show or hide the Changed units panel: every unit the branch touched, with its explain status",
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "view.toggle", registry.Args{"id": ChangedUnitsView, "place": "dock", "edge": "right", "size": 350, "title": "Changed units"})
 			}},
 		{ID: "request.this.compose", Grant: registry.Open, Title: "Write a request about the selection, the unit at the cursor, or the cursor's place: {what} is review, tests or refactor",
 			Available: func(registry.Args) bool { return h.Available("request.new", nil) },
+			Args:      []registry.Arg{registry.StringArg("what")},
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.requestThis(ctx, a.String("what")) }},
 	} {
 		x.Add(h.Command(c))

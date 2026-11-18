@@ -145,8 +145,8 @@ func voiceOptions() []registry.OptionSpec {
 func (x *Voice) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "voice.download", Grant: registry.Open, Title: "Download a Whisper {model} for dictation: base.en, small.en or medium.en; the configured one by default",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.download(a.String("model")) }},
-		{ID: "voice.speak", Grant: registry.Open, Title: "Say {text} out loud, as voice.speech says", Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("model")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.download(a.String("model")) }},
+		{ID: "voice.speak", Grant: registry.Open, Title: "Say {text} out loud, as voice.speech says", Args: []registry.Arg{registry.StringArg("text")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.speak(a.String("text"))
 		}},
 	}

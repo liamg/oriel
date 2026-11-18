@@ -152,11 +152,11 @@ func (x *Inbox) commands() []registry.Command {
 	open := registry.Args{"id": InboxView, "place": "dock", "edge": "right", "size": 380, "title": "Inbox"}
 	return []registry.Command{
 		{ID: "inbox.open", Grant: registry.Open, Title: "Show the Inbox panel: everything waiting on you, and what's been answered; or hide it",
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "view.toggle", open)
 			}},
 		{ID: "inbox.dismiss", Grant: registry.Open, Title: "Take a card off the window: {id} (source/id), or the prompt up, or the top of the stack; it waits on in the Inbox panel",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := a.String("id")
 				if id == "" {
 					x.mu.Lock()
@@ -173,10 +173,10 @@ func (x *Inbox) commands() []registry.Command {
 				}
 				return x.dismiss(id)
 			}},
-		{ID: "inbox.next", Grant: registry.Open, Title: "Inbox: the next card", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
-		{ID: "inbox.prev", Grant: registry.Open, Title: "Inbox: the card before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
+		{ID: "inbox.next", Grant: registry.Open, Title: "Inbox: the next card", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
+		{ID: "inbox.prev", Grant: registry.Open, Title: "Inbox: the card before", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
 		{ID: "inbox.card.open", Grant: registry.Open, Title: "Inbox: go where the selected card is answered (a question's thread), or open it",
-			Run: func(registry.Ctx, registry.Args) error { return x.chooseSelected() }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.chooseSelected() }},
 	}
 }
 

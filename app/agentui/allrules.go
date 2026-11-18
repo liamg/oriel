@@ -26,7 +26,7 @@ const rulesHelp = "agent/asks#all-sessions"
 func (x *Permissions) rulesCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "rules.add", Grant: string(plugin.CapGate), Title: "Allow {rule} in every session without asking: {kind} permission (Bash(go test:*), Edit, a tool), gateway (a gateway's tool) or network (net(*.golang.org:443))",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("kind"), registry.StringArg("rule")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				w, err := sessionkit.SandboxCalls(x.h)
 				if err != nil {
 					return err
@@ -34,7 +34,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 				return w.AddRule(core.AskKind(cmp.Or(a.String("kind"), string(core.AskPermission))), a.String("rule"))
 			}},
 		{ID: "rules.remove", Grant: string(plugin.CapGate), Title: "Stop allowing {rule} in every session: what it let through asks again; {kind} as rules.add's",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("kind"), registry.StringArg("rule")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				rule := a.String("rule")
 				if rule == "" {
 					return errors.New("rules.remove needs a rule")

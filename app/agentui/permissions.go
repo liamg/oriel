@@ -70,20 +70,20 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 	}
 	for _, c := range []registry.Command{
 		{ID: "agent.permissions.open", Grant: registry.Open, Title: "Show what the sandboxed agent of the session in front may do, and its connections: the Workspace page's Permissions",
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "workspace.open", registry.Args{"tab": "permissions"})
 			}},
 		{ID: "agent.permissions.dock.toggle", Grant: registry.Open, Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return h.Run(ctx, "view.toggle", open) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return h.Run(ctx, "view.toggle", open) }},
 		{ID: "permissions.tool.set", Grant: string(plugin.CapGate), Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("action"), registry.StringArg("id"), registry.StringArg("tool")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				return x.change(id, func(w hostapi.SandboxCalls) error {
 					return w.SetToolRule(id, a.String("tool"), hostapi.ToolAction(noneAsEmpty(a.String("action"))))
 				})
 			}},
 		{ID: "permissions.net.set", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("action"), registry.StringArg("host"), registry.StringArg("id"), registry.IntArg("port"), registry.BoolArg("private")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				h, port, err := hostPort(a.String("host"), a.Int("port"))
 				if err != nil {

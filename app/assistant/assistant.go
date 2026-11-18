@@ -133,44 +133,45 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 func (x *Assistant) commands() []registry.Command {
 	isOpen := func(registry.Args) bool { return x.open }
 	return []registry.Command{
-		{ID: "assistant.toggle", Grant: registry.Open, Title: "Open Ori, the assistant, or minimise it", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "assistant.toggle", Grant: registry.Open, Title: "Open Ori, the assistant, or minimise it", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.setOpen(!x.open)
 			return nil
 		}},
-		{ID: "assistant.open", Grant: string(plugin.CapAgentPrompt), Title: "Open Ori, the assistant; with {text}, ask it that", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "assistant.open", Grant: string(plugin.CapAgentPrompt), Title: "Open Ori, the assistant; with {text}, ask it that", Args: []registry.Arg{registry.StringArg("text")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			x.setOpen(true)
 			x.conv.Say(a.String("text"), false)
 			return nil
 		}},
 		{ID: "assistant.close", Grant: registry.Open, Title: "Minimise Ori, the assistant; the conversation waits", Available: isOpen,
-			Run: func(registry.Ctx, registry.Args) error { x.setOpen(false); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.setOpen(false); return nil }},
 		{ID: "assistant.say", Grant: string(plugin.CapAgentPrompt), Title: "Ask the assistant something: {text}; {voice} when it was spoken, so its answer is",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("text"), registry.BoolArg("voice")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				if strings.TrimSpace(a.String("text")) == "" {
 					return errors.New("nothing to say")
 				}
 				x.conv.Say(a.String("text"), a.Bool("voice"))
 				return nil
 			}},
-		{ID: "assistant.send", Grant: string(plugin.CapAgentPrompt), Title: "Send what's in the assistant's composer", Available: isOpen, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "assistant.send", Grant: string(plugin.CapAgentPrompt), Title: "Send what's in the assistant's composer", Available: isOpen, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.send()
 			return nil
 		}},
-		{ID: "assistant.new", Grant: registry.Open, Title: "Start a new conversation with the assistant", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "assistant.new", Grant: registry.Open, Title: "Start a new conversation with the assistant", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			x.conv.Clear()
 			return nil
 		}},
 		{ID: "assistant.stop", Grant: string(plugin.CapSessionControl), Title: "Stop the assistant's turn", Available: func(registry.Args) bool { return x.conv.Busy() },
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.conv.Interrupt(ctx) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.conv.Interrupt(ctx) }},
 		{ID: "assistant.answer", Grant: string(plugin.CapGate), Title: "Answer the assistant's confirmation: {yes} or not; {id}, else the oldest waiting",
 			Available: func(registry.Args) bool { return len(x.conv.Waiting()) > 0 },
+			Args:      []registry.Arg{registry.StringArg("id"), registry.BoolArg("yes")},
 			Run:       func(_ registry.Ctx, a registry.Args) error { return x.answer(a.String("id"), a.Bool("yes")) }},
 		{ID: "assistant.pick", Grant: string(plugin.CapAgentPrompt), Title: "Pick row {n} of the assistant's last answer: open its session or link, or ask about it",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.pick(a.Int("n")) }},
+			Args: []registry.Arg{registry.IntArg("n")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.pick(a.Int("n")) }},
 		{ID: "assistant.undo", Grant: registry.Open, Title: "Undo what the assistant did: {id}, else the latest it can undo",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.undo(a.String("id")) }},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.undo(a.String("id")) }},
 		{ID: "assistant.result.open", Grant: registry.Open, Title: "Open what the assistant's action made: {id}, else the latest",
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.show(ctx, a.String("id")) }},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.show(ctx, a.String("id")) }},
 	}
 }
 
