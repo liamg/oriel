@@ -53,22 +53,22 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 	}
 	for _, k := range in.Keys {
 		switch {
-		case hasKey([]render.KeyEvent{k}, "j", "Down"):
+		case keyIs(k, "j", "Down"):
 			*sel = step(*sel, 1)
-		case hasKey([]render.KeyEvent{k}, "k", "Up"):
+		case keyIs(k, "k", "Up"):
 			*sel = step(*sel, -1)
-		case hasKey([]render.KeyEvent{k}, "g", "Home"):
+		case keyIs(k, "g", "Home"):
 			*sel = step(-1, 1)
-		case hasKey([]render.KeyEvent{k}, "G", "End"):
+		case keyIs(k, "G", "End"):
 			*sel = step(n, -1)
-		case k.Key == "CR":
+		case keyIs(k, "CR"):
 			if n > 0 && !static(*sel) && !off(*sel) {
 				res.Activated = *sel
 			}
 		}
 	}
 	passOn(c, id, in.Keys, func(k render.KeyEvent) bool {
-		return k.Key == "CR" || hasKey([]render.KeyEvent{k}, "j", "k", "g", "G", "Down", "Up", "Home", "End")
+		return keyIs(k, "CR", "j", "k", "g", "G", "Down", "Up", "Home", "End")
 	})
 	focused := in.Focused
 	mode := o.KeyMode

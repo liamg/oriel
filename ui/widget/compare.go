@@ -45,14 +45,14 @@ func Compare(c *ui.Ctx, key any, before, after image.Image, w float32, o Compare
 	}
 	for _, k := range in.Keys {
 		switch {
-		case hasKey([]render.KeyEvent{k}, "Left", "h"):
+		case keyIs(k, "Left", "h"):
 			st.at -= .05
-		case hasKey([]render.KeyEvent{k}, "Right", "l"):
+		case keyIs(k, "Right", "l"):
 			st.at += .05
 		}
 	}
 	st.at += .05 * float32(steps(in.Access))
-	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return hasKey([]render.KeyEvent{k}, "Left", "Right", "h", "l") })
+	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return keyIs(k, "Left", "Right", "h", "l") })
 	st.at = max(0, min(st.at, 1))
 	bb, ab := before.Bounds(), after.Bounds()
 	k := w / float32(max(bb.Dx(), ab.Dx(), 1))

@@ -23,12 +23,12 @@ func Tabs(c *ui.Ctx, key any, labels []string, active *int, o TabsOpts) bool {
 	id := c.Next(key)
 	in := c.Interaction(id)
 	old := *active
-	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return hasKey([]render.KeyEvent{k}, "h", "l", "Left", "Right") })
+	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return keyIs(k, "h", "l", "Left", "Right") })
 	for _, k := range in.Keys {
 		switch {
-		case hasKey([]render.KeyEvent{k}, "l", "Right"):
+		case keyIs(k, "l", "Right"):
 			*active = min(*active+1, len(labels)-1)
-		case hasKey([]render.KeyEvent{k}, "h", "Left"):
+		case keyIs(k, "h", "Left"):
 			*active = max(*active-1, 0)
 		}
 	}
