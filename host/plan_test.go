@@ -40,7 +40,7 @@ func TestPlanThreadsReachTheAgentByPlace(t *testing.T) {
 	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
-	_, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "half-up?",
+	_, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "half-up?",
 		Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 5, Text: "- Round each line in minor units, ties to even."}})
 	if err != nil {
 		t.Fatal(err)
@@ -105,12 +105,12 @@ func planWithAgent(t *testing.T, r *rig) (core.SessionID, *agenttest.FakeSession
 // thread opens a thread on PLAN.md and gives it status.
 func (r *rig) thread(id core.SessionID, line int, body string, status core.ThreadStatus) core.ThreadID {
 	r.t.Helper()
-	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: body,
+	tid, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: body,
 		Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: line}})
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: status}); err != nil {
+	if err := r.w.run.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: status}); err != nil {
 		r.t.Fatal(err)
 	}
 	return tid

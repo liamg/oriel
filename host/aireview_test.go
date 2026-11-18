@@ -43,7 +43,7 @@ func TestAIReviewRunsOnThePickedProvider(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), Offers: []agent.Model{{ID: "gpt-5", Default: true}}}
 	r := newRig(t, codex)
 	id, wt := r.changed()
-	rid, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"})
+	rid, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestAIReviewRunsOnTheSessionAgent(t *testing.T) {
 	r := newRig(t, codex)
 	r.fake.Offers = []agent.Model{{ID: "m1", Default: true}, {ID: "m2"}}
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, r.fake)
@@ -118,7 +118,7 @@ func TestAIReviewRunsOnTheSessionAgent(t *testing.T) {
 	if l, _ := se.LastAIReview(); l.Provider != "fake" || l.Model != "m1" {
 		t.Errorf("the review: %+v", l)
 	}
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Model: "m2", Full: true}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Model: "m2", Full: true}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, r.fake)
@@ -138,7 +138,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, wt := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -150,13 +150,13 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	if first.Projects[0].Head != head {
 		t.Fatalf("the review's head %q, want %q", first.Projects[0].Head, head)
 	}
-	if err := r.w.SetFindings(core.FindingsRecorded{Session: id, Findings: []core.Finding{{ID: se.Findings[0].ID, Dismissed: true}}}); err != nil {
+	if err := r.w.reviews.SetFindings(core.FindingsRecorded{Session: id, Findings: []core.Finding{{ID: se.Findings[0].ID, Dismissed: true}}}); err != nil {
 		t.Fatal(err)
 	}
 	wt.Write(map[string]string{"currency.go": "package pricing\n\nvar half = 5\n"})
 	wt.Commit("Claude", "currency")
 	wt.Write(map[string]string{"tiers.go": "package pricing\n"})
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, codex)
@@ -169,7 +169,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 		l, _ := se.LastAIReview()
 		return len(se.AIReviews) == 2 && !l.Running
 	})
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err == nil || !strings.Contains(err.Error(), "nothing has changed") {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err == nil || !strings.Contains(err.Error(), "nothing has changed") {
 		t.Errorf("a re-review with nothing new: %v", err)
 	}
 }
@@ -180,7 +180,7 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -194,7 +194,7 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	if f := se.Findings[0]; f.Severity != "medium" || f.Line != 31 || f.Body != "The table covers JPY and USD only." {
 		t.Errorf("finding: %+v", f)
 	}
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex", Full: true}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex", Full: true}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, codex)
@@ -215,7 +215,7 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -223,7 +223,7 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	rv.Emit(agent.TurnEnd{})
 	se := r.eventually(id, "the finding", func(se core.SessionState) bool { return len(se.Findings) == 1 })
 	f := se.Findings[0]
-	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{Project: f.Project, File: f.File, Line: f.Line},
+	tid, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{Project: f.Project, File: f.File, Line: f.Line},
 		Title: f.Title, Body: "Fix this", Severity: f.Severity, Finding: f.ID})
 	if err != nil {
 		t.Fatal(err)
@@ -239,13 +239,13 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	if !se.FindingOpen(se.Findings[0]) {
 		t.Error("a finding whose thread is open isn't open")
 	}
-	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadResolved}); err != nil {
+	if err := r.w.run.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadResolved}); err != nil {
 		t.Fatal(err)
 	}
 	if se := r.session(id); se.FindingOpen(se.Findings[0]) {
 		t.Error("a finding whose thread is resolved is still open")
 	}
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "x", Finding: "nope"}); err == nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "x", Finding: "nope"}); err == nil {
 		t.Error("a thread from a finding that isn't there")
 	}
 }
@@ -261,7 +261,7 @@ func (panicky) Start(context.Context, agent.StartSpec) (agent.Session, error) {
 func TestAIReviewSurvivesAPanic(t *testing.T) {
 	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.eventually(id, "the review to end", func(se core.SessionState) bool { l, _ := se.LastAIReview(); return !l.Running })
@@ -277,7 +277,7 @@ func TestCloseWaitsForAIReview(t *testing.T) {
 	release := sync.OnceFunc(func() { close(codex.HoldClose) })
 	t.Cleanup(release) // a failure before the release mustn't leave the host's Close waiting
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
+	if _, err := r.w.reviews.AIReview(context.Background(), hostapi.AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	reviewer(t, codex)

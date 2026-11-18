@@ -21,10 +21,10 @@ func TestAHandOverWaitsForItsProvider(t *testing.T) {
 		t.Fatalf("resumed %d times before its provider was known", n)
 	}
 	app := func() []agent.Provider { return []agent.Provider{r.fake} }
-	r.w.SetProviders(app)
+	r.w.setProviders(app)
 	r.agent()
 	r.eventually(id, "resumed", func(se core.SessionState) bool { return se.Agent.Running })
-	r.w.SetProviders(app)
+	r.w.setProviders(app)
 	r.settle()
 	if n := len(r.fake.Resumed()); n != 1 {
 		t.Errorf("resumed %d times, want once", n)

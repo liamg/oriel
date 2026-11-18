@@ -375,7 +375,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 		t.Fatalf("not held: %+v", r)
 	default:
 	}
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.code != http.StatusForbidden || !strings.Contains(r.body, "not allowed") {
@@ -385,7 +385,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Allow: the dial goes through, and the next asks again.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.code != 200 || r.body != "upstream" {
@@ -395,7 +395,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Always: recorded, and the next goes through with no ask.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.code != 200 {
@@ -427,7 +427,7 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 		res := make(chan int, 1)
 		go func() { code, _ := get(t, paddr, up.URL); res <- code }()
 		ask := s.waitAsk(id, core.AskNetwork)
-		if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"}); err != nil {
+		if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"}); err != nil {
 			t.Fatal(err)
 		}
 		if code := <-res; code != http.StatusForbidden {
@@ -471,7 +471,7 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(ctx, "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"}); err != nil {
 		t.Fatal(err)
 	}
 	if !<-done {
@@ -490,7 +490,7 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	other, _, ob := s.sandboxed()
 	go func() { done <- ob.Egress().Allow(ctx, "cdn.mirror.test", 443) }()
 	ask = s.waitAsk(other, core.AskNetwork)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: agentrun.ForAll}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: agentrun.ForAll}); err != nil {
 		t.Fatal(err)
 	}
 	if !<-done {
@@ -528,7 +528,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 	if ask.Tool != "oriel__commit" || ask.Rule != "oriel__commit" || !strings.Contains(ask.Summary, "Add new.go") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError || r.Text() != "Committed 1 file(s)." {
@@ -542,7 +542,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 		t.Fatalf("not held: %q", r.Text())
 	default:
 	}
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "the user denied oriel__push") || !strings.Contains(r.Text(), "open a PR instead") {
@@ -554,7 +554,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 
 	res = call("oriel__push", map[string]any{})
 	ask = s.waitAsk(id, core.AskGateway)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError || r.Text() != "Pushed." {
@@ -577,7 +577,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 func TestPolicyHooksAnswerSandboxAsks(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	s.w.SetApp(hostapi.App{Decide: func(_ context.Context, d hostapi.Decide) hostapi.Verdict {
+	s.w.setApp(hostapi.App{Decide: func(_ context.Context, d hostapi.Decide) hostapi.Verdict {
 		switch {
 		case d.Ask.Kind == core.AskNetwork && d.Ask.Host == "pkgs.mirror.test:443":
 			return hostapi.Verdict{Decision: "allow", By: "init.lua"}
@@ -615,7 +615,7 @@ func TestRequestHostRefusalHolds(t *testing.T) {
 	if ask.Tool != "oriel__request_host" || !strings.Contains(ask.Summary, "needs docker") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "refused") {
@@ -772,7 +772,7 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	id, _, b := s.sandboxed()
 	ctx := context.Background()
 
-	p, err := s.w.Permissions(ctx, id)
+	p, err := s.w.boxes.Permissions(ctx, id)
 	if err != nil || !p.Sandboxed || !p.Filtered {
 		t.Fatalf("permissions = %+v, %v", p, err)
 	}
@@ -800,13 +800,13 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 		t.Errorf("push = %+v", tp)
 	}
 
-	if err := s.w.SetToolRule(id, gateway.Prefix+"push", hostapi.ToolDeny); err != nil {
+	if err := s.w.boxes.SetToolRule(id, gateway.Prefix+"push", hostapi.ToolDeny); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.w.SetNetRule(hostapi.NetRuleReq{Session: id, Host: "Example.COM", Port: 443, Action: hostapi.NetBlock}); err != nil {
 		t.Fatal(err)
 	}
-	p, _ = s.w.Permissions(ctx, id)
+	p, _ = s.w.boxes.Permissions(ctx, id)
 	if tp := push(p); tp.Action != gateway.Deny || tp.Source != hostapi.SourceSession || tp.Session != gateway.Deny {
 		t.Errorf("push after a session deny = %+v", tp)
 	}
@@ -814,13 +814,13 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 		t.Errorf("example.com after a block = %+v, %v", r, ok)
 	}
 
-	if err := s.w.SetToolRule(id, gateway.Prefix+"push", ""); err != nil {
+	if err := s.w.boxes.SetToolRule(id, gateway.Prefix+"push", ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.w.SetNetRule(hostapi.NetRuleReq{Session: id, Host: "example.com", Port: 443}); err != nil {
 		t.Fatal(err)
 	}
-	p, _ = s.w.Permissions(ctx, id)
+	p, _ = s.w.boxes.Permissions(ctx, id)
 	if tp := push(p); tp.Session != "" || tp.Action != gateway.Ask {
 		t.Errorf("push after clearing = %+v", tp)
 	}
@@ -829,10 +829,10 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	}
 
 	b.Egress().Record(egress.Event{Host: "example.com", Port: 443, Proto: "tls"})
-	if p, _ = s.w.Permissions(ctx, id); len(p.Conns) != 1 || p.Conns[0].Host != "example.com" {
+	if p, _ = s.w.boxes.Permissions(ctx, id); len(p.Conns) != 1 || p.Conns[0].Host != "example.com" {
 		t.Errorf("conns = %+v", p.Conns)
 	}
-	if err := s.w.SetToolRule(id, gateway.Prefix+"push", "maybe"); err == nil {
+	if err := s.w.boxes.SetToolRule(id, gateway.Prefix+"push", "maybe"); err == nil {
 		t.Error("a bad action was taken")
 	}
 }
@@ -863,7 +863,7 @@ func TestGrantsTogetherAreAllKept(t *testing.T) {
 		wg.Go(func() { b.Grant([]gateway.Rule{{Tool: fmt.Sprintf("tool%d", i), Action: gateway.Allow}}) })
 	}
 	wg.Go(func() {
-		if err := s.w.SetToolRule(id, "set", hostapi.ToolDeny); err != nil {
+		if err := s.w.boxes.SetToolRule(id, "set", hostapi.ToolDeny); err != nil {
 			t.Error(err)
 		}
 	})
@@ -888,7 +888,7 @@ func TestSandboxRestartsOnceWhenIdle(t *testing.T) {
 	b := s.keptBox(id)
 	a.Emit(agent.TurnStart{})
 	s.eventually(id, "working", func(se core.SessionState) bool { return se.Agent.Working })
-	if err := s.w.RestartSandbox(id); err != nil {
+	if err := s.w.boxes.RestartSandbox(id); err != nil {
 		t.Fatal(err)
 	}
 	b.RestartWhenIdle("again")
@@ -950,7 +950,7 @@ func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: agentrun.ForAll}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: agentrun.ForAll}); err != nil {
 		t.Fatal(err)
 	}
 	if !<-done {

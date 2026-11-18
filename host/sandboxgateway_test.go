@@ -28,7 +28,7 @@ func (s *sandboxRig) allowed(id core.SessionID, root, tool string, args any) mcp
 		}
 		se := s.session(id)
 		if len(se.Asks) == 1 && se.Asks[0].Kind == core.AskGateway && se.Asks[0].Tool == tool {
-			if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "allow"}); err != nil {
+			if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "allow"}); err != nil {
 				s.t.Fatal(err)
 			}
 			r := <-ch

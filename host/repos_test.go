@@ -46,7 +46,7 @@ func TestReposFileReadsTheOldArray(t *testing.T) {
 	if got := storeRepos(r); !slices.Equal(got, []core.RepoID{"pricing"}) {
 		t.Fatalf("store repos after an old repos.json = %v", got)
 	}
-	if err := r.w.RemoveRepo("pricing"); err != nil {
+	if err := r.w.repos.RemoveRepo("pricing"); err != nil {
 		t.Fatal(err)
 	}
 	var f struct {
@@ -68,7 +68,7 @@ func TestReposChangedOnAdd(t *testing.T) {
 			got = append(got, ev)
 		}
 	})
-	repo, err := r.w.AddRepoPath(context.Background(), r.repo.Dir)
+	repo, err := r.w.repos.AddRepoPath(context.Background(), r.repo.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestReposChangedOnAdd(t *testing.T) {
 	if repo.Source != core.RepoAdded || !repo.Added.Equal(r.now()) {
 		t.Errorf("added %+v", repo)
 	}
-	if _, err := r.w.AddRepoPath(context.Background(), r.repo.Dir); err != nil || len(got) != 1 {
+	if _, err := r.w.repos.AddRepoPath(context.Background(), r.repo.Dir); err != nil || len(got) != 1 {
 		t.Errorf("adding it again: %v, %d events", err, len(got))
 	}
 	r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "x", Repos: []core.RepoID{repo.ID}})
@@ -91,24 +91,24 @@ func TestReposChangedOnAdd(t *testing.T) {
 func TestRemoveRepo(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()
-	repo, _ := r.w.AddRepoPath(ctx, r.repo.Dir)
+	repo, _ := r.w.repos.AddRepoPath(ctx, r.repo.Dir)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "eng-2231", Prompt: "x", Repos: []core.RepoID{repo.ID}})
-	if err := r.w.RemoveRepo(repo.ID); err == nil || !strings.Contains(err.Error(), "eng-2231") {
+	if err := r.w.repos.RemoveRepo(repo.ID); err == nil || !strings.Contains(err.Error(), "eng-2231") {
 		t.Fatalf("removing a repo a session works in: %v", err)
 	}
 	if err := r.w.Archive(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.RemoveRepo(repo.ID); err != nil {
+	if err := r.w.repos.RemoveRepo(repo.ID); err != nil {
 		t.Fatal(err)
 	}
-	if len(r.w.Repos()) != 0 || len(storeRepos(r)) != 0 {
-		t.Fatalf("still registered: %v", r.w.Repos())
+	if len(r.w.repos.Repos()) != 0 || len(storeRepos(r)) != 0 {
+		t.Fatalf("still registered: %v", r.w.repos.Repos())
 	}
 	if _, err := os.Stat(filepath.Join(r.repo.Dir, "round.go")); err != nil {
 		t.Errorf("removing touched the files: %v", err)
 	}
-	if again, err := r.w.AddRepoPath(ctx, r.repo.Dir); err != nil || again.ID != repo.ID {
+	if again, err := r.w.repos.AddRepoPath(ctx, r.repo.Dir); err != nil || again.ID != repo.ID {
 		t.Errorf("adding it back by hand: %+v, %v", again, err)
 	}
 }
@@ -128,17 +128,17 @@ func TestScanFindsSiblings(t *testing.T) {
 	}
 	known.Git("worktree", "add", "-q", "-b", "wt", filepath.Join(src, "a-worktree"))
 
-	if _, err := r.w.AddRepoPath(ctx, filepath.Join(src, "removed")); err != nil {
+	if _, err := r.w.repos.AddRepoPath(ctx, filepath.Join(src, "removed")); err != nil {
 		t.Fatal(err)
 	}
-	removed, _ := r.w.Find(filepath.Join(src, "removed"))
-	if err := r.w.RemoveRepo(removed.ID); err != nil {
+	removed, _ := r.w.repos.Find(filepath.Join(src, "removed"))
+	if err := r.w.repos.RemoveRepo(removed.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.w.AddRepoPath(ctx, known.Dir); err != nil {
+	if _, err := r.w.repos.AddRepoPath(ctx, known.Dir); err != nil {
 		t.Fatal(err)
 	}
-	added, err := r.w.ScanRepos(ctx, false)
+	added, err := r.w.repos.ScanRepos(ctx, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,10 +153,10 @@ func TestScanFindsSiblings(t *testing.T) {
 		t.Fatalf("discovered %v, want [sibling]", names)
 	}
 	repoAt(t, filepath.Join(src, "later"))
-	if again, _ := r.w.ScanRepos(ctx, false); len(again) != 0 {
+	if again, _ := r.w.repos.ScanRepos(ctx, false); len(again) != 0 {
 		t.Errorf("a folder scanned already was read again: %v", again)
 	}
-	if again, _ := r.w.ScanRepos(ctx, true); len(again) != 1 || filepath.Base(again[0].Path) != "later" {
+	if again, _ := r.w.repos.ScanRepos(ctx, true); len(again) != 1 || filepath.Base(again[0].Path) != "later" {
 		t.Errorf("scan all = %v", again)
 	}
 }
@@ -166,30 +166,30 @@ func TestCloneParent(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()
 	r.w.opts.ReposDir = filepath.Join(t.TempDir(), "fallback")
-	if got := r.w.CloneParent(); got != r.w.opts.ReposDir {
+	if got := r.w.repos.CloneParent(); got != r.w.opts.ReposDir {
 		t.Errorf("parent with no repos = %q", got)
 	}
 	code := filepath.Join(t.TempDir(), "code")
 	for _, n := range []string{"a", "b"} {
-		if _, err := r.w.AddRepoPath(ctx, repoAt(t, filepath.Join(code, n)).Dir); err != nil {
+		if _, err := r.w.repos.AddRepoPath(ctx, repoAt(t, filepath.Join(code, n)).Dir); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := r.w.AddRepoPath(ctx, r.repo.Dir); err != nil {
+	if _, err := r.w.repos.AddRepoPath(ctx, r.repo.Dir); err != nil {
 		t.Fatal(err)
 	}
-	if got := r.w.CloneParent(); got != code {
+	if got := r.w.repos.CloneParent(); got != code {
 		t.Errorf("parent = %q, want %q", got, code)
 	}
 	bare := filepath.Join(t.TempDir(), "My-Project.git")
 	r.repo.Git("clone", "-q", "--bare", r.repo.Dir, bare)
-	tg, err := r.w.CloneTarget(ctx, hostapi.CloneReq{URL: bare})
+	tg, err := r.w.repos.CloneTarget(ctx, hostapi.CloneReq{URL: bare})
 	if err != nil || tg.Dir != filepath.Join(code, "my-project") || tg.Exists {
 		t.Fatalf("target = %+v, %v", tg, err)
 	}
 	elsewhere := filepath.Join(t.TempDir(), "elsewhere")
 	var lines []string
-	repo, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine", Progress: func(l string) { lines = append(lines, l) }})
+	repo, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine", Progress: func(l string) { lines = append(lines, l) }})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestCloneParent(t *testing.T) {
 	if len(lines) == 0 {
 		t.Error("no progress lines")
 	}
-	if tg, _ := r.w.CloneTarget(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine"}); !tg.Exists || !tg.Same {
+	if tg, _ := r.w.repos.CloneTarget(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine"}); !tg.Exists || !tg.Same {
 		t.Errorf("target over its own clone = %+v", tg)
 	}
 }
@@ -208,17 +208,17 @@ func TestCloneParent(t *testing.T) {
 func TestCheckRepoPath(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()
-	if c := r.w.CheckRepoPath(ctx, t.TempDir()); c.Error == "" {
+	if c := r.w.repos.CheckRepoPath(ctx, t.TempDir()); c.Error == "" {
 		t.Errorf("a plain folder: %+v", c)
 	}
 	wt := filepath.Join(t.TempDir(), "wt")
 	r.repo.Git("worktree", "add", "-q", "-b", "wt", wt)
-	c := r.w.CheckRepoPath(ctx, wt)
+	c := r.w.repos.CheckRepoPath(ctx, wt)
 	if c.Path != r.repo.Dir || !c.Worktree || c.Known != "" || c.Branch != "main" {
 		t.Errorf("a worktree: %+v", c)
 	}
-	repo, _ := r.w.AddRepoPath(ctx, r.repo.Dir)
-	if c := r.w.CheckRepoPath(ctx, r.repo.Dir); c.Known != repo.ID || c.Worktree {
+	repo, _ := r.w.repos.AddRepoPath(ctx, r.repo.Dir)
+	if c := r.w.repos.CheckRepoPath(ctx, r.repo.Dir); c.Known != repo.ID || c.Worktree {
 		t.Errorf("a known repo: %+v", c)
 	}
 }

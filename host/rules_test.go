@@ -55,7 +55,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	a2.WaitSent(t)
 
 	ans := r.askedCard(one, a1, goTest("p1", "./..."))
-	if err := r.w.Answer(hostapi.AnswerReq{Session: one, Ask: "p1", Decision: "always"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: one, Ask: "p1", Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow {
@@ -68,7 +68,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	}
 
 	r.setNow(r.now().Add(5 * time.Minute))
-	if err := r.w.Answer(hostapi.AnswerReq{Session: two, Ask: "p3", Decision: "always", For: agentrun.ForAll}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: two, Ask: "p3", Decision: "always", For: agentrun.ForAll}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow {
@@ -96,20 +96,20 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	a4.WaitSent(t)
 	r.noCard(four, a4, goTest("p5", "./..."))
 
-	if err := r.w.RemoveRule(core.AskPermission, "Bash(go test:*)"); err != nil {
+	if err := r.w.run.RemoveRule(core.AskPermission, "Bash(go test:*)"); err != nil {
 		t.Fatal(err)
 	}
 	if rules := r.w.Store().State().Rules; len(rules) != 0 {
 		t.Fatalf("removed, yet %+v", rules)
 	}
 	ans = r.askedCard(four, a4, goTest("p6", "./..."))
-	if err := r.w.Answer(hostapi.AnswerReq{Session: four, Ask: "p6", Decision: "deny"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: four, Ask: "p6", Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; d.Allow {
 		t.Error("denied, yet allowed")
 	}
-	if err := r.w.RemoveRule(core.AskPermission, "Bash(go test:*)"); err == nil {
+	if err := r.w.run.RemoveRule(core.AskPermission, "Bash(go test:*)"); err == nil {
 		t.Error("removed a rule that isn't there")
 	}
 }
@@ -119,10 +119,10 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 func TestUtilityAgentsIgnoreRulesForAllSessions(t *testing.T) {
 	r := newRig(t)
 	r.fake.Offers = []agent.Model{{ID: "small", Small: true, Default: true}}
-	if err := r.w.AddRule(core.AskPermission, "Bash(go test:*)"); err != nil {
+	if err := r.w.run.AddRule(core.AskPermission, "Bash(go test:*)"); err != nil {
 		t.Fatal(err)
 	}
-	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "hi"})
+	u, err := r.w.utility.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "hi"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestARuleAllowsOnlyItsOwnCommand(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("One")
 	a.WaitSent(t)
-	if err := r.w.AddRule(core.AskPermission, "Bash(go test:*)"); err != nil {
+	if err := r.w.run.AddRule(core.AskPermission, "Bash(go test:*)"); err != nil {
 		t.Fatal(err)
 	}
 	r.noCard(id, a, bash("ok", "go test ./..."))
@@ -163,7 +163,7 @@ func TestARuleAllowsOnlyItsOwnCommand(t *testing.T) {
 	} {
 		p := bash(fmt.Sprint("p", i), cmd)
 		ans := r.askedCard(id, a, p)
-		if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: p.ID, Decision: "deny"}); err != nil {
+		if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: p.ID, Decision: "deny"}); err != nil {
 			t.Fatal(err)
 		}
 		if d := <-ans; d.Allow {
@@ -176,11 +176,11 @@ func TestARuleAllowsOnlyItsOwnCommand(t *testing.T) {
 func TestRemoveRuleKeepsAnotherKindsRule(t *testing.T) {
 	r := newRig(t)
 	for _, k := range []core.AskKind{core.AskPermission, core.AskGateway} {
-		if err := r.w.AddRule(k, "lookup"); err != nil {
+		if err := r.w.run.AddRule(k, "lookup"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := r.w.RemoveRule(core.AskGateway, "lookup"); err != nil {
+	if err := r.w.run.RemoveRule(core.AskGateway, "lookup"); err != nil {
 		t.Fatal(err)
 	}
 	if rules := r.w.Store().State().Rules; len(rules) != 1 || rules[0].Kind != core.AskPermission {

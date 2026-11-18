@@ -52,7 +52,7 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 	replied(r, id, a, map[string]any{"body": "One more step.", "working": true})
 	r.noneSent(a) // three without the user is enough
 
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "keep going"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "keep going"}); err != nil {
 		t.Fatal(err)
 	}
 	a.WaitSent(t)

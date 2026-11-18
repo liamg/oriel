@@ -25,7 +25,7 @@ func TestTheUsersPromptsReachTheAgent(t *testing.T) {
 		t.Fatalf("before the app sends prompts, the pack is Packs': %q", a.Spec.Pack.Text)
 	}
 	o := prompts.Overrides{prompts.PartID("drafts"): "Never write drafts.\n", prompts.StyleID: "Tabs."}
-	if err := r.w.SetPrompts(o); err != nil {
+	if err := r.w.run.SetPrompts(o); err != nil {
 		t.Fatal(err)
 	}
 	r.restart()
@@ -33,7 +33,7 @@ func TestTheUsersPromptsReachTheAgent(t *testing.T) {
 	if !strings.Contains(a.Spec.Pack.Text, "Never write drafts.") || !strings.Contains(a.Spec.Pack.Text, "# Work") {
 		t.Errorf("the work pack hasn't the user's drafts part: %.200q", a.Spec.Pack.Text)
 	}
-	if err := r.w.SetPrompts(prompts.Overrides{}); err != nil {
+	if err := r.w.run.SetPrompts(prompts.Overrides{}); err != nil {
 		t.Fatal(err)
 	}
 	_, a = r.workSession("third")
@@ -50,7 +50,7 @@ func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 	r.fake.Has = &agent.Features{Terminal: true, Fork: true, Notes: "CLAUDE.md"}
 	r.repo.Write(map[string]string{"CLAUDE.md": "repo rules\n"})
 	r.repo.Commit("Ada", "rules")
-	if err := r.w.SetPrompts(prompts.Overrides{prompts.StyleID: "Tabs, never spaces.\n"}); err != nil {
+	if err := r.w.run.SetPrompts(prompts.Overrides{prompts.StyleID: "Tabs, never spaces.\n"}); err != nil {
 		t.Fatal(err)
 	}
 	id, _ := r.workSession("Work")
@@ -78,7 +78,7 @@ func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 		t.Errorf("the notes show in the workspace's diff: %q", out)
 	}
 
-	if err := r.w.SetPrompts(prompts.Overrides{}); err != nil {
+	if err := r.w.run.SetPrompts(prompts.Overrides{}); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(filepath.Join(se.Dir, "CLAUDE.md"))
@@ -91,7 +91,7 @@ func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 // A direct session runs in the user's own directory: Oriel writes nothing there.
 func TestNoNotesInTheUsersOwnDirectory(t *testing.T) {
 	r := newRig(t)
-	if err := r.w.SetPrompts(prompts.Overrides{prompts.StyleID: "Tabs."}); err != nil {
+	if err := r.w.run.SetPrompts(prompts.Overrides{prompts.StyleID: "Tabs."}); err != nil {
 		t.Fatal(err)
 	}
 	r.start(core.SessionSpec{Kind: core.KindDirect, Dir: r.repo.Dir, Provider: "fake"})

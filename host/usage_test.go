@@ -59,22 +59,22 @@ func TestReadUsageKeepsTheNewestReading(t *testing.T) {
 	r := newRig(t, claude)
 	probed := core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now().Add(-time.Hour), Windows: []core.UsageWindow{{Name: "weekly", Used: .3}}}
 	claude.set(probed)
-	if err := r.w.ReadUsage(context.Background()); err != nil {
+	if err := r.w.stats.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "weekly", Used: .5}}})
-	if err := r.w.ReadUsage(context.Background()); err != nil {
+	if err := r.w.stats.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if got := usedNow(r.w, "claude"); got != .5 {
 		t.Errorf("an older reading replaced the session's: %v", got)
 	}
-	if h := r.w.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude"}); len(h) != 2 {
+	if h := r.w.stats.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude"}); len(h) != 2 {
 		t.Errorf("history = %+v", h)
 	}
 	probed.Sampled, probed.Windows = r.now().Add(time.Minute), []core.UsageWindow{{Name: "weekly", Used: .6}}
 	claude.set(probed)
-	if err := r.w.ReadUsage(context.Background()); err != nil {
+	if err := r.w.stats.ReadUsage(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	if got := usedNow(r.w, "claude"); got != .6 {
@@ -91,7 +91,7 @@ func TestReadUsageLogsWhichProviderFailed(t *testing.T) {
 	var buf bytes.Buffer
 	r.log = slog.New(slog.NewTextHandler(&lockedWriter{mu: &mu, w: &buf}, nil))
 	r.restart()
-	if err := r.w.ReadUsage(context.Background()); err == nil {
+	if err := r.w.stats.ReadUsage(context.Background()); err == nil {
 		t.Fatal("no error")
 	}
 	mu.Lock()

@@ -118,7 +118,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Handled(t)
 	r.noneSent(a)
 	p, _ := r.session(id).Primary()
-	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {
+	if _, err := r.w.code.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := r.ship(id, false)[p.Name].PRDraft; d.Stale || d.Empty() {
@@ -135,7 +135,7 @@ func TestDraftsKeepWhatTheUserWrote(t *testing.T) {
 	ctx := context.Background()
 	p, _ := r.session(id).Primary()
 	write(t, dir, "round.go", "package pricing\n\nfunc Round(x float64) float64 { return x }\n")
-	if err := r.w.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Body: "fix: mine"}); err != nil {
+	if err := r.w.code.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Body: "fix: mine"}); err != nil {
 		t.Fatal(err)
 	}
 	turn(r, id, a)
@@ -150,7 +150,7 @@ func TestDraftsKeepWhatTheUserWrote(t *testing.T) {
 		t.Errorf("the user's draft became %+v", d)
 	}
 
-	if err := r.w.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Drop: true}); err != nil {
+	if err := r.w.code.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Drop: true}); err != nil {
 		t.Fatal(err)
 	}
 	if out := a.Call(t, "commit_draft", map[string]any{"message": "fix: theirs"}); out != "saved" {

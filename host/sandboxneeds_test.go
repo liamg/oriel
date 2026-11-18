@@ -104,7 +104,7 @@ func TestTheGatewayCarriesPluginsTools(t *testing.T) {
 	s := newSandboxRig(t)
 	var got hostapi.GatewayCall
 	run := func(_ context.Context, c hostapi.GatewayCall) (string, error) { got = c; return "tagged", nil }
-	s.w.SetApp(hostapi.App{GatewayTools: func() []hostapi.GatewayTool {
+	s.w.setApp(hostapi.App{GatewayTools: func() []hostapi.GatewayTool {
 		return []hostapi.GatewayTool{{Name: "forge_tags", Desc: "List tags.", ReadOnly: true, Run: run},
 			{Name: "commit", Desc: "Not the gateway's commit.", Run: run}}
 	}})

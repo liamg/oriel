@@ -18,7 +18,7 @@ func TestCloneRegistersTheRepo(t *testing.T) {
 	bare := filepath.Join(t.TempDir(), "pricing.git")
 	r.repo.Git("clone", "-q", "--bare", r.repo.Dir, bare)
 	ctx := context.Background()
-	repo, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare})
+	repo, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,27 +28,27 @@ func TestCloneRegistersTheRepo(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(repo.Path, "round.go")); err != nil {
 		t.Errorf("the clone has no files: %v", err)
 	}
-	if got, ok := r.w.Find("pricing"); !ok || got.Path != repo.Path {
-		t.Errorf("not registered: %+v", r.w.Repos())
+	if got, ok := r.w.repos.Find("pricing"); !ok || got.Path != repo.Path {
+		t.Errorf("not registered: %+v", r.w.repos.Repos())
 	}
-	again, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare})
+	again, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare})
 	if err != nil || again.ID != repo.ID {
 		t.Errorf("cloning the same URL again: %+v, %v", again, err)
 	}
-	named, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "Pricing Two"})
+	named, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "Pricing Two"})
 	if err != nil || named.Path != filepath.Join(r.w.opts.ReposDir, "pricing-two") {
 		t.Errorf("a clone with a name: %+v, %v", named, err)
 	}
-	if _, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "pricing-two"}); err != nil {
+	if _, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "pricing-two"}); err != nil {
 		t.Errorf("a name taken by the same remote: %v", err)
 	}
 	if err := os.MkdirAll(filepath.Join(r.w.opts.ReposDir, "taken"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "taken"}); err == nil || !strings.Contains(err.Error(), "already") {
+	if _, err := r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Name: "taken"}); err == nil || !strings.Contains(err.Error(), "already") {
 		t.Errorf("cloning over a directory: %v", err)
 	}
-	_, err = r.w.CloneRepo(ctx, hostapi.CloneReq{URL: filepath.Join(t.TempDir(), "gone.git")})
+	_, err = r.w.repos.CloneRepo(ctx, hostapi.CloneReq{URL: filepath.Join(t.TempDir(), "gone.git")})
 	if err == nil || !strings.Contains(err.Error(), "gone.git") || !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("a URL that isn't there: %v", err)
 	}

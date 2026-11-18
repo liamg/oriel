@@ -2,11 +2,12 @@
 // app's process. It is the source of truth for session state: every change is a core event, applied to the store
 // it shares with the app, and kept in a log per session so it survives a restart.
 //
-// This package is the host's facade: the API the app calls, much of it the methods of the parts it embeds, each entry
-// point recovering a panic into an error. The work is done by its parts, each in a package of its own that sees the
-// host only as a hostcore.State: worktree (workspaces), agentrun (agents), sandboxhost (sandboxes), ship (code
-// hosts and the Ship page), repos, jobs, utility, aireview, persist (what's kept on disk) and pricing (the price
-// book). The parts never call each other; what one needs of another it's given here, as a func.
+// This package is the host's facade: the API the app calls, the hostapi contracts, written out on Host (api.go), each
+// entry point recovering a panic into an error. The work is done by its parts, held as named fields, each in a
+// package of its own that sees the host only as a hostcore.State: worktree (workspaces), agentrun (agents),
+// sandboxhost (sandboxes), ship (code hosts and the Ship page), repos, jobs, utility, aireview, persist (what's kept
+// on disk) and pricing (the price book). A part's own methods stay its own. The parts never import each other; what
+// one needs of another it's given in Host.parts, as a func, and nowhere else.
 //
 // Lock order, outermost first: a session's agent's lock (agentrun), then the edit lock (State.Mutate), then the
 // store's. Every other lock (the runner's, the logs', the sandbox settings', the ship and mirror states') is held
@@ -78,20 +79,6 @@ type Options struct {
 	SessionIDs func() string
 }
 
-// The host's parts, by the names it embeds them under.
-type (
-	logsPart    = persist.Logs
-	statsPart   = persist.Stats
-	reposPart   = repos.Registry
-	runPart     = agentrun.Runner
-	boxesPart   = sandboxhost.Boxes
-	codePart    = ship.Ships
-	jobsPart    = jobs.Jobs
-	utilityPart = utility.Utilities
-	reviewsPart = aireview.Reviews
-	workPart    = worktree.Worktrees
-)
-
 // Host hosts sessions.
 type Host struct {
 	opts  Options
@@ -101,17 +88,18 @@ type Host struct {
 	kinds kinds
 	edit  sync.Mutex // one read-modify-write of a session's state at a time (State.Mutate)
 
-	// The parts whose calls are the host's own, embedded: their methods are the host's, each recovering a panic.
-	*logsPart
-	*statsPart
-	*reposPart
-	*runPart
-	*boxesPart
-	*codePart
-	*jobsPart
-	*utilityPart
-	*reviewsPart
-	*workPart
+	// The parts, each in a package of its own; the host's API is written out on it, each method calling the part
+	// that does the work (api.go).
+	logs    *persist.Logs
+	stats   *persist.Stats
+	repos   *repos.Registry
+	run     *agentrun.Runner
+	boxes   *sandboxhost.Boxes
+	code    *ship.Ships
+	jobs    *jobs.Jobs
+	utility *utility.Utilities
+	reviews *aireview.Reviews
+	work    *worktree.Worktrees
 
 	prices *pricing.Pricing
 
@@ -134,20 +122,20 @@ func New(opts Options) (*Host, error) {
 	if err := w.parts(); err != nil {
 		return nil, err
 	}
-	if err := w.Restore(w.store); err != nil {
+	if err := w.logs.Restore(w.store); err != nil {
 		return nil, err
 	}
 	strip := persist.NewStrip(opts.Home, opts.Log)
 	if err := strip.Restore(w.store); err != nil {
 		w.log.Warn("the tab strip as it was left", "err", err)
 	}
-	w.RestoreUsage()
-	w.store.Subscribe(core.Filter{}, w.logsPart.Record)
+	w.stats.RestoreUsage()
+	w.store.Subscribe(core.Filter{}, w.logs.Record)
 	strip.Track(w.store)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
-	w.EmitChanged()
-	w.EmitRules()
+	w.repos.EmitChanged()
+	w.run.EmitRules()
 	w.resumeHandedOver()
 	return w, nil
 }
@@ -181,51 +169,62 @@ func defaults(opts *Options) error {
 	return nil
 }
 
-// parts makes the host's parts, each given what it needs of the others.
+// parts makes the host's parts, each given what it needs of the others in its Deps. This is the one place the parts
+// meet, so it's the whole list of who calls whom:
+//
+//   - worktree: repos (Resolve, Add, Repos, Dir)
+//   - agentrun: repos (Repos), stats (AccountOf, Record, UsageSampled), ship (PROpen), and the host's AddRepo,
+//     ShipRename and NewBranch, which keep the notes in step
+//   - sandboxhost: agentrun (RunAwaitingKey, GatewayTools, Sandbox, Sandboxes, AppendItem, SetAgent,
+//     RestartWhenIdle), repos (Repos), its own Config, and the host's AddRepo
+//   - ship: agentrun (RunAwaitingKey, Wake)
+//   - jobs: sandboxhost (Config) and the host's Start
+//   - utility: agentrun (AppTools, SignedOut)
+//   - aireview: agentrun (Pack, Protected, SignedOut)
 func (w *Host) parts() error {
 	st := state{w}
-	w.logsPart = persist.NewLogs(w.env, st)
+	w.logs = persist.NewLogs(w.env, st)
 	w.prices = pricing.New(w.env, pricing.Deps{Client: w.opts.HTTP, URL: w.opts.PricesURL})
-	w.statsPart = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
+	w.stats = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
 	var err error
-	if w.reposPart, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
+	if w.repos, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
 		return err
 	}
-	w.workPart = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.Resolve, AddRepo: w.Add,
-		Repos: w.Repos, ReposDir: w.Dir, NotesFiles: w.notesFiles})
-	w.runPart = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
+	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
+		Repos: w.repos.Repos, ReposDir: w.repos.Dir, NotesFiles: w.notesFiles})
+	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
 		MCPServers:     w.mcpServers,
 		Exec:           w.opts.Exec,
 		Sandbox:        w.opts.Sandbox,
 		Packs:          w.opts.Packs,
 		KeyWait:        w.opts.KeyWait,
-		Repos:          w.Repos,
+		Repos:          w.repos.Repos,
 		AddRepo:        w.AddRepo,
-		AccountOf:      w.AccountOf,
-		Record:         w.statsPart.Record,
-		UsageSampled:   w.UsageSampled,
-		PROpen:         func(id core.SessionID, project, branch string) bool { return w.PROpen(id, project, branch) },
+		AccountOf:      w.stats.AccountOf,
+		Record:         w.stats.Record,
+		UsageSampled:   w.stats.UsageSampled,
+		PROpen:         func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
 		RenameBranch:   w.ShipRename,
 		NewBranch:      w.NewBranch,
 		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
 		Prices:         w.prices})
-	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {
+	if w.boxes, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}
-	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, RunAwaitingKey: w.RunAwaitingKey, Wake: w.Wake,
+	w.code = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, RunAwaitingKey: w.run.RunAwaitingKey, Wake: w.run.Wake,
 		BranchRenamed: worktree.BranchRenamed})
-	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
-		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})
-	w.utilityPart = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
-		Tools: w.AppTools, SignedOut: w.SignedOut})
-	w.reviewsPart = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
+	w.jobs = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
+		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxes.Config().Default != "host" }})
+	w.utility = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
+		Tools: w.run.AppTools, SignedOut: w.run.SignedOut})
+	w.reviews = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
 		Pack: func(name string) (agent.Pack, bool) {
 			if w.opts.Packs == nil {
 				return agent.Pack{}, false
 			}
-			return w.Pack(name)
+			return w.run.Pack(name)
 		},
-		Protected: w.Protected, SignedOut: w.SignedOut})
+		Protected: w.run.Protected, SignedOut: w.run.SignedOut})
 	return nil
 }
 
@@ -233,33 +232,33 @@ func (w *Host) parts() error {
 func (w *Host) sandboxDeps() sandboxhost.Deps {
 	return sandboxhost.Deps{Env: w.env, State: state{w},
 		RunAwaitingKey: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
-			return w.RunAwaitingKey(ctx, id, what, project, fn)
+			return w.run.RunAwaitingKey(ctx, id, what, project, fn)
 		},
-		Config:          func() sandbox.Config { return w.Config() },
+		Config:          func() sandbox.Config { return w.boxes.Config() },
 		Providers:       w.opts.Providers.List,
-		GatewayTools:    w.GatewayTools,
+		GatewayTools:    w.run.GatewayTools,
 		Factory:         w.opts.Sandbox,
-		Live:            func(id core.SessionID) hostapi.Sandbox { return w.Sandbox(id) },
-		Running:         func() []hostapi.Sandbox { return w.Sandboxes() },
-		Repos:           func() []core.Repo { return w.Repos() },
+		Live:            func(id core.SessionID) hostapi.Sandbox { return w.run.Sandbox(id) },
+		Running:         func() []hostapi.Sandbox { return w.run.Sandboxes() },
+		Repos:           func() []core.Repo { return w.repos.Repos() },
 		AddRepo:         w.AddRepo,
-		Note:            func(id core.SessionID, it core.Item) { w.AppendItem(id, it) },
-		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.SetAgent(id, fn) },
-		RestartWhenIdle: w.RestartWhenIdle}
+		Note:            func(id core.SessionID, it core.Item) { w.run.AppendItem(id, it) },
+		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.run.SetAgent(id, fn) },
+		RestartWhenIdle: w.run.RestartWhenIdle}
 }
 
 // settle puts back what the last process left running when it ended without handing over.
 func (w *Host) settle() {
-	w.runPart.Settle()
+	w.run.Settle()
 	for _, se := range w.store.State().Sessions {
-		w.reviewsPart.Settle(se)
+		w.reviews.Settle(se)
 	}
 }
 
 // HandOver stops every agent for the next start to resume, then closes the host: Oriel quitting.
 func (w *Host) HandOver() {
 	defer w.env.Recover("HandOver", nil)
-	w.runPart.HandOver()
+	w.run.HandOver()
 	_ = w.Close()
 }
 
@@ -271,10 +270,10 @@ func (w *Host) Close() error {
 	w.stopOnce.Do(func() {
 		defer w.env.Recover("Close", &w.closeErr)
 		close(w.closed)
-		w.runPart.Close()
+		w.run.Close()
 		w.waitGoing()
-		w.statsPart.Close()
-		w.closeErr = errors.Join(w.closeErr, w.logsPart.Close())
+		w.stats.Close()
+		w.closeErr = errors.Join(w.closeErr, w.logs.Close())
 	})
 	return w.closeErr
 }
@@ -287,7 +286,7 @@ const closeWait = 5 * time.Second
 func (w *Host) waitGoing() {
 	done := make(chan struct{})
 	go func() {
-		w.Wait()
+		w.reviews.Wait()
 		w.going.Wait()
 		close(done)
 	}()
@@ -305,8 +304,8 @@ func (w *Host) notesFiles() []string { return agent.NotesFiles(w.opts.Providers.
 
 // Busy names the host's work under way off its callers that will end on its own: agents starting, resumes,
 // notices. A test waits for none before it counts what that work does.
-func (w *Host) Busy() []string {
-	return append(w.Starting(), w.going.Transient()...)
+func (w *Host) busy() []string {
+	return append(w.run.Starting(), w.going.Transient()...)
 }
 
 // emit applies an event to the host's state.
@@ -351,8 +350,8 @@ func (s state) Mutate(id core.SessionID, fn func(se core.SessionState) error) er
 // mcpServers are the MCP servers a session's agent reaches of its own: in a sandbox, those its gateway carries; on
 // this machine, the ones installed for its provider.
 func (w *Host) mcpServers(se core.SessionState) []agent.MCPServer {
-	if se.Agent.Sandboxed && w.boxesPart != nil {
-		return w.MCPServers()
+	if se.Agent.Sandboxed && w.boxes != nil {
+		return w.boxes.MCPServers()
 	}
 	if w.opts.Providers == nil {
 		return nil

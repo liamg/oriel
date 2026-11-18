@@ -61,7 +61,7 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 	if p := r.w.ProviderInfo(context.Background()); p[0].Install.LoggedIn || !strings.Contains(p[0].Install.Note, "OAuth token revoked") {
 		t.Errorf("the launcher's provider = %+v", p[0].Install)
 	}
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id2, Body: "and this"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id2, Body: "and this"}); err != nil {
 		t.Fatal(err)
 	}
 	r.noneSent(a2)
@@ -93,7 +93,7 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 	a.WaitSent(t)
 	a.LoseLogin("Not logged in · Run /login")
 	first, _ := loginCard(r.eventually(id, "the login's card", flagged))
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: first.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: first.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	again, _ := loginCard(r.eventually(id, "a card again", func(se core.SessionState) bool {
@@ -101,7 +101,7 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 		return ok && a.ID != first.ID
 	}))
 	r.fake.SignIn(true)
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
@@ -131,7 +131,7 @@ func TestAnAgentRefusedForItsLoginStartsOnceSignedIn(t *testing.T) {
 	}
 	r.fake.Refuse(nil)
 	r.fake.SignIn(true)
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := r.agent().WaitSent(t); !strings.Contains(got.Text, "go on") {
@@ -152,7 +152,7 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 	if in, _ := r.fake.Detect(context.Background()); !in.LoggedIn {
 		t.Fatal("the fake's files should still say signed in")
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	again, _ := loginCard(r.eventually(id, "a card again: the same login is still refused", func(se core.SessionState) bool {
@@ -163,7 +163,7 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 		t.Errorf("rechecked, the launcher's provider = %+v", p[0].Install)
 	}
 	r.fake.SignIn(true) // signed in again outside Oriel: a new login on disk
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: again.ID, Decision: "recheck"}); err != nil {
 		t.Fatal(err)
 	}
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
@@ -200,10 +200,10 @@ func (p *detectPanics) Detect(ctx context.Context) (agent.Install, error) {
 func TestALoginCheckOutlivesAFailedMark(t *testing.T) {
 	p := &detectPanics{Fake: &agenttest.Fake{Name: "flaky"}}
 	r := newRig(t, p)
-	r.w.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
+	r.w.run.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
 	until(t, "the login's read", func() bool { return p.calls.Load() > 0 })
 	done := make(chan bool)
-	go func() { done <- r.w.CheckLogin("flaky", false) }()
+	go func() { done <- r.w.run.CheckLogin("flaky", false) }()
 	select {
 	case <-done:
 	case <-time.After(waitTimeout):
@@ -227,7 +227,7 @@ func TestABrowserLoginClearsTheCards(t *testing.T) {
 	if p := r.w.ProviderInfo(context.Background()); !p[0].Has.Login || p[0].Has.Terminal {
 		t.Errorf("the provider has %+v", p[0].Has)
 	}
-	url, err := r.w.StartLogin(context.Background(), "fake")
+	url, err := r.w.run.StartLogin(context.Background(), "fake")
 	if err != nil || url != agenttest.LoginURL {
 		t.Fatalf("StartLogin = %q, %v", url, err)
 	}
@@ -239,10 +239,10 @@ func TestABrowserLoginClearsTheCards(t *testing.T) {
 // A provider that doesn't sign in from Oriel can't be asked to.
 func TestStartLoginNeedsALoginStarter(t *testing.T) {
 	r := newRig(t)
-	if _, err := r.w.StartLogin(context.Background(), "fake"); err == nil {
+	if _, err := r.w.run.StartLogin(context.Background(), "fake"); err == nil {
 		t.Error("a provider without Login signed in from Oriel")
 	}
-	if _, err := r.w.StartLogin(context.Background(), "nobody"); err == nil {
+	if _, err := r.w.run.StartLogin(context.Background(), "nobody"); err == nil {
 		t.Error("no provider signed in")
 	}
 }
@@ -251,7 +251,7 @@ func TestStartLoginNeedsALoginStarter(t *testing.T) {
 func TestCloseDoesNotWaitForASignInLeftOpen(t *testing.T) {
 	r := newRig(t)
 	r.fake.Has = &agent.Features{Login: true}
-	if _, err := r.w.StartLogin(context.Background(), "fake"); err != nil {
+	if _, err := r.w.run.StartLogin(context.Background(), "fake"); err != nil {
 		t.Fatal(err)
 	}
 	closed := make(chan error, 1)

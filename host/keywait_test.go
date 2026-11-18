@@ -59,7 +59,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+		_, err := r.w.code.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 		done <- err
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok && se.Status == core.StatusNeedsYou })
@@ -84,12 +84,12 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
+		_, err := r.w.code.ShipCommit(context.Background(), hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 		done <- err
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok })
 	a, _ := keyAsk(se)
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	select {

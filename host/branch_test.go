@@ -79,7 +79,7 @@ func TestRenameBranchTool(t *testing.T) {
 	if notes := notesOf(t, r.session(id)); !strings.Contains(notes, "on branch `tester/backoff`") {
 		t.Errorf("the notes don't follow the rename:\n%s", notes)
 	}
-	if err := r.w.ShipPush(context.Background(), hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
+	if err := r.w.code.ShipPush(context.Background(), hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
 	if out := wt.Git("ls-remote", "origin", "tester/backoff"); !strings.Contains(out, "tester/backoff") {
@@ -94,13 +94,13 @@ func TestRenameBranchTool(t *testing.T) {
 func TestRenameBranchWaitsForAnOpenPR(t *testing.T) {
 	r := newRig(t)
 	id, p, _, a := branchSession(t, r)
-	if err := r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch, Open: true}); err != nil {
+	if err := r.w.code.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch, Open: true}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.CallErr("rename_branch", map[string]any{"name": "tester/backoff"}); err == nil || !strings.Contains(err.Error(), "is open") {
 		t.Fatalf("renamed under an open PR: %v", err)
 	}
-	if err := r.w.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch}); err != nil {
+	if err := r.w.code.SawPR(hostapi.PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch}); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "rename_branch", map[string]any{"name": "tester/backoff"})
@@ -185,7 +185,7 @@ func TestAdoptingABranchMakesItPushable(t *testing.T) {
 	wt.Write(map[string]string{"more.go": "package limiter\n"})
 	wt.Commit("Ada", "more")
 
-	err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name})
+	err := r.w.code.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name})
 	if err == nil || !strings.Contains(err.Error(), "git checkout "+p.Branch) || !strings.Contains(err.Error(), "new_branch / rename_branch") {
 		t.Fatalf("pushing the agent's branch: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestAdoptingABranchMakesItPushable(t *testing.T) {
 	if m.Projects[0].Branch != "agent/own" {
 		t.Errorf("the manifest has %q", m.Projects[0].Branch)
 	}
-	if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
+	if err := r.w.code.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
 	if out := wt.Git("ls-remote", "origin", "agent/own"); !strings.Contains(out, "agent/own") {
@@ -274,7 +274,7 @@ func TestAdoptRefusals(t *testing.T) {
 			if got := r.project(id).Branch; got != p.Branch {
 				t.Errorf("the session's branch moved to %q", got)
 			}
-			if err := r.w.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err == nil {
+			if err := r.w.code.ShipPush(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err == nil {
 				t.Error("pushed")
 			}
 		})

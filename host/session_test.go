@@ -44,7 +44,7 @@ func idleWithAComment(t *testing.T) (*rig, core.SessionID, *agenttest.FakeSessio
 // A comment to an idle agent reaches it at once (how soon is TestACommentReachesTheAgentBudget).
 func TestACommentReachesTheAgent(t *testing.T) {
 	r, id, a, req := idleWithAComment(t)
-	tid, err := r.w.Comment(context.Background(), req)
+	tid, err := r.w.run.Comment(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestCommentsWaitForTheTurnUnlessUrgent(t *testing.T) {
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "later please"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "later please"}); err != nil {
 		t.Fatal(err)
 	}
 	r.noneSent(a)
@@ -78,7 +78,7 @@ func TestCommentsWaitForTheTurnUnlessUrgent(t *testing.T) {
 	}
 	a.Emit(agent.TurnStart{})
 	r.eventually(id, "the next turn", func(se core.SessionState) bool { return se.Agent.Working })
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "stop, this first", Urgent: true}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "stop, this first", Urgent: true}); err != nil {
 		t.Fatal(err)
 	}
 	got := a.WaitSent(t) // the fake ends the turn when interrupted
@@ -216,7 +216,7 @@ func TestTasksFollowTheirThreads(t *testing.T) {
 	if tasks := r.session(id).Tasks; len(tasks) != 2 || tasks[0].Status != core.TaskInProgress || string(tasks[0].Thread) != tid {
 		t.Fatalf("tasks = %+v", tasks)
 	}
-	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: core.ThreadID(tid), Status: core.ThreadResolved}); err != nil {
+	if err := r.w.run.SetThread(hostapi.ThreadReq{Session: id, Thread: core.ThreadID(tid), Status: core.ThreadResolved}); err != nil {
 		t.Fatal(err)
 	}
 	tasks := r.session(id).Tasks
@@ -241,7 +241,7 @@ func TestPermissionLayers(t *testing.T) {
 	if se.Asks[0].Rule != "Bash(go test:*)" {
 		t.Fatalf("ask = %+v, status %s", se.Asks, se.Status)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "always"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow || !d.Always {
@@ -260,14 +260,14 @@ func TestPermissionLayers(t *testing.T) {
 	rm, _ := json.Marshal(map[string]string{"command": "rm -rf build"})
 	ans = a.Ask(agent.Permission{ID: "p3", Tool: "Bash", Input: rm})
 	r.eventually(id, "the card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p3", Decision: "deny", Note: "use the Makefile target"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "p3", Decision: "deny", Note: "use the Makefile target"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; d.Allow || !strings.Contains(d.Note, "use the Makefile target") {
 		t.Errorf("deny = %+v", d)
 	}
 	// The app's policy hooks (layer 2) answer without a card.
-	r.w.SetApp(hostapi.App{Decide: func(_ context.Context, d hostapi.Decide) hostapi.Verdict {
+	r.w.setApp(hostapi.App{Decide: func(_ context.Context, d hostapi.Decide) hostapi.Verdict {
 		if strings.Contains(d.Ask.Input, "curl") {
 			return hostapi.Verdict{Decision: "deny", Note: "no network from Bash", By: "init.lua"}
 		}
@@ -296,7 +296,7 @@ func TestAnMCPCallAsksThroughTheSessionsLayers(t *testing.T) {
 	if ask := se.Asks[0]; ask.Kind != core.AskPermission || ask.Tool != tool || ask.Rule != tool {
 		t.Fatalf("ask = %+v", ask)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "m1", Decision: "always"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "m1", Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow || !d.Always {
@@ -307,7 +307,7 @@ func TestAnMCPCallAsksThroughTheSessionsLayers(t *testing.T) {
 	}
 	ans = a.Ask(agent.Permission{ID: "m3", Tool: "mcp__claude_ai_Claude_Docs__delete", Input: json.RawMessage(`{}`)})
 	r.eventually(id, "a card for the other tool", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "m3", Decision: "deny"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "m3", Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; d.Allow {
@@ -324,7 +324,7 @@ func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
 	ask := core.Ask{Tool: "mcp__oriel__debug_step", Summary: "step over in main.main", Rule: "mcp__oriel__debug_step"}
 	got := make(chan hostapi.Verdict, 1)
 	go func() {
-		v, err := r.w.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: ask})
+		v, err := r.w.run.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: ask})
 		if err != nil {
 			t.Error(err)
 		}
@@ -334,27 +334,27 @@ func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
 	if k := se.Asks[0].Kind; k != core.AskPermission || se.Asks[0].Summary != ask.Summary {
 		t.Fatalf("ask = %+v", se.Asks[0])
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "always"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if v := <-got; v.Decision != "allow" || v.By != "the user" {
 		t.Errorf("always = %+v", v)
 	}
-	if v, err := r.w.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: ask}); err != nil || v.Decision != "allow" || !strings.HasPrefix(v.By, "rule ") {
+	if v, err := r.w.run.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: ask}); err != nil || v.Decision != "allow" || !strings.HasPrefix(v.By, "rule ") {
 		t.Errorf("after always: %+v %v", v, err)
 	}
 	go func() {
-		v, _ := r.w.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: core.Ask{Tool: "mcp__oriel__debug_eval", Summary: "evaluate os.Exit(1)"}})
+		v, _ := r.w.run.Ask(context.Background(), hostapi.AskReq{Session: id, Ask: core.Ask{Tool: "mcp__oriel__debug_eval", Summary: "evaluate os.Exit(1)"}})
 		got <- v
 	}()
 	se = r.eventually(id, "the second card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "deny", Note: "not that"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Decision: "deny", Note: "not that"}); err != nil {
 		t.Fatal(err)
 	}
 	if v := <-got; v.Decision != "deny" || v.Note != "not that" {
 		t.Errorf("deny = %+v", v)
 	}
-	if _, err := r.w.Ask(context.Background(), hostapi.AskReq{Session: "nope", Ask: ask}); err == nil {
+	if _, err := r.w.run.Ask(context.Background(), hostapi.AskReq{Session: "nope", Ask: ask}); err == nil {
 		t.Error("asked for a session that isn't running")
 	}
 }
@@ -370,7 +370,7 @@ func TestQuestionsWaitForTheUser(t *testing.T) {
 	if se.Asks[0].Kind != core.AskQuestion {
 		t.Fatalf("status %s, asks %+v", se.Status, se.Asks)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Decision: "answer", Answers: map[string]string{"Which colour?": "blue"}}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Decision: "answer", Answers: map[string]string{"Which colour?": "blue"}}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ch; d.Answers["Which colour?"] != "blue" {
@@ -385,7 +385,7 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	id, a := r.workSession("Negative values round the wrong way")
 	a.WaitSent(t)
 	req := r.session(id).Threads[0].ID
-	other, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"})
+	other, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +397,7 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	if se.Asks[0].Thread != req {
 		t.Errorf("an unnamed question was asked in %q, want the active thread %q", se.Asks[0].Thread, req)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
 		t.Fatal(err)
 	}
 	<-ch
@@ -415,7 +415,7 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	if se.Asks[0].Thread != other || se.Asks[0].Kind != core.AskQuestion || se.Asks[0].Questions[0].Question != "Which zero?" {
 		t.Errorf("the ask tool asked %+v, want a question in %q", se.Asks[0], other)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Answers: map[string]string{"Which zero?": "-0"}}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: se.Asks[0].ID, Answers: map[string]string{"Which zero?": "-0"}}); err != nil {
 		t.Fatal(err)
 	}
 	if out := <-got; !strings.Contains(out, "Which zero?") || !strings.Contains(out, "-0") {
@@ -435,7 +435,7 @@ func TestAQuestionOffAThreadIsAskedInTheRequest(t *testing.T) {
 	id, a := r.workSession("Negative values round the wrong way")
 	a.WaitSent(t)
 	req := r.session(id).Threads[0].ID
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"}); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "reply", map[string]any{"thread": string(req), "body": "Which way should they round?"})
@@ -446,7 +446,7 @@ func TestAQuestionOffAThreadIsAskedInTheRequest(t *testing.T) {
 	if se.Asks[0].Thread != req {
 		t.Errorf("the question was asked in %q, want the request %q", se.Asks[0].Thread, req)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}}); err != nil {
 		t.Fatal(err)
 	}
 	<-ch
@@ -464,7 +464,7 @@ func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
 	if !ok || th.Anchor != nil || !th.Open() {
 		t.Fatalf("the question is in thread %q (%+v), want an open general one", se.Asks[0].Thread, th)
 	}
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}}); err != nil {
 		t.Fatal(err)
 	}
 	<-ch
@@ -485,7 +485,7 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 	id, a := r.workSession("Work")
 	a.WaitSent(t)
 	r.eventually(id, "the agent running", func(se core.SessionState) bool { return se.Agent.Running }) // its first turn is sent as it launches
-	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "why decimal and not big.Rat?", Btw: true})
+	tid, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "why decimal and not big.Rat?", Btw: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,7 +526,7 @@ func TestAThreadOpenedResolvedIsANote(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Work")
 	a.WaitSent(t)
-	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3},
+	tid, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3},
 		Title: "Explain: func Round", Body: "Rounds half to even.", Status: core.ThreadResolved})
 	if err != nil {
 		t.Fatal(err)
@@ -543,7 +543,7 @@ func TestConsoleMessagesQueueUntilTheTurnEnds(t *testing.T) {
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
-	if err := r.w.Send(hostapi.SendReq{Session: id, Text: "also check routes.go"}); err != nil {
+	if err := r.w.run.Send(hostapi.SendReq{Session: id, Text: "also check routes.go"}); err != nil {
 		t.Fatal(err)
 	}
 	if q := r.session(id).Agent.Queue; len(q) != 1 {
@@ -608,7 +608,7 @@ func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {
 // The app offers tools of its own (LSP lookups), and calls go back to it.
 func TestAppToolsReachTheAgent(t *testing.T) {
 	r := newRig(t)
-	r.w.SetApp(hostapi.App{
+	r.w.setApp(hostapi.App{
 		Tools: func(hostapi.ToolsReq) []agent.Tool {
 			return []agent.Tool{{Name: "lsp_definition", Description: "Where a symbol is defined.", ReadOnly: true,
 				Schema: json.RawMessage(`{"type":"object"}`)}}
@@ -635,7 +635,7 @@ func TestAToolTheAgentsOwnMCPServerCoversIsntOffered(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			r := newRig(t)
 			r.fake.MCP = c.installed
-			r.w.SetApp(hostapi.App{Tools: func(hostapi.ToolsReq) []agent.Tool {
+			r.w.setApp(hostapi.App{Tools: func(hostapi.ToolsReq) []agent.Tool {
 				return []agent.Tool{
 					{Name: "linear_issue", Schema: json.RawMessage(`{"type":"object"}`), CoveredBy: []string{"mcp.linear.app"}},
 					{Name: "lsp_definition", Schema: json.RawMessage(`{"type":"object"}`)},
@@ -665,7 +665,7 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 	answered(r, id, a) // nothing owed: the next the agent is sent is the comment, not a carry-on
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
-	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "run the suite"})
+	tid, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "run the suite"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -843,7 +843,7 @@ func TestResumeRestartsAnAgentThatStoppedAnswering(t *testing.T) {
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "and the zero case"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "and the zero case"}); err != nil {
 		t.Fatal(err)
 	}
 	r.noneSent(a)
@@ -900,7 +900,7 @@ func TestEvidenceBacksEveryReplyOfTheTurn(t *testing.T) {
 	id, a := r.workSession("Fix it")
 	a.WaitSent(t)
 	tid := string(r.session(id).Threads[0].ID)
-	other, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "and this"})
+	other, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "and this"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -969,8 +969,8 @@ func TestOnlyTheRequestTheAgentIsOnIsActive(t *testing.T) {
 		return th.Busy && th.Active
 	})
 	a.Emit(agent.TurnStart{})
-	b, _ := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "second"})
-	c, _ := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "third"})
+	b, _ := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "second"})
+	c, _ := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "third"})
 	a.Call(t, "reply", map[string]any{"thread": string(first), "body": "Done."})
 	a.Emit(agent.TurnEnd{})
 	a.WaitSent(t)
@@ -1022,7 +1022,7 @@ func TestReplyRefusesUnseenComments(t *testing.T) {
 	id, a := r.workSession("Fix the rounding")
 	a.WaitSent(t)
 	tid := r.session(id).Threads[0].ID
-	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "and the zero case"}); err != nil {
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "and the zero case"}); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "On it.", "working": true})
