@@ -84,11 +84,11 @@ func (x *Consent) commands() []registry.Command {
 	open := func(registry.Args) bool { return len(x.queue) > 0 }
 	return []registry.Command{
 		{ID: "plugins.consent", UserOnly: true, Title: "Ask to install the plugin in {dir} (or update to it from the one in {from}), then run {then} with {dir} if it's accepted; {source}, {badge}, {warning} and {facts} ({label, value}s) are what's known of where it comes from",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.consentCommand(a) }},
+			Args: []registry.Arg{registry.StringArg("badge"), registry.StringArg("dir"), registry.AnyArg("facts"), registry.StringArg("from"), registry.StringArg("source"), registry.StringArg("then"), registry.StringArg("warning")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.consentCommand(a) }},
 		{ID: "plugins.consent.accept", UserOnly: true, Title: "Install: accept every capability the plugin asks for", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { x.answer(true); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.answer(true); return nil }},
 		{ID: "plugins.consent.cancel", Grant: registry.Open, Title: "Cancel the install: grant nothing", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { x.answer(false); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.answer(false); return nil }},
 	}
 }
 

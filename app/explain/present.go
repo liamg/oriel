@@ -184,11 +184,11 @@ func (x *Presenter) commands() []registry.Command {
 	}
 	has := func(registry.Args) bool { return x.focus != nil }
 	return []registry.Command{
-		{ID: "present.next", Grant: registry.Open, Title: "Presentation: the next block", Available: has, Run: on(func(f *presentFocus) { f.move(1) })},
-		{ID: "present.prev", Grant: registry.Open, Title: "Presentation: the block before", Available: has, Run: on(func(f *presentFocus) { f.move(-1) })},
+		{ID: "present.next", Grant: registry.Open, Title: "Presentation: the next block", Available: has, Args: registry.NoArgs, Run: on(func(f *presentFocus) { f.move(1) })},
+		{ID: "present.prev", Grant: registry.Open, Title: "Presentation: the block before", Available: has, Args: registry.NoArgs, Run: on(func(f *presentFocus) { f.move(-1) })},
 		{ID: "present.comment", Grant: string(plugin.CapAgentPrompt), Title: "Presentation: open a thread on the selected block's lines", Available: has,
-			Run: on(func(f *presentFocus) { f.comment(max(f.st.sel, 0), f.st.part) })},
-		{ID: "present.source.open", Grant: registry.Open, Title: "Presentation: go to the selected block's source", Available: has, Run: on(func(f *presentFocus) {
+			Args: registry.NoArgs, Run: on(func(f *presentFocus) { f.comment(max(f.st.sel, 0), f.st.part) })},
+		{ID: "present.source.open", Grant: registry.Open, Title: "Presentation: go to the selected block's source", Available: has, Args: registry.NoArgs, Run: on(func(f *presentFocus) {
 			if f.p.Source == nil || len(f.st.blocks) == 0 {
 				return
 			}

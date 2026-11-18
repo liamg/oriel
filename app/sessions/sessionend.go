@@ -111,7 +111,7 @@ func (x *End) commands() []registry.Command {
 	open := func(registry.Args) bool { return x.ask != nil }
 	return []registry.Command{
 		{ID: "session.end", Grant: string(plugin.CapSessionControl), Title: "End {id}, or the session in front: {how} archive or delete, {discard} uncommitted work, {delete_branch}; no {how} opens the dialog",
-			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
+			Available: has, Args: []registry.Arg{registry.BoolArg("delete_branch"), registry.BoolArg("discard"), registry.StringArg("how"), registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus)))
 				switch a.String("how") {
 				case "":
@@ -123,13 +123,13 @@ func (x *End) commands() []registry.Command {
 				return fmt.Errorf("a session ends by archive or delete, not %q", a.String("how"))
 			}},
 		{ID: "session.close", Grant: string(plugin.CapSessionControl), Title: "Close {id}, or the session in front: stop its agent and archive it, asking first when something would be lost, or archive or delete it when it's done",
-			Available: has, Run: func(_ registry.Ctx, a registry.Args) error {
+			Available: has, Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				return x.close(core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus))))
 			}},
 		{ID: "session.end.confirm", Grant: string(plugin.CapSessionControl), Title: "End the session as the End session dialog says", Available: open,
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.confirm(ctx) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.confirm(ctx) }},
 		{ID: "session.end.cancel", Grant: registry.Open, Title: "Close the End session dialog, ending nothing", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { x.ask = nil; return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.ask = nil; return nil }},
 	}
 }
 

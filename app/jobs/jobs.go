@@ -178,23 +178,23 @@ func (x *Jobs) commands() []registry.Command {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	formOpen := func(registry.Args) bool { return x.form != nil }
 	return []registry.Command{
-		{ID: "jobs.open", Grant: registry.Open, Title: "Open the Jobs page, at a {job} by name", Ex: "Jobs", ExArg: "job", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "jobs.open", Grant: registry.Open, Title: "Open the Jobs page, at a {job} by name", Ex: "Jobs", ExArg: "job", Args: []registry.Arg{registry.StringArg("job")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("job"))
 		}},
 		{ID: "jobs.new", Grant: registry.Open, Title: "New job: the dialog, with {title}, {prompt}, {sandbox}, {provider}, {model}, {effort} or {schedule} filled in",
-			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.newForm(a); return nil }},
+			Available: has, Args: []registry.Arg{registry.StringArg("effort"), registry.StringArg("model"), registry.StringArg("prompt"), registry.StringArg("provider"), registry.AnyArg("sandbox"), registry.AnyArg("schedule"), registry.StringArg("title")}, Run: func(_ registry.Ctx, a registry.Args) error { x.newForm(a); return nil }},
 		{ID: "jobs.edit", Grant: registry.Open, Title: "Edit a job in the dialog: {name}, the selected one by default", Available: has,
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, false) }},
+			Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, false) }},
 		{ID: "jobs.duplicate", Grant: registry.Open, Title: "Duplicate a job in the New job dialog: {name}, the selected one by default", Available: has,
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, true) }},
+			Args: []registry.Arg{registry.StringArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, true) }},
 		{ID: "jobs.save", Grant: string(plugin.CapSessionControl), Title: "Save a job: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {run} runs it after",
-			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.save(ctx, a); return err }},
+			Available: has, Args: []registry.Arg{registry.TextArg("effort"), registry.TextArg("model"), registry.StringArg("name"), registry.TextArg("prompt"), registry.TextArg("provider"), registry.BoolArg("run"), registry.TextArg("sandbox"), registry.AnyArg("schedule"), registry.TextArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.save(ctx, a); return err }},
 		{ID: "jobs.run", Grant: string(plugin.CapSessionControl), Title: "Run a job now: {name}, the selected one by default", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.runJob(ctx, a) }},
+			Args: []registry.Arg{registry.StringArg("name")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.runJob(ctx, a) }},
 		{ID: "jobs.delete", Grant: string(plugin.CapSessionControl), Title: "Delete a job: {name}; its runs stay", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.deleteJob(ctx, a) }},
+			Args: []registry.Arg{registry.StringArg("name")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.deleteJob(ctx, a) }},
 		{ID: "session.delete", Grant: string(plugin.CapSessionControl), Title: "Delete a session: {id}, or the one in front; its worktrees, workspace and log go, the repos stay", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := core.SessionID(a.String("id"))
 				if id == "" {
 					id = h.State().Focus
@@ -206,7 +206,7 @@ func (x *Jobs) commands() []registry.Command {
 				return c.Delete(ctx, id)
 			}},
 		{ID: "jobs.form.save", UserOnly: true, Title: "Save the job the dialog holds; {run} runs it too", Available: formOpen,
-			Run: func(_ registry.Ctx, a registry.Args) error { x.submit(a.Bool("run")); return nil }},
+			Args: []registry.Arg{registry.BoolArg("run")}, Run: func(_ registry.Ctx, a registry.Args) error { x.submit(a.Bool("run")); return nil }},
 	}
 }
 

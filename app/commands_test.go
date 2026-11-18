@@ -227,3 +227,195 @@ func TestBuiltinCommandsDeclareTheirGrant(t *testing.T) {
 		t.Errorf("built-in commands name a Grant that isn't a capability:\n  %s", strings.Join(unknown, "\n  "))
 	}
 }
+
+// Every built-in command declares the arguments it takes, and what runs one (a keymap, a contribution such as a menu
+// item or a rail entry, a Run written out in the code) passes only those, of their types: a misspelled key would
+// otherwise read as nothing.
+func TestBuiltinCommandsDeclareTheirArgs(t *testing.T) {
+	s, _ := commandScene(t)
+	r := s.Registry()
+	var none []string
+	for _, c := range r.Commands() {
+		if strings.HasPrefix(c.Source, "builtin") && !strings.HasPrefix(c.ID, "load:") && c.Args == nil {
+			none = append(none, c.ID)
+		}
+	}
+	if len(none) > 0 {
+		t.Errorf("%d built-in commands don't say what arguments they take. Give each Args (registry.NoArgs for none):\n  %s",
+			len(none), strings.Join(none, "\n  "))
+	}
+	check := func(id string, args registry.Args, where string) {
+		c, ok := r.CommandFor(id)
+		if !ok || len(args) == 0 {
+			return
+		}
+		known := registry.Args{}
+		for k, v := range args {
+			if _, unknown := v.(present); !unknown {
+				known[k] = v
+			} else if !c.Takes(k) {
+				t.Errorf("%s: command %q doesn't take %q", where, id, k)
+			}
+		}
+		if err := registry.CheckArgs(c, known); err != nil && !strings.Contains(err.Error(), "is required") {
+			t.Errorf("%s: %v", where, err)
+		}
+	}
+	for _, k := range r.Keymaps() {
+		check(k.Command, k.Args, "keymap "+k.Mode+" "+k.Keys+" ("+k.Source+")")
+	}
+	for _, kind := range r.ContributionKinds() {
+		for _, c := range r.Contributions(kind) {
+			v := reflect.Indirect(reflect.ValueOf(c))
+			if v.Kind() != reflect.Struct {
+				continue
+			}
+			cmd, args := v.FieldByName("Command"), v.FieldByName("Args")
+			if !cmd.IsValid() || cmd.Kind() != reflect.String || !args.IsValid() {
+				continue
+			}
+			if a, ok := args.Interface().(registry.Args); ok {
+				check(cmd.String(), a, kind+" "+c.ContributionName())
+			}
+		}
+	}
+	for _, lit := range runArgLiterals(t, "..") {
+		check(lit.id, lit.args, lit.at)
+	}
+}
+
+type runArgLiteral struct {
+	id, at string
+	args   registry.Args
+}
+
+// runArgLiterals are the Runs written out in the code with their args as a literal: x.Run(ctx, "id",
+// registry.Args{"k": v}) and kit.Call{Command: "id", Args: registry.Args{…}}. Only the keys are known, so each value
+// is any.
+func runArgLiterals(t *testing.T, root string) []runArgLiteral {
+	t.Helper()
+	var out []runArgLiteral
+	fset := token.NewFileSet()
+	keysOf := func(e ast.Expr) (registry.Args, bool) {
+		cl, ok := e.(*ast.CompositeLit)
+		if !ok {
+			return nil, false
+		}
+		if sel, ok := cl.Type.(*ast.SelectorExpr); !ok || sel.Sel.Name != "Args" {
+			return nil, false
+		}
+		a := registry.Args{}
+		for _, el := range cl.Elts {
+			kv, ok := el.(*ast.KeyValueExpr)
+			if !ok {
+				return nil, false
+			}
+			lit, ok := kv.Key.(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				return nil, false
+			}
+			k, _ := strconv.Unquote(lit.Value)
+			a[k] = argValue(kv.Value)
+		}
+		return a, true
+	}
+	for _, dir := range []string{"app", "host", "ui", "plugin", "script", "registry", "agent", "catalog"} {
+		if err := filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() && (d.Name() == "testdata" || d.Name() == "apptest") {
+				if d != nil && d.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+				return nil
+			}
+			f, err := parser.ParseFile(fset, p, nil, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ast.Inspect(f, func(n ast.Node) bool {
+				switch v := n.(type) {
+				case *ast.CallExpr:
+					sel, ok := v.Fun.(*ast.SelectorExpr)
+					if !ok || sel.Sel.Name != "Run" && sel.Sel.Name != "run" || len(v.Args) < 2 {
+						return true
+					}
+					for i := 0; i+1 < len(v.Args) && i < 2; i++ {
+						lit, ok := v.Args[i].(*ast.BasicLit)
+						if !ok || lit.Kind != token.STRING {
+							continue
+						}
+						id, err := strconv.Unquote(lit.Value)
+						if err != nil || !commandShaped.MatchString(id) {
+							continue
+						}
+						if a, ok := keysOf(v.Args[i+1]); ok {
+							out = append(out, runArgLiteral{id, fset.Position(lit.Pos()).String(), a})
+						}
+					}
+				case *ast.CompositeLit:
+					var id string
+					var args ast.Expr
+					for _, el := range v.Elts {
+						kv, ok := el.(*ast.KeyValueExpr)
+						if !ok {
+							continue
+						}
+						k, ok := kv.Key.(*ast.Ident)
+						if !ok {
+							continue
+						}
+						switch k.Name {
+						case "Command":
+							if lit, ok := kv.Value.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+								id, _ = strconv.Unquote(lit.Value)
+							}
+						case "Args":
+							args = kv.Value
+						}
+					}
+					if id != "" && args != nil {
+						if a, ok := keysOf(args); ok {
+							out = append(out, runArgLiteral{id, fset.Position(v.Pos()).String(), a})
+						}
+					}
+				}
+				return true
+			})
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return out
+}
+
+// argValue is a literal arg's value where it's plain (a string, a number, a bool), else nil: present, its type unknown.
+func argValue(e ast.Expr) any {
+	switch v := e.(type) {
+	case *ast.BasicLit:
+		switch v.Kind {
+		case token.STRING:
+			s, _ := strconv.Unquote(v.Value)
+			return s
+		case token.INT:
+			n, _ := strconv.Atoi(v.Value)
+			return n
+		case token.FLOAT:
+			f, _ := strconv.ParseFloat(v.Value, 64)
+			return f
+		}
+	case *ast.Ident:
+		switch v.Name {
+		case "true":
+			return true
+		case "false":
+			return false
+		}
+	}
+	return present{}
+}
+
+// present is a literal arg whose value's type isn't known from its source: the key is there, its type unchecked.
+type present struct{}

@@ -243,7 +243,7 @@ func TestSecurityKeyCardCancelsAWaitingCommit(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	r.Run("ship.commit", registry.Args{"project": p.Name, "message": "two", "force": true})
+	r.Run("ship.commit", registry.Args{"project": p.Name, "message": "two"})
 	r.WaitFrame("the key's card", func(s string) bool { return apptest.HasAll(s, "Touch your security key", "Cancel") })
 	r.ClickText("Cancel")
 	r.WaitGone("Touch your security key")

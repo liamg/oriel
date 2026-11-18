@@ -34,7 +34,7 @@ func (t *Themes) Activate(_ context.Context, h plugin.Host) error {
 		t.Add(h.Theme(theme.File{Path: f}))
 	}
 	t.Add(h.Picker(themePicker(h)))
-	t.Add(h.Command(registry.Command{ID: "themes.browse", Grant: registry.Open, Ex: "Themes", Title: "Pick a theme, each shown as it's highlighted", Run: func(ctx registry.Ctx, _ registry.Args) error {
+	t.Add(h.Command(registry.Command{ID: "themes.browse", Grant: registry.Open, Ex: "Themes", Title: "Pick a theme, each shown as it's highlighted", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 		return h.Run(ctx, "picker.open", registry.Args{"source": "themes"})
 	}}))
 	t.Add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>T", Command: "picker.open", Args: registry.Args{"source": "themes"}, Desc: "Themes"}))

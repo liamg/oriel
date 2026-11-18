@@ -118,11 +118,11 @@ func (e *Explorer) fileCommands() []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "explorer.file.new", Grant: string(plugin.CapEditorWrite), Title: "New file {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
-			Run: newEntry("file")},
+			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("path")}, Run: newEntry("file")},
 		{ID: "explorer.folder.new", Grant: string(plugin.CapEditorWrite), Title: "New folder {name} in the folder {path} (a file's own folder for a file); with no {name}, ask for it",
-			Run: newEntry("folder")},
+			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("path")}, Run: newEntry("folder")},
 		{ID: "explorer.rename", Grant: string(plugin.CapEditorWrite), Title: "Rename the file or folder {path} to {name}, in the same folder; with no {name}, ask for it",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("path")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				p, err := editable(a)
 				if err != nil {
 					return err
@@ -134,7 +134,7 @@ func (e *Explorer) fileCommands() []registry.Command {
 				}
 				return e.rename(p, name)
 			}},
-		{ID: "explorer.duplicate", Grant: string(plugin.CapEditorWrite), Title: "Copy the file or folder {path} beside it, as \"name copy\"", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "explorer.duplicate", Grant: string(plugin.CapEditorWrite), Title: "Copy the file or folder {path} beside it, as \"name copy\"", Args: []registry.Arg{registry.StringArg("path")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			p, err := editable(a)
 			if err != nil {
 				return err
@@ -142,14 +142,14 @@ func (e *Explorer) fileCommands() []registry.Command {
 			return duplicate(p)
 		}},
 		{ID: "explorer.delete", Grant: string(plugin.CapEditorWrite), Title: "Move the file or folder {path} to the trash once {confirm}ed; {permanent} deletes it instead",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.BoolArg("confirm"), registry.StringArg("path"), registry.BoolArg("permanent")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				p, err := editable(a)
 				if err != nil {
 					return err
 				}
 				return e.remove(p, a.Bool("confirm"), a.Bool("permanent"))
 			}},
-		{ID: "explorer.path.copy", Grant: registry.Open, Title: "Copy the path of {path}: absolute, or with {relative} from its repo's root", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "explorer.path.copy", Grant: registry.Open, Title: "Copy the path of {path}: absolute, or with {relative} from its repo's root", Args: []registry.Arg{registry.StringArg("path"), registry.BoolArg("relative")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			p, err := e.absPath(a)
 			if err != nil {
 				return err

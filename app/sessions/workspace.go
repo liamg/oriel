@@ -101,6 +101,7 @@ func (x *Workspace) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "workspace.open", Grant: registry.Open, Title: "Show where the session in front's agent works, its sandbox and image, and what it may do: {tab} overview, files, image, build log or permissions",
 			Available: inFront,
+			Args:      []registry.Arg{registry.StringArg("tab")},
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if t := a.String("tab"); t != "" {
 					i := slices.Index(wsTabs, t)
@@ -113,9 +114,9 @@ func (x *Workspace) commands() []registry.Command {
 				return nil
 			}},
 		{ID: "workspace.image.rebuild", Grant: string(plugin.CapSessionControl), Title: "Build the sandbox image of {id}, the session in front by default, again without the cache, then restart its agent on it",
-			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.rebuild(session(a)) }},
+			Available: inFront, Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.rebuild(session(a)) }},
 		{ID: "workspace.restart", Grant: string(plugin.CapSessionControl), Title: "Restart the agent of {id}, the session in front by default, in a new sandbox once its turn ends",
-			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
+			Available: inFront, Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				w, err := sessionkit.SandboxCalls(x.h)
 				if err != nil {

@@ -29,7 +29,7 @@ type detailOpen struct {
 // detailCommand is agent.console.details.open: {item} or {ask} of {id} (the session in front) in a dialog, in full.
 func (x *Console) detailCommand() registry.Command {
 	return registry.Command{ID: "agent.console.details.open", Grant: registry.Open, Title: "Show a tool call {item} or an ask {ask} of session {id} in full, with its status, input and result",
-		Run: func(_ registry.Ctx, a registry.Args) error {
+		Args: []registry.Arg{registry.StringArg("ask"), registry.StringArg("id"), registry.StringArg("item")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			id := core.SessionID(a.String("id"))
 			if id == "" {
 				se, ok := x.front()

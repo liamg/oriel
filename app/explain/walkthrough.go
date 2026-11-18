@@ -117,23 +117,24 @@ func (x *Walkthrough) commands() []registry.Command {
 	ready := func(registry.Args) bool { return x.ready() }
 	return []registry.Command{
 		{ID: "explain.change.open", Grant: string(plugin.CapAgentPrompt), Title: "Explain this change: a walkthrough of the branch's change across every project and file, step by step, written by the session's agent; thrown away once the code it's about changes",
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.open(ctx) }},
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.open(ctx) }},
 		{ID: "explain.change.step", Grant: registry.Open, Title: "Go to step {step} of the walkthrough, or {by} steps on (-1 back)", Available: ready,
-			Run: func(_ registry.Ctx, a registry.Args) error { x.goTo(x.stepArg(a)); return nil }},
+			Args: []registry.Arg{registry.IntArg("by"), registry.IntArg("step")}, Run: func(_ registry.Ctx, a registry.Args) error { x.goTo(x.stepArg(a)); return nil }},
 		{ID: "explain.change.line.move", Grant: registry.Open, Title: "Move the walkthrough's line {by} lines, for a comment", Available: ready,
-			Run: func(_ registry.Ctx, a registry.Args) error { x.moveLine(a.Int("by")); return nil }},
+			Args: []registry.Arg{registry.IntArg("by")}, Run: func(_ registry.Ctx, a registry.Args) error { x.moveLine(a.Int("by")); return nil }},
 		{ID: "explain.change.ask", Grant: string(plugin.CapAgentPrompt), Title: "Ask about this step of the walkthrough: a new request with the step attached",
 			Available: func(registry.Args) bool { return x.ready() && x.h.Available("request.new", nil) },
+			Args:      registry.NoArgs,
 			Run:       func(ctx registry.Ctx, _ registry.Args) error { return x.ask(ctx) }},
 		{ID: "explain.change.comment", Grant: string(plugin.CapAgentPrompt), Title: "Comment on the walkthrough step's {line} (the one picked by default): a thread on it",
 			Available: func(registry.Args) bool {
 				return x.ready() && x.current().path != "" && x.h.Available("thread.new", nil)
 			},
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.comment(ctx, a.Int("line")) }},
+			Args: []registry.Arg{registry.IntArg("line")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.comment(ctx, a.Int("line")) }},
 		{ID: "explain.change.discard", Grant: registry.Open, Title: "Discard the walkthrough", Available: func(registry.Args) bool { return x.w != nil },
-			Run: func(registry.Ctx, registry.Args) error { x.discard(); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.discard(); return nil }},
 		{ID: "explain.change.close", Grant: registry.Open, Title: "Close the walkthrough, keeping it to come back to",
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return x.h.Run(ctx, "view.close", registry.Args{"id": ExplainChangeView})
 			}},
 	}

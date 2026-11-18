@@ -59,7 +59,7 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 		v.Add(h.HelpPage(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
 	for _, c := range []registry.Command{
-		{ID: "help.open", Grant: registry.Open, Title: "Open a help page: {id}, page#anchor, or the one on a {topic}", Ex: "help", ExArg: "topic", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "help.open", Grant: registry.Open, Title: "Open a help page: {id}, page#anchor, or the one on a {topic}", Ex: "help", ExArg: "topic", Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("topic")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			if id := a.String("id"); id != "" {
 				return v.show(id)
 			}
@@ -69,7 +69,7 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return v.show(v.find(topic))
 		}},
-		{ID: "help.focused.open", Grant: registry.Open, Title: "Help on what has focus", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.focused.open", Grant: registry.Open, Title: "Help on what has focus", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			u := h.UI()
 			if u == nil {
 				return nil
@@ -80,18 +80,18 @@ func (v *View) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return v.show(id)
 		}},
-		{ID: "help.mode.toggle", Grant: registry.Open, Title: "Help mode: a ? on everything with help", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.mode.toggle", Grant: registry.Open, Title: "Help mode: a ? on everything with help", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			v.mode, v.into = !v.mode, false
 			return nil
 		}},
-		{ID: "help.back", Grant: registry.Open, Title: "Back to the help page before", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.back", Grant: registry.Open, Title: "Back to the help page before", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if n := len(v.back); n > 0 {
 				v.fwd = append(v.fwd, v.cur)
 				v.cur, v.back = v.back[n-1], v.back[:n-1]
 			}
 			return nil
 		}},
-		{ID: "help.forward", Grant: registry.Open, Title: "Forward to the help page after", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "help.forward", Grant: registry.Open, Title: "Forward to the help page after", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if n := len(v.fwd); n > 0 {
 				v.back = append(v.back, v.cur)
 				v.cur, v.fwd = v.fwd[n-1], v.fwd[:n-1]

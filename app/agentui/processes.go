@@ -28,7 +28,7 @@ import (
 func (x *Console) processCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "agent.process.stop", Grant: string(plugin.CapSessionControl), Title: "Stop a process the last turn of {session}'s agent (the session in front's) left running: {id}",
-			Available: func(a registry.Args) bool { return x.canStop(x.processSession(a)) }, Run: x.stopProcess},
+			Available: func(a registry.Args) bool { return x.canStop(x.processSession(a)) }, Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("session")}, Run: x.stopProcess},
 	}
 }
 

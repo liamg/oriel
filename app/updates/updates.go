@@ -153,17 +153,20 @@ func (x *Update) commands() []registry.Command {
 	can := func(registry.Args) bool { return x.updater() != nil }
 	return []registry.Command{
 		{ID: "update.check", Grant: registry.Open, Title: "Check for a newer Oriel now, and show what it brings", Available: can, Ex: "UpdateCheck",
-			Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
 		{ID: "update.notes.open", Grant: registry.Open, Title: "Show the update card: the newer release and its notes", Available: can,
-			Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},
 		{ID: "update.install", UserOnly: true, Title: "Update Oriel now: download, verify and install the newer release, then restart onto it once the agents have handed over",
 			Available: func(registry.Args) bool { _, ok := x.latest(); return ok },
+			Args:      registry.NoArgs,
 			Run:       func(registry.Ctx, registry.Args) error { return x.update(updateOpts{page: true, restart: true}) }},
 		{ID: "update.restart", UserOnly: true, Title: "Restart onto the installed update: running agents hand over first",
 			Available: func(registry.Args) bool { _, ok := x.ready(); return ok },
+			Args:      registry.NoArgs,
 			Run:       func(registry.Ctx, registry.Args) error { return x.restart() }},
 		{ID: "update.progress.open", Grant: registry.Open, Title: "Show the Updating page: how the update is getting on",
 			Available: func(registry.Args) bool { return x.current() != nil },
+			Args:      registry.NoArgs,
 			Run:       func(registry.Ctx, registry.Args) error { x.setPage(true); return nil }},
 	}
 }

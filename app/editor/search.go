@@ -116,7 +116,7 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
 	p.Add(kit.OnDirChanged(h, "search starts afresh in the directory", func(kit.DirChanged) { p.forget() }))
 	for _, c := range []registry.Command{
-		{ID: "search.open", Grant: registry.Open, Title: "Search the project for a PCRE2 {query}; \"@all \" first takes in generated files", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "search.open", Grant: registry.Open, Title: "Search the project for a PCRE2 {query}; \"@all \" first takes in generated files", Args: []registry.Arg{registry.AnyArg("query")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			if q, ok := a["query"].(string); ok {
 				p.query = q
 			}
@@ -127,21 +127,21 @@ func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return h.Run(ctx, "project.panel.toggle", registry.Args{"name": "search"})
 		}},
-		{ID: "search.replace.preview", Grant: registry.Open, Title: "Show the diff the replace would make", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "search.replace.preview", Grant: registry.Open, Title: "Show the diff the replace would make", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return p.preview(ctx)
 		}},
-		{ID: "search.replace.apply", Grant: string(plugin.CapEditorWrite), Title: "Make the replace being previewed", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "search.replace.apply", Grant: string(plugin.CapEditorWrite), Title: "Make the replace being previewed", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return p.apply(ctx)
 		}},
 		{ID: "edits.preview", Grant: registry.Open, Title: "Show {edits} to files (search.FileEdit, by absolute path) as a diff, which Apply makes; {title} and {detail} head it",
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("detail"), registry.AnyArg("edits"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				edits, _ := a["edits"].([]search.FileEdit)
 				if len(edits) == 0 {
 					return fmt.Errorf("no edits to preview")
 				}
 				return p.show(ctx, &editPlan{title: a.String("title"), detail: a.String("detail"), edits: edits})
 			}},
-		{ID: "search.quickfix.send", Grant: registry.Open, Title: "Send the search's matches to the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "search.quickfix.send", Grant: registry.Open, Title: "Send the search's matches to the quickfix list", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			var items []map[string]any
 			for _, m := range p.results() {
 				col := 1

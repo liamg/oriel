@@ -33,6 +33,12 @@ func (t Trouble) Args() Args {
 	return a
 }
 
+// TroubleArgs are the args Trouble.Args gives, as FixCommand and ExplainCommand declare them, then more.
+func TroubleArgs(more ...Arg) []Arg {
+	return append([]Arg{StringArg("kind"), StringArg("subject"), StringArg("context"), StringArg("file"), IntArg("line"),
+		IntArg("end_line"), StringArg("fix")}, more...)
+}
+
 // TroubleOf is the Trouble in a, as Args made it.
 func TroubleOf(a Args) Trouble {
 	return Trouble{Kind: a.String("kind"), Subject: a.String("subject"), Context: a.String("context"), File: a.String("file"),

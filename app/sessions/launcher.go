@@ -103,11 +103,11 @@ func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	x.Add(h.Command(registry.Command{ID: "session.new",
 		Grant: registry.Open, Title: "New session: the launcher, with {kind}, {prompt}, {ticket}, {pr}, {dir}, {repos} or {provider} filled in",
-		Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
+		Available: has, Args: sessionkit.StartArgs(), Run: func(_ registry.Ctx, a registry.Args) error { x.openWith(a); return nil }}))
 	x.Add(h.Command(registry.Command{ID: "session.launch", Grant: string(plugin.CapSessionControl), Title: "Start the session the launcher holds",
-		Available: func(registry.Args) bool { return x.open }, Run: func(registry.Ctx, registry.Args) error { return x.start() }}))
+		Available: func(registry.Args) bool { return x.open }, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.start() }}))
 	x.Add(h.Command(registry.Command{ID: "launcher.repo.pick", Grant: registry.Open, Title: "Tick {repo} in the open launcher",
-		Available: func(registry.Args) bool { return x.open }, Run: func(_ registry.Ctx, a registry.Args) error {
+		Available: func(registry.Args) bool { return x.open }, Args: []registry.Arg{registry.StringArg("repo")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			r := core.RepoID(a.String("repo"))
 			if r == "" {
 				return errors.New("pick which repo? Give its {repo}")

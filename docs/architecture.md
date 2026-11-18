@@ -141,6 +141,19 @@ what each command in it needs, and a lazy plugin's command is checked as it is o
 `TestBuiltinCommandsDeclareTheirGrant` fails on a built-in command that says none of these. An event can need a
 capability to be hooked at all (`EventInfo.Grant`: `ModeChanged` needs `input.observe`).
 
+### A command's arguments
+
+A command declares the arguments it takes (`Command.Args`: each a name, a type as `Args` reads it — `string`, `text`
+for a string or a number, `int`, `float`, `bool`, `list`, `map`, `any` — whether it's required, and a line of doc;
+`registry.StringArg("path")` and the like for the common case). Running one with a key it doesn't name, a value of
+the wrong type or a required one missing fails before its `Run`, naming the command and the key (`registry.CheckArgs`),
+so a misspelled key is an error rather than a zero value. `registry.NoArgs` takes none; `registry.MoreArgs` among them
+takes other keys too, for a command that hands its args on whole (`debug.launch`'s adapter keys). A ! after an ex name
+comes as `bang`, which any command with an `Ex` takes. Every built-in declares its args, and what runs one — a keymap,
+a contribution's `Command` and `Args`, a `Run` written out with a literal `registry.Args` — passes only what it takes:
+`TestBuiltinCommandsDeclareTheirArgs` fails otherwise. A plugin's command declares them with `oriel.command`'s `args`
+option; one that declares none takes anything.
+
 ### Plugin ids
 
 A built-in plugin's id is kebab-case (`stats-page`, `session-end`, `which-key`), as a third-party manifest's

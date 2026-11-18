@@ -125,27 +125,27 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "term.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Ex: "term", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "term.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Ex: "term", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("side"), registry.AnyArg("source"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			place := cmp.Or(a.String("place"), "dock")
 			return open(place, a.String("side"))(ctx, a)
 		}},
 		{ID: "term.host.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal on this machine, outside the session's sandbox, in {dir} (the window's directory by default)",
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("side"), registry.AnyArg("source"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				b := registry.Args{"host": true}
 				for k, v := range a {
 					b[k] = v
 				}
 				return open(cmp.Or(a.String("place"), "dock"), a.String("side"))(ctx, b)
 			}},
-		{ID: "term.right.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split to the right", Ex: "vterm", Run: open("split", "right")},
-		{ID: "term.below.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split below", Ex: "sterm", Run: open("split", "down")},
-		{ID: "term.normal.enter", Grant: registry.Open, Title: "Terminal-normal mode: vim's motions over the scrollback", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "term.right.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split to the right", Ex: "vterm", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "right")},
+		{ID: "term.below.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split below", Ex: "sterm", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "down")},
+		{ID: "term.normal.enter", Grant: registry.Open, Title: "Terminal-normal mode: vim's motions over the scrollback", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if t := x.focused(); t != nil {
 				x.enterNormal(t)
 			}
 			return nil
 		}},
-		{ID: "term.last_output.copy", Grant: registry.Open, Title: "Copy the last command's output", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "term.last_output.copy", Grant: registry.Open, Title: "Copy the last command's output", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			t := x.focusedOrLast()
 			if t == nil {
 				return fmt.Errorf("no terminal")
@@ -159,6 +159,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "term.last_output.send", Grant: string(plugin.CapAgentPrompt), Title: "Send the last command's output to a request",
 			Available: func(registry.Args) bool { return h.Available("request.attach", nil) },
+			Args:      registry.NoArgs,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				t := x.focusedOrLast()
 				if t == nil {
@@ -166,7 +167,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return h.Run(ctx, "request.attach", registry.Args{"text": term.LastOutput(t.emu), "title": "terminal output"})
 			}},
-		{ID: "term.last_command.run", Grant: string(plugin.CapExec), Title: "Run the last command again, in a new split", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "term.last_command.run", Grant: string(plugin.CapExec), Title: "Run the last command again, in a new split", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			t := x.focusedOrLast()
 			if t == nil {
 				return fmt.Errorf("no terminal")
@@ -702,7 +703,7 @@ func (t *terminal) title() string {
 // renaming is Rename… on a terminal's tab, and term.rename behind it.
 func (x *Terminals) renaming(h plugin.Host) {
 	x.Add(h.Command(registry.Command{ID: "term.rename", Grant: registry.Open, Title: "Rename terminal {instance}, the one in front by default, to {name}; with no {name}, edit it over the terminal; an empty one puts back the program's",
-		Run: func(_ registry.Ctx, a registry.Args) error {
+		Args: []registry.Arg{registry.StringArg("instance"), registry.AnyArg("name")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			t := x.focusedOrLast()
 			if i := a.String("instance"); i != "" {
 				t = x.get(i)

@@ -89,18 +89,18 @@ func (x *AIReview) commands() []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "review.ai.run", Grant: string(plugin.CapAgentPrompt), Title: "AI review the change of session {id} (the one in front by default): what changed since the last review, or all of it with {full}",
-			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { return x.run(a) }},
+			Available: has, Args: []registry.Arg{registry.BoolArg("full"), registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.run(a) }},
 		{ID: "review.ai.thread.new", Grant: string(plugin.CapAgentPrompt), Title: "Turn the AI review's {finding} into a thread on its line, for the session's agent to answer", Available: has,
-			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("finding"), registry.StringArg("id")}, Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				return x.thread(ctx, se, f, false)
 			})},
 		{ID: "review.ai.fix", Grant: string(plugin.CapAgentPrompt), Title: "Ask the session's agent to fix the AI review's {finding}, in a thread on its line", Available: has,
 			When: core.OwnsChanges,
-			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("finding"), registry.StringArg("id")}, Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				return x.thread(ctx, se, f, true)
 			})},
 		{ID: "review.ai.dismiss", Grant: registry.Open, Title: "Dismiss the AI review's {finding}, or bring it back with {dismissed} false", Available: has,
-			Run: finding(func(_ context.Context, se core.SessionState, f core.Finding, a registry.Args) error {
+			Args: []registry.Arg{registry.AnyArg("dismissed"), registry.StringArg("finding"), registry.StringArg("id")}, Run: finding(func(_ context.Context, se core.SessionState, f core.Finding, a registry.Args) error {
 				f.Dismissed = true
 				if v, ok := a["dismissed"].(bool); ok {
 					f.Dismissed = v
@@ -108,14 +108,14 @@ func (x *AIReview) commands() []registry.Command {
 				return x.setFinding(se, f)
 			})},
 		{ID: "review.ai.project.add", Grant: string(plugin.CapSessionControl), Title: "Add the repo the AI review's {finding} is about to the session", Available: has,
-			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("finding"), registry.StringArg("id")}, Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				if f.Repo == "" {
 					return errors.New("the finding names no other repo")
 				}
 				return x.h.Run(ctx, "session.repo.add", registry.Args{"id": string(se.ID), "repo": f.Repo})
 			})},
 		{ID: "review.ai.open", Grant: registry.Open, Title: "Show the AI review's {finding} at its line in the diff",
-			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("finding"), registry.StringArg("id")}, Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
 				path := findingPath(se, f)
 				if path == "" {
 					return errors.New("the finding names no file")
@@ -123,7 +123,7 @@ func (x *AIReview) commands() []registry.Command {
 				return x.h.Run(ctx, "diff.open", registry.Args{"path": path, "line": f.Line})
 			})},
 		{ID: "review.ai.filter", Grant: registry.Open, Title: "Show only the AI review's findings of {severity}, or all of them again",
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("severity")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				s := a.String("severity")
 				if s == x.filter {
 					s = ""
@@ -132,9 +132,9 @@ func (x *AIReview) commands() []registry.Command {
 				return nil
 			}},
 		{ID: "review.ai.dismissed.toggle", Grant: registry.Open, Title: "Show or hide the AI review's dismissed findings",
-			Run: func(registry.Ctx, registry.Args) error { x.dismissed = !x.dismissed; return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.dismissed = !x.dismissed; return nil }},
 		{ID: "review.ai.prompt.edit", Grant: registry.Open, Title: "Edit the AI review's prompt: your agents/ai-review.md, made from the built-in one the first time",
-			Run: func(ctx registry.Ctx, _ registry.Args) error {
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 				path := x.promptPath()
 				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 					p, _ := packs.Get(hostapi.AIReviewPack)

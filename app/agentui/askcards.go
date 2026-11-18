@@ -188,11 +188,9 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	if k.acts[res.Action].away && a.Kind == core.AskPermission && dismiss != nil {
 		dismiss()
 	}
-	args := registry.Args{"id": string(se.ID), "ask": a.ID}
-	for n, v := range k.acts[res.Action].args {
-		args[n] = v
-	}
-	x.run(context.Background(), cmp.Or(k.acts[res.Action].cmd, "ask.answer"), args)
+	cmd := cmp.Or(k.acts[res.Action].cmd, "ask.answer")
+	where := registry.Args{"id": string(se.ID), "ask": a.ID}
+	x.run(context.Background(), cmd, registry.ContextArgs(x.h, cmd, where, k.acts[res.Action].args))
 }
 
 // askAct is what an ask card's action does.
