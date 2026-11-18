@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -856,7 +857,7 @@ func entryIcon(c *ui.Ctx, e uireg.RailEntry, size float32, tone render.Color) {
 		return
 	}
 	r, _ := ui.Service[registry.Registry](c)
-	kit.Icon(c, r, "icon", e.Icon, size, tone)
+	icons.Icon(c, r, "icon", e.Icon, size, tone)
 }
 
 // badgeFill is the colour of an entry's pill: its BadgeTone, else rail.badge.

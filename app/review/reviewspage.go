@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/internal/words"
 
@@ -507,7 +508,7 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 					tone, button = th.C(theme.Warn), "Retry"
 				}
 				if r.src.Icon != "" {
-					kit.Icon(c, x.h, "src", r.src.Icon, 12, tone)
+					icons.Icon(c, x.h, "src", r.src.Icon, 12, tone)
 				}
 				c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", reviewRowLabel(r), widget.UIFont(12, tone)) })
 				if widget.Button(c, "act", button, widget.ButtonOpts{Help: reviewsHelp + "#list"}) {

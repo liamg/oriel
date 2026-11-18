@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry"
@@ -360,8 +361,8 @@ func (x *Editor) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWin
 	}
 	o := widget.ToggleChipOpts{Help: cmp.Or(a.Help, "editor/pane")}
 	switch {
-	case kit.HasIcon(ic):
-		o.Lead = func(c *ui.Ctx, fg render.Color) { kit.Icon(c, x.h, "icon", ic, 11, fg) }
+	case icons.HasIcon(ic):
+		o.Lead = func(c *ui.Ctx, fg render.Color) { icons.Icon(c, x.h, "icon", ic, 11, fg) }
 	case ic != "":
 		label = strings.TrimSpace(ic + " " + label)
 	}

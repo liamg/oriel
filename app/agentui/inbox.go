@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -772,7 +773,7 @@ func (x *Inbox) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 				if !r.waiting() {
 					name = "✓"
 				}
-				kit.Icon(c, x.h, "g", name, 13, tone)
+				icons.Icon(c, x.h, "g", name, 13, tone)
 			})
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
 			c.Text("title", r.card.Title, widget.UIFont(12.5, title))

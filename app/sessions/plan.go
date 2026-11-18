@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -391,7 +392,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 				// The ticket opens in a tab of its own: the prompt it started with is its text, too long for this column.
 				if widget.Clickable(c, "ticket", ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(8, 6), Gap: 8, Cross: ui.Center, Radius: 4,
 					Label: "Ticket " + se.Ticket, Help: "agent/plan#docs"}, func(c *ui.Ctx) {
-					kit.Icon(c, x.h, "i", "doc", 12, th.C(theme.Accent))
+					icons.Icon(c, x.h, "i", "doc", 12, th.C(theme.Accent))
 					c.Text("k", "Ticket", widget.UIFont(12.5, th.C(theme.FgMuted)))
 					c.Text("key", se.Ticket, widget.MonoFont(12, th.C(theme.Accent)))
 				}).Clicked {

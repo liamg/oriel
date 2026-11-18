@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -490,7 +491,7 @@ func (e *Explorer) options(c *ui.Ctx) {
 		{Key: "only", Label: "Changed only", On: &e.changedOnly, Help: help, Shortcut: "⌥C"},
 		{Key: "hidden", Label: "Hidden files", On: &e.hidden, Help: help},
 	}, widget.MenuButtonOpts{Label: "Explorer options", Size: 22, Help: help,
-		Icon: func(c *ui.Ctx, fg render.Color) { kit.Icon(c, e.h, "icon", "settings", 13, fg) }})
+		Icon: func(c *ui.Ctx, fg render.Color) { icons.Icon(c, e.h, "icon", "settings", 13, fg) }})
 }
 
 // subheader is the line under the scopes: what Changed and Uncommitted compare with.

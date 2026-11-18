@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/render"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
@@ -24,7 +25,7 @@ type window struct{ sh *shell }
 // contribute contributes them, and answers how to take them back.
 func (w window) contribute() func() {
 	var d []registry.Disposable
-	for _, name := range []string{kit.ScriptsService, kit.BuiltinsService, services.QuitService, kit.IconsService, kit.WindowService} {
+	for _, name := range []string{kit.ScriptsService, kit.BuiltinsService, services.QuitService, icons.IconsService, kit.WindowService} {
 		d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: name, Impl: w, Source: "builtin:window"}))
 	}
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: kit.ReadsService, Impl: w.sh.reads, Source: "builtin:window"}))

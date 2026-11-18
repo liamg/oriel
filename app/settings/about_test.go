@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/settings"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
 )
 
 // cursorShown says the title bar's logo draws its cursor: a fill in logo.cursor inside the logo.
 func cursorShown(s *apptest.Scene) bool {
 	b := s.Within("Sessions", "Oriel").Bounds
-	want := s.UI().Theme().C(kit.TLogoCursor)
+	want := s.UI().Theme().C(icons.TLogoCursor)
 	for _, op := range s.List().Ops {
 		if op.Kind == render.OpPath && op.Style.Fill == want && op.Path != nil && len(op.Path.Segs) > 0 {
 			if p := op.Path.Segs[0].Pts[0]; p.X >= b.Min.X && p.X <= b.Max.X && p.Y >= b.Min.Y && p.Y <= b.Max.Y {

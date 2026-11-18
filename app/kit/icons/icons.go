@@ -1,4 +1,5 @@
-package kit
+// Package icons is the app's icon set and its logo, drawn in the theme's colours.
+package icons
 
 import (
 	"image"

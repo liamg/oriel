@@ -1,7 +1,7 @@
 package shell
 
 import (
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 )
@@ -21,5 +21,5 @@ func Icon(f render.Frame, r render.Rect, th *theme.Resolved) {
 	size := 660 * u
 	s := size / 100
 	cx, cy := sq.Min.X+sq.Dx()/2, sq.Min.Y+sq.Dy()/2
-	kit.Logo(f, render.XYWH(cx-47*s, cy-53*s, size, size), th)
+	icons.Logo(f, render.XYWH(cx-47*s, cy-53*s, size, size), th)
 }

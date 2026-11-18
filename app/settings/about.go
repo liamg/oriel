@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -83,9 +84,9 @@ func (x *About) brand(c *ui.Ctx) {
 		}
 		if widget.Clickable(c, "brand", ui.Style{Dir: ui.Row, Gap: 8, Cross: ui.Center, Pad: ui.PadXY(4, 3), Radius: 4, Label: "Oriel", Tooltip: "About Oriel",
 			Help: aboutHelp}, func(c *ui.Ctx) {
-			c.Paint("logo", ui.Px(22), ui.Px(22), func(f render.Frame, r render.Rect) { kit.LogoLit(f, r, th, lit, glow) })
+			c.Paint("logo", ui.Px(22), ui.Px(22), func(f render.Frame, r render.Rect) { icons.LogoLit(f, r, th, lit, glow) })
 			c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 12, Tracking: .2},
-				Color: th.C(kit.TWordmark)})
+				Color: th.C(icons.TWordmark)})
 		}).Clicked {
 			kit.RunOrNotify(x.h, "settings", "about.toggle", nil)
 		}
@@ -102,10 +103,10 @@ func (x *About) card(c *ui.Ctx) {
 		}
 	}
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Paint("logo", ui.Px(36), ui.Px(36), func(f render.Frame, r render.Rect) { kit.Logo(f, r, th) })
+		c.Paint("logo", ui.Px(36), ui.Px(36), func(f render.Frame, r render.Rect) { icons.Logo(f, r, th) })
 		c.Column("name", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
 			c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 18, Tracking: .24},
-				Color: th.C(kit.TWordmark)})
+				Color: th.C(icons.TWordmark)})
 			c.Text("version", cmp.Or(x.Version, "dev build"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
 		})
 		if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close", Help: aboutHelp, Size: 18}) {
