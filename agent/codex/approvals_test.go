@@ -44,11 +44,12 @@ func wired(t *testing.T, spec agent.StartSpec) *wire {
 			if err := json.Unmarshal(r.Params, &p); err != nil {
 				t.Error(err)
 			}
-			if len(p.Input) > 0 {
-				w.steers <- p.Input[0].Text
-			}
+			// Answered before the test hears of it: once told, the test may end and close the wire.
 			if err := r.Reply(map[string]any{"turnId": "tu"}, nil); err != nil {
 				t.Error(err)
+			}
+			if len(p.Input) > 0 {
+				w.steers <- p.Input[0].Text
 			}
 		case "config/read":
 			w.mu.Lock()
