@@ -26,8 +26,11 @@ A release found while Oriel runs is downloaded and verified in the background be
 
 ## The update card {#card}
 
-The newer release, the version you have, and its release notes. **Later** (`esc`) closes it. **Update** updates
-now, on the Updating page. **Restart** shows once an update is installed.
+The newer release, the version you have, and what's new: the notes of every release between the two, newest first,
+each under its version, so an update that skips versions shows what each of them changed. A release's notes list its
+breaking changes, features and fixes; one whose changes were all internal (refactoring, tests, build) says **No
+notable changes**. **Later** (`esc`) closes it. **Update** updates now, on the Updating page. **Restart** shows once
+an update is installed.
 
 ## The Updating page {#page}
 
