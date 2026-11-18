@@ -73,7 +73,7 @@ func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
 	r.seq++
 	seq := r.seq
 	x.mu.Unlock()
-	c, err := x.client(id)
+	c, err := x.client()
 	if err != nil {
 		return
 	}

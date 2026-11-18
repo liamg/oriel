@@ -648,7 +648,7 @@ func (s gitTrees) WatchWindow(fn func(root string, paths []string)) registry.Dis
 	return registry.DisposeFunc(s.g.watchWindow(fn))
 }
 
-// state is the last status read, nil outside a repo or before the first.
+// State is the last status read, nil outside a repo or before the first. Reading it keeps the tree watched.
 func (t *gitTree) State() *gitx.State {
 	if t == nil || t.status == nil {
 		return nil
@@ -716,7 +716,7 @@ func (t *gitTree) Root() string {
 	return t.status.Repo().Dir
 }
 
-// rel is a path relative to the repo's root, as git names it, from one that's absolute or relative to the work dir.
+// Rel is a path relative to the repo's root, as git names it, from one that's absolute or relative to the work dir.
 func (t *gitTree) Rel(p string) string {
 	if t.Root() == "" {
 		return p

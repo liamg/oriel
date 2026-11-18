@@ -463,9 +463,12 @@ func (s Session) id(id string) core.SessionID {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
+//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
 func (h HUD) Indicator(name string, build any, opts script.Table, where string) error {
-	every, _ := time.ParseDuration(str(opts, "every"))
+	every, err := durationOf(opts["every"])
+	if err != nil {
+		return fmt.Errorf("hud indicator %s: every: %w", name, err)
+	}
 	fn, _ := build.(*script.Fn)
 	if fn == nil {
 		h.a.setIndicator(name, build)

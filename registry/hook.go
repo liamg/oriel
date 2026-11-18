@@ -206,7 +206,7 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 		slow := over && e.over // twice running: a busy machine stalls any one call now and then
 		e.over = over
 		r.hooks.mu.Unlock()
-		if p, ok := err.(*Panic); ok {
+		if p, ok := err.(*Panic); ok { // the hook's own panic, not one wrapped from a command it ran
 			r.faults.fault(Fault{Kind: KindHook, ID: e.id, Source: e.h.Source, Err: p})
 		} else {
 			r.Report(KindHook, e.id, err)

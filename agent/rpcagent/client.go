@@ -444,7 +444,7 @@ func (c *Client) answer(ctx context.Context, method string, params json.RawMessa
 		}
 		s := c.session(t.Session)
 		if s == nil {
-			return nil, fmt.Errorf("no session %s", t.Session)
+			return nil, core.NoSession(core.SessionID(t.Session))
 		}
 		out, err := s.tool(ctx, t.Name, t.Arguments)
 		if err != nil {

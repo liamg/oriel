@@ -136,7 +136,7 @@ func (x *End) commands() []registry.Command {
 // open opens the dialog on id, reading its projects afresh for what it would lose.
 func (x *End) open(id core.SessionID) error {
 	if _, ok := x.h.State().Session(id); !ok {
-		return fmt.Errorf("no session %q", id)
+		return core.NoSession(id)
 	}
 	x.ask = &endAsk{id: id, focus: true}
 	if s, ok := services.ShipsOf(x.h); ok {
@@ -237,7 +237,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 	s, ok := x.h.State().Session(a.id)
 	if !ok {
 		x.ask = nil
-		return fmt.Errorf("no session %q", a.id)
+		return core.NoSession(a.id)
 	}
 	se := s.Snapshot()
 	var ships []services.ProjectShip

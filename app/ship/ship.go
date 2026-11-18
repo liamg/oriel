@@ -161,7 +161,7 @@ func (x *Ship) Deactivate(ctx context.Context) error {
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
 // client is the session host's ship calls.
-func (x *Ship) client(id core.SessionID) (hostapi.ShipCalls, error) {
+func (x *Ship) client() (hostapi.ShipCalls, error) {
 	return sessionkit.ShipCalls(x.h)
 }
 
@@ -336,7 +336,7 @@ func (x *Ship) reading(id core.SessionID) (*shipReport, int, int) {
 // on its own since seq keeps that read's entry.
 func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) {
 	var ships []shipRead
-	c, err := x.client(id)
+	c, err := x.client()
 	if err == nil {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		var read []hostapi.Ship

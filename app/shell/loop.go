@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"log/slog"
@@ -63,7 +64,7 @@ func (l *loop) open(poke func()) []func() {
 	l.ui.SetClipboard(sh.desktop)
 	sh.provide(l.ui)
 	l.ui.Title = "Oriel"
-	sh.keys, sh.modes = l.keys, l.modes
+	sh.keys = l.keys
 	sh.ui.Store(l.ui)
 	l.keys.Raw = func() bool {
 		ed, ok := services.EditorsOf(reg)
@@ -501,12 +502,10 @@ func acceptKey(r registry.Registry, modes, pending []string) bool {
 	return exact == nil && !more
 }
 
-// modes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
-// focused widget's own mode (an input's
-// "input", a list's "list"); or, with none, ViewKeyMode while a view in the layout has focus, or EmptyKeyMode while the
-// main area is empty, then the editor's "n"; then "global", for app chords that work everywhere.
-func (l *loop) modes() []string { return l.sh.keyModes() }
-
+// keyModes are the keymap modes keys resolve in, most specific first: the active key layers' (a popup's); then a
+// focused widget's own mode (an input's "input", a list's "list"); or, with none, ViewKeyMode while a view in the
+// layout has focus, or EmptyKeyMode while the main area is empty, then the editor's "n"; then "global", for app
+// chords that work everywhere.
 func (sh *shell) keyModes() []string {
 	return append(registry.ActiveKeyModes(sh.cfg.Registry), sh.baseKeyModes()...)
 }
@@ -555,7 +554,10 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		var err error
 		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
-			if _, ok := err.(*registry.Panic); !ok {
+			// The command's own panic is reported as its fault, and a hook's stop where the step was asked for. Only
+			// its own: "turned off" wraps the panic that turned it off, and that's news.
+			_, panicked := err.(*registry.Panic)
+			if !panicked && !errors.Is(err, kit.ErrStopped) {
 				_ = l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
 			}
 		}

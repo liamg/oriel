@@ -204,8 +204,7 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 	}
 }
 
-// field is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ saves and runs.
-// jobField is one of the job form's fields.
+// jobField is one of the job form's fields: Tab moves on, Escape closes, ⌘↵ saves and runs.
 func (x *Jobs) jobField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
 	o.Help, o.TabMoves, o.KeyMode = "agent/jobs#new", true, JobFormKeyMode
 	widget.DialogField(c, key, text, o, focus, x.closeForm, nil)

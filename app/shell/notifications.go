@@ -266,7 +266,7 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	case res.Action >= 0:
 		a := row.Actions[res.Action]
 		if err := n.h.Run(ctx, a.Command, registry.Args(a.Args)); err != nil {
-			n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+			kit.NotifyFailure(n.h, core.Notice{ID: "action.failed", AutoClear: true, Source: "core"}, fmt.Errorf("%s: %w", a.Title, err))
 		}
 		_ = n.h.Apply(core.Dismissal(row))
 	case res.Closed:
@@ -294,7 +294,7 @@ func (n *notices) inboxCards() []uireg.InboxCard {
 		for _, a := range row.Actions {
 			card.Actions = append(card.Actions, uireg.InboxAction{Label: a.Title, Primary: len(card.Actions) == 0, Run: func() {
 				if err := n.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {
-					n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+					kit.NotifyFailure(n.h, core.Notice{ID: "action.failed", AutoClear: true, Source: "core"}, fmt.Errorf("%s: %w", a.Title, err))
 				}
 				answer()
 			}})

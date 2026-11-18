@@ -252,7 +252,7 @@ func (x *Verify) send(q *quiz, text string) error {
 		return nil
 	}
 	if _, ok := x.h.Session(q.session); !ok {
-		return fmt.Errorf("no session %s", q.session)
+		return core.NoSession(q.session)
 	}
 	i := q.at
 	q.qs[i].Answer, q.answer = text, ""
@@ -298,7 +298,7 @@ func (x *Verify) again(q *quiz) error {
 	}
 	sess, ok := x.h.Session(q.session)
 	if !ok {
-		return fmt.Errorf("no session %s", q.session)
+		return core.NoSession(q.session)
 	}
 	x.start(q, sess.Snapshot())
 	return nil
@@ -338,7 +338,7 @@ func (x *Verify) openFile(ctx registry.Ctx, q *quiz) error {
 func (x *Verify) openAt(ctx registry.Ctx, q *quiz, f string, line int) error {
 	sess, ok := x.h.Session(q.session)
 	if !ok {
-		return fmt.Errorf("no session %s", q.session)
+		return core.NoSession(q.session)
 	}
 	x.open = ""
 	se := sess.Snapshot()

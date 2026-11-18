@@ -331,6 +331,20 @@ L.status.rule("red", function(sess) if sess.red then return "error" end end)
 	if indicator.Slot != "titlebar.right" || indicator.Every.Seconds() != 30 {
 		t.Errorf("indicator %+v", indicator)
 	}
+	// every takes seconds as other duration options do, and a value that's neither raises.
+	s.Lua(`L.hud.indicator("builds", L.ui.indicator{ label = "BUILD", value = 1 }, { every = 45 })`)
+	var every float64
+	for _, c := range s.Registry().Contributions("hud.indicator") {
+		if ind := c.(uireg.Indicator); ind.Name == "builds" {
+			every = ind.Every.Seconds()
+		}
+	}
+	if every != 45 {
+		t.Errorf("every = 45 is %vs", every)
+	}
+	if err := s.LuaErr(`L.hud.indicator("bad", L.ui.indicator{ label = "X" }, { every = "30 s" })`); !strings.Contains(err, "every") {
+		t.Errorf("a bad every: %q", err)
+	}
 	if n, err := indicator.Build(nil); err != nil || n == nil {
 		t.Errorf("building it: %v", err)
 	}

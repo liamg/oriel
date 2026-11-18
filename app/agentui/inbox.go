@@ -254,11 +254,11 @@ func (x *Inbox) isDismissed(k string) bool {
 	return x.dismissed[k]
 }
 
-// dismiss takes a card off the stack, and tells its source.
 // dismissDrawn dismisses a card from its own dialog or ✕: it was drawn waiting, and one answered since has nothing
 // left to dismiss.
 func (x *Inbox) dismissDrawn(k string) { _ = x.dismiss(k) }
 
+// dismiss takes a card off the stack, and tells its source.
 func (x *Inbox) dismiss(k string) error {
 	x.gather()
 	x.mu.Lock()

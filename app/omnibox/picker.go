@@ -294,7 +294,7 @@ func (p *Picker) act(a uireg.PickerAction, g group) {
 	}
 	p.close(false)
 	if err := registry.Call(func() error { return a.Run(context.Background(), items) }); err != nil {
-		p.h.Notify(core.Notice{ID: "picker.action", Severity: core.SevError, Source: "picker", AutoClear: true, Text: a.Title + ": " + err.Error()})
+		kit.NotifyFailure(p.h, core.Notice{ID: "picker.action", Source: "picker", AutoClear: true}, fmt.Errorf("%s: %w", a.Title, err))
 	}
 }
 

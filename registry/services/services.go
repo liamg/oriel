@@ -117,7 +117,7 @@ type GitTrees interface {
 // GitTree is one work tree's git status.
 type GitTree interface {
 	Root() string       // the repo's root; "" outside a repo, or until it's found
-	State() *gitx.State // the last status read; nil outside a repo, or before the first
+	State() *gitx.State // the last status read; nil outside a repo, or before the first. Reading it keeps the tree watched
 	// StateWithCounts is State with each file's line counts, read only while something keeps asking for them, frame to
 	// frame; State until they're first read.
 	StateWithCounts() *gitx.State

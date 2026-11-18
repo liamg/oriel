@@ -6,9 +6,10 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"time"
 	"unicode/utf8"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Format is how a file's text is written: with a UTF-8 byte-order mark or not, and lines ending in CRLF or LF
@@ -122,40 +123,11 @@ func (f *File) Write(text []byte, noLines bool) error {
 		return errors.New("read-only: " + f.ReadOnly)
 	}
 	b := Encode(text, f.Format, noLines)
-	path, err := filepath.EvalSymlinks(f.Path)
-	if errors.Is(err, fs.ErrNotExist) {
-		path, err = f.Path, nil
+	perm := f.Mode.Perm() // a new file's: one already there keeps its own
+	if perm == 0 {
+		perm = 0o644
 	}
-	if err != nil {
-		return err
-	}
-	mode := f.Mode
-	if st, err := os.Stat(path); err == nil {
-		mode = st.Mode()
-	} else if mode == 0 {
-		mode = 0o644
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".oriel-*")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
-	if _, err := tmp.Write(b); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(mode.Perm()); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	if err := atomicfile.Write(f.Path, b, perm); err != nil {
 		return err
 	}
 	f.New = false

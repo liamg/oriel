@@ -361,7 +361,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 	}
 	switch {
 	case l.Browser:
-		c, err := x.client(se.ID)
+		c, err := x.client()
 		if err != nil {
 			return err
 		}

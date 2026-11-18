@@ -150,13 +150,34 @@ func TestTypedDirs(t *testing.T) {
 	}
 }
 
-// addRecents puts 39-start's three directories in s's recents.
 // stateDir gives the window a state directory of the test's, where it keeps its recent directories.
 func stateDir(t *testing.T) func(*apptest.Config) {
 	dir := t.TempDir()
 	return func(cfg *apptest.Config) { cfg.StateDir = dir }
 }
 
+// A recents file that doesn't parse is left as it is: opening a directory says why it can't remember it, rather
+// than saving over the user's list.
+func TestACorruptRecentsFileIsntOverwritten(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "recent.json")
+	corrupt := []byte(`{"directories": [{"path": "/src/notes"`)
+	if err := os.WriteFile(path, corrupt, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.StateDir = dir }})
+	if err := shell.AddRecent(s.Headless, t.TempDir(), time.Now()); err == nil {
+		t.Error("adding to a corrupt recents file said nothing")
+	}
+	if b, err := os.ReadFile(path); err != nil || string(b) != string(corrupt) {
+		t.Errorf("the corrupt recents file became %q (%v)", b, err)
+	}
+	if got := shell.Recents(s.Headless); len(got) != 0 {
+		t.Errorf("recents from a corrupt file: %v", got)
+	}
+}
+
+// addRecents puts 39-start's three directories in s's recents.
 func addRecents(s *apptest.Scene) {
 	home, _ := os.UserHomeDir()
 	for _, d := range []struct {

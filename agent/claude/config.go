@@ -3,8 +3,10 @@ package claude
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,7 +151,7 @@ func updateFile(path string, edit func(map[string]any) bool) error {
 
 func loadFile(path string) (map[string]any, error) {
 	b, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return map[string]any{}, nil
 	}
 	if err != nil {
@@ -204,7 +206,7 @@ func lockFile(path string) (func(), error) {
 			_ = f.Close()
 			return func() { _ = os.Remove(p) }, nil
 		}
-		if !os.IsExist(err) {
+		if !errors.Is(err, fs.ErrExist) {
 			return nil, err
 		}
 		if fi, err := os.Stat(p); err == nil && time.Since(fi.ModTime()) > lockStale {

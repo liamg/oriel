@@ -491,7 +491,7 @@ func (x *Sessions) front(id core.SessionID, background bool, then []kit.Call) er
 func (x *Sessions) open(ctx context.Context, id core.SessionID, then []kit.Call) error {
 	se, ok := x.h.Session(id)
 	if !ok {
-		return fmt.Errorf("no session %q", id)
+		return core.NoSession(id)
 	}
 	front := func() error { return kit.Focus(x.h, id, then) }
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {

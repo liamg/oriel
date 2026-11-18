@@ -327,7 +327,7 @@ func (e *Engine) runSearch(v *view, p Pos, pat string, fwd bool, off searchOffse
 	// With an e, s or b offset a match at the cursor counts, unless its offset position is the cursor.
 	withOff := off.set && off.kind != 0
 	m, ok, _ := e.findPattern(v, re, p, fwd, count, withOff)
-	for i := 0; ok && withOff && offsetPos(v, m, off) == p && i < v.lines()+1; i++ {
+	for i := 0; ok && withOff && offsetPos(v, m, off) == p && i <= v.lines(); i++ {
 		m, ok, _ = e.findPattern(v, re, toPos(m.Start), fwd, 1, false)
 	}
 	if !ok {

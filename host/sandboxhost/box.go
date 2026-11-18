@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -102,7 +103,7 @@ func (s *Factory) BackendFor(cfg sandbox.Config) (sandbox.Backend, error) {
 }
 
 func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) bool) []string {
-	cfg := s.config(core.SessionState{})
+	cfg := s.config()
 	var out []string
 	for _, name := range s.Available() {
 		named := cfg
@@ -128,7 +129,7 @@ func (s *Factory) host() (Deps, bool) {
 	return s.deps, s.attached
 }
 
-func (s *Factory) config(se core.SessionState) sandbox.Config {
+func (s *Factory) config() sandbox.Config {
 	if s.Config != nil {
 		return s.Config()
 	}
@@ -186,7 +187,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostap
 	if err := sandbox.SaveManifest(root, ManifestOf(root, se)); err != nil {
 		return nil, err
 	}
-	cfg := s.config(se)
+	cfg := s.config()
 	if se.Agent.Network == "open" {
 		cfg.NoEgressProxy = true
 	}
@@ -533,25 +534,7 @@ func (b *Box) updateGrants(fn func([]gateway.Rule) []gateway.Rule) error {
 	if err != nil {
 		return err
 	}
-	path := sandbox.GrantsPath(b.root)
-	f, err := os.CreateTemp(filepath.Dir(path), ".grants-*")
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(data); err != nil {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-		return err
-	}
-	if err := f.Close(); err != nil {
-		_ = os.Remove(f.Name())
-		return err
-	}
-	if err := os.Rename(f.Name(), path); err != nil {
-		_ = os.Remove(f.Name())
-		return err
-	}
-	return nil
+	return atomicfile.Write(sandbox.GrantsPath(b.root), data, 0o600)
 }
 
 func (b *Box) logCall(e gateway.Entry) {

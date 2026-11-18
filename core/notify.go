@@ -79,7 +79,7 @@ func (e Notified) Apply(s *State) error {
 	if e.Session != "" && e.Severity == SevError && e.Session != s.Focus {
 		se := s.session(e.Session)
 		if se == nil {
-			return fmt.Errorf("no session %s", e.Session)
+			return NoSession(e.Session)
 		}
 		se.Unseen++
 	}
@@ -136,7 +136,7 @@ func (e SessionFocused) Apply(s *State) error {
 	if e.ID != "" {
 		se := s.session(e.ID)
 		if se == nil {
-			return fmt.Errorf("no session %s", e.ID)
+			return NoSession(e.ID)
 		}
 		se.Unseen = 0
 		s.openTab(e.ID)
@@ -154,7 +154,7 @@ func (e TabOpened) Scope() SessionID { return e.ID }
 
 func (e TabOpened) Apply(s *State) error {
 	if s.session(e.ID) == nil {
-		return fmt.Errorf("no session %s", e.ID)
+		return NoSession(e.ID)
 	}
 	s.openTab(e.ID)
 	return nil

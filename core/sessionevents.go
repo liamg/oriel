@@ -41,7 +41,7 @@ func upsert[T any](xs []T, x T, same func(T) bool) []T {
 func (s *State) mustSession(id SessionID) (*SessionState, error) {
 	se := s.session(id)
 	if se == nil {
-		return nil, fmt.Errorf("no session %s", id)
+		return nil, NoSession(id)
 	}
 	return se, nil
 }

@@ -17,9 +17,15 @@ type Inbox struct{ a *APIs }
 
 //oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, codehost (a pull request's activity; github is taken as it) or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } }, open = { command, args } or fn() }. An action runs its command or its function and answers the card: it goes to the inbox's history. open takes you to where the card is answered: choosing its row in the Inbox panel runs it rather than opening the card there."
 func (i Inbox) Add(card script.Table, where string) error {
-	c := uireg.InboxCard{ID: str(card, "id"), Type: str(card, "type"), Title: str(card, "title"), Sub: str(card, "sub"), Group: str(card, "group"),
-		Session: str(card, "session"), Icon: str(card, "icon"), Tone: str(card, "tone"), Kicker: str(card, "kicker"), Detail: str(card, "detail"),
-		Code: str(card, "code"), Note: str(card, "note"), Created: time.Now()}
+	f := &fields{t: card, what: "the inbox card"}
+	c := uireg.InboxCard{ID: f.str("id"), Type: f.str("type"), Title: f.str("title"), Sub: f.str("sub"), Group: f.str("group"),
+		Session: f.str("session"), Icon: f.str("icon"), Tone: f.str("tone"), Kicker: f.str("kicker"), Detail: f.str("detail"),
+		Code: f.str("code"), Note: f.str("note"), Created: time.Now()}
+	c.Mine, c.Interrupt, c.Banner, c.Prompt, c.Done = f.boolean("mine"), f.boolean("interrupt"), f.boolean("banner"), f.boolean("prompt"), f.boolean("done")
+	expires, _ := f.number("expires")
+	if err := f.err(); err != nil {
+		return err
+	}
 	if u := i.a.Host.UI(); u != nil {
 		c.Created = u.Now() // expires counts from the window's clock, as oriel.now does
 	}
@@ -29,13 +35,8 @@ func (i Inbox) Add(card script.Table, where string) error {
 	if c.Group == "github" {
 		c.Group = uireg.GroupCodeHost
 	}
-	c.Mine, _ = card["mine"].(bool)
-	c.Interrupt, _ = card["interrupt"].(bool)
-	c.Banner, _ = card["banner"].(bool)
-	c.Prompt, _ = card["prompt"].(bool)
-	c.Done, _ = card["done"].(bool)
-	if s, ok := card["expires"].(float64); ok && s > 0 {
-		c.Expires = c.Created.Add(time.Duration(s * float64(time.Second)))
+	if expires > 0 {
+		c.Expires = c.Created.Add(time.Duration(expires * float64(time.Second)))
 	}
 	switch o := card["open"].(type) {
 	case *script.Fn:
@@ -53,8 +54,11 @@ func (i Inbox) Add(card script.Table, where string) error {
 		if !ok {
 			continue
 		}
-		a := uireg.InboxAction{Label: str(t, "label"), Key: str(t, "key"), Command: str(t, "command")}
-		a.Primary, _ = t["primary"].(bool)
+		af := &fields{t: t, what: "the inbox card's action"}
+		a := uireg.InboxAction{Label: af.str("label"), Key: af.str("key"), Command: af.str("command"), Primary: af.boolean("primary")}
+		if err := af.err(); err != nil {
+			return err
+		}
 		if args, ok := t["args"].(script.Table); ok {
 			a.Args = registry.Args(args)
 		}

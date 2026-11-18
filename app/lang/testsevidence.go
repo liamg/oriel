@@ -28,7 +28,7 @@ func (x *Tests) evidence() []registry.Disposable {
 				id := a.String("id")
 				se, ok := x.h.Session(core.SessionID(session))
 				if !ok {
-					return fmt.Errorf("no session %q", session)
+					return core.NoSession(core.SessionID(session))
 				}
 				if _, ok := se.Snapshot().Run(id); !ok {
 					return fmt.Errorf("no test run %q in %s", id, session)

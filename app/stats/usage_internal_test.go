@@ -28,7 +28,7 @@ func TestUsageProjection(t *testing.T) {
 	if absDur(r.runsOut.Sub(out)) > time.Second || r.runsOut.Format("Mon 15:04") != "Thu 14:38" {
 		t.Errorf("runs out %v, want %v", r.runsOut, out)
 	}
-	v, _ := r.verdict(rig.StatsNow, time.UTC)
+	v, _ := r.verdict(time.UTC)
 	if v != "at this rate the weekly window runs out Thu 14:38 · 18h 21m before the reset" {
 		t.Errorf("verdict = %q", v)
 	}
@@ -36,7 +36,7 @@ func TestUsageProjection(t *testing.T) {
 	r = readWindow(rig.StatsNow, five, []core.ProviderUsage{
 		{Sampled: rig.StatsNow.Add(-30 * time.Minute), Windows: []core.UsageWindow{{Name: "5h", Used: .31, Resets: five.Resets}}},
 	})
-	if v, _ := r.verdict(rig.StatsNow, time.UTC); r.burn < .139 || r.burn > .141 || v != "≈ 71% at the reset · won't run out" {
+	if v, _ := r.verdict(time.UTC); r.burn < .139 || r.burn > .141 || v != "≈ 71% at the reset · won't run out" {
 		t.Errorf("5h: burn %.3f, %q", r.burn, v)
 	}
 }

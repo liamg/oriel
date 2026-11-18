@@ -125,7 +125,7 @@ func (x *Catalog) cacheDir() string {
 	return filepath.Join(x.DataDir, "cache")
 }
 
-// resolver is a sync's resolver for registry entries, nil until the indexes are fetched.
+// newResolver is a sync's resolver for registry entries, nil until the indexes are fetched.
 func (x *Catalog) newResolver() catalog.Resolver {
 	x.mu.Lock()
 	c := x.client

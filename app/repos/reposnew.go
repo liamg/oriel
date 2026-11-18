@@ -116,8 +116,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 	x.dialog = nil
 }
 
-// dialogField is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
-// repoField is one of the Add repo dialog's fields.
+// repoField is one of the Add repo dialog's fields: Tab moves on, Escape closes, ⌘↵ adds.
 func (x *Repos) repoField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
 	o.Help, o.TabMoves, o.KeyMode = "agent/repos#add", true, RepoNewKeyMode
 	widget.DialogField(c, key, text, o, focus, x.closeDialog, x.submitDialog)

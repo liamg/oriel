@@ -252,6 +252,25 @@ func TestSecurityKeyCardCancelsAWaitingCommit(t *testing.T) {
 	}
 }
 
+// A card's field of the wrong type is an error naming it, not a quiet zero: mine = "true" isn't false.
+func TestLuaInboxCardFieldsOfTheWrongType(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	for line, want := range map[string]string{
+		`L.inbox.add({ id = "w1", title = "Hi", mine = "true" })`:                               "mine is a string, not a boolean",
+		`L.inbox.add({ id = "w2", title = 5 })`:                                                 "title is a number, not a string",
+		`L.inbox.add({ id = "w3", title = "Hi", expires = "soon" })`:                            "expires is a string, not a number",
+		`L.inbox.add({ id = "w4", title = "Hi", actions = { { label = "Go", primary = 1 } } })`: "action's primary is a number, not a boolean",
+	} {
+		if err := s.LuaErr(line); !strings.Contains(err, want) {
+			t.Errorf("%s: %q, want %q in it", line, err, want)
+		}
+	}
+	s.Frame()
+	if s.Has("Hi") {
+		t.Error("a card with a wrongly typed field was added")
+	}
+}
+
 // A Lua plugin adds its own card type with oriel.inbox.add: it stacks, an action runs its command and answers
 // it, and oriel.inbox.remove takes another away.
 func TestLuaInboxCards(t *testing.T) {

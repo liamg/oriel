@@ -724,7 +724,7 @@ func (m *matcher) inVisual(p pos) bool {
 	switch a.Mode {
 	case 'v':
 		before := p.Line == top.Line && p.Col < top.Col
-		after := p.Line == bot.Line && p.Col >= bot.Col+1
+		after := p.Line == bot.Line && p.Col > bot.Col
 		return !before && !after
 	case 0x16:
 		start, end := m.vcol(top.Line, top.Col), m.vcolEnd(top.Line, top.Col)

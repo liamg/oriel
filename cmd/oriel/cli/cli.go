@@ -69,7 +69,7 @@ func builtinAgents(home string) []plugin.Plugin { return agents.Builtins(filepat
 
 // startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the
 // jobs' schedules and the prices. The plan windows are read once the app gives the host its providers.
-func startHost(ctx context.Context, w *host.Host, log *slog.Logger, load *sysload.Sampler) {
+func startHost(ctx context.Context, w *host.Host, load *sysload.Sampler) {
 	go load.Run(ctx)
 	go w.SampleLoad(ctx, load)
 	go w.SweepSandboxes(ctx, time.Hour)

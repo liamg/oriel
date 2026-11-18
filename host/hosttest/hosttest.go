@@ -3,7 +3,6 @@
 package hosttest
 
 import (
-	"fmt"
 	"log/slog"
 	"sync"
 	"testing"
@@ -30,7 +29,7 @@ func (s *State) Snapshot() core.State { return s.Store.State() }
 func (s *State) Session(id core.SessionID) (core.SessionState, error) {
 	se, ok := s.Store.State().Session(id)
 	if !ok {
-		return core.SessionState{}, fmt.Errorf("no session %s", id)
+		return core.SessionState{}, core.NoSession(id)
 	}
 	return se.Snapshot(), nil
 }

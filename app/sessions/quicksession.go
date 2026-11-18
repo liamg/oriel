@@ -52,7 +52,7 @@ func (x *Launcher) quick() {
 			return h.Run(ctx, "session.start", sessionkit.SpecArgs(spec))
 		})
 		if err != nil {
-			h.Notify(core.Notice{ID: "session.quick.start", Severity: core.SevError, Text: "Quick session: " + err.Error()})
+			kit.NotifyFailure(h, core.Notice{ID: "session.quick.start", Title: "Quick session"}, err)
 		}
 	})
 }

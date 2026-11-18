@@ -2,6 +2,9 @@ package shell
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,30 +40,48 @@ type recentFile struct {
 	Directories []recentDir `json:"directories"`
 }
 
-// list is the recent directories, read again only when the file has changed.
+// list is the recent directories, none when the file can't be read.
 func (r *recents) list() []recentDir {
+	ds, _ := r.load()
+	return ds
+}
+
+// load is the recent directories, read again only when the file has changed; a file that's there but doesn't parse
+// is an error, so nothing saves over it.
+func (r *recents) load() ([]recentDir, error) {
 	if r == nil {
-		return nil
+		return nil, nil
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	st, err := os.Stat(r.path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	if c := r.read; c != nil && c.size == st.Size() && c.mod.Equal(st.ModTime()) {
-		return slices.Clone(c.dirs)
+		return slices.Clone(c.dirs), nil
+	}
+	b, err := os.ReadFile(r.path)
+	if err != nil {
+		return nil, err
 	}
 	var f recentFile
-	if b, err := os.ReadFile(r.path); err == nil {
-		_ = json.Unmarshal(b, &f)
+	if err := json.Unmarshal(b, &f); err != nil {
+		return nil, fmt.Errorf("%s: %w", r.path, err)
 	}
 	r.read = &recentRead{dirs: f.Directories, size: st.Size(), mod: st.ModTime()}
-	return slices.Clone(f.Directories)
+	return slices.Clone(f.Directories), nil
 }
 
 func (r *recents) add(dir string, at time.Time) error {
-	ds := slices.DeleteFunc(r.list(), func(d recentDir) bool { return d.Path == dir })
+	ds, err := r.load()
+	if err != nil {
+		return err
+	}
+	ds = slices.DeleteFunc(ds, func(d recentDir) bool { return d.Path == dir })
 	ds = append([]recentDir{{Path: dir, At: at}}, ds...)
 	return r.save(ds[:min(len(ds), maxRecents)])
 }
@@ -69,7 +90,11 @@ func (r *recents) forget(dir string) error {
 	if r == nil {
 		return nil
 	}
-	return r.save(slices.DeleteFunc(r.list(), func(d recentDir) bool { return d.Path == dir }))
+	ds, err := r.load()
+	if err != nil {
+		return err
+	}
+	return r.save(slices.DeleteFunc(ds, func(d recentDir) bool { return d.Path == dir }))
 }
 
 func (r *recents) save(ds []recentDir) error {

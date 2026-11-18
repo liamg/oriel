@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"cmp"
 	"image/color"
 	"strings"
 
@@ -44,7 +45,7 @@ func Annotation(c *ui.Ctx, key any, o AnnotationOpts, body func(c *ui.Ctx)) ui.I
 	}
 	border := alpha(o.Tone, .45)
 	return c.Column(key, ui.Style{W: w, Pad: ui.Insets{L: 14, T: 11, R: 14, B: 12}, Gap: 5, Fill: col(c, tAnnotationBg), Stroke: border, Border: 1,
-		Radius: 2, Role: ui.RoleGroup, Label: cmpStr(o.Label, o.Title), Help: o.Help}, func(c *ui.Ctx) {
+		Radius: 2, Role: ui.RoleGroup, Label: cmp.Or(o.Label, o.Title), Help: o.Help}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			Diamond(c, "n", o.N, 18, o.Tone, col(c, tAnnotationIndex))
 			c.Text("t", strings.ToUpper(o.Title), monoText(10, typeset.SemiBold, o.Tone, .12))
