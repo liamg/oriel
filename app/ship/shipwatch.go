@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/registry/services"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/watch"
@@ -43,7 +43,7 @@ func (x *Ship) follow() (started []core.SessionID) {
 		if se.Archived {
 			continue
 		}
-		m := kit.ManagerFor(x.h, se.ID)
+		m := statefile.ManagerFor(x.h, se.ID)
 		if m == nil {
 			continue
 		}
@@ -52,7 +52,7 @@ func (x *Ship) follow() (started []core.SessionID) {
 			watching[id] = true
 			for _, local := range x.localSources(se) {
 				keep[local.Key] = true
-				x.subs.Hold(local.Key, m, watch.Need{MaxAge: shipPoll}, func() kit.Closer {
+				x.subs.Hold(local.Key, m, watch.Need{MaxAge: shipPoll}, func() statefile.Closer {
 					return watch.Subscribe(m, local, watch.Need{MaxAge: shipPoll}, "ship: git")
 				})
 			}
@@ -66,7 +66,7 @@ func (x *Ship) follow() (started []core.SessionID) {
 		}
 		prs := x.prSource(id)
 		keep["prs:"+string(id)] = true
-		x.subs.Hold("prs:"+string(id), m, need, func() kit.Closer {
+		x.subs.Hold("prs:"+string(id), m, need, func() statefile.Closer {
 			return budgeted{watch.Subscribe(m, prs, need, "ship: pull requests"), x.budget.Use(prs.Key, prRequests)}
 		})
 	}

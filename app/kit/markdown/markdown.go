@@ -1,4 +1,5 @@
-package kit
+// Package markdown draws markdown as the window's markdown service does, and reads it as plain text.
+package markdown
 
 import (
 	_ "embed"
@@ -7,6 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -14,10 +16,10 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// ThreadMarkdown is how a thread's comments draw their markdown: images found from its project's folder (the primary
+// ForThread is how a thread's comments draw their markdown: images found from its project's folder (the primary
 // project's, or the first, when it isn't anchored), all of them one lightbox group.
-func ThreadMarkdown(se core.SessionState, t core.Thread) MarkdownOpts {
-	o := CommentMarkdown()
+func ForThread(se core.SessionState, t core.Thread) kit.MarkdownOpts {
+	o := Comment()
 	o.Group, o.Help = "thread:"+string(t.ID), "agent/requests#request"
 	for i, p := range se.Projects {
 		if t.Anchor != nil && p.Name == t.Anchor.Project || t.Anchor == nil && p.Primary || o.Dir == "" && i == 0 {
@@ -27,10 +29,10 @@ func ThreadMarkdown(se core.SessionState, t core.Thread) MarkdownOpts {
 	return o
 }
 
-// MDSpans is a paragraph's inline markdown as spans: `code`, *emphasis*, **strong**, ~~struck~~, and [links](url) as
+// Spans is a paragraph's inline markdown as spans: `code`, *emphasis*, **strong**, ~~struck~~, and [links](url) as
 // their text. Emphasis follows CommonMark's delimiter runs (spec/gfm, "Emphasis and strong emphasis"): a run opens or
 // closes by what flanks it, so a snake_case name or 2 * 3 * 4 stays as written.
-func MDSpans(s string) []widget.Span {
+func Spans(s string) []widget.Span {
 	toks := mdTokens(s)
 	mdEmphasis(toks)
 	var out []widget.Span
@@ -247,23 +249,13 @@ func mdPunct(r rune) bool {
 	return r < 0x80 && strings.ContainsRune("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~", r) || unicode.IsPunct(r)
 }
 
-// MarkdownOpts are where a document's relative images are, the lightbox group its images make (one of its own if
-// ""), and whether a newline in a paragraph is a line break (a comment's) or a space (a document's: CommonMark's soft
-// break).
-type MarkdownOpts struct {
-	Dir    string
-	Group  string
-	Help   string
-	Breaks bool
-}
+// Comment is how a comment draws its markdown, as GitHub draws a comment's: each newline a line break.
+func Comment() kit.MarkdownOpts { return kit.MarkdownOpts{Breaks: true} }
 
-// CommentMarkdown is how a comment draws its markdown, as GitHub draws a comment's: each newline a line break.
-func CommentMarkdown() MarkdownOpts { return MarkdownOpts{Breaks: true} }
-
-// MarkdownText draws src as the window's markdown service does, as o says (its images found from o.Dir, its newlines
+// Text draws src as the window's markdown service does, as o says (its images found from o.Dir, its newlines
 // line breaks with o.Breaks), or wrapped as it is without one.
-func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts) {
-	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
+func Text(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle, o kit.MarkdownOpts) {
+	if md, ok := registry.ServiceOf[kit.Markdown](r, kit.MarkdownService); ok {
 		md.TextIn(c, key, src, width, body, o)
 		return
 	}
@@ -272,7 +264,7 @@ func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width flo
 
 // DocText draws markdown as a doc reads, a hover's or an answer's: the UI face, muted.
 func DocText(c *ui.Ctx, r registry.Registry, key any, src string, width float32) {
-	MarkdownText(c, r, key, src, width, widget.UIFont(12, c.Theme().C(theme.FgMuted)), MarkdownOpts{})
+	Text(c, r, key, src, width, widget.UIFont(12, c.Theme().C(theme.FgMuted)), kit.MarkdownOpts{})
 }
 
 // PlainText is a markdown document as it reads, without its marks: fences, headings' and quotes' marks go, and each

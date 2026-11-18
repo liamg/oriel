@@ -10,7 +10,7 @@ import (
 )
 
 func show(ed *edit.Editor) string {
-	s := ed.Buf().String()
+	s := ed.Buffer().Snapshot().String()
 	c := ed.Cursors()[0]
 	if r, ok := c.Selection(); ok {
 		return s[:r.Start] + "[" + s[r.Start:r.End] + "]" + s[r.End:]

@@ -53,19 +53,19 @@ func List(c *ui.Ctx, key any, n int, sel *int, o ListOpts, row func(c *ui.Ctx, i
 	old := *sel
 	for _, k := range in.Keys {
 		switch {
-		case hasKey([]render.KeyEvent{k}, "j", "Down"):
+		case keyIs(k, "j", "Down"):
 			*sel++
-		case hasKey([]render.KeyEvent{k}, "k", "Up"):
+		case keyIs(k, "k", "Up"):
 			*sel--
-		case hasKey([]render.KeyEvent{k}, "g", "Home"):
+		case keyIs(k, "g", "Home"):
 			*sel = 0
-		case hasKey([]render.KeyEvent{k}, "G", "End"):
+		case keyIs(k, "G", "End"):
 			*sel = n - 1
-		case k.Key == "PageDown" || k.Key == "d" && k.Mods == render.ModCtrl:
+		case keyIs(k, "PageDown") || k.Key == "d" && k.Mods == render.ModCtrl:
 			*sel += page
-		case k.Key == "PageUp" || k.Key == "u" && k.Mods == render.ModCtrl:
+		case keyIs(k, "PageUp") || k.Key == "u" && k.Mods == render.ModCtrl:
 			*sel -= page
-		case k.Key == "CR":
+		case keyIs(k, "CR"):
 			res.Activated = *sel
 		}
 	}
@@ -259,7 +259,7 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		}
 		cur := flat[st.sel]
 		switch {
-		case hasKey([]render.KeyEvent{k}, "l", "Right"):
+		case keyIs(k, "l", "Right"):
 			if len(cur.item.Children) > 0 {
 				if !st.isOpen(cur.item) {
 					toggle(st.sel)
@@ -267,13 +267,13 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 					st.sel++
 				}
 			}
-		case hasKey([]render.KeyEvent{k}, "h", "Left"):
+		case keyIs(k, "h", "Left"):
 			if len(cur.item.Children) > 0 && st.isOpen(cur.item) {
 				toggle(st.sel)
 			} else if cur.parent >= 0 {
 				st.sel = cur.parent
 			}
-		case k.Key == "CR":
+		case keyIs(k, "CR"):
 			if len(cur.item.Children) > 0 {
 				toggle(st.sel)
 			} else {
@@ -341,8 +341,7 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 				rc.Box("label", ui.Style{}, func(rc *ui.Ctx) {
 					rc.Text("t", label, t)
 					if it.Strike {
-						w := rc.Shaper().Shape(label, t.Font).Advance
-						rc.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: t.Color, Float: &ui.Float{At: render.Point{Y: .5}}}, nil)
+						strike(rc, label, t, .5)
 					}
 				})
 				if it.Note != "" {

@@ -183,10 +183,10 @@ clip 0,0 1600x974 r 0
     rect 14,124.54 24x24.000008 fill #b98aff radius 12
     text "M" @23.296875,139.6 #141006 JetBrains Mono 8.5
     clip 48,124.54 878x37.269493 r 0
-      clip 48,124.54 852x15.7295 r 0
+      clip 48,124.54 858x15.7295 r 0
         text "Rate-limit the search endpoint per API key" @48,137.13376 #ece6d8 Inter 13
       pop
-      text "now" @908,136.00475 #7c7566 JetBrains Mono 10
+      text "4w" @914,136.00475 #7c7566 JetBrains Mono 10
       rect 48,145.2695 33.71x16.539993 fill #b98aff12 radius 10 stroke 1 #b98aff59
       text "NEW" @55,156.9595 #b98aff JetBrains Mono 9.5
       text "acme/api#790 · mkhan · +214 −38" @88.71,157.1395 #7c7566 JetBrains Mono 10
@@ -194,10 +194,10 @@ clip 0,0 1600x974 r 0
     rect 14,179.8095 24x24 fill #b98aff radius 12
     text "OB" @20.59375,194.86949 #141006 JetBrains Mono 8.5
     clip 48,179.8095 878x37.269485 r 0
-      clip 48,179.8095 852x15.729492 r 0
+      clip 48,179.8095 858x15.729492 r 0
         text "chore(deps): sweep" @48,192.40324 #ece6d8 Inter 13
       pop
-      text "now" @908,191.27423 #7c7566 JetBrains Mono 10
+      text "4w" @914,191.27423 #7c7566 JetBrains Mono 10
       rect 48,200.53899 33.71x16.539993 fill #b98aff12 radius 10 stroke 1 #b98aff59
       text "NEW" @55,212.22899 #b98aff JetBrains Mono 9.5
       text "acme/pricing#793 · oriel-bot" @88.71,212.40898 #7c7566 JetBrains Mono 10
@@ -207,10 +207,10 @@ clip 0,0 1600x974 r 0
     rect 14,235.07898 24x24 fill #b98aff radius 12
     text "J" @23.296875,250.13898 #141006 JetBrains Mono 8.5
     clip 48,235.07898 878x37.2695 r 0
-      clip 48,235.07898 852x15.729492 r 0
+      clip 48,235.07898 858x15.729492 r 0
         text "Move invoice PDFs to the render worker" @48,247.67273 #ece6d8 Inter 13
       pop
-      text "now" @908,246.54372 #7c7566 JetBrains Mono 10
+      text "4w" @914,246.54372 #7c7566 JetBrains Mono 10
       rect 48,255.80847 92.84x16.540009 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
       text "RE-REQUESTED" @55,267.49847 #ff5f6d JetBrains Mono 9.5
       text "acme/billing-ui#791 · jsato · 1 commit since yours" @147.84,267.6785 #7c7566 JetBrains Mono 10
@@ -218,10 +218,10 @@ clip 0,0 1600x974 r 0
     rect 14,290.34848 24x24 fill #b98aff radius 12
     text "M" @23.296875,305.4085 #141006 JetBrains Mono 8.5
     clip 48,290.34848 878x37.2695 r 0
-      clip 48,290.34848 852x15.729492 r 0
+      clip 48,290.34848 858x15.729492 r 0
         text "Rework the rate limiter so that per-key buckets refill continuously instead of once a minute, with burst" @48,302.94223 #ece6d8 Inter 13
       pop
-      text "now" @908,301.81323 #7c7566 JetBrains Mono 10
+      text "4w" @914,301.81323 #7c7566 JetBrains Mono 10
       rect 48,311.07797 33.71x16.540009 fill #b98aff12 radius 10 stroke 1 #b98aff59
       text "NEW" @55,322.76797 #b98aff JetBrains Mono 9.5
       text "acme/api#796 · mkhan" @88.71,322.948 #7c7566 JetBrains Mono 10
@@ -231,10 +231,10 @@ clip 0,0 1600x974 r 0
     rect 14,372.158 24x24 fill #b98aff radius 12
     text "B" @23.296875,387.21802 #141006 JetBrains Mono 8.5
     clip 48,372.158 878x37.2695 r 0
-      clip 48,372.158 852x15.729492 r 0
+      clip 48,372.158 858x15.729492 r 0
         text "Retry flaky S3 uploads with jitter" @48,384.75174 #ece6d8 Inter 13
       pop
-      text "now" @908,383.62274 #7c7566 JetBrains Mono 10
+      text "4w" @914,383.62274 #7c7566 JetBrains Mono 10
       rect 48,392.88748 125.69x16.540009 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
       text "CHANGES REQUESTED" @55,404.57748 #ff9b45 JetBrains Mono 9.5
       text "acme/api#794 · bnoor · no commits since" @180.69,404.7575 #7c7566 JetBrains Mono 10
@@ -262,7 +262,7 @@ clip 0,0 1600x974 r 0
     text "OPEN" @1006.71,106.69 #4fe0a0 JetBrains Mono 9.5
     text "acme/api#790" @1046.99,107.23 #b3ab99 JetBrains Mono 11
     text " · mkhan wants to merge mk/search-ratelimit → main" @1126.115,107.23 #b3ab99 JetBrains Mono 11
-    text " · asked you just …" @1455.8025,107.23 #b3ab99 JetBrains Mono 11
+    text " · asked you 4w ag…" @1455.8025,107.23 #b3ab99 JetBrains Mono 11
     rect 959,123.54 199.66663x78.74 fill #060606 radius 6
     clip 959,123.54 199.66663x78.74 r 6
       text "CHECKS" @969,141.23001 #7c7566 JetBrains Mono 9.5

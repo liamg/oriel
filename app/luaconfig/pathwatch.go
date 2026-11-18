@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry"
@@ -31,7 +31,7 @@ type pathWatch struct {
 // watchPaths watches with r's app manager, polling every poll once it can't.
 func watchPaths(r registry.Registry, poll time.Duration, changed func()) *pathWatch {
 	p := &pathWatch{changed: changed}
-	p.m, p.done = kit.FileManager(r, "paths", poll)
+	p.m, p.done = statefile.FileManager(r, "paths", poll)
 	return p
 }
 

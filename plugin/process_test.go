@@ -18,7 +18,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/jsonrpc"
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // fakeEnv makes this test binary a process plugin.

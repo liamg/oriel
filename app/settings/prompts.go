@@ -91,7 +91,7 @@ func (x *Prompts) section(c *ui.Ctx) {
 
 func (x *Prompts) commands() []registry.Command {
 	return []registry.Command{
-		{ID: "prompts.open", Grant: registry.Open, Title: "Open the Prompts page, at a prompt by {id}: style.code, pack.work, part.drafts…", Ex: "Prompts", ExArg: "id",
+		{ID: "prompts.open", Grant: registry.Open, Title: "Open the Prompts page, at a prompt by {id}: style.code, pack.work, part.drafts…", Ex: []string{"Prompts"}, ExArg: "id",
 			Args: []registry.Arg{registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(a.String("id")) }},
 		{ID: "prompts.set", Grant: string(plugin.CapAgentPrompt), Title: "Save your version of a prompt: {id}, {text}; empty text or the default goes back to the default",
 			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("text")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.set(x.target(a), a.String("text")) }},

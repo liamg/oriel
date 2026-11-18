@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/internal/words"
 
@@ -231,7 +232,7 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 			c.Text("none", "No description.", widget.UIFont(12, th.C(theme.FgFaint)))
 			return
 		}
-		kit.MarkdownText(c, x.h, "md", s.PR.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+		markdown.Text(c, x.h, "md", s.PR.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 	})
 	section("review", func(c *ui.Ctx) { x.reviewThreads(c, se, s, inner) })
 }
@@ -298,7 +299,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 							widget.Ago(c, "at", cm.Time, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint))})
 						}
 					})
-					kit.MarkdownText(c, x.h, "body", cm.Body, width, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+					markdown.Text(c, x.h, "body", cm.Body, width, widget.UIFont(12.5, th.C(theme.FgMuted)), markdown.ForThread(se, t))
 				})
 			}
 			if n := len(t.Drafts()); n > 0 {
@@ -360,7 +361,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		widget.Rule(c, "rule")
 		c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8)}, func(c *ui.Ctx) {
 			if f.tab == 1 {
-				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+				markdown.Text(c, x.h, "preview", f.body, max(200, c.Size().X-40), widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				return
 			}
 			if r := widget.Prose(c, "body", &f.body, widget.ProseOpts{Label: "Body", Placeholder: "What and why", Lines: 18, MinLines: 10,

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -35,7 +34,7 @@ func TestShowcaseSearch(t *testing.T) {
 	s.TypeInto("Replace", `Rounded$1(`)
 	s.Frame()
 	s.Click(apptest.Centre(s.Node("Replace all…").Bounds), 0)
-	s.Until("the replace's diff", func() bool { return s.Showing(editor.ReplaceView) })
+	s.Until("the replace's diff", func() bool { return s.Showing(kit.ReplaceView) })
 	s.Shot("07-replace-preview")
 }
 

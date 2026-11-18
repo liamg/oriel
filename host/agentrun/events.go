@@ -4,13 +4,13 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/internal/chaos"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -222,7 +222,7 @@ func (x *Runner) projectOf(id core.SessionID, path string) string {
 		return ""
 	}
 	for _, p := range se.Projects {
-		if rel, err := filepath.Rel(p.Dir, path); err == nil && !strings.HasPrefix(rel, "..") {
+		if pathx.Inside(path, p.Dir) {
 			return p.Name
 		}
 	}

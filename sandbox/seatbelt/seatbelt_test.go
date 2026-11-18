@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/sbpl"
 )
 
 func TestSBPLOrdersPaths(t *testing.T) {
@@ -84,8 +85,8 @@ func TestLoopbackModes(t *testing.T) {
 
 func TestQuote(t *testing.T) {
 	for in, want := range map[string]string{`/a`: `"/a"`, `/a"b`: `"/a\"b"`, `/a\b`: `"/a\\b"`, `/a") (allow default`: `"/a\") (allow default"`} {
-		if got := quote(in); got != want {
-			t.Errorf("quote(%q) = %s, want %s", in, got, want)
+		if got := sbpl.Quote(in); got != want {
+			t.Errorf("sbpl.Quote(%q) = %s, want %s", in, got, want)
 		}
 	}
 }
@@ -233,7 +234,7 @@ func TestCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Dir != root || !slices.Equal(c.Argv, []string{sandboxExec, "-f", filepath.Join(sandbox.Dir(root), "seatbelt.sb"), "claude"}) {
+	if c.Dir != root || !slices.Equal(c.Argv, []string{sbpl.SandboxExec, "-f", filepath.Join(sandbox.Dir(root), "seatbelt.sb"), "claude"}) {
 		t.Errorf("command %v in %s", c.Argv, c.Dir)
 	}
 	env := map[string]string{}
@@ -254,11 +255,11 @@ func TestCommand(t *testing.T) {
 	real := func(p string) string { r, _ := filepath.EvalSymlinks(p); return r }
 	common := real(filepath.Join(repo, ".git"))
 	for _, want := range []string{
-		`(deny file-read* (subpath "/Users") (subpath "/Volumes") (subpath ` + quote(real(home)) + `)`,
-		`(allow file-read* file-write* (subpath ` + quote(real(root)) + `))`,
-		`(allow file-read* file-write* (subpath ` + quote(common) + `))`,
-		`(deny file-write* (subpath ` + quote(filepath.Join(common, "config")) + `))`,
-		`(deny file-write* (subpath ` + quote(filepath.Join(common, "hooks")) + `))`,
+		`(deny file-read* (subpath "/Users") (subpath "/Volumes") (subpath ` + sbpl.Quote(real(home)) + `)`,
+		`(allow file-read* file-write* (subpath ` + sbpl.Quote(real(root)) + `))`,
+		`(allow file-read* file-write* (subpath ` + sbpl.Quote(common) + `))`,
+		`(deny file-write* (subpath ` + sbpl.Quote(filepath.Join(common, "config")) + `))`,
+		`(deny file-write* (subpath ` + sbpl.Quote(filepath.Join(common, "hooks")) + `))`,
 		`(remote tcp "localhost:` + strings.TrimPrefix(env["HTTPS_PROXY"], "http://127.0.0.1:") + `")`,
 	} {
 		if !strings.Contains(profile, want) {

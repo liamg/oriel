@@ -220,7 +220,7 @@ func (e *Engine) SetCursor(p Pos) {
 func (e *Engine) LastNotice() edit.Notice { return e.notice }
 
 func (e *Engine) view() *view {
-	v := newView(e.ed.Buf())
+	v := newView(e.ed.Buffer().Snapshot())
 	v.folds = &e.fold
 	v.ts = e.opts.TabStop
 	return v
@@ -619,7 +619,7 @@ func (e *Engine) newGroup() text.UndoGroup {
 	if e.outerGroup != 0 {
 		return e.outerGroup
 	}
-	return e.ed.NewGroup()
+	return e.ed.Buffer().NewGroup()
 }
 
 // startChange begins recording a change for ".".
@@ -675,12 +675,12 @@ func (e *Engine) repeat(c cmd) {
 
 // do applies replaces as part of the current change's undo step.
 func (e *Engine) do(group text.UndoGroup, rs ...text.Replace) text.Change {
-	before := e.ed.UndoSeq()
+	before := e.ed.Buffer().UndoSeq()
 	ch, err := e.ed.Do(rs, group)
 	if err != nil {
 		panic(err)
 	}
-	if seq := e.ed.UndoSeq(); seq != before {
+	if seq := e.ed.Buffer().UndoSeq(); seq != before {
 		if _, ok := e.undoCur[seq]; !ok {
 			e.undoCur[seq] = e.cur
 		}

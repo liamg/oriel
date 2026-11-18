@@ -438,46 +438,83 @@ func newUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
-func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume string) (_ agent.Session, err error) {
-	if spec.Cwd == "" {
-		return nil, errors.New("claude: no directory to start in")
-	}
-	id := resume
-	if id == "" {
-		id = newUUID()
-	}
-	modDir := filepath.Join(spec.StateDir, "claude-mod")
-	temp := ""
-	if spec.StateDir == "" {
-		if temp, err = os.MkdirTemp("", "oriel-claude-"); err != nil {
-			return nil, err
-		}
-		modDir = filepath.Join(temp, "mod")
-	}
-	defer func() {
-		if err != nil && temp != "" {
-			_ = os.RemoveAll(temp)
-		}
-	}()
-	argv, err := args(spec, modDir, id, resume)
+func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume string) (agent.Session, error) {
+	l, err := p.prepare(spec, resume)
 	if err != nil {
 		return nil, err
 	}
-	bin := p.bin()
-	exe := spec.Exec
-	if exe == nil {
-		exe = hostexec.Exec{}
-		if bin, err = exec.LookPath(bin); err != nil {
+	s, err := p.launch(ctx, spec, l)
+	if err != nil {
+		l.cleanup()
+		return nil, err
+	}
+	return s, nil
+}
+
+// claudeLaunch is what starting claude needs ready before its process starts: the session's id, its mod and state
+// directories, the binaries and arguments, and the socket its hooks call back on.
+type claudeLaunch struct {
+	id, resume string
+	modDir     string
+	temp       string // a state directory made for this session when the spec gave none
+	bin        string
+	argv       []string
+	orielBin   string
+	exe        agent.Exec
+	dir        string // the socket's directory
+	ln         net.Listener
+}
+
+// cleanup undoes what prepare made, for a launch that didn't start.
+func (l *claudeLaunch) cleanup() {
+	if l.ln != nil {
+		_ = l.ln.Close()
+	}
+	if l.dir != "" {
+		_ = os.RemoveAll(l.dir)
+	}
+	if l.temp != "" {
+		_ = os.RemoveAll(l.temp)
+	}
+}
+
+// prepare gets a launch ready: the directories, the binaries, the mod written, the folder trusted on the host, and
+// the hooks' socket listening. On an error nothing it made is left.
+func (p *Provider) prepare(spec agent.StartSpec, resume string) (_ *claudeLaunch, err error) {
+	if spec.Cwd == "" {
+		return nil, errors.New("claude: no directory to start in")
+	}
+	l := &claudeLaunch{id: resume, resume: resume, modDir: filepath.Join(spec.StateDir, "claude-mod"), exe: spec.Exec}
+	if l.id == "" {
+		l.id = newUUID()
+	}
+	defer func() {
+		if err != nil {
+			l.cleanup()
+		}
+	}()
+	if spec.StateDir == "" {
+		if l.temp, err = os.MkdirTemp("", "oriel-claude-"); err != nil {
+			return nil, err
+		}
+		l.modDir = filepath.Join(l.temp, "mod")
+	}
+	if l.argv, err = args(spec, l.modDir, l.id, resume); err != nil {
+		return nil, err
+	}
+	l.bin = p.bin()
+	if l.exe == nil {
+		l.exe = hostexec.Exec{}
+		if l.bin, err = exec.LookPath(l.bin); err != nil {
 			return nil, fmt.Errorf("claude: %w", err)
 		}
 	}
-	orielBin := p.OrielBin
-	if orielBin == "" {
-		if orielBin, err = os.Executable(); err != nil {
+	if l.orielBin = p.OrielBin; l.orielBin == "" {
+		if l.orielBin, err = os.Executable(); err != nil {
 			return nil, err
 		}
 	}
-	if err := writeMod(modDir, spec.Pack); err != nil {
+	if err := writeMod(l.modDir, spec.Pack); err != nil {
 		return nil, err
 	}
 	// Inside a sandbox its own config is prepared for it; on the host, the folder is trusted first, or claude
@@ -488,25 +525,24 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 		}
 		_ = ensureDefaults(spec.Env)
 	}
-	dir, err := sockDir()
-	if err != nil {
+	if l.dir, err = sockDir(); err != nil {
 		return nil, err
 	}
-	ln, err := net.Listen("unix", sockPath(dir))
-	if err != nil {
-		_ = os.RemoveAll(dir)
+	if l.ln, err = net.Listen("unix", sockPath(l.dir)); err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(bin, argv...)
-	cmd.Dir = spec.Cwd
-	cmd.Env = append(inherited(os.Environ()), processEnv(spec, sockPath(dir), orielBin)...)
+	return l, nil
+}
 
+// launch starts claude in its PTY and the session that drives it.
+func (p *Provider) launch(ctx context.Context, spec agent.StartSpec, l *claudeLaunch) (*session, error) {
+	cmd := exec.Command(l.bin, l.argv...)
+	cmd.Dir = spec.Cwd
+	cmd.Env = append(inherited(os.Environ()), processEnv(spec, sockPath(l.dir), l.orielBin)...)
 	sctx, cancel := context.WithCancel(ctx)
-	pty, err := exe.StartPTY(sctx, cmd, cols, rows)
+	pty, err := l.exe.StartPTY(sctx, cmd, cols, rows)
 	if err != nil {
 		cancel()
-		_ = ln.Close()
-		_ = os.RemoveAll(dir)
 		return nil, fmt.Errorf("claude: %w", err)
 	}
 	// In a sandbox the log is written through a mount of the host's projects folder, so it's read where the host
@@ -524,13 +560,13 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 		cancel: cancel,
 		pty:    pty,
 		term:   newTerminal(pty),
-		ln:     ln,
-		dir:    dir,
-		temp:   temp,
-		tail:   newTailer(config, spec.Cwd, id, resume != "", prices),
+		ln:     l.ln,
+		dir:    l.dir,
+		temp:   l.temp,
+		tail:   newTailer(config, spec.Cwd, l.id, l.resume != "", prices),
 		events: eventq.New(),
 		done:   make(chan struct{}),
-		id:     id,
+		id:     l.id,
 		wake:   make(chan struct{}, 1),
 		asks:   map[string]chan agent.Decision{},
 		forks:  map[string]chan forkAnswerIn{},
@@ -538,7 +574,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 
 		unattendedWait: unattendedWait,
 	}
-	if submitsFirst(spec, resume) {
+	if submitsFirst(spec, l.resume) {
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})
 	}
 	s.term.watch = s.watchScreen

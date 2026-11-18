@@ -6,6 +6,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -37,7 +38,7 @@ func commentMenu(c *ui.Ctx, h plugin.Host, t core.Thread, cm core.Comment, shown
 	case 4:
 		runOrSay(h, "request.queued.delete", ref)
 	case 0:
-		kit.CopyText(h, kit.PlainText(cm.Body))
+		kit.CopyText(h, markdown.PlainText(cm.Body))
 	case 1:
 		kit.CopyText(h, cm.Body)
 	case 2:

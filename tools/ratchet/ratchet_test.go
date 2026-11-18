@@ -43,6 +43,9 @@ var ceilings = map[string]int{
 	"timers in tests": 78,
 	// A test frames and runs the loop's queue through apptest's waits (Until, Quiet), not a loop of its own.
 	"RunQueued in tests outside apptest": 2,
+	// Whether a path is in a directory is internal/pathx's (Inside, Rel), not a HasPrefix(rel, "..") that misreads a
+	// child named "..foo".
+	"hand-written path containment": 0,
 }
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
@@ -167,6 +170,7 @@ func TestRatchets(t *testing.T) {
 		"wall-clock measures in tests":         wallClock(Untagged(tests(withTests), "perf")),
 		"timers in tests":                      AnyPkgSelectors(Untagged(tests(withTests), "perf"), "time", "After", "Tick", "NewTimer", "NewTicker", "AfterFunc"),
 		"RunQueued in tests outside apptest":   Calls(without(Untagged(tests(withTests), "perf"), "app/apptest/"), "RunQueued"),
+		"hand-written path containment":        DotDotPrefixes(without(all, "internal/pathx/", "catalog/lint.go", "vim/ex.go", "vim/vimtest/mine/")),
 	}
 	for name, hits := range counts {
 		ceiling, ok := ceilings[name]

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/syntax/tree"
 	"github.com/liamg/oriel/text"
@@ -59,8 +60,8 @@ func (ws Workspace) Rel(path string) string {
 	if !filepath.IsAbs(path) {
 		return filepath.ToSlash(path)
 	}
-	r, err := filepath.Rel(ws.Root, path)
-	if err != nil || r == ".." || len(r) > 2 && r[:3] == ".."+string(filepath.Separator) {
+	r, ok := pathx.Rel(path, ws.Root)
+	if !ok {
 		return filepath.ToSlash(path)
 	}
 	return filepath.ToSlash(r)

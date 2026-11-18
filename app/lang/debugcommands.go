@@ -27,10 +27,10 @@ func (x *Debug) sessionCommands() []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "debug.start", Grant: string(plugin.CapExec), Title: "Start debugging: the launch config {config} by name, else the first in .oriel/debug.toml, else one for the current file",
-			Ex: "Debug", ExArg: "config", Args: []registry.Arg{registry.StringArg("config")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.startNamed(a.String("config")) }},
+			Ex: []string{"Debug"}, ExArg: "config", Args: []registry.Arg{registry.StringArg("config")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.startNamed(a.String("config")) }},
 		{ID: "debug.launch", Grant: string(plugin.CapExec), Title: "Start debugging a launch config given whole: {name, type, request, program, args, cwd, env, pid} and the adapter's own keys, as in .oriel/debug.toml",
 			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("type"), registry.StringArg("request"), registry.StringArg("program"), registry.ListArg("args"), registry.StringArg("cwd"), registry.MapArg("env"), registry.IntArg("pid"), registry.MoreArgs}, Run: func(_ registry.Ctx, a registry.Args) error { return x.launch(a) }},
-		{ID: "debug.continue", Grant: string(plugin.CapExec), Title: "Continue, or start debugging when nothing is", Ex: "Dc", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "debug.continue", Grant: string(plugin.CapExec), Title: "Continue, or start debugging when nothing is", Ex: []string{"Dc"}, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if !x.sess.live() {
 				return x.startNamed("")
 			}
@@ -69,7 +69,7 @@ func (x *Debug) breakpointCommands() []registry.Command {
 				return nil
 			}},
 		{ID: "debug.breakpoint.set", Grant: string(plugin.CapExec), Title: "Set a breakpoint at {file}:{line} (the cursor's by default) with a {condition}, {hit} condition or {log} message; {keep} leaves one already there as it is",
-			Ex: "Breakpoint", ExArg: "condition",
+			Ex: []string{"Breakpoint"}, ExArg: "condition",
 			Args: []registry.Arg{registry.StringArg("condition"), registry.StringArg("file"), registry.StringArg("hit"), registry.BoolArg("keep"), registry.IntArg("line"), registry.StringArg("log")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				file, line, err := x.place(a)
 				if err != nil {
@@ -81,7 +81,7 @@ func (x *Debug) breakpointCommands() []registry.Command {
 				x.set(file, debugBreakpoint{Line: line, Condition: a.String("condition"), HitCondition: a.String("hit"), LogMessage: a.String("log")})
 				return nil
 			}},
-		{ID: "debug.logpoint.set", Grant: string(plugin.CapExec), Title: "Set a logpoint on the cursor's line: {message}, {expressions} in braces", Ex: "Logpoint", ExArg: "message",
+		{ID: "debug.logpoint.set", Grant: string(plugin.CapExec), Title: "Set a logpoint on the cursor's line: {message}, {expressions} in braces", Ex: []string{"Logpoint"}, ExArg: "message",
 			Args: []registry.Arg{registry.AnyArg("expressions"), registry.StringArg("message")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				msg := strings.TrimSpace(a.String("message"))
 				if msg == "" {
@@ -118,7 +118,7 @@ func (x *Debug) breakpointCommands() []registry.Command {
 // watchCommands watch and evaluate expressions, and show the panel.
 func (x *Debug) watchCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "debug.watch.add", Grant: string(plugin.CapExec), Title: "Watch an {expression}", Ex: "Watch", ExArg: "expression", Args: []registry.Arg{registry.StringArg("expression")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "debug.watch.add", Grant: string(plugin.CapExec), Title: "Watch an {expression}", Ex: []string{"Watch"}, ExArg: "expression", Args: []registry.Arg{registry.StringArg("expression")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.addWatch(a.String("expression"))
 		}},
 		{ID: "debug.watch.remove", Grant: registry.Open, Title: "Stop watching the {index}th expression (0-based)", Args: []registry.Arg{registry.IntArg("index")}, Run: func(_ registry.Ctx, a registry.Args) error {
@@ -132,7 +132,7 @@ func (x *Debug) watchCommands() []registry.Command {
 			x.refresh()
 			return nil
 		}},
-		{ID: "debug.eval", Grant: string(plugin.CapExec), Title: "Evaluate an {expression} in the selected frame, in the debug console", Available: x.live, Ex: "Eval", ExArg: "expression",
+		{ID: "debug.eval", Grant: string(plugin.CapExec), Title: "Evaluate an {expression} in the selected frame, in the debug console", Available: x.live, Ex: []string{"Eval"}, ExArg: "expression",
 			Args: []registry.Arg{registry.StringArg("expression")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.eval(a.String("expression")) }},
 		{ID: "debug.open", Grant: registry.Open, Title: "Show the Debug panel", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.h.Run(ctx, "view.open", debugViewArgs())

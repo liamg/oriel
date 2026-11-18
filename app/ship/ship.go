@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/registry/services"
 
@@ -63,8 +64,8 @@ type Ship struct {
 	cancel    context.CancelFunc
 	busy      work.Busy                         // reads and steps
 	saving    sync.WaitGroup                    // drafts the user typed, on their way to the session host
-	subs      kit.Subs                          // what it reads, from the sessions' managers (shipwatch.go)
-	budget    kit.Budget                        // background PR polls' requests
+	subs      statefile.Subs                    // what it reads, from the sessions' managers (shipwatch.go)
+	budget    statefile.Budget                  // background PR polls' requests
 	showQuiet map[core.SessionID]bool           // the Ship page shows the projects with nothing to ship; on the loop
 	watching  map[core.SessionID]bool           // the sessions whose git follow watches; x.mu
 	projects  map[core.SessionID][]core.Project // each session's projects as follow last saw them; x.mu

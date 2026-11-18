@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Host git in a sandboxed workspace runs on files the agent can write. GitEnv
@@ -89,7 +92,7 @@ func (g *Guard) hostGitDirs(root, dir string) (gitDir, workTree string, err erro
 	m, _ := LoadManifest(root)
 	for _, p := range m.Projects {
 		proj := filepath.Join(root, p.Dir)
-		if !within(abs, proj) {
+		if !pathx.Inside(abs, proj) {
 			continue
 		}
 		admin, err := WorktreeAdmin(p.Repo, proj)
@@ -304,42 +307,29 @@ func safeKey(key string) bool {
 	return false
 }
 
-func within(p, dir string) bool {
-	rel, err := filepath.Rel(dir, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, "../")
+// Repo is dir as gitx runs git in it, with GitEnv applied: host git in a sandboxed workspace goes through here, or
+// through GitEnv.
+func Repo(dir string) (gitx.Repo, error) { return (*Guard)(nil).Repo(dir) }
+
+// Repo is the package's Repo, vetting through g.
+func (g *Guard) Repo(dir string) (gitx.Repo, error) {
+	env, err := g.GitEnv(dir)
+	if err != nil {
+		return gitx.Repo{}, err
+	}
+	return gitx.Repo{Dir: dir, Env: env}, nil
 }
 
-// Git runs host git in dir with GitEnv applied, returning stdout. Host git
-// in a sandboxed workspace goes through here, or through GitEnv.
-func Git(dir string, args ...string) (string, error) {
-	return (*Guard)(nil).GitContext(context.Background(), dir, args...)
-}
-
-// GitContext is Git, killed when ctx ends.
-func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
-	return (*Guard)(nil).GitContext(ctx, dir, args...)
+// Git runs host git in dir with GitEnv applied, as gitx runs it, returning what it printed.
+func Git(ctx context.Context, dir string, args ...string) (string, error) {
+	return (*Guard)(nil).Git(ctx, dir, args...)
 }
 
 // Git is the package's Git, vetting through g.
-func (g *Guard) Git(dir string, args ...string) (string, error) {
-	return g.GitContext(context.Background(), dir, args...)
-}
-
-// GitContext is the package's GitContext, vetting through g.
-func (g *Guard) GitContext(ctx context.Context, dir string, args ...string) (string, error) {
-	env, err := g.GitEnv(dir)
+func (g *Guard) Git(ctx context.Context, dir string, args ...string) (string, error) {
+	r, err := g.Repo(dir)
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = dir
-	if env != nil {
-		cmd.Env = append(os.Environ(), env...)
-	}
-	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()))
-	}
-	return out.String(), nil
+	return r.Run(ctx, args...)
 }

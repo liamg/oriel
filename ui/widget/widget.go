@@ -9,6 +9,7 @@ package widget
 
 import (
 	"image/color"
+	"slices"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -115,13 +116,13 @@ func pressedKey(keys []render.KeyEvent) bool {
 	return false
 }
 
+// keyIs says k is one of names, pressed with no modifier but Shift (which a name like "G" already says): the one
+// rule every widget's keys follow.
+func keyIs(k render.KeyEvent, names ...string) bool {
+	return k.Mods&^render.ModShift == 0 && slices.Contains(names, k.Key)
+}
+
+// hasKey says keys hold one of names (keyIs).
 func hasKey(keys []render.KeyEvent, names ...string) bool {
-	for _, k := range keys {
-		for _, n := range names {
-			if k.Mods&^render.ModShift == 0 && k.Key == n {
-				return true
-			}
-		}
-	}
-	return false
+	return slices.ContainsFunc(keys, func(k render.KeyEvent) bool { return keyIs(k, names...) })
 }

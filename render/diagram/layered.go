@@ -721,48 +721,83 @@ func (g *flowLayout) place() {
 
 // result turns the placed graph into boxes, routes and what's drawn, in the flowchart's direction.
 func (g *flowLayout) result() *Layout {
-	// rank positions
+	rpos, thick := g.rankPositions()
+	gStart, gEnd := g.groupExtents(rpos, thick)
+	l := g.boxes(rpos, gStart, gEnd)
+	g.routes(l, rpos, g.edgeEnds(rpos))
+	g.clipGroupEnds(l)
+	g.loopRoutes(l)
+	g.finish(l)
+	return l
+}
+
+// pt is a point in the flowchart's direction from one in TB / LR coordinates: along the order axis, across the
+// rank axis.
+func (g *flowLayout) pt(along, across float32) render.Point {
+	if g.vertical {
+		return render.Point{X: along, Y: across}
+	}
+	return render.Point{X: across, Y: along}
+}
+
+// rect is the box between two corners given as pt takes them.
+func (g *flowLayout) rect(along0, across0, along1, across1 float32) render.Rect {
+	a, b := g.pt(along0, across0), g.pt(along1, across1)
+	return render.Rect{Min: render.Point{X: min(a.X, b.X), Y: min(a.Y, b.Y)}, Max: render.Point{X: max(a.X, b.X), Y: max(a.Y, b.Y)}}
+}
+
+// rankPositions are each rank's centre along the rank axis, and its thickness: its widest node, with room between
+// ranks for the subgraphs that start or end there.
+func (g *flowLayout) rankPositions() (rpos, thick []float32) {
 	nr := len(g.layers)
-	thick := make([]float32, nr)
+	thick = make([]float32, nr)
 	for r, l := range g.layers {
 		for _, n := range l {
 			thick[r] = max(thick[r], g.nodes[n].across)
 		}
 	}
-	titleStart := g.f.Dir == TB
-	titleEnd := g.f.Dir == BT
-	depth := func(r int, starts bool) int {
-		d := 0
-		for _, n := range g.layers[r] {
-			if g.nodes[n].group < 0 {
-				continue
-			}
-			c := 0
-			for _, gi := range g.chains[g.nodes[n].group] {
-				if starts && g.minRank[gi] == r || !starts && g.maxRank[gi] == r {
-					c++
-				}
-			}
-			d = max(d, c)
-		}
-		return d
-	}
-	room := func(starts bool) float32 {
-		x := float32(groupPad)
-		if starts && titleStart || !starts && titleEnd {
-			x += g.title
-		}
-		return x
-	}
-	rpos := make([]float32, nr)
+	rpos = make([]float32, nr)
 	for r := 1; r < nr; r++ {
-		rpos[r] = rpos[r-1] + thick[r-1]/2 + thick[r]/2 + g.halfGap + float32(depth(r-1, false))*room(false) + float32(depth(r, true))*room(true)
+		rpos[r] = rpos[r-1] + thick[r-1]/2 + thick[r]/2 + g.halfGap + float32(g.groupDepth(r-1, false))*g.groupRoom(false) +
+			float32(g.groupDepth(r, true))*g.groupRoom(true)
 	}
-	// subgraph extents along the rank axis
+	return rpos, thick
+}
+
+// groupDepth is how many subgraphs nest to start (or end) at rank r, at most, over its nodes.
+func (g *flowLayout) groupDepth(r int, starts bool) int {
+	d := 0
+	for _, n := range g.layers[r] {
+		if g.nodes[n].group < 0 {
+			continue
+		}
+		c := 0
+		for _, gi := range g.chains[g.nodes[n].group] {
+			if starts && g.minRank[gi] == r || !starts && g.maxRank[gi] == r {
+				c++
+			}
+		}
+		d = max(d, c)
+	}
+	return d
+}
+
+// groupRoom is the room a subgraph takes at its start (or end) along the rank axis: its padding, and its title on
+// the side the title sits.
+func (g *flowLayout) groupRoom(starts bool) float32 {
+	x := float32(groupPad)
+	if starts && g.f.Dir == TB || !starts && g.f.Dir == BT {
+		x += g.title
+	}
+	return x
+}
+
+// groupExtents are each subgraph's start and end along the rank axis: its ranks', and its children's, with its room.
+func (g *flowLayout) groupExtents(rpos, thick []float32) (gStart, gEnd []float32) {
 	ng := len(g.f.Groups)
-	gStart, gEnd := make([]float32, ng), make([]float32, ng)
-	var extent func(gi int)
+	gStart, gEnd = make([]float32, ng), make([]float32, ng)
 	done := make([]bool, ng)
+	var extent func(gi int)
 	extent = func(gi int) {
 		if done[gi] {
 			return
@@ -779,53 +814,52 @@ func (g *flowLayout) result() *Layout {
 				s, e = min(s, gStart[c]), max(e, gEnd[c])
 			}
 		}
-		gStart[gi], gEnd[gi] = s-room(true), e+room(false)
+		gStart[gi], gEnd[gi] = s-g.groupRoom(true), e+g.groupRoom(false)
 	}
 	for gi := range ng {
 		extent(gi)
 	}
-	lo, hi := g.groupEdges()
+	return gStart, gEnd
+}
 
-	// in TB / LR coordinates: x along the order axis for TB
-	pt := func(along, across float32) render.Point {
-		if g.vertical {
-			return render.Point{X: along, Y: across}
-		}
-		return render.Point{X: across, Y: along}
-	}
-	rect := func(along0, across0, along1, across1 float32) render.Rect {
-		a, b := pt(along0, across0), pt(along1, across1)
-		return render.Rect{Min: render.Point{X: min(a.X, b.X), Y: min(a.Y, b.Y)}, Max: render.Point{X: max(a.X, b.X), Y: max(a.Y, b.Y)}}
-	}
+// boxes is the layout's nodes and subgraphs, placed.
+func (g *flowLayout) boxes(rpos, gStart, gEnd []float32) *Layout {
+	lo, hi := g.groupEdges()
 	l := &Layout{}
-	f := g.f
-	for i, n := range f.Nodes {
+	for i, n := range g.f.Nodes {
 		nd := g.nodes[i]
 		c := rpos[nd.rank]
-		l.Nodes = append(l.Nodes, Box{ID: n.ID, Label: n.Label, Shape: n.Shape, Rect: rect(nd.pos-nd.along/2, c-nd.across/2, nd.pos+nd.along/2, c+nd.across/2)})
+		l.Nodes = append(l.Nodes, Box{ID: n.ID, Label: n.Label, Shape: n.Shape, Rect: g.rect(nd.pos-nd.along/2, c-nd.across/2, nd.pos+nd.along/2, c+nd.across/2)})
 	}
-	for gi, gr := range f.Groups {
+	for gi, gr := range g.f.Groups {
 		r := render.Rect{}
 		if !math.IsInf(float64(lo[gi]), 0) {
-			r = rect(lo[gi], gStart[gi], hi[gi], gEnd[gi])
+			r = g.rect(lo[gi], gStart[gi], hi[gi], gEnd[gi])
 		}
 		l.Groups = append(l.Groups, Box{ID: gr.ID, Label: gr.Title, Rect: r})
 	}
-	// ports: where each edge meets a node, spread along its side by where the edge goes
-	type port struct {
-		edge   int // index into g.edges
-		start  bool
-		toward float32
-	}
-	ports := map[[2]int][]port{} // node, side (0 start of rank axis, 1 end)
+	return l
+}
+
+// flowPort is where an edge meets a node's side: the edge (an index into flowLayout.edges), whether it starts
+// there, and where along the order axis it heads.
+type flowPort struct {
+	edge   int
+	start  bool
+	toward float32
+}
+
+// edgeEnds are where each edge leaves and reaches its nodes, spread along their sides by where the edges go.
+func (g *flowLayout) edgeEnds(rpos []float32) [][2]render.Point {
+	ports := map[[2]int][]flowPort{} // node, side (0 start of rank axis, 1 end)
 	for i, e := range g.edges {
-		ports[[2]int{e.u, 1}] = append(ports[[2]int{e.u, 1}], port{i, true, g.nodes[e.chain[1]].pos})
-		ports[[2]int{e.v, 0}] = append(ports[[2]int{e.v, 0}], port{i, false, g.nodes[e.chain[len(e.chain)-2]].pos})
+		ports[[2]int{e.u, 1}] = append(ports[[2]int{e.u, 1}], flowPort{i, true, g.nodes[e.chain[1]].pos})
+		ports[[2]int{e.v, 0}] = append(ports[[2]int{e.v, 0}], flowPort{i, false, g.nodes[e.chain[len(e.chain)-2]].pos})
 	}
 	ends := make([][2]render.Point, len(g.edges))
 	for key, ps := range ports {
 		n, side := key[0], key[1]
-		slices.SortStableFunc(ps, func(a, b port) int {
+		slices.SortStableFunc(ps, func(a, b flowPort) int {
 			switch {
 			case a.toward < b.toward:
 				return -1
@@ -835,7 +869,7 @@ func (g *flowLayout) result() *Layout {
 			return 0
 		})
 		nd := g.nodes[n]
-		shape := f.Nodes[n].Shape
+		shape := g.f.Nodes[n].Shape
 		spread := float32(0)
 		switch {
 		case len(ps) < 2:
@@ -855,7 +889,7 @@ func (g *flowLayout) result() *Layout {
 			if side == 1 {
 				across = rpos[nd.rank] + d
 			}
-			at := pt(nd.pos+off, across)
+			at := g.pt(nd.pos+off, across)
 			if p.start {
 				ends[p.edge][0] = at
 			} else {
@@ -863,15 +897,21 @@ func (g *flowLayout) result() *Layout {
 			}
 		}
 	}
+	return ends
+}
+
+// routes adds each edge's route to l: from its start port, through its chain's dummy nodes, to its end port.
+func (g *flowLayout) routes(l *Layout, rpos []float32, ends [][2]render.Point) {
+	f := g.f
 	for i, e := range g.edges {
 		fe := f.Edges[e.edge]
 		pts := []render.Point{ends[i][0]}
 		var label render.Rect
 		for _, d := range e.chain[1 : len(e.chain)-1] {
 			nd := g.nodes[d]
-			p := pt(nd.pos, rpos[nd.rank])
+			p := g.pt(nd.pos, rpos[nd.rank])
 			if nd.kind == kLabel {
-				label = rect(nd.pos-nd.along/2, rpos[nd.rank]-nd.across/2, nd.pos+nd.along/2, rpos[nd.rank]+nd.across/2)
+				label = g.rect(nd.pos-nd.along/2, rpos[nd.rank]-nd.across/2, nd.pos+nd.along/2, rpos[nd.rank]+nd.across/2)
 				label = inset(label, 3, 2)
 			}
 			pts = append(pts, p)
@@ -886,7 +926,10 @@ func (g *flowLayout) result() *Layout {
 		rt.FromGroup, rt.ToGroup = f.Node(fe.From) == nil, f.Node(fe.To) == nil
 		l.Edges = append(l.Edges, rt)
 	}
-	// an edge on a subgraph ends on its box
+}
+
+// clipGroupEnds ends an edge on a subgraph on the subgraph's box.
+func (g *flowLayout) clipGroupEnds(l *Layout) {
 	for i := range l.Edges {
 		rt := &l.Edges[i]
 		if rt.FromGroup {
@@ -897,6 +940,11 @@ func (g *flowLayout) result() *Layout {
 			rt.Points[n-1] = clipToBox(l.Groups[rt.To].Rect, rt.Points[n-2], rt.Points[n-1])
 		}
 	}
+}
+
+// loopRoutes adds the self-loops to l: each a short arc off its node's far side, with its label beyond it.
+func (g *flowLayout) loopRoutes(l *Layout) {
+	f := g.f
 	for _, ei := range g.loops {
 		fe := f.Edges[ei]
 		n := slices.IndexFunc(f.Nodes, func(nd Node) bool { return nd.ID == fe.From })
@@ -920,8 +968,6 @@ func (g *flowLayout) result() *Layout {
 		l.Edges = append(l.Edges, Route{Edge: ei, From: n, To: n, Points: []render.Point{a, z}, Loop: true, Label: label, Vertical: g.vertical,
 			Line: fe.Line, StartMark: fe.Start, EndMark: fe.End})
 	}
-	g.finish(l)
-	return l
 }
 
 // edgeEnd is the node or subgraph index of an edge's From (or To).

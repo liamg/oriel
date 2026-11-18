@@ -283,18 +283,18 @@ func lightboxDraw(c *ui.Ctx, key any, lf lightboxFrame) {
 		ic := imageCacheOf(c)
 		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(ic, f, it, lf.d, r) })
 		c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -16, Y: 14}}}, func(c *ui.Ctx) {
-			if lightboxButton(c, "x", "✕", "Close", "Close (Esc)", false, fg, chrome, lf.help) {
+			if lf.button(c, "x", lightboxButton{Glyph: "✕", Label: "Close", Tip: "Close (Esc)"}) {
 				lf.close()
 			}
 		})
 		if len(items) > 1 {
 			c.Box("prev", ui.Style{Float: &ui.Float{At: render.Point{Y: .5}, Self: render.Point{Y: .5}, Offset: render.Point{X: 16}}}, func(c *ui.Ctx) {
-				if lightboxButton(c, "b", "‹", "Previous image", "Previous (←)", *at == 0, fg, chrome, lf.help) {
+				if lf.button(c, "b", lightboxButton{Glyph: "‹", Label: "Previous image", Tip: "Previous (←)", Off: *at == 0}) {
 					*at--
 				}
 			})
 			c.Box("next", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: .5}, Self: render.Point{X: 1, Y: .5}, Offset: render.Point{X: -16}}}, func(c *ui.Ctx) {
-				if lightboxButton(c, "b", "›", "Next image", "Next (→)", *at == len(items)-1, fg, chrome, lf.help) {
+				if lf.button(c, "b", lightboxButton{Glyph: "›", Label: "Next image", Tip: "Next (→)", Off: *at == len(items)-1}) {
 					*at++
 				}
 			})
@@ -337,12 +337,20 @@ func panAxis(off, length, centre, size float32) float32 {
 	return max(size-centre-length/2, min(off, length/2-centre))
 }
 
-func lightboxButton(c *ui.Ctx, key any, glyph, label, tip string, off bool, fg, fill render.Color, help string) bool {
-	if off {
+// lightboxButton is one of the lightbox's round buttons over the image: close, previous and next.
+type lightboxButton struct {
+	Glyph, Label, Tip string
+	Off               bool // greyed out, taking no click: previous on the first image
+}
+
+// button draws b on the lightbox's chrome, and says it was clicked.
+func (lf *lightboxFrame) button(c *ui.Ctx, key any, b lightboxButton) bool {
+	fg := col(c, tLightboxFg)
+	if b.Off {
 		fg = alpha(fg, .35)
 	}
-	return Clickable(c, key, ui.Style{W: ui.Px(34), H: ui.Px(34), Radius: 17, Fill: fill, Main: ui.Center, Cross: ui.Center, Disabled: off,
-		Label: label, Tooltip: tip, Help: help}, func(c *ui.Ctx) {
-		c.Text("g", glyph, uiText(c, 17, typeset.Medium, fg))
+	return Clickable(c, key, ui.Style{W: ui.Px(34), H: ui.Px(34), Radius: 17, Fill: col(c, tLightboxChrome), Main: ui.Center, Cross: ui.Center,
+		Disabled: b.Off, Label: b.Label, Tooltip: b.Tip, Help: lf.help}, func(c *ui.Ctx) {
+		c.Text("g", b.Glyph, uiText(c, 17, typeset.Medium, fg))
 	}).Clicked
 }

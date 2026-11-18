@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/catalog/registrycmd"
 	"github.com/liamg/oriel/integ"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 const pluginUsage = `oriel plugin pack [-o OUT] [DIR]          check the plugin in DIR (here by default) and build its release archives
@@ -56,8 +57,8 @@ func runPlugin(args []string, stdout, stderr io.Writer) error {
 		}
 		_, _ = fmt.Fprintf(stdout, "%s %s\n", p.Manifest.ID, p.Manifest.Version)
 		for _, a := range p.Archives {
-			rel, err := filepath.Rel(dir, a.Path)
-			if err != nil || strings.HasPrefix(rel, "..") {
+			rel, ok := pathx.Rel(a.Path, dir)
+			if !ok {
 				rel = a.Path
 			}
 			_, _ = fmt.Fprintf(stdout, "sha256:%s  %s  %s\n", a.SHA256, a.Platform, rel)

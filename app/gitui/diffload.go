@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/imagex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/syntax/tree"
@@ -133,15 +134,15 @@ type imageDiff struct {
 
 // decodeImageDiff decodes the versions of a changed image; nil when path isn't an image or neither decodes.
 func decodeImageDiff(path string, old, new []byte, code byte) *imageDiff {
-	if !kit.IsImage(path) {
+	if !imagex.IsImage(path) {
 		return nil
 	}
 	d := &imageDiff{oldSize: len(old), newSize: len(new)}
 	if len(old) > 0 {
-		d.old, _, _ = kit.DecodeImage(old)
+		d.old, _, _ = imagex.Decode(old)
 	}
 	if len(new) > 0 && code != 'D' {
-		d.new, _, _ = kit.DecodeImage(new)
+		d.new, _, _ = imagex.Decode(new)
 	}
 	if d.old == nil && d.new == nil {
 		return nil

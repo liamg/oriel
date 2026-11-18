@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // WriteFile writes data to path, which must lie under root, without following
@@ -73,8 +75,8 @@ func createTemp(r *os.Root, rel string) (string, *os.File, error) {
 func CheckPath(root, path string) error {
 	root = filepath.Clean(root)
 	path = filepath.Clean(path)
-	rel, err := filepath.Rel(root, path)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	rel, ok := pathx.Rel(path, root)
+	if !ok {
 		return fmt.Errorf("%s is outside %s", path, root)
 	}
 	cur := root
@@ -136,7 +138,7 @@ func Open(path string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !within(real, realRoot) {
+	if !pathx.Inside(real, realRoot) {
 		return nil, fmt.Errorf("%s leads out of the workspace, and Oriel does not read through it", path)
 	}
 	rel, err := filepath.Rel(realRoot, real)

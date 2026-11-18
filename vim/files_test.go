@@ -23,6 +23,8 @@ type host struct {
 
 func (h *host) Quit() { h.quits++ }
 
+func (h *host) OwnsEx(name string) bool { return name == "ls" || name == "copen" || name == "messages" }
+
 func (h *host) Command(name, args string, bang bool) bool {
 	if name == "ls" || name == "copen" || name == "messages" {
 		h.commands = append(h.commands, name)

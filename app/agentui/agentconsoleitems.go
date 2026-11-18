@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry"
@@ -48,7 +49,7 @@ func (x *Console) item(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 		c.Row(k, ui.Style{W: ui.Px(width), Role: ui.RoleListItem, Selected: sel}, func(c *ui.Ctx) {
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: map[bool]render.Color{true: th.C(tBlockSelected)}[sel]}, nil)
 			c.Box("gap", ui.Style{W: ui.Px(6)}, nil)
-			kit.DocText(c, x.h, "md", it.Text, width-8)
+			markdown.DocText(c, x.h, "md", it.Text, width-8)
 		})
 	case core.ItemThinking:
 		open := st.open(k, false)
@@ -285,7 +286,7 @@ func (x *Console) forkCard(c *ui.Ctx, k string, f forkAnswer, width float32, sel
 		case f.err != nil:
 			c.Text("err", f.err.Error(), widget.UIFont(12, th.C(theme.Error)))
 		default:
-			kit.DocText(c, x.h, "a", f.a, width-28)
+			markdown.DocText(c, x.h, "a", f.a, width-28)
 		}
 	})
 }

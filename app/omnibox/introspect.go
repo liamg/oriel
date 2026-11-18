@@ -24,7 +24,7 @@ func (i *Introspect) Activate(_ context.Context, h plugin.Host) error {
 	}
 	i.Add(h.Picker(commandsSource(h)))
 	i.Add(h.Picker(keymapsSource(h, i.ConfigDir)))
-	i.Add(h.Command(registry.Command{ID: "keymaps.browse", Grant: registry.Open, Ex: "Keys", Title: "List keymaps", Args: registry.NoArgs, Run: pick("keymaps")}))
-	i.Add(h.Command(registry.Command{ID: "commands.browse", Grant: registry.Open, Ex: "Commands", Title: "List commands", Args: registry.NoArgs, Run: pick("commands")}))
+	i.Add(h.Command(registry.Command{ID: "keymaps.browse", Grant: registry.Open, Ex: []string{"Keys"}, Title: "List keymaps", Args: registry.NoArgs, Run: pick("keymaps")}))
+	i.Add(h.Command(registry.Command{ID: "commands.browse", Grant: registry.Open, Ex: []string{"Commands"}, Title: "List commands", Args: registry.NoArgs, Run: pick("commands")}))
 	return nil
 }

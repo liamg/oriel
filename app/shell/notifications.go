@@ -109,7 +109,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Log", "size": 360})
 	}
 	for _, c := range []registry.Command{
-		{ID: "log.open", Grant: registry.Open, Title: "Open the log at an entry, or set its {level} (:Log level debug)", Ex: "Log", Args: []registry.Arg{registry.StringArg("args"), registry.StringArg("level"), registry.AnyArg("seq"), registry.StringArg("severity")}, Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "log.open", Grant: registry.Open, Title: "Open the log at an entry, or set its {level} (:Log level debug)", Ex: []string{"Log", "messages"}, Args: []registry.Arg{registry.StringArg("args"), registry.StringArg("level"), registry.AnyArg("seq"), registry.StringArg("severity")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			lv := a.String("level")
 			if f := strings.Fields(a.String("args")); len(f) == 2 && f[0] == "level" {
 				lv = f[1]
@@ -132,7 +132,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			kit.CopyText(n.h, n.sh.report(""))
 			return nil
 		}},
-		{ID: "events.open", Grant: registry.Open, Title: "Show the live core event stream", Ex: "Events", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "events.open", Grant: registry.Open, Title: "Show the live core event stream", Ex: []string{"Events"}, Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.open", registry.Args{"id": "events", "place": "dock", "edge": "bottom", "title": "Events"})
 		}},
 		{ID: "notice.dismiss", Grant: registry.Open, Title: "Dismiss a notice's toast, by {seq} or every one with {id}", Args: []registry.Arg{registry.StringArg("id"), registry.AnyArg("seq")}, Run: func(_ registry.Ctx, a registry.Args) error {

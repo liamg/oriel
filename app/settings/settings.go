@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -104,7 +105,7 @@ func (s *Settings) Activate(_ context.Context, h plugin.Host) error {
 	s.Add(h.Contribute(registry.Busy{Name: "settings", Busy: s.work.Busy}))
 	s.h = h
 	conf := s.ConfigDir
-	s.files, s.filesDone = kit.FileManager(h, "settings", SettingsPoll)
+	s.files, s.filesDone = statefile.FileManager(h, "settings", SettingsPoll)
 	s.trustPath = filepath.Join(conf, "trusted.toml")
 	s.othersMu.Lock() // a file's first reading may load them all already
 	s.user = s.track(&settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser})
@@ -187,7 +188,7 @@ func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 func (s *Settings) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	return []registry.Command{
-		{ID: "settings.open", Grant: registry.Open, Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: "Settings", ExArg: "query",
+		{ID: "settings.open", Grant: registry.Open, Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: []string{"Settings"}, ExArg: "query",
 			Args: []registry.Arg{registry.AnyArg("query"), registry.AnyArg("section")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				if sec := str(a, "section"); sec != "" {
 					s.open, s.section, s.query = true, sec, str(a, "query")

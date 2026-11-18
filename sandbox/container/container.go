@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Mount binds a host path into the container.
@@ -414,8 +416,8 @@ func PrepareMountpoints(mounts []Mount) error {
 			if p.Target == m.Target || p.Volume {
 				continue
 			}
-			rel, err := filepath.Rel(p.Target, m.Target)
-			if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+			rel, ok := pathx.Rel(m.Target, p.Target)
+			if !ok || rel == "." {
 				continue
 			}
 			host := filepath.Join(p.Source, rel)

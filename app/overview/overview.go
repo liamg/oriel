@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -278,7 +279,7 @@ func (o *Overview) cardView(c *ui.Ctx, dir string) {
 			}
 			c.Column("readme", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 10, Role: ui.RoleRegion, Label: cd.readme.name}, func(c *ui.Ctx) {
 				widget.Caption(c, "title", cd.readme.name)
-				kit.MarkdownText(c, o.h, "md", cd.readme.text, width, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
+				markdown.Text(c, o.h, "md", cd.readme.text, width, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
 					Group: "readme:" + dir, Help: "shell/overview"})
 			})
 		}

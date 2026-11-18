@@ -52,11 +52,11 @@ func (e *Engine) Multi() (MultiState, bool) {
 }
 
 func (e *Engine) resolve(a text.AnchorID) int {
-	off, _ := e.ed.Resolve(a)
-	return min(off, e.ed.Buf().Len())
+	off, _ := e.ed.Buffer().Resolve(a)
+	return min(off, e.ed.Buffer().Snapshot().Len())
 }
 
-func (e *Engine) anchor(off int) text.AnchorID { return e.ed.Anchor(off, text.Right) }
+func (e *Engine) anchor(off int) text.AnchorID { return e.ed.Buffer().Anchor(off, text.Right) }
 
 func isWordByte(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) }
 
@@ -111,7 +111,7 @@ func wholeWordAfter(b []byte, w string, from int) (int, bool) {
 
 // MultiNext is ⌃n: the word under the cursor as a region, then the next whole-word match of it as another.
 func (e *Engine) MultiNext() {
-	b := e.ed.Buf().Bytes()
+	b := e.ed.Buffer().Snapshot().Bytes()
 	v := e.view()
 	m := e.multi
 	if m == nil || m.word == "" {
@@ -130,7 +130,7 @@ func (e *Engine) MultiNext() {
 // addNextMatch adds the next whole-word match at or after from as a region.
 func (e *Engine) addNextMatch(from int) {
 	m := e.multi
-	b := e.ed.Buf().Bytes()
+	b := e.ed.Buffer().Snapshot().Bytes()
 	at, ok := wholeWordAfter(b, m.word, from)
 	if !ok {
 		return
@@ -195,7 +195,7 @@ func (e *Engine) MultiVertical(dir int) {
 func (e *Engine) collapse() {
 	m := e.multi
 	for i, r := range m.regs {
-		e.ed.Release(r.anchor)
+		e.ed.Buffer().Release(r.anchor)
 		m.regs[i].anchor = e.anchor(e.resolve(r.head))
 	}
 	m.extend = false
@@ -207,8 +207,8 @@ func (e *Engine) multiEnd() {
 		return
 	}
 	for _, r := range m.regs {
-		e.ed.Release(r.anchor)
-		e.ed.Release(r.head)
+		e.ed.Buffer().Release(r.anchor)
+		e.ed.Buffer().Release(r.head)
 	}
 	if m.group != 0 && e.outerGroup == m.group {
 		e.outerGroup = 0
@@ -283,8 +283,8 @@ func (e *Engine) multiKey(k string) bool {
 func (e *Engine) dropPrimary() {
 	m := e.multi
 	r := m.regs[m.primary]
-	e.ed.Release(r.anchor)
-	e.ed.Release(r.head)
+	e.ed.Buffer().Release(r.anchor)
+	e.ed.Buffer().Release(r.head)
 	m.regs = slices.Delete(m.regs, m.primary, m.primary+1)
 	if len(m.regs) == 0 {
 		e.multi = nil
@@ -297,7 +297,7 @@ func (e *Engine) dropPrimary() {
 
 // regionRanges are the regions' text, inclusive of the head's character, in buffer order.
 func (e *Engine) regionRanges() []text.Range {
-	b := e.ed.Buf().Bytes()
+	b := e.ed.Buffer().Snapshot().Bytes()
 	var out []text.Range
 	for _, r := range e.multi.regs {
 		a, h := e.resolve(r.anchor), e.resolve(r.head)
@@ -319,7 +319,7 @@ func (e *Engine) regionRanges() []text.Range {
 func (e *Engine) deleteRegions() {
 	m := e.multi
 	if m.group == 0 {
-		m.group = e.ed.NewGroup()
+		m.group = e.ed.Buffer().NewGroup()
 	}
 	var rs []text.Replace
 	for _, r := range e.regionRanges() {
@@ -337,8 +337,8 @@ func (e *Engine) cursorsAtEnds(after bool) {
 	m := e.multi
 	rs := e.regionRanges()
 	for i, r := range m.regs {
-		e.ed.Release(r.anchor)
-		e.ed.Release(r.head)
+		e.ed.Buffer().Release(r.anchor)
+		e.ed.Buffer().Release(r.head)
 		off := rs[min(i, len(rs)-1)].Start
 		if after {
 			off = rs[min(i, len(rs)-1)].End
@@ -351,7 +351,7 @@ func (e *Engine) cursorsAtEnds(after bool) {
 func (e *Engine) multiStartInsert() {
 	m := e.multi
 	if m.group == 0 {
-		m.group = e.ed.NewGroup()
+		m.group = e.ed.Buffer().NewGroup()
 	}
 	m.inserting = true
 	e.mode = Insert
@@ -370,7 +370,7 @@ func (e *Engine) follow() {
 func (e *Engine) multiCommand(k string) bool {
 	m := e.multi
 	if len(m.keys) == 0 {
-		m.group = e.ed.NewGroup()
+		m.group = e.ed.Buffer().NewGroup()
 	}
 	m.keys = append(m.keys, k)
 	e.outerGroup = m.group
@@ -413,8 +413,8 @@ func (e *Engine) multiCommand(k string) bool {
 
 // reanchor moves a cursor's anchors to off.
 func (e *Engine) reanchor(r mregion, off int) (head, anchor text.AnchorID) {
-	e.ed.Release(r.head)
-	e.ed.Release(r.anchor)
+	e.ed.Buffer().Release(r.head)
+	e.ed.Buffer().Release(r.anchor)
 	return e.anchor(off), e.anchor(off)
 }
 
@@ -427,8 +427,8 @@ func (e *Engine) dedupe() {
 	for _, r := range m.regs {
 		off := e.resolve(r.head)
 		if seen[off] && r != p {
-			e.ed.Release(r.head)
-			e.ed.Release(r.anchor)
+			e.ed.Buffer().Release(r.head)
+			e.ed.Buffer().Release(r.anchor)
 			continue
 		}
 		seen[off] = true
@@ -450,7 +450,7 @@ func (e *Engine) keyNow(k string) {
 // stepping back onto the character before it, as vim's does.
 func (e *Engine) multiInsertKey(k string) bool {
 	m := e.multi
-	b := e.ed.Buf().Bytes()
+	b := e.ed.Buffer().Snapshot().Bytes()
 	var rs []text.Replace
 	switch k {
 	case "<Esc>", "<C-c>":

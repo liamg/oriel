@@ -212,6 +212,32 @@ func TypeRefs(files []File, name string) []Hit {
 	return hits
 }
 
+// DotDotPrefixes finds strings.HasPrefix(x, "..…"): a path checked for leaving a directory by hand, which misreads a
+// child named "..foo"; internal/pathx answers it.
+func DotDotPrefixes(files []File) []Hit {
+	var hits []Hit
+	for _, f := range files {
+		ast.Inspect(f.AST, func(n ast.Node) bool {
+			c, ok := n.(*ast.CallExpr)
+			if !ok || len(c.Args) != 2 {
+				return true
+			}
+			s, ok := c.Fun.(*ast.SelectorExpr)
+			if !ok || s.Sel.Name != "HasPrefix" {
+				return true
+			}
+			if id, ok := s.X.(*ast.Ident); !ok || id.Name != "strings" {
+				return true
+			}
+			if lit, ok := c.Args[1].(*ast.BasicLit); ok && strings.HasPrefix(lit.Value, `"..`) {
+				hits = append(hits, Hit{pos(f, c), "strings.HasPrefix(…, " + lit.Value + ")"})
+			}
+			return true
+		})
+	}
+	return hits
+}
+
 // Calls finds calls of a method or function named name, on any receiver.
 func Calls(files []File, name string) []Hit {
 	var hits []Hit

@@ -314,3 +314,25 @@ func (x *Plan) startWorkFooter(c *ui.Ctx, d *startWork) {
 		}
 	})
 }
+
+// startWorkReq is session.work.start's args as the host's request: {clear} and {fresh} (both on unless false),
+// {branches} by project name, {sandbox}, {network}, {model} and {effort}, each the session's own when absent.
+func startWorkReq(id core.SessionID, a registry.Args) hostapi.StartWorkReq {
+	r := hostapi.StartWorkReq{Session: id, KeepThreads: a["clear"] == false, KeepConversation: a["fresh"] == false,
+		Network: a.String("network"), Model: a.String("model"), Effort: a.String("effort")}
+	if v, ok := a["sandbox"].(bool); ok {
+		r.Sandbox = &v
+	}
+	switch b := a["branches"].(type) {
+	case map[string]string:
+		r.Branches = b
+	case map[string]any:
+		r.Branches = map[string]string{}
+		for k, v := range b {
+			if s, ok := v.(string); ok {
+				r.Branches[k] = s
+			}
+		}
+	}
+	return r
+}

@@ -57,7 +57,7 @@ func (s *state) Key(k string) input.Result {
 	handled := input.Result{Handled: true}
 	switch {
 	case cmd && name == "a":
-		s.ed.SetCursors([]edit.Cursor{{Off: s.ed.Buf().Len(), Anchor: 0, Selecting: true}})
+		s.ed.SetCursors([]edit.Cursor{{Off: s.ed.Buffer().Snapshot().Len(), Anchor: 0, Selecting: true}})
 	case cmd && name == "c":
 		s.copy(false)
 	case cmd && name == "x":
@@ -67,9 +67,9 @@ func (s *state) Key(k string) input.Result {
 			s.insert(r.Text, true)
 		}
 	case cmd && name == "z" && !shift:
-		s.after(s.ed.Undo())
+		s.after(s.ed.Buffer().Undo())
 	case cmd && (name == "z" && shift || name == "y"):
-		s.after(s.ed.Redo())
+		s.after(s.ed.Buffer().Redo())
 	case cmd && name == "s":
 		return input.Result{Handled: true, Command: "editor.save"}
 	case name == "BS":
@@ -103,7 +103,7 @@ func (s *state) cursor() edit.Cursor {
 // step of its own.
 func (s *state) insert(t string, alone bool) {
 	if s.group == 0 || alone {
-		s.group = s.ed.NewGroup()
+		s.group = s.ed.Buffer().NewGroup()
 	}
 	_ = s.ed.Replace(t, s.group)
 	if alone {
@@ -117,7 +117,7 @@ func (s *state) insert(t string, alone bool) {
 func (s *state) delete(motion string, cmd, alt bool) {
 	c := s.cursor()
 	if _, ok := c.Selection(); !ok {
-		snap := s.ed.Buf()
+		snap := s.ed.Buffer().Snapshot()
 		switch {
 		case cmd && motion == edit.CharPrev:
 			motion = edit.LineStart
@@ -140,7 +140,7 @@ func (s *state) delete(motion string, cmd, alt bool) {
 // move is the arrows, Home and End: with ⌥ by word, with ⌘ to the line's (or buffer's) ends, with Shift selecting.
 func (s *state) move(key string, shift, cmd, alt bool) {
 	c := s.cursor()
-	snap := s.ed.Buf()
+	snap := s.ed.Buffer().Snapshot()
 	if r, ok := c.Selection(); ok && !shift && (key == "Left" || key == "Right") && !cmd && !alt {
 		off := r.Start
 		if key == "Right" {
@@ -188,7 +188,7 @@ func (s *state) move(key string, shift, cmd, alt bool) {
 // copy puts the selection on the clipboard, or the whole line when nothing's selected; cut deletes it too.
 func (s *state) copy(cut bool) {
 	c := s.cursor()
-	snap := s.ed.Buf()
+	snap := s.ed.Buffer().Snapshot()
 	r, ok := c.Selection()
 	kind := edit.Charwise
 	if !ok {
@@ -214,5 +214,5 @@ func (s *state) after(ch text.Change, ok bool) {
 		return
 	}
 	r := ch.Replaces[len(ch.Replaces)-1]
-	s.ed.SetCursors([]edit.Cursor{{Off: min(r.Range.Start+len(r.Text), s.ed.Buf().Len())}})
+	s.ed.SetCursors([]edit.Cursor{{Off: min(r.Range.Start+len(r.Text), s.ed.Buffer().Snapshot().Len())}})
 }

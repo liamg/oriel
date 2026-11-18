@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -93,7 +94,7 @@ func (x *Explain) Kept(c *ui.Ctx, key, help string) {
 		case a.err != nil:
 			c.Text("err", a.err.Error(), mono(11, theme.Error))
 		default:
-			kit.DocText(c, x.h, "md", a.text, width)
+			markdown.DocText(c, x.h, "md", a.text, width)
 			if a.by != "" {
 				c.Text("by", a.by, mono(10, theme.FgFaint))
 			}

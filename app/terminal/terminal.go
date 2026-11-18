@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -51,7 +52,7 @@ type Terminals struct {
 	StateFile func() string  // where the screens are kept for the window's directory
 	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
 	h         plugin.Host
-	state     *kit.StateFile // the saved screens of the directory the window is on
+	state     *statefile.StateFile // the saved screens of the directory the window is on
 
 	mu    sync.Mutex
 	terms map[string]*terminal
@@ -109,7 +110,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.StateFile, Load: x.loadSaved, Leave: x.leave})
+	x.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "terminal screens", Path: x.StateFile, Load: x.loadSaved, Leave: x.leave})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(h.Option(registry.OptionSpec{Name: "terminal.shell", Type: registry.String, Default: "$SHELL", Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "The program a new terminal runs, with its arguments; $VARS expand, so $SHELL is your login shell."}))
@@ -125,7 +126,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}
 	for _, c := range []registry.Command{
-		{ID: "term.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Ex: "term", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("side"), registry.AnyArg("source"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "term.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal: {cmd}, {env}, {place}, {title}, or a {source} to show; with {bang}, in the main area", Ex: []string{"term"}, Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.StringArg("place"), registry.StringArg("side"), registry.AnyArg("source"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			place := cmp.Or(a.String("place"), "dock")
 			return open(place, a.String("side"))(ctx, a)
 		}},
@@ -137,8 +138,8 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return open(cmp.Or(a.String("place"), "dock"), a.String("side"))(ctx, b)
 			}},
-		{ID: "term.right.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split to the right", Ex: "vterm", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "right")},
-		{ID: "term.below.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split below", Ex: "sterm", Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "down")},
+		{ID: "term.right.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split to the right", Ex: []string{"vterm"}, Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "right")},
+		{ID: "term.below.open", Grant: string(plugin.CapExec), GrantOn: x.program, Title: "Open a terminal in a split below", Ex: []string{"sterm"}, Args: []registry.Arg{registry.AnyArg("args"), registry.AnyArg("cmd"), registry.StringArg("dir"), registry.AnyArg("env"), registry.BoolArg("host"), registry.StringArg("instance"), registry.AnyArg("source"), registry.StringArg("title")}, Run: open("split", "down")},
 		{ID: "term.normal.enter", Grant: registry.Open, Title: "Terminal-normal mode: vim's motions over the scrollback", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			if t := x.focused(); t != nil {
 				x.enterNormal(t)

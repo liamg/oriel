@@ -52,7 +52,7 @@ type Recorder struct {
 	w     io.Writer
 	seq   uint64
 	err   error
-	vault *Vault
+	vault Vault
 }
 
 func NewRecorder(w io.Writer) *Recorder { return &Recorder{w: w} }
@@ -61,7 +61,7 @@ func NewRecorder(w io.Writer) *Recorder { return &Recorder{w: w} }
 func ResumeRecorder(w io.Writer, seq uint64) *Recorder { return &Recorder{w: w, seq: seq} }
 
 // Keep puts the text sealed events take out of the log in v; without one it's dropped.
-func (r *Recorder) Keep(v *Vault) *Recorder {
+func (r *Recorder) Keep(v Vault) *Recorder {
 	r.vault = v
 	return r
 }
@@ -122,7 +122,7 @@ func Replay(r io.Reader, s Store) error {
 func ReplayCount(r io.Reader, s Store) (uint64, error) { return ReplayVault(r, s, nil) }
 
 // ReplayVault is ReplayCount, with the text sealed events left out of the log put back from v.
-func ReplayVault(r io.Reader, s Store, v *Vault) (uint64, error) {
+func ReplayVault(r io.Reader, s Store, v Vault) (uint64, error) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 16<<20)
 	var seq uint64

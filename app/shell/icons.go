@@ -5,6 +5,8 @@ import (
 	"image"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
+	"github.com/liamg/oriel/internal/imagex"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -14,7 +16,7 @@ import (
 // icon draws a named icon as kit.Icon does, from the window's registry (shell.provide).
 func icon(c *ui.Ctx, key any, name string, size float32, col render.Color) {
 	r, _ := ui.Service[registry.Registry](c)
-	kit.Icon(c, r, key, name, size, col)
+	icons.Icon(c, r, key, name, size, col)
 }
 
 // contributedIcon is the icon a plugin's [contributes] icons in r brings by name, as its shape in col: the image's
@@ -50,7 +52,7 @@ func contributedIcon(r registry.Registry, pictures *kit.Pictures, name string, c
 		if img, ok := from.(image.Image); ok {
 			src = img
 		} else {
-			src, pc.Format, pc.Err = kit.DecodeImage(ic.Data)
+			src, pc.Format, pc.Err = imagex.Decode(ic.Data)
 		}
 		if pc.Err == nil {
 			pc.Img = tinted(src, col)

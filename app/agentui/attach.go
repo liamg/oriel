@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/imagex"
 	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/ui/widget"
@@ -67,7 +68,7 @@ func inProjects(ps []core.Project, path string) bool {
 
 // mdFile is a file as markdown: an image for a picture, else a link named name.
 func mdFile(name, path string) string {
-	if kit.IsImage(path) {
+	if imagex.IsImage(path) {
 		return "![" + name + "](" + mdDest(path) + ")"
 	}
 	return "[" + name + "](" + mdDest(path) + ")"

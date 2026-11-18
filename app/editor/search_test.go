@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/editor"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -19,7 +19,7 @@ func TestProjectSearch(t *testing.T) {
 	s.Frame()
 	s.ClickOn("Search")
 	s.Frame()
-	if !s.Showing(editor.SearchView) {
+	if !s.Showing(kit.SearchView) {
 		t.Fatal("the rail's Search didn't open the search panel")
 	}
 	s.TypeInto("Find", `(?<=return )Round\(`)
@@ -68,7 +68,7 @@ func TestReplacePreviewThenApply(t *testing.T) {
 		t.Errorf("the results don't preview the replacement:\n%s", s.Text())
 	}
 	s.Click(apptest.Centre(s.Node("Replace all…").Bounds), 0)
-	s.Until("Replace all… to show the diff", func() bool { return s.Showing(editor.ReplaceView) })
+	s.Until("Replace all… to show the diff", func() bool { return s.Showing(kit.ReplaceView) })
 	s.Frame()
 	text := s.Text()
 	for _, want := range []string{"4 replacements in 2 files", "- func Round(v int) int { return v * 100 }", "+ func Rounded(v int) int { return v * 100 }",
@@ -98,7 +98,7 @@ func TestReplacePreviewThenApply(t *testing.T) {
 	if got := s.Line(2); got != "func tier() int { return Round(3) }" {
 		t.Errorf("u didn't undo the replace: %q", got)
 	}
-	if s.Showing(editor.ReplaceView) {
+	if s.Showing(kit.ReplaceView) {
 		t.Error("the diff stayed open after Apply")
 	}
 }

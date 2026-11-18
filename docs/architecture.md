@@ -20,7 +20,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
 | `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `UsageLogs`, `Discovered`) and transcript types; `agent/usage` (what a log says an agent used, as provider-neutral events: each provider reads its own log format into them, and one with no log writes them, which `agent/usage/stats` counts: the stats a provider's log adds up to, shared by the host and the app); `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite); `agent/eventq` (an unbounded queue in front of a session's events), `agent/guard` (the guard rails every agent is held to, ahead of its own gate), `agent/release` (an agent's release for its sandbox, fetched and checked against its checksum), `agent/hostexec` (a provider's processes on this machine, outside any sandbox), `agent/packs` (each kind's prompt pack and the Oriel tools it expects), `agent/prompts` (the prompts the user can edit) |
 | `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/ship`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State; it embeds the parts whose calls are its own, so their entry points are the host's methods |
-| `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds |
+| `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds, and OS confinement: `sandbox/ossandbox` confines plugin processes (Landlock and seccomp on Linux, sandbox-exec on macOS) and `sandbox/seatbelt` agents, sharing `sandbox/sbpl`'s Seatbelt plumbing |
 | `gitx` | git |
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
 | `fswatch`, `search`, `sysload`, `semver` | file and folder changes from the OS; project search and replace (ripgrep, or the same in Go); how busy the machine is; semantic versions |
@@ -33,7 +33,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `ui` | the immediate-mode toolkit: layout, input routing, focus, accessibility; `ui/widget` (every control), `ui/layout` (the window's tree of views as data) |
 | `theme`, `toml` | theme files and token resolution; a round-tripping TOML 1.0 editor for settings and themes |
 | `zstd` | a Zstandard (RFC 8878) decoder: whole buffers or streamed within a frame's window; Codex's compressed rollouts |
-| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/draw` for what they draw alike with the app's types, `app/kit/edits` for a buffer's text, `app/kit/desktop` for the desktop's folder chooser, `app/kit/work` for work off the loop and periodic work, `app/kit/sessionkit` for the session host's parts and session args, and `app/kit/prui` and `app/kit/agentkit` for what only some share); what draws nothing of the app's is `ui/widget`'s |
+| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/draw` for what they draw alike with the app's types, `app/kit/edits` for a buffer's text, `app/kit/desktop` for the desktop's folder chooser, `app/kit/work` for work off the loop and periodic work, `app/kit/sessionkit` for the session host's parts and session args, `app/kit/icons` for the icon set and logo, `app/kit/markdown` for drawing markdown, `app/kit/statefile` for state files and freshness subscriptions, and `app/kit/prui` and `app/kit/agentkit` for what only some share); what draws nothing of the app's is `ui/widget`'s |
 | `conversation`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
@@ -120,8 +120,10 @@ parts joined by `_`, never `-` (`term.host.open`, `review.pr.submit`, `term.last
 fixed set (`commandVerbs` in `app/commands_test.go`): `open`, `close` and `toggle`, not `show` and `hide`; `confirm`
 and `cancel` for a dialog's buttons. An ex command's name (`:Settings`, `:term`) is an alias of the command it runs,
 not an id of its own: the command's `Ex` (`registry.Command`), with what's typed after it handed over as the argument
-its `ExArg` names (`args` when it names none). `:Watch len(xs)` runs `debug.watch.add` with `expression`. A plugin
-gives its own the same way (`oriel.command(id, fn, { ex = "Hi" })`); one whose id is a single word (`Hello`) is
+its `ExArg` names (`args` when it names none). `:Watch len(xs)` runs `debug.watch.add` with `expression`. A command
+may have several (`buffers.pick`'s are `ls`, `buffers` and `files`), and one named by a vim command runs ahead of the
+engine's own, so the window shows `:ls` and `:copen` in its own views and a plugin can take them over. A plugin gives
+its own the same way (`oriel.command(id, fn, { ex = "Hi" })`, or a list); one whose id is a single word (`Hello`) is
 its own ex name.
 
 Two tests in `app` hold this. `TestCommandNamesFollowTheConvention` fails on a built-in command off the convention.

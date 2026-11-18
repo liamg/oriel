@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -258,10 +259,10 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			x.complete()
 			return nil
 		}},
-		{ID: "buffers.pick", Grant: registry.Open, Title: "Switch to an open buffer", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "buffers.pick", Grant: registry.Open, Title: "Switch to an open buffer", Ex: []string{"ls", "buffers", "files"}, Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "buffers"})
 		}},
-		{ID: "quickfix.open", Grant: registry.Open, Title: "Show the quickfix list", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "quickfix.open", Grant: registry.Open, Title: "Show the quickfix list", Ex: []string{"copen", "cwindow", "lopen", "lwindow"}, Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "quickfix"})
 		}},
 		{ID: "quickfix.set", Grant: registry.Open, Title: "Make a new quickfix list: {title}, {items} of {path, line, col, text}", Args: []registry.Arg{registry.ListArg("items"), registry.StringArg("title")}, Run: func(_ registry.Ctx, a registry.Args) error {
@@ -425,7 +426,7 @@ func (x *Editor) window(name string) (vim.WindowID, error) {
 
 // relName is how the editor names path: relative to its directory when inside it.
 func (x *Editor) relName(path string) string {
-	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
+	if rel, ok := pathx.Rel(path, x.dir); ok && filepath.IsAbs(path) {
 		return rel
 	}
 	return path
@@ -468,9 +469,7 @@ func (x *Editor) complete() {
 		cands = append(cands, vim.ExNames()...)
 		for _, c := range x.h.Commands() {
 			cands = append(cands, c.ID)
-			if c.Ex != "" {
-				cands = append(cands, c.Ex)
-			}
+			cands = append(cands, c.Ex...)
 		}
 		arg = cmd
 	} else {

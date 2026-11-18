@@ -55,11 +55,11 @@ func Menu(c *ui.Ctx, key any, items []MenuItem, o MenuOpts) (chosen int, closed 
 	}
 	for _, k := range in.Keys {
 		switch {
-		case hasKey([]render.KeyEvent{k}, "j", "Down"):
+		case keyIs(k, "j", "Down"):
 			step(1)
-		case hasKey([]render.KeyEvent{k}, "k", "Up"):
+		case keyIs(k, "k", "Up"):
 			step(-1)
-		case k.Key == "CR" && usable(st.hi):
+		case keyIs(k, "CR") && usable(st.hi):
 			chosen = st.hi
 		case k.Key == "Esc":
 			closed = true

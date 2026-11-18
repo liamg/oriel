@@ -55,7 +55,7 @@ func (s *state) cursor() int { return s.ed.Cursors()[0].Off }
 func (s *state) goTo(off int) {
 	c := edit.Cursor{Off: off}
 	if s.mark != nil {
-		if m, ok := s.ed.Resolve(*s.mark); ok {
+		if m, ok := s.ed.Buffer().Resolve(*s.mark); ok {
 			c.Anchor, c.Selecting = m, true
 		}
 	}
@@ -63,7 +63,7 @@ func (s *state) goTo(off int) {
 }
 
 func (s *state) move(motion string) {
-	snap := s.ed.Buf()
+	snap := s.ed.Buffer().Snapshot()
 	vertical := motion == edit.LineNext || motion == edit.LinePrev
 	if !vertical || s.want < 0 {
 		s.want = edit.RuneCol(snap, s.cursor())
@@ -80,7 +80,7 @@ func (s *state) kill(from, to int, save bool) {
 	if from > to {
 		from, to = to, from
 	}
-	t := string(s.ed.Buf().Slice(text.Range{Start: from, End: to}))
+	t := string(s.ed.Buffer().Snapshot().Slice(text.Range{Start: from, End: to}))
 	if s.lastCmd == "kill" && len(s.kills) > 0 {
 		s.kills[len(s.kills)-1] += t
 	} else {
@@ -88,7 +88,7 @@ func (s *state) kill(from, to int, save bool) {
 	}
 	s.ed.SetRegister('+', edit.Register{Text: s.kills[len(s.kills)-1]})
 	if !save {
-		_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+		_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.Buffer().NewGroup())
 		s.ed.SetCursors([]edit.Cursor{{Off: from}})
 	}
 }
@@ -97,13 +97,13 @@ func (s *state) region() (int, int, bool) {
 	if s.mark == nil {
 		return 0, 0, false
 	}
-	m, ok := s.ed.Resolve(*s.mark)
+	m, ok := s.ed.Buffer().Resolve(*s.mark)
 	return m, s.cursor(), ok
 }
 
 func (s *state) clearMark() {
 	if s.mark != nil {
-		s.ed.Release(*s.mark)
+		s.ed.Buffer().Release(*s.mark)
 		s.mark = nil
 	}
 	s.goTo(s.cursor())
@@ -150,21 +150,21 @@ func (s *state) Key(k string) input.Result {
 		s.move(edit.BufEnd)
 	case "<C-x>h":
 		s.ed.SetCursors([]edit.Cursor{{Off: 0}})
-		a := s.ed.Anchor(0, text.Left)
+		a := s.ed.Buffer().Anchor(0, text.Left)
 		s.mark = &a
-		s.goTo(s.ed.Buf().Len())
+		s.goTo(s.ed.Buffer().Snapshot().Len())
 	case "<C-Space>", "<C-@>":
 		if s.mark != nil {
-			s.ed.Release(*s.mark)
+			s.ed.Buffer().Release(*s.mark)
 		}
-		a := s.ed.Anchor(s.cursor(), text.Left)
+		a := s.ed.Buffer().Anchor(s.cursor(), text.Left)
 		s.mark = &a
 		s.goTo(s.cursor())
 	case "<C-g>":
 		s.clearMark()
 	case "<C-k>":
 		// To the end of the line; at the end, the line break.
-		snap := s.ed.Buf()
+		snap := s.ed.Buffer().Snapshot()
 		from := s.cursor()
 		to, _ := edit.Motion(snap, from, edit.LineEnd, 1, 0)
 		if to == from && from < snap.Len() {
@@ -185,19 +185,19 @@ func (s *state) Key(k string) input.Result {
 			s.insert(r.Text, true)
 		}
 	case "<C-d>", "<Del>":
-		snap := s.ed.Buf()
+		snap := s.ed.Buffer().Snapshot()
 		if from := s.cursor(); from < snap.Len() {
 			to, _ := edit.Motion(snap, from, edit.CharNext, 1, 0)
-			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.Buffer().NewGroup())
 		}
 	case "<BS>":
 		if to := s.cursor(); to > 0 {
-			from, _ := edit.Motion(s.ed.Buf(), to, edit.CharPrev, 1, 0)
-			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.NewGroup())
+			from, _ := edit.Motion(s.ed.Buffer().Snapshot(), to, edit.CharPrev, 1, 0)
+			_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: from, End: to}}}, s.ed.Buffer().NewGroup())
 			s.ed.SetCursors([]edit.Cursor{{Off: from}})
 		}
 	case "<C-/>", "<C-_>":
-		if ch, ok := s.ed.Undo(); ok && len(ch.Replaces) > 0 {
+		if ch, ok := s.ed.Buffer().Undo(); ok && len(ch.Replaces) > 0 {
 			r := ch.Replaces[len(ch.Replaces)-1]
 			s.ed.SetCursors([]edit.Cursor{{Off: r.Range.Start + len(r.Text)}})
 		}
@@ -223,7 +223,7 @@ func (s *state) Key(k string) input.Result {
 // insert types t at the point; typed characters undo together, as emacs amalgamates them.
 func (s *state) insert(t string, alone bool) {
 	if s.group == 0 || alone {
-		s.group = s.ed.NewGroup()
+		s.group = s.ed.Buffer().NewGroup()
 	}
 	off := s.cursor()
 	_, _ = s.ed.Do([]text.Replace{{Range: text.Range{Start: off, End: off}, Text: []byte(t)}}, s.group)

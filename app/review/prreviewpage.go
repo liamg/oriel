@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/internal/words"
 
@@ -240,7 +241,7 @@ func (x *PRReview) agentVerdict(c *ui.Ctx, se core.SessionState, width float32) 
 	}
 	th := c.Theme()
 	reviewCard(c, "verdict", "THE AGENT'S VERDICT", ui.Flex(1), func(c *ui.Ctx) {
-		kit.MarkdownText(c, x.h, "body", said.Body, width-24, widget.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
+		markdown.Text(c, x.h, "body", said.Body, width-24, widget.UIFont(13, th.C(theme.Fg)), markdown.ForThread(se, t))
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 			if widget.Button(c, "reply", "Reply…", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 				x.run("request.open", registry.Args{"thread": string(t.ID)})
@@ -478,7 +479,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			})
 		default:
 			c.Text("cap", "WHAT THE AUTHOR GETS", widget.MonoFont(9.5, th.C(theme.FgFaint)))
-			kit.MarkdownText(c, x.h, "words", it.words(), width-60, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			markdown.Text(c, x.h, "words", it.words(), width-60, widget.UIFont(12.5, th.C(theme.Fg)), markdown.Comment())
 		}
 		if f.asking == it.id {
 			widget.Input(c, "ask", &f.ask, widget.InputOpts{Label: "How should it change?", Placeholder: "How should the agent reword it?", EnterSubmits: true,
@@ -497,7 +498,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			return
 		}
 		reviewCard(c, "reworded", "THE AGENT'S REWORDING", ui.Flex(1), func(c *ui.Ctx) {
-			kit.MarkdownText(c, x.h, "t", text, width-84, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			markdown.Text(c, x.h, "t", text, width-84, widget.UIFont(12.5, th.C(theme.Fg)), markdown.Comment())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("review.pr.rework.discard", registry.Args{"id": string(se.ID), "item": it.id})
@@ -592,11 +593,11 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
 				c.Text("scap", "SUMMARY", widget.MonoFont(9.5, th.C(theme.FgFaint)))
-				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+				markdown.Text(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, widget.UIFont(12.5, th.C(theme.Fg)), markdown.Comment())
 				for i, it := range items {
 					c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 						c.Text("at", fmt.Sprintf("%s:%d", it.at.File, it.at.Line), widget.MonoFont(10.5, th.C(theme.Accent)))
-						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+						markdown.Text(c, x.h, "b", comments[i].Body, w-48, widget.UIFont(12.5, th.C(theme.Fg)), markdown.Comment())
 					})
 				}
 				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", widget.MonoFont(10, th.C(theme.FgFaint)))

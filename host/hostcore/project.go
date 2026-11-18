@@ -172,7 +172,7 @@ func OwnBranch(g *sandbox.Guard, p core.Project) (string, error) {
 	if p.Branch == "" || p.Detached || p.ReadOnly {
 		return "", fmt.Errorf("%s has no branch of this session's to push", p.Name)
 	}
-	out, err := g.Git(p.Dir, "rev-parse", "--abbrev-ref", "HEAD")
+	out, err := g.Git(context.Background(), p.Dir, "rev-parse", "--abbrev-ref", "HEAD")
 	if err != nil {
 		return "", err
 	}

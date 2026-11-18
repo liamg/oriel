@@ -1,16 +1,16 @@
-package kit
+package statefile
 
 import (
 	"context"
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/watch"
 )
 
@@ -30,10 +30,10 @@ func FileManager(r registry.Registry, name string, poll time.Duration) (m *watch
 		return m, func() {}
 	}
 	start := fswatch.New
-	if w, ok := WindowOf(r); ok {
+	if w, ok := kit.WindowOf(r); ok {
 		start = w.FSWatch
 	}
-	m = watch.New(watch.Options{Name: name, Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: Polls(r)})
+	m = watch.New(watch.Options{Name: name, Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: kit.Polls(r)})
 	return m, m.Close
 }
 
@@ -262,15 +262,4 @@ func (b *Budget) BackOff() {
 	b.mu.Lock()
 	b.backed = time.Now().Add(15 * time.Minute)
 	b.mu.Unlock()
-}
-
-// LoadState is a load as the toolkit shows it.
-func LoadState(l registry.Load) widget.LoadState {
-	switch {
-	case l.Done:
-		return widget.LoadState{Phase: widget.Ready}
-	case l.Err != nil:
-		return widget.LoadState{Phase: widget.Failed, Err: l.Err}
-	}
-	return widget.LoadState{Phase: widget.Pending, Since: l.Since}
 }

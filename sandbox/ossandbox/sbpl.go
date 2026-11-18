@@ -3,6 +3,8 @@ package ossandbox
 import (
 	"fmt"
 	"strings"
+
+	"github.com/liamg/oriel/sandbox/sbpl"
 )
 
 // sbplRead are what any program on macOS reads: dyld and its shared cache, the system's libraries, frameworks
@@ -33,11 +35,11 @@ func SBPL(p Profile) string {
 	if len(p.Ports) > 0 {
 		b.WriteString("(allow system-socket)\n(allow network-outbound")
 		for _, port := range p.Ports {
-			fmt.Fprintf(&b, " (remote tcp %s)", quote(fmt.Sprintf("*:%d", port)))
+			fmt.Fprintf(&b, " (remote tcp %s)", sbpl.Quote(fmt.Sprintf("*:%d", port)))
 		}
 		b.WriteString(" (remote unix-socket (path-literal \"/private/var/run/mDNSResponder\")))\n(allow mach-lookup")
 		for _, s := range sbplNet {
-			fmt.Fprintf(&b, " (global-name %s)", quote(s))
+			fmt.Fprintf(&b, " (global-name %s)", sbpl.Quote(s))
 		}
 		b.WriteString(")\n")
 		rule(&b, "allow file-read*", []string{"/private/var/db/mds", "/Library/Keychains"}, false)
@@ -56,12 +58,7 @@ func rule(b *strings.Builder, allow string, paths []string, literal bool) {
 		if literal {
 			kind = "literal"
 		}
-		fmt.Fprintf(b, " (%s %s)", kind, quote(p))
+		fmt.Fprintf(b, " (%s %s)", kind, sbpl.Quote(p))
 	}
 	b.WriteString(")\n")
-}
-
-// quote is a Seatbelt string: in double quotes, with \ and " escaped.
-func quote(s string) string {
-	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
 }

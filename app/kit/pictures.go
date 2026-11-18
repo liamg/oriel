@@ -23,6 +23,7 @@ import (
 	_ "golang.org/x/image/webp"
 
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/imagex"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -192,9 +193,9 @@ func decoded(b []byte) (*Picture, error) {
 		pc.Format = "svg"
 		pc.Doc, pc.Err = svg.Parse(b)
 	} else {
-		pc.Img, pc.Format, pc.Err = DecodeImage(b)
+		pc.Img, pc.Format, pc.Err = imagex.Decode(b)
 		if pc.Format == "png" {
-			pc.Density = pngDensity(b)
+			pc.Density = imagex.PNGDensity(b)
 		}
 	}
 	if pc.Err != nil {

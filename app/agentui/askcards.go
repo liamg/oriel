@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -302,7 +303,7 @@ func (x *Console) keyCard(k *askCardParts, se core.SessionState, a core.Ask) {
 	k.o.Kicker = ""
 	k.o.Title = "Touch your security key"
 	k.o.Detail = kit.JoinParts(a.Summary, a.Detail, kit.Label(se))
-	k.o.Icon = func(c *ui.Ctx, tone render.Color) { kit.Icon(c, x.h, "icon", "key", 15, tone) }
+	k.o.Icon = func(c *ui.Ctx, tone render.Color) { icons.Icon(c, x.h, "icon", "key", 15, tone) }
 	k.add("Cancel", "c", false, registry.Args{"decision": string(hostapi.DecisionDeny)})
 }
 

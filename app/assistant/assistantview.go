@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -243,7 +244,7 @@ func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, late
 			for _, e := range b.entries {
 				switch e.Kind {
 				case conversation.KindReply:
-					widget.Rich(c, e.Seq, kit.MDSpans(e.Text), width-40, widget.UIFont(13.5, th.C(theme.Fg)), widget.RichOpts{})
+					widget.Rich(c, e.Seq, markdown.Spans(e.Text), width-40, widget.UIFont(13.5, th.C(theme.Fg)), widget.RichOpts{})
 					if len(e.Items) > 0 {
 						keyed := slices.IndexFunc(log, func(o conversation.Entry) bool { return o.Seq == e.Seq }) == latestItems
 						x.items(c, fmt.Sprint("items", e.Seq), e.Items, keyed)

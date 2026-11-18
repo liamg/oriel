@@ -36,7 +36,7 @@ func TestAnsweredReviewsAreTheirMove(t *testing.T) {
 	if i := strings.Index(text, "Notify on drift"); i > inProgress {
 		t.Errorf("a pull request you were asked about again isn't waiting on you:\n%s", text)
 	}
-	if !strings.Contains(text, "Notify on drift now RE-REQUESTED") {
+	if !strings.Contains(text, "Notify on drift 4w RE-REQUESTED") {
 		t.Errorf("asked again after commenting, it isn't re-requested:\n%s", text)
 	}
 	if n := reviewsOf(s).Count(); n != 4 {

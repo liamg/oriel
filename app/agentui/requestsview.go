@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -383,7 +384,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					}
 				}
 			})
-			kit.MarkdownText(c, x.h, "body", cm.Body, inner, widget.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
+			markdown.Text(c, x.h, "body", cm.Body, inner, widget.UIFont(13, th.C(theme.Fg)), markdown.ForThread(se, t))
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}

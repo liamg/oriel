@@ -4,11 +4,11 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -37,7 +37,7 @@ func (p *Problems) Manifest() plugin.Manifest { return plugin.Manifest{ID: "prob
 
 func (p *Problems) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
-	p.Add(h.Command(registry.Command{ID: "problems.open", Grant: registry.Open, Ex: "Problems", Title: "List every diagnostic: Lua errors, language servers'", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
+	p.Add(h.Command(registry.Command{ID: "problems.open", Grant: registry.Open, Ex: []string{"Problems"}, Title: "List every diagnostic: Lua errors, language servers'", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "problems", "place": "dock", "edge": "bottom", "title": "Problems", "size": 260})
 	}}))
 	p.Add(h.View("problems", problemsView{p}))
@@ -136,7 +136,7 @@ func (p *Problems) view(c *ui.Ctx) {
 // short is a file as Problems shows it: from the config or work directory if it's under one, else with ~.
 func (p *Problems) short(file string) string {
 	for _, dir := range []string{p.ConfigDir, kit.WindowDir(p.h)} {
-		if rel, err := filepath.Rel(dir, file); dir != "" && err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, ok := pathx.Rel(file, dir); ok {
 			return rel
 		}
 	}

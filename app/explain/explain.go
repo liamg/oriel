@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/registry/services"
@@ -644,7 +645,7 @@ func (x *Explain) relName(path string) string {
 	if !ok {
 		return path
 	}
-	if r, err := filepath.Rel(ed.Dir(), path); err == nil && !strings.HasPrefix(r, "..") {
+	if r, ok := pathx.Rel(path, ed.Dir()); ok {
 		return filepath.ToSlash(r)
 	}
 	return path

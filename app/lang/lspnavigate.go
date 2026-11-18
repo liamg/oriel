@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
@@ -296,7 +297,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 	sel := pk.refs[pk.sel]
 	root := editorDir(x.h)
 	rel := func(p string) string {
-		if r, err := filepath.Rel(root, p); err == nil && !strings.HasPrefix(r, "..") {
+		if r, ok := pathx.Rel(p, root); ok {
 			return r
 		}
 		return p
@@ -575,7 +576,7 @@ func (x *LSP) symbolItems(syms []lsp.Symbol) []uireg.PickerItem {
 	walk = func(ss []lsp.Symbol, container string) {
 		for _, s := range ss {
 			path := s.Path
-			if r, err := filepath.Rel(editorDir(x.h), path); err == nil && !strings.HasPrefix(r, "..") {
+			if r, ok := pathx.Rel(path, editorDir(x.h)); ok {
 				path = r
 			}
 			detail := s.Kind.String()
@@ -616,7 +617,7 @@ func (x *LSP) calls(ctx registry.Ctx, incoming bool) error {
 		var out []uireg.PickerItem
 		for _, call := range calls {
 			path := call.Item.Path
-			if r, err := filepath.Rel(editorDir(x.h), path); err == nil && !strings.HasPrefix(r, "..") {
+			if r, ok := pathx.Rel(path, editorDir(x.h)); ok {
 				path = r
 			}
 			out = append(out, uireg.PickerItem{ID: fmt.Sprintf("%s:%d", path, call.Item.Selection.Start.Line), Label: call.Item.Name,

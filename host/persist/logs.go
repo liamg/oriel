@@ -119,8 +119,8 @@ func (l *Logs) openLog(id core.SessionID, seq uint64) error {
 }
 
 // vault keeps the text a session's log leaves out: redacted comments' bodies. Nil if its file can't be read.
-func (l *Logs) vault(id core.SessionID) *core.Vault {
-	v, err := core.OpenVault(filepath.Join(l.env.SessionDir(id), "redacted.json"))
+func (l *Logs) vault(id core.SessionID) core.Vault {
+	v, err := openVault(filepath.Join(l.env.SessionDir(id), "redacted.json"))
 	if err != nil {
 		l.env.Log.Warn("session vault", "session", id, "err", err)
 		return nil

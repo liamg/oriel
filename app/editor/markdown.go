@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -297,15 +298,17 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 			case mdTable:
 				markdownTable(c, fmt.Sprint("table", k), b, width, body, nil)
 			case mdHeading:
-				mdAligned(c, fmt.Sprint("h", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, head, widget.RichOpts{}) })
+				mdAligned(c, fmt.Sprint("h", k), b.Align, width, func(c *ui.Ctx, key any) {
+					widget.Rich(c, key, markdown.Spans(b.Text), width, head, widget.RichOpts{})
+				})
 			case mdItem:
 				indent := float32(b.Level) * 14
 				c.Row(fmt.Sprint("li", k), ui.Style{Gap: 8, Pad: ui.Insets{L: 4 + indent}}, func(c *ui.Ctx) {
 					c.Text("mark", b.Mark, body)
-					widget.Rich(c, "t", kit.MDSpans(b.Text), width-22-indent, body, prose)
+					widget.Rich(c, "t", markdown.Spans(b.Text), width-22-indent, body, prose)
 				})
 			default:
-				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, body, prose) })
+				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, markdown.Spans(b.Text), width, body, prose) })
 			}
 		}
 	})
@@ -325,7 +328,7 @@ func markdownTable(c *ui.Ctx, key any, b mdBlock, width float32, body ui.TextSty
 	rows := make([][][]widget.Span, len(b.Rows))
 	for r, row := range b.Rows {
 		for _, cell := range row {
-			rows[r] = append(rows[r], kit.MDSpans(cell))
+			rows[r] = append(rows[r], markdown.Spans(cell))
 		}
 	}
 	o := widget.TableOpts{Head: true, Label: "table"}

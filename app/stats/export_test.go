@@ -2,7 +2,7 @@ package stats
 
 import (
 	"github.com/liamg/oriel/agent/usage/stats"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/watch"
@@ -27,7 +27,7 @@ func (m *Machine) LoadOf() []float64                      { return m.loadOf() }
 
 // RefreshReports reads every report again.
 func (x *Stats) RefreshReports() {
-	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) { sub.Refresh() })
+	statefile.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) { sub.Refresh() })
 }
 
 var Hours = hours

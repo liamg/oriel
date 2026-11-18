@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
@@ -148,7 +148,7 @@ func (x *Boxes) SandboxShell(ctx context.Context, id core.SessionID, cwd string)
 	if !ok {
 		return sandbox.Command{}, fmt.Errorf("the %s sandbox can't run a terminal", b.backend.Name())
 	}
-	if rel, err := filepath.Rel(b.root, cwd); cwd == "" || err != nil || strings.HasPrefix(rel, "..") {
+	if !pathx.Inside(cwd, b.root) {
 		cwd = b.root
 	}
 	return sh.Shell(ctx, b.root, cwd, sandbox.LaunchOpts{Environ: os.Environ(), Config: b.cfg})

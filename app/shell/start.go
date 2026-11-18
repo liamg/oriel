@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/sessionkit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry/uireg"
@@ -24,14 +25,11 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// StartView is what the main area shows with nothing open: no directory and no session.
-// OverviewView is what it shows with a directory or session open but no view in it. OpeningView is what it
+// StartView is what the main area shows with nothing open: no directory and no session. OpeningView is what it
 // shows while the window is about to open again on another directory or session.
 const (
-	StartView          = "app.start"
-	OverviewView       = kit.OverviewView
-	OpeningView        = "app.opening"
-	OverviewPanelsView = kit.OverviewPanelsView
+	StartView   = "app.start"
+	OpeningView = "app.opening"
 )
 
 var (
@@ -189,7 +187,7 @@ func (s *start) opening(c *ui.Ctx, h plugin.Host) {
 	th := c.Theme()
 	c.Column("opening", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 18, Role: ui.RoleRegion, Label: "Opening"},
 		func(c *ui.Ctx) {
-			c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { kit.Logo(f, r, th) })
+			c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { icons.Logo(f, r, th) })
 			widget.Busy(c, "busy", widget.LoadState{}, widget.BusyOpts{Label: "Opening " + what, Size: 13})
 		})
 }
@@ -370,9 +368,9 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 		}
 		if len(recent) > 0 {
 			c.Row("hello", ui.Style{W: width, Cross: ui.Center, Gap: 16, Pad: ui.Insets{B: 26}}, func(c *ui.Ctx) {
-				c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { kit.Logo(f, r, th) })
+				c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { icons.Logo(f, r, th) })
 				c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 26, Tracking: .32},
-					Color: th.C(kit.TWordmark)})
+					Color: th.C(icons.TWordmark)})
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("version", s.sh.cfg.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(theme.FgFaint)})
 			})
@@ -458,7 +456,7 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 					return
 				}
 				c.Column("recent", ui.Style{W: ui.Flex(46).Clamp(260, 460), H: ui.Px(330), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Paint("logo", ui.Px(300), ui.Px(300), func(f render.Frame, r render.Rect) { kit.Logo(f, r, th) })
+					c.Paint("logo", ui.Px(300), ui.Px(300), func(f render.Frame, r render.Rect) { icons.Logo(f, r, th) })
 				})
 			})
 		}

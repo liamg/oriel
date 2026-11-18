@@ -4,13 +4,14 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"github.com/liamg/oriel/internal/clock"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 
 	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry/keymap"
@@ -275,10 +276,10 @@ type Command struct {
 	// UserOnly is a command no plugin may run, whatever it holds: what changes who may do what (installing plugins
 	// and accepting their consent, settings, secrets, updates). The user's own keys, clicks and config still run it.
 	UserOnly bool
-	// Ex is the ex command that runs it too, an alias of its id: ":Settings" runs the command whose Ex is
-	// "Settings". What's typed after the name comes as the argument ExArg names ("args" when ExArg is ""), and a ! as
-	// "bang".
-	Ex    string
+	// Ex are the ex commands that run it too, aliases of its id: ":Settings" runs the command whose Ex holds
+	// "Settings", and ":ls", ":buffers" and ":files" all run the buffer picker. What's typed after the name comes as
+	// the argument ExArg names ("args" when ExArg is ""), and a ! as "bang".
+	Ex    []string
 	ExArg string
 	// Args are the arguments it takes: a run with a key it doesn't name, a value of the wrong type or a required one
 	// missing fails, saying so (CheckArgs). NoArgs takes none; MoreArgs among them takes other keys too. Every
@@ -600,7 +601,7 @@ func (r *reg) exCommand(name string) (Command, bool) {
 		return Command{}, false
 	}
 	for _, c := range r.Commands() {
-		if c.Ex == name {
+		if slices.Contains(c.Ex, name) {
 			return c, true
 		}
 	}

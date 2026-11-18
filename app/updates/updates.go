@@ -152,7 +152,7 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 func (x *Update) commands() []registry.Command {
 	can := func(registry.Args) bool { return x.updater() != nil }
 	return []registry.Command{
-		{ID: "update.check", Grant: registry.Open, Title: "Check for a newer Oriel now, and show what it brings", Available: can, Ex: "UpdateCheck",
+		{ID: "update.check", Grant: registry.Open, Title: "Check for a newer Oriel now, and show what it brings", Available: can, Ex: []string{"UpdateCheck"},
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
 		{ID: "update.notes.open", Grant: registry.Open, Title: "Show the update card: the newer release and its notes", Available: can,
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},

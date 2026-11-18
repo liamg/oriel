@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/edit/editorconfig"
 	"github.com/liamg/oriel/gitx/attr"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
@@ -86,7 +87,7 @@ func (c *conventions) setRoot(dir string) {
 }
 
 func (c *conventions) rel(p string) string {
-	if r, err := filepath.Rel(c.root(), p); err == nil && !strings.HasPrefix(r, "..") {
+	if r, ok := pathx.Rel(p, c.root()); ok {
 		return filepath.ToSlash(r)
 	}
 	return p
@@ -138,7 +139,7 @@ func (c *conventions) resolve(path string) map[string]value {
 	set := func(name string, v any, src string) { out[name] = value{v, src} }
 	at := func(file string, line int) string { return fmt.Sprintf("%s:%d", c.rel(file), line) }
 
-	if r, rel := c.repo(path); !strings.HasPrefix(rel, "..") {
+	if r, rel := c.repo(path); filepath.IsLocal(rel) {
 		attrs, err := r.Attributes(rel)
 		if err == nil {
 			if v := attrs["eol"]; v.Text == "lf" || v.Text == "crlf" {

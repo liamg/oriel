@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/app/kit/prui"
 
 	"github.com/liamg/oriel/app/kit/work"
@@ -459,7 +460,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 					}
 				}
 				if f.Body != "" {
-					widget.Rich(c, "body", kit.MDSpans(f.Body), width, widget.UIFont(11.5, fg), widget.RichOpts{})
+					widget.Rich(c, "body", markdown.Spans(f.Body), width, widget.UIFont(11.5, fg), widget.RichOpts{})
 				}
 				c.Row("acts", ui.Style{Gap: 6, Pad: ui.Insets{T: 3}, Cross: ui.Center}, func(c *ui.Ctx) {
 					if f.Dismissed {

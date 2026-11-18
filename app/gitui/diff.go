@@ -39,14 +39,6 @@ const DiffView = kit.DiffView
 // DiffKeyMode is the focused diff's keys: ]h [h between hunks, r marks one reviewed, gc comments, ? explains.
 const DiffKeyMode = "diff"
 
-// The diff's slots for plugins, each a view drawn in the order of its name, built with the diff's repo root as
-// ViewCtx.Instance: DiffHeader views above the files, DiffSide views in the left column under
-// the changed files, and DiffRight views in a column at the right (an AI review's findings).
-const (
-	DiffSide  = kit.DiffSide
-	DiffRight = kit.DiffRight
-)
-
 // diffPresenter is DecorationCtx.Presenter while the diff asks for a file's decorations: their Blocks go between
 // its lines.
 const diffPresenter = "diff"

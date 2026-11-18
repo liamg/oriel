@@ -210,7 +210,7 @@ func RepoDockerfile(repo string) (string, bool) {
 		return string(b), true
 	}
 	base := defaultBranch(repo)
-	out, err := sandbox.Git(repo, "show", base+":"+DockerfilePath)
+	out, err := sandbox.Git(context.Background(), repo, "show", base+":"+DockerfilePath)
 	if err != nil || strings.TrimSpace(out) == "" {
 		return "", false
 	}
@@ -220,14 +220,14 @@ func RepoDockerfile(repo string) (string, bool) {
 // defaultBranch is repo's default branch: origin's HEAD, else the first of
 // the usual names that exists.
 func defaultBranch(repo string) string {
-	if s, err := sandbox.Git(repo, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"); err == nil {
+	if s, err := sandbox.Git(context.Background(), repo, "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"); err == nil {
 		ref := strings.TrimSpace(s)
 		if p := strings.TrimPrefix(ref, "refs/remotes/"); p != ref && p != "" {
 			return p
 		}
 	}
 	for _, c := range []string{"origin/main", "origin/master", "main", "master", "develop", "trunk"} {
-		if _, err := sandbox.Git(repo, "rev-parse", "--verify", "--quiet", c+"^{commit}"); err == nil {
+		if _, err := sandbox.Git(context.Background(), repo, "rev-parse", "--verify", "--quiet", c+"^{commit}"); err == nil {
 			return c
 		}
 	}

@@ -105,7 +105,7 @@ func (x *Tickets) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "tickets.open", Grant: registry.Open, Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Ex: "Tickets", ExArg: "tracker", Args: []registry.Arg{registry.StringArg("tracker")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "tickets.open", Grant: registry.Open, Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Ex: []string{"Tickets"}, ExArg: "tracker", Args: []registry.Arg{registry.StringArg("tracker")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("tracker"))
 		}},
 		{ID: "ticket.open", Grant: registry.Open, Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Args: []registry.Arg{registry.StringArg("ticket")}, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -127,7 +127,7 @@ func (x *Tickets) commands() []registry.Command {
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
 		{ID: "tickets.filter", Grant: registry.Open, Title: "Filter the tickets page's list", Available: open,
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
-		{ID: "tickets.key.set", UserOnly: true, Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Ex: "TicketKey", ExArg: "tracker", Args: []registry.Arg{registry.StringArg("tracker")}, Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "tickets.key.set", UserOnly: true, Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Ex: []string{"TicketKey"}, ExArg: "tracker", Args: []registry.Arg{registry.StringArg("tracker")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, a.String("tracker"))
 		}},
 		{ID: "tickets.done.set", UserOnly: true, Title: "Mark a {ticket} done in its tracker", Args: []registry.Arg{registry.StringArg("ticket")}, Run: func(_ registry.Ctx, a registry.Args) error {

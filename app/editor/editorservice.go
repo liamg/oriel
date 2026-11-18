@@ -3,9 +3,9 @@ package editor
 import (
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/syntax/tree"
 
@@ -141,7 +141,7 @@ func (s editors) SetCursor(pos text.Pos) { s.x.e.SetCursor(vim.Pos(pos)) }
 
 func (s editors) JumpTo(path string, pos text.Pos) error {
 	name := path
-	if rel, err := filepath.Rel(s.x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
+	if rel, ok := pathx.Rel(path, s.x.dir); ok && filepath.IsAbs(path) {
 		name = rel
 	}
 	if err := s.x.e.JumpTo(name, vim.Pos(pos)); err != nil {

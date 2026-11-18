@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/integ/github/ghtest"
-	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // TestMain fixes the time zone for every test's times before any goroutine reads it, and runs the sandbox's helper

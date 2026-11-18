@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -50,7 +51,7 @@ func NewDirTree(h plugin.Host) *DirTree {
 	d := &DirTree{h: h, entries: map[string][]DirEntry{}, wanted: map[string]bool{}}
 	d.cache = plugin.NewCache(h, func(_ context.Context, dir string) ([]DirEntry, error) { return ReadDirEntries(dir), nil },
 		plugin.CacheOpts[string, []DirEntry]{MaxEntries: 64, Path: func(dir string) string { return dir },
-			Watches: func() *watch.Manager { return kit.ManagerFor(h, "") }})
+			Watches: func() *watch.Manager { return statefile.ManagerFor(h, "") }})
 	return d
 }
 

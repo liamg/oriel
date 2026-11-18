@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/sessionkit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
@@ -104,7 +105,7 @@ type Stats struct {
 
 	mu       sync.Mutex
 	frameNow time.Time              // now, as the last frame that asked for a read saw it: the time reads off the loop go by
-	subs     kit.Subs               // the reads, from the app's manager: those no frame asks for are paused
+	subs     statefile.Subs         // the reads, from the app's manager: those no frame asks for are paused
 	used     map[string]bool        // the reads asked for since the last frame
 	since    map[string]time.Time   // when frames first saw each read running, for its load
 	live     []core.ProviderUsage   // readings since the history was fetched, from UsageSampled
@@ -214,7 +215,7 @@ func (x *Stats) commands() []registry.Command {
 			}
 			return x.setSplit(ctx, on)
 		}},
-		{ID: "usage.open", Grant: registry.Open, Title: "Open the Usage page: each provider's plan windows", Ex: "Usage", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
+		{ID: "usage.open", Grant: registry.Open, Title: "Open the Usage page: each provider's plan windows", Ex: []string{"Usage"}, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
 		{ID: "usage.refresh", Grant: registry.Open, Title: "Read every provider's plan windows again", Available: has, Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.refreshUsage(ctx)
 		}},
@@ -225,7 +226,7 @@ func (x *Stats) commands() []registry.Command {
 func (x *Stats) pageCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "stats.open", Grant: registry.Open, Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside); :Stats takes them as repo=api 7d session group=model",
-			Ex: "Stats", Args: []registry.Arg{registry.ListArg("account"), registry.StringArg("args"), registry.StringArg("group"), registry.ListArg("kind"), registry.ListArg("model"), registry.ListArg("origin"), registry.ListArg("provider"), registry.StringArg("range"), registry.ListArg("repo"), registry.ListArg("session")}, Run: func(ctx registry.Ctx, a registry.Args) error {
+			Ex: []string{"Stats"}, Args: []registry.Arg{registry.ListArg("account"), registry.StringArg("args"), registry.StringArg("group"), registry.ListArg("kind"), registry.ListArg("model"), registry.ListArg("origin"), registry.ListArg("provider"), registry.StringArg("range"), registry.ListArg("repo"), registry.ListArg("session")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				if line := a.String("args"); line != "" {
 					return x.ex(ctx, line)
 				}
@@ -537,11 +538,11 @@ func keep[T any](x *Stats, key, what string, ask func() (T, error)) (answer[T], 
 	x.used[key] = true
 	x.frameNow = x.now()
 	x.mu.Unlock()
-	m := kit.ManagerFor(x.h, "")
+	m := statefile.ManagerFor(x.h, "")
 	if m == nil {
 		return answer[T]{}, widget.LoadState{}
 	}
-	x.subs.Hold(key, m, statsNeed, func() kit.Closer {
+	x.subs.Hold(key, m, statsNeed, func() statefile.Closer {
 		var last *answer[T] // reads run one at a time
 		src := watch.Source[answer[T]]{Key: "stats:" + key, Poll: true, Read: func(watch.Reader) (answer[T], error) {
 			v, err := ask()
@@ -558,7 +559,7 @@ func keep[T any](x *Stats, key, what string, ask func() (T, error)) (answer[T], 
 		}}
 		return watch.SubscribeFunc(m, src, statsNeed, "stats: "+what, x.h.Redraw)
 	})
-	sub, ok := kit.Held[answer[T]](&x.subs, key)
+	sub, ok := statefile.Held[answer[T]](&x.subs, key)
 	if !ok {
 		return answer[T]{}, widget.LoadState{}
 	}
@@ -607,7 +608,7 @@ func (x *Stats) framed() {
 // fresher reads again the reports older than liveAfter: the agents they count have moved on.
 func (x *Stats) fresher() {
 	now := x.now()
-	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
+	statefile.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
 		if a, _, ok := sub.Get(); ok && now.Sub(a.at) > liveAfter && !sub.Busy() {
 			sub.Refresh()
 		}
@@ -779,7 +780,7 @@ func (x *Stats) openSession(ctx registry.Ctx, id core.SessionID) error {
 func (x *Stats) found(id core.SessionID) (stats.Group, bool) {
 	var found stats.Group
 	ok := false
-	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
+	statefile.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
 		a, _, _ := sub.Get()
 		for _, g := range a.v.Groups {
 			if g.Key == string(id) && g.Origin != "" {

@@ -10,6 +10,8 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/icons"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -368,7 +370,7 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 			t := r.ticket
 			c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				if many && r.tracker.Icon != "" {
-					kit.Icon(c, x.h, "tracker", r.tracker.Icon, 12, th.C(theme.FgMuted))
+					icons.Icon(c, x.h, "tracker", r.tracker.Icon, 12, th.C(theme.FgMuted))
 				}
 				c.Text("k", t.Key, widget.MonoFont(11, th.C(theme.FgMuted)))
 				c.Text("t", t.Title, widget.UIFont(13, th.C(theme.Fg)))
@@ -466,7 +468,7 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 		}
 		switch {
 		case full.Description != "":
-			kit.MarkdownText(c, x.h, "description", full.Description, 640, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+			markdown.Text(c, x.h, "description", full.Description, 640, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		case full.Summary != "":
 			widget.Wrap(c, "summary", full.Summary, 640, widget.UIFont(13, th.C(theme.FgMuted)))
 		}

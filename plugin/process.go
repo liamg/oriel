@@ -19,7 +19,7 @@ import (
 
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/jsonrpc"
-	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // Handler answers a plugin's request to its own host side (its Lua), before the host's methods: handled false

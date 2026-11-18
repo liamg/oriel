@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -43,13 +44,13 @@ type Reviews struct {
 	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
-	subs   kit.Subs // the lists' poll, from the app's manager
+	subs   statefile.Subs // the lists' poll, from the app's manager
 
 	mu      sync.Mutex
 	lists   map[string]*reviewList   // by source
 	details map[string]*reviewDetail // by URL, as the page asked
 	page    reviewsPage
-	clock   clock.Clock // when lists and details were read; the system's if nil
+	clock   clock.Clock // when lists and details were read: the window's
 }
 
 func (x *Reviews) now() time.Time { return clock.Or(x.clock).Now() }
@@ -80,6 +81,9 @@ func (x *Reviews) Manifest() plugin.Manifest { return plugin.Manifest{ID: "revie
 
 func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists, x.details = h, map[string]*reviewList{}, map[string]*reviewDetail{}
+	if x.clock == nil {
+		x.clock = h.Clock()
+	}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking}))
 	for _, o := range x.options() {
@@ -164,7 +168,7 @@ func (x *Reviews) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "reviews.open", Grant: registry.Open, Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: "Reviews", ExArg: "source", Args: []registry.Arg{registry.StringArg("source")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "reviews.open", Grant: registry.Open, Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: []string{"Reviews"}, ExArg: "source", Args: []registry.Arg{registry.StringArg("source")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("source"))
 		}},
 		{ID: "reviews.refresh", Grant: registry.Open, Title: "Ask every review source for the pull requests waiting on you again now", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
@@ -222,13 +226,13 @@ const reviewsCheck = 15 * time.Second
 // poll keeps the sources' lists fresh: a subscription to the app's manager whose read asks each source again once
 // its list is older than reviews.poll.
 func (x *Reviews) poll() {
-	m := kit.ManagerFor(x.h, "")
+	m := statefile.ManagerFor(x.h, "")
 	if m == nil {
 		return
 	}
 	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: work.UnfocusedPoll}
-	x.subs.Hold("reviews", m, need, func() kit.Closer {
-		src := kit.Every("reviews.requested", func(ctx context.Context) error {
+	x.subs.Hold("reviews", m, need, func() statefile.Closer {
+		src := statefile.Every("reviews.requested", func(ctx context.Context) error {
 			for _, s := range kit.Sites(x.h).ReviewSources() {
 				kit.Sites(x.h).Warm(ctx, s)
 				x.fresh(s, x.pollEvery())

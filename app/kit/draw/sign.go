@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -25,7 +26,7 @@ func DrawSign(c *ui.Ctx, h plugin.Host, key any, d uireg.Decoration, size float3
 		switch {
 		case d.Icon != "":
 			r, _ := ui.Service[registry.Registry](c)
-			kit.Icon(c, r, "icon", d.Icon, 12, col)
+			icons.Icon(c, r, "icon", d.Icon, 12, col)
 			if d.Text != "" {
 				c.Box("n", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: 1}, Self: render.Point{X: .5, Y: .7}}}, func(c *ui.Ctx) {
 					c.Text("t", d.Text, widget.MonoFont(8, col))

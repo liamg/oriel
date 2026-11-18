@@ -3,6 +3,8 @@ package ossandbox
 import (
 	"strings"
 	"testing"
+
+	"github.com/liamg/oriel/sandbox/sbpl"
 )
 
 // The macOS profile, by its text. Seatbelt denies what no rule allows ("(deny default)"), so the profile is
@@ -41,8 +43,8 @@ func TestSBPL(t *testing.T) {
 // A path can't break out of its string: a quote or backslash in it is escaped.
 func TestSBPLQuote(t *testing.T) {
 	for in, want := range map[string]string{`/a`: `"/a"`, `/a"b`: `"/a\"b"`, `/a\b`: `"/a\\b"`, `/a") (allow default`: `"/a\") (allow default"`} {
-		if got := quote(in); got != want {
-			t.Errorf("quote(%q) = %s, want %s", in, got, want)
+		if got := sbpl.Quote(in); got != want {
+			t.Errorf("sbpl.Quote(%q) = %s, want %s", in, got, want)
 		}
 	}
 }

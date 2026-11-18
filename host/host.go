@@ -4,7 +4,7 @@
 //
 // This package is the host's facade: the API the app calls, much of it the methods of the parts it embeds, each entry
 // point recovering a panic into an error. The work is done by its parts, each in a package of its own that sees the
-// host only as a hostcore.State: worktree (workspaces), agentrun (agents), sandboxhost (sandboxes), github (code
+// host only as a hostcore.State: worktree (workspaces), agentrun (agents), sandboxhost (sandboxes), ship (code
 // hosts and the Ship page), repos, jobs, utility, aireview, persist (what's kept on disk) and pricing (the price
 // book). The parts never call each other; what one needs of another it's given here, as a func.
 //

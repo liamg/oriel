@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -152,7 +153,7 @@ func (x *LSP) completionMenu(c *ui.Ctx) {
 				c.Text("detail", it.Detail, ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.Fg)})
 			}
 			if it.Doc.Text != "" {
-				markdown(c, x.h, "md", it.Doc, 280)
+				serverDoc(c, x.h, "md", it.Doc, 280)
 			}
 		})
 	})
@@ -203,7 +204,7 @@ func (x *LSP) signatureCard(c *ui.Ctx) {
 			c.Text("z", s.Label[to:], base)
 		})
 		if s.Doc.Text != "" {
-			markdown(c, x.h, "doc", s.Doc, 460)
+			serverDoc(c, x.h, "doc", s.Doc, 460)
 		}
 	})
 }
@@ -211,7 +212,7 @@ func (x *LSP) signatureCard(c *ui.Ctx) {
 // hoverView is the K card.
 func (x *LSP) hoverView(c *ui.Ctx) {
 	draw.Popup(c, "card", ui.Style{W: ui.Px(520), Pad: ui.Pad(12), Gap: 8, Help: "editor/pane#hover"}, func(c *ui.Ctx) {
-		markdown(c, x.h, "md", x.hover.md, 494)
+		serverDoc(c, x.h, "md", x.hover.md, 494)
 		c.Text("keys", "esc to close", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: c.Theme().C(theme.FgGhost)})
 	})
 }
@@ -307,10 +308,10 @@ func marked(c *ui.Ctx, s string, hits []int, base, hit ui.TextStyle) {
 	flush()
 }
 
-// markdown draws a server's markup: markdown as the editor's preview draws it, plain text as wrapped paragraphs.
-func markdown(c *ui.Ctx, r registry.Registry, key any, m lsp.Markup, width float32) {
+// serverDoc draws a server's markup: markdown as the editor's preview draws it, plain text as wrapped paragraphs.
+func serverDoc(c *ui.Ctx, r registry.Registry, key any, m lsp.Markup, width float32) {
 	if m.Kind == "markdown" {
-		kit.DocText(c, r, key, m.Text, width)
+		markdown.DocText(c, r, key, m.Text, width)
 		return
 	}
 	body := widget.UIFont(12, c.Theme().C(theme.FgMuted))

@@ -31,6 +31,25 @@ func TestInside(t *testing.T) {
 	}
 }
 
+// Rel is the path under dir, and a child whose name starts with two dots is under it, unlike ".." itself.
+func TestRel(t *testing.T) {
+	for _, c := range []struct {
+		path, dir, rel string
+		ok             bool
+	}{
+		{"/a/b/c", "/a", "b/c", true},
+		{"/a", "/a", ".", true},
+		{"/a/..foo", "/a", "..foo", true},
+		{"/a/..", "/a", "", false},
+		{"/b", "/a", "", false},
+		{"x", "/a", "", false},
+	} {
+		if rel, ok := Rel(c.path, c.dir); rel != c.rel || ok != c.ok {
+			t.Errorf("Rel(%q, %q) = %q, %v; want %q, %v", c.path, c.dir, rel, ok, c.rel, c.ok)
+		}
+	}
+}
+
 func TestInsideResolved(t *testing.T) {
 	dir := t.TempDir()
 	real := filepath.Join(dir, "real")

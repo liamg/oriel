@@ -150,9 +150,22 @@ func (l richLayout) widths() (line, widest float32) {
 // base, code in mono on a tint. It returns the number of lines.
 func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o RichOpts) int {
 	l := richMeasure(c, spans, base, o)
-	gap, style, code := l.gap, l.style, l.code
-	var lines [][]richPiece
-	var joins []string // what a wrapped line joins the one before with, copied
+	lines, joins := l.wrap(c, width)
+	st := ui.Style{Gap: 3, Role: ui.RoleText, Label: richText(spans)}
+	if o.Align != ui.Start {
+		st.W, st.Cross = ui.Px(width), o.Align
+	}
+	c.Column(key, st, func(c *ui.Ctx) {
+		for i, ln := range lines {
+			c.Row(i, ui.Style{Cross: ui.Center}, func(c *ui.Ctx) { l.line(c, ln, joins[i], i > 0) })
+		}
+	})
+	return len(lines)
+}
+
+// wrap breaks the paragraph into lines no wider than width, and says what each line joins the one before with
+// when it's copied: "" for the first, " " where a space wrapped, "\n" for a break.
+func (l richLayout) wrap(c *ui.Ctx, width float32) (lines [][]richPiece, joins []string) {
 	var x float32
 	newLine := func(join string) {
 		lines, joins, x = append(lines, nil), append(joins, join), 0
@@ -160,7 +173,7 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 	place := func(p richPiece) {
 		add := p.width
 		if p.space && x > 0 {
-			add += gap
+			add += l.gap
 		}
 		if len(lines) == 0 || x > 0 && x+add > width {
 			join := ""
@@ -191,74 +204,89 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 			place(p)
 		}
 	}
-	st := ui.Style{Gap: 3, Role: ui.RoleText, Label: richText(spans)}
-	if o.Align != ui.Start {
-		st.W, st.Cross = ui.Px(width), o.Align
-	}
-	c.Column(key, st, func(c *ui.Ctx) {
-		for i, ln := range lines {
-			c.Row(i, ui.Style{Cross: ui.Center}, func(c *ui.Ctx) {
-				soft := i > 0
-				text := func(c *ui.Ctx, key any, s string, st ui.TextStyle) {
-					if soft {
-						c.WrappedText(key, s, st, joins[i])
-						soft = false
-					} else {
-						c.Text(key, s, st)
-					}
-				}
-				// Neighbouring words of one span draw as one run; a space between spans is a gap.
-				var run strings.Builder
-				var cur Span
-				n := 0
-				flush := func() {
-					if run.Len() == 0 {
-						return
-					}
-					st := style(cur)
-					if cur.Strike {
-						w := c.Shaper().Shape(run.String(), st.Font).Advance
-						c.Box(n, ui.Style{}, func(c *ui.Ctx) {
-							text(c, "t", run.String(), st)
-							c.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: st.Color, Float: &ui.Float{At: render.Point{Y: .55}}}, nil)
-						})
-					} else {
-						text(c, n, run.String(), st)
-					}
-					n++
-					run.Reset()
-				}
-				for j, p := range ln {
-					sp := p.space && j > 0
-					if p.span.Code || p.span != cur {
-						flush()
-						if sp {
-							c.Box(n, ui.Style{W: ui.Px(gap)}, nil)
-							n++
-						}
-						cur = p.span
-						if p.span.Code {
-							fg, bg := code, col(c, tCodeSpanBg)
-							if p.span.Tone.A > 0 {
-								fg.Color, bg = p.span.Tone, alpha(p.span.Tone, .14)
-							}
-							c.Row(n, ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Fill: bg, Cross: ui.Center}, func(c *ui.Ctx) {
-								text(c, "t", p.text, fg)
-							})
-							n++
-							cur = Span{}
-							continue
-						}
-					} else if sp {
-						run.WriteString(" ")
-					}
-					run.WriteString(p.text)
-				}
-				flush()
-			})
+	return lines, joins
+}
+
+// richLine draws one wrapped line: neighbouring words of one span as one run, a space between spans as a gap, a
+// code span on its tint. The first text a soft-wrapped line draws carries its join, so a copy reads as one line.
+type richLine struct {
+	l    richLayout
+	join string
+	soft bool
+	run  strings.Builder
+	cur  Span
+	n    int
+}
+
+// line draws ln, a line wrap made; soft is a line that continues the one before.
+func (l richLayout) line(c *ui.Ctx, ln []richPiece, join string, soft bool) {
+	r := &richLine{l: l, join: join, soft: soft}
+	for j, p := range ln {
+		sp := p.space && j > 0
+		if p.span.Code || p.span != r.cur {
+			r.flush(c)
+			if sp {
+				c.Box(r.n, ui.Style{W: ui.Px(l.gap)}, nil)
+				r.n++
+			}
+			r.cur = p.span
+			if p.span.Code {
+				r.code(c, p)
+				continue
+			}
+		} else if sp {
+			r.run.WriteString(" ")
 		}
+		r.run.WriteString(p.text)
+	}
+	r.flush(c)
+}
+
+// text draws s, the line's join on the first text of a soft-wrapped line.
+func (r *richLine) text(c *ui.Ctx, key any, s string, st ui.TextStyle) {
+	if r.soft {
+		c.WrappedText(key, s, st, r.join)
+		r.soft = false
+		return
+	}
+	c.Text(key, s, st)
+}
+
+// flush draws the run of words gathered so far.
+func (r *richLine) flush(c *ui.Ctx) {
+	if r.run.Len() == 0 {
+		return
+	}
+	st, s := r.l.style(r.cur), r.run.String()
+	if r.cur.Strike {
+		c.Box(r.n, ui.Style{}, func(c *ui.Ctx) {
+			r.text(c, "t", s, st)
+			strike(c, s, st, .55)
+		})
+	} else {
+		r.text(c, r.n, s, st)
+	}
+	r.n++
+	r.run.Reset()
+}
+
+// code draws a code span on its tint, or its tone's.
+func (r *richLine) code(c *ui.Ctx, p richPiece) {
+	fg, bg := r.l.code, col(c, tCodeSpanBg)
+	if p.span.Tone.A > 0 {
+		fg.Color, bg = p.span.Tone, alpha(p.span.Tone, .14)
+	}
+	c.Row(r.n, ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Fill: bg, Cross: ui.Center}, func(c *ui.Ctx) {
+		r.text(c, "t", p.text, fg)
 	})
-	return len(lines)
+	r.n++
+	r.cur = Span{}
+}
+
+// strike draws a line through s, text just drawn in st in the box it's in, at y of the box's height.
+func strike(c *ui.Ctx, s string, st ui.TextStyle, y float32) {
+	w := c.Shaper().Shape(s, st.Font).Advance
+	c.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: st.Color, Float: &ui.Float{At: render.Point{Y: y}}}, nil)
 }
 
 func richText(spans []Span) string {

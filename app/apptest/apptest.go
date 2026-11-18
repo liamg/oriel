@@ -15,6 +15,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/app/kit"
 
 	"github.com/liamg/oriel/registry/uireg"
 
@@ -144,7 +145,7 @@ func New(t testing.TB, o Options) *Scene {
 			t.Errorf("closing the scene: %v", err)
 		}
 	})
-	s.OverviewOff = h.Registry().View(app.OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.ColumnNode() }))
+	s.OverviewOff = h.Registry().View(kit.OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.ColumnNode() }))
 	return s
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -157,7 +158,7 @@ func (x *LSP) agentRel(path string) string { return agentRel(x.dir(), path) }
 // agentRel is a path as an agent gives it: relative to the project, root, when it's inside it.
 func agentRel(root, path string) string {
 	if root != "" {
-		if rel, err := filepath.Rel(root, path); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, ok := pathx.Rel(path, root); ok {
 			return rel
 		}
 	}

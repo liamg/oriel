@@ -155,7 +155,7 @@ func (e *Explorer) fileCommands() []registry.Command {
 				return err
 			}
 			if a.Bool("relative") {
-				if r, err := filepath.Rel(e.git().Root(), p); err == nil && !strings.HasPrefix(r, "..") {
+				if r, ok := pathx.Rel(p, e.git().Root()); ok {
 					p = filepath.ToSlash(r)
 				}
 			}
