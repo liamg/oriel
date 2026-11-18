@@ -253,7 +253,7 @@ func (a *APIs) bind(vm *script.VM) {
 				return nil, x.Present(c.String(0))
 			},
 			"presenter": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
+				if err := a.check("editor.read"); err != nil {
 					return nil, err
 				}
 				return nil, x.Presenter(c.Table(0), c.Where())

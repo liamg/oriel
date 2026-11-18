@@ -234,7 +234,7 @@ func (e *Explorer) commands() []registry.Command {
 		return h.Run(ctx, "project.panel.toggle", registry.Args{"name": "explorer"})
 	}
 	return []registry.Command{
-		{ID: "explorer.scope.set", Title: "Show the Explorer in a {scope}: changed, uncommitted or all", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "explorer.scope.set", Grant: registry.Open, Title: "Show the Explorer in a {scope}: changed, uncommitted or all", Run: func(ctx registry.Ctx, a registry.Args) error {
 			i := slices.Index(explorerScopes, a.String("scope"))
 			if i < 0 {
 				return fmt.Errorf("no scope %q: changed, uncommitted or all", a.String("scope"))
@@ -242,15 +242,15 @@ func (e *Explorer) commands() []registry.Command {
 			e.keep(func(k *explorerKept) { k.Scope = explorerScopes[i] })
 			return show(ctx)
 		}},
-		{ID: "explorer.changed_only.toggle", Title: "Show only changed files in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "explorer.changed_only.toggle", Grant: registry.Open, Title: "Show only changed files in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			e.changedOnly = !e.changedOnly
 			return nil
 		}},
-		{ID: "explorer.hidden.toggle", Title: "Show hidden files (dot files) in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "explorer.hidden.toggle", Grant: registry.Open, Title: "Show hidden files (dot files) in All (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			e.hidden = !e.hidden
 			return nil
 		}},
-		{ID: "explorer.stage", Title: "Stage the selected file or hunk, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.stage", Grant: string(plugin.CapGit), Title: "Stage the selected file or hunk, or unstage it if it's staged", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if h, staged, ok := e.selectedHunk(); ok {
 				path, t := e.hunks.path, e.git()
 				e.Git.async(func(ctx context.Context) error {
@@ -275,23 +275,23 @@ func (e *Explorer) commands() []registry.Command {
 			}
 			return h.Run(ctx, "git.stage", registry.Args{"path": e.git().abs(f.Path)})
 		}},
-		{ID: "explorer.unstage", Title: "Unstage the selected file", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.unstage", Grant: string(plugin.CapGit), Title: "Unstage the selected file", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
 				return h.Run(ctx, "git.unstage", registry.Args{"path": e.git().abs(f.Path)})
 			}
 			return nil
 		}},
-		{ID: "explorer.discard", Title: "Discard the selected file's unstaged changes", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.discard", Grant: string(plugin.CapGit), Title: "Discard the selected file's unstaged changes", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok && f.Area != gitx.Staged {
 				return h.Run(ctx, "git.discard", registry.Args{"path": e.git().abs(f.Path)})
 			}
 			return nil
 		}},
-		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
+		{ID: "explorer.commit", Grant: string(plugin.CapGit), Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a.Bool("all")})
 			}},
-		{ID: "explorer.diff.open", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "explorer.diff.open", Grant: registry.Open, Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
 				return e.openDiff(ctx, f.Path)
 			}

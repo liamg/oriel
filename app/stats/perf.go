@@ -83,9 +83,9 @@ func (x *Perf) Manifest() plugin.Manifest {
 
 func (x *Perf) commands() []registry.Command {
 	return []registry.Command{
-		{ID: "perf.open", Title: "Open the Performance page: what Oriel and the processes it started cost, and the machine's load",
+		{ID: "perf.open", Grant: registry.Open, Title: "Open the Performance page: what Oriel and the processes it started cost, and the machine's load",
 			Run: func(registry.Ctx, registry.Args) error { x.open = true; return nil }},
-		{ID: "perf.close", Title: "Close the Performance page", Run: func(registry.Ctx, registry.Args) error { x.open = false; return nil }},
+		{ID: "perf.close", Grant: registry.Open, Title: "Close the Performance page", Run: func(registry.Ctx, registry.Args) error { x.open = false; return nil }},
 	}
 }
 

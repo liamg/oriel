@@ -87,7 +87,7 @@ func (x *Consent) commands() []registry.Command {
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.consentCommand(a) }},
 		{ID: "plugins.consent.accept", UserOnly: true, Title: "Install: accept every capability the plugin asks for", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.answer(true); return nil }},
-		{ID: "plugins.consent.cancel", Title: "Cancel the install: grant nothing", Available: open,
+		{ID: "plugins.consent.cancel", Grant: registry.Open, Title: "Cancel the install: grant nothing", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.answer(false); return nil }},
 	}
 }

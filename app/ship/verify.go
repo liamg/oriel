@@ -103,19 +103,19 @@ func (x *Verify) commands() []registry.Command {
 	h := x.h
 	open := func(registry.Args) bool { return x.shown() != nil }
 	return []registry.Command{
-		{ID: "verify.open", Title: "Take the verify quiz on the change of the session in front: {id}",
+		{ID: "verify.open", Grant: string(plugin.CapAgentPrompt), Title: "Take the verify quiz on the change of the session in front: {id}",
 			Available: func(a registry.Args) bool { _, ok := x.session(a); return ok && len(registry.Forkers(h)) > 0 },
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				return x.begin(se)
 			}},
-		{ID: "verify.send", Title: "Send your answer to the quiz's question: {text}, else what's in the composer", Available: open,
+		{ID: "verify.send", Grant: string(plugin.CapAgentPrompt), Title: "Send your answer to the quiz's question: {text}, else what's in the composer", Available: open,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.send(x.shown(), a.String("text")) }},
-		{ID: "verify.restart", Title: "Take the verify quiz again, with new questions", Available: open,
+		{ID: "verify.restart", Grant: string(plugin.CapAgentPrompt), Title: "Take the verify quiz again, with new questions", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.again(x.shown()) }},
-		{ID: "verify.file.open", Title: "Open the file the quiz is asking about", Available: open,
+		{ID: "verify.file.open", Grant: registry.Open, Title: "Open the file the quiz is asking about", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.openFile(ctx, x.shown()) }},
-		{ID: "verify.close", Title: "Close the verify quiz; it waits where it was", Available: open,
+		{ID: "verify.close", Grant: registry.Open, Title: "Close the verify quiz; it waits where it was", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.open = ""; return nil }},
 	}
 }

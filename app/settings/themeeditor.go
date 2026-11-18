@@ -131,7 +131,7 @@ func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 func (e *ThemeEditor) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return strings.TrimSpace(s) }
 	return []registry.Command{
-		{ID: "theme.edit", Title: "Open the theme editor; :Theme pick to pick from the window, :Theme {name} to switch", Ex: "Theme",
+		{ID: "theme.edit", Grant: registry.Open, Title: "Open the theme editor; :Theme pick to pick from the window, :Theme {name} to switch", Ex: "Theme",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				switch arg := str(a, "args"); arg {
 				case "":
@@ -143,23 +143,23 @@ func (e *ThemeEditor) commands() []registry.Command {
 				}
 				return nil
 			}},
-		{ID: "theme.pick", Title: "Pick a token from the window", Run: func(registry.Ctx, registry.Args) error { return e.startPick() }},
-		{ID: "theme.select", Title: "Edit a token: {name}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "theme.pick", Grant: registry.Open, Title: "Pick a token from the window", Run: func(registry.Ctx, registry.Args) error { return e.startPick() }},
+		{ID: "theme.select", Grant: registry.Open, Title: "Edit a token: {name}", Run: func(_ registry.Ctx, a registry.Args) error {
 			e.choose(str(a, "name"))
 			e.open = true
 			return nil
 		}},
-		{ID: "theme.set", Title: "Override a token in your theme: {name} = {value}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "theme.set", Grant: string(plugin.CapSettings), Title: "Override a token in your theme: {name} = {value}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return e.set(str(a, "name"), str(a, "value"))
 		}},
-		{ID: "theme.reset", Title: "Reset a token to what it inherits: {name}, or the one being edited", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "theme.reset", Grant: string(plugin.CapSettings), Title: "Reset a token to what it inherits: {name}, or the one being edited", Run: func(_ registry.Ctx, a registry.Args) error {
 			name := str(a, "name")
 			if name == "" {
 				name = e.sel
 			}
 			return e.reset(name)
 		}},
-		{ID: "theme.undo", Title: "Undo the last theme edit", Run: func(registry.Ctx, registry.Args) error { return e.undoLast() }},
+		{ID: "theme.undo", Grant: string(plugin.CapSettings), Title: "Undo the last theme edit", Run: func(registry.Ctx, registry.Args) error { return e.undoLast() }},
 	}
 }
 

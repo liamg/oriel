@@ -203,19 +203,19 @@ func (x *Stats) seen(ev core.Event) {
 func (x *Stats) commands() []registry.Command {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	return []registry.Command{
-		{ID: "stats.session.open", Title: "Open a session's stats as a main tab: {id}, the one in front by default, or one outside Oriel",
+		{ID: "stats.session.open", Grant: registry.Open, Title: "Open a session's stats as a main tab: {id}, the one in front by default, or one outside Oriel",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.openSession(ctx, core.SessionID(a.String("id")))
 			}},
-		{ID: "stats.split", Title: "Split multi-repo sessions over their repos: {on}, or switch", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "stats.split", Grant: registry.Open, Title: "Split multi-repo sessions over their repos: {on}, or switch", Run: func(ctx registry.Ctx, a registry.Args) error {
 			on, ok := a["on"].(bool)
 			if !ok {
 				on = !x.split()
 			}
 			return x.setSplit(ctx, on)
 		}},
-		{ID: "usage.open", Title: "Open the Usage page: each provider's plan windows", Ex: "Usage", Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
-		{ID: "usage.refresh", Title: "Read every provider's plan windows again", Available: has, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "usage.open", Grant: registry.Open, Title: "Open the Usage page: each provider's plan windows", Ex: "Usage", Run: func(registry.Ctx, registry.Args) error { return x.openUsage() }},
+		{ID: "usage.refresh", Grant: registry.Open, Title: "Read every provider's plan windows again", Available: has, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.refreshUsage(ctx)
 		}},
 	}
@@ -224,24 +224,24 @@ func (x *Stats) commands() []registry.Command {
 // pageCommands are the Stats page's.
 func (x *Stats) pageCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "stats.open", Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside); :Stats takes them as repo=api 7d session group=model",
+		{ID: "stats.open", Grant: registry.Open, Title: "Open the Stats page: {group} by, a {range} (7d, 30d, 90d), filtered by {repo}, {provider}, {account}, {session}, {kind}, {model}, {origin} (oriel, outside); :Stats takes them as repo=api 7d session group=model",
 			Ex: "Stats", Run: func(ctx registry.Ctx, a registry.Args) error {
 				if line := a.String("args"); line != "" {
 					return x.ex(ctx, line)
 				}
 				return x.openPage(a)
 			}},
-		{ID: "stats.origin.set", Title: "Show the Stats page's sessions from {origin}: oriel, outside, or \"\" for every one", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "stats.origin.set", Grant: registry.Open, Title: "Show the Stats page's sessions from {origin}: oriel, outside, or \"\" for every one", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.setOrigin(a.String("origin"))
 		}},
-		{ID: "stats.group.set", Title: "Group the Stats page {by} repo, session, kind, model, provider, account, origin or day", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "stats.group.set", Grant: registry.Open, Title: "Group the Stats page {by} repo, session, kind, model, provider, account, origin or day", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.regroup(a.String("by"))
 		}},
-		{ID: "stats.range.step", Title: "Step the Stats page's range {step} -1 shorter or 1 longer", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "stats.range.step", Grant: registry.Open, Title: "Step the Stats page's range {step} -1 shorter or 1 longer", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.q.rng = min(max(x.q.rng+a.Int("step"), 0), len(statsRanges)-2)
 			return nil
 		}},
-		{ID: "stats.custom_range.set", Title: "Set the Stats page's custom range {range} (2026-09-01..2026-09-30), or pick it in the date picker",
+		{ID: "stats.custom_range.set", Grant: registry.Open, Title: "Set the Stats page's custom range {range} (2026-09-01..2026-09-30), or pick it in the date picker",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if a.String("range") == "" {
 					x.open, x.usageOpen, x.picking = true, false, true
@@ -255,20 +255,20 @@ func (x *Stats) pageCommands() []registry.Command {
 				x.custom(r)
 				return nil
 			}},
-		{ID: "stats.move", Title: "Move the Stats page's selection {by} rows", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "stats.move", Grant: registry.Open, Title: "Move the Stats page's selection {by} rows", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.sel = max(x.sel+a.Int("by"), 0)
 			return nil
 		}},
-		{ID: "stats.drill", Title: "Drill into the Stats page's selected row: its filter chip, regrouped", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "stats.drill", Grant: registry.Open, Title: "Drill into the Stats page's selected row: its filter chip, regrouped", Run: func(registry.Ctx, registry.Args) error {
 			return x.drillSelected()
 		}},
-		{ID: "stats.back", Title: "Back out of the Stats page's last drill", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "stats.back", Grant: registry.Open, Title: "Back out of the Stats page's last drill", Run: func(registry.Ctx, registry.Args) error {
 			if n := len(x.back); n > 0 {
 				x.q, x.back = x.back[n-1], x.back[:n-1]
 			}
 			return nil
 		}},
-		{ID: "stats.copy", Title: "Copy the Stats page's table as CSV", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "stats.copy", Grant: registry.Open, Title: "Copy the Stats page's table as CSV", Run: func(registry.Ctx, registry.Args) error {
 			kit.CopyText(x.h, x.csv())
 			return nil
 		}},

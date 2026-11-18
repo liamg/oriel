@@ -178,14 +178,14 @@ func (x *Jobs) commands() []registry.Command {
 	has := func(registry.Args) bool { return sessionkit.HasSessions(x.h) }
 	formOpen := func(registry.Args) bool { return x.form != nil }
 	return []registry.Command{
-		{ID: "jobs.open", Title: "Open the Jobs page, at a {job} by name", Ex: "Jobs", ExArg: "job", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "jobs.open", Grant: registry.Open, Title: "Open the Jobs page, at a {job} by name", Ex: "Jobs", ExArg: "job", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("job"))
 		}},
-		{ID: "jobs.new", Title: "New job: the dialog, with {title}, {prompt}, {sandbox}, {provider}, {model}, {effort} or {schedule} filled in",
+		{ID: "jobs.new", Grant: registry.Open, Title: "New job: the dialog, with {title}, {prompt}, {sandbox}, {provider}, {model}, {effort} or {schedule} filled in",
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { x.newForm(a); return nil }},
-		{ID: "jobs.edit", Title: "Edit a job in the dialog: {name}, the selected one by default", Available: has,
+		{ID: "jobs.edit", Grant: registry.Open, Title: "Edit a job in the dialog: {name}, the selected one by default", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, false) }},
-		{ID: "jobs.duplicate", Title: "Duplicate a job in the New job dialog: {name}, the selected one by default", Available: has,
+		{ID: "jobs.duplicate", Grant: registry.Open, Title: "Duplicate a job in the New job dialog: {name}, the selected one by default", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, true) }},
 		{ID: "jobs.save", Grant: string(plugin.CapSessionControl), Title: "Save a job: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {run} runs it after",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.save(ctx, a); return err }},

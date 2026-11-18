@@ -128,7 +128,7 @@ func (x *Mirror) Activate(_ context.Context, h plugin.Host) error {
 func (x *Mirror) commands() []registry.Command {
 	inFront := func(a registry.Args) bool { _, ok := x.session(a); return ok }
 	return []registry.Command{
-		{ID: "review.threads.sync", Title: "Mirror the session's pull requests' review threads now", Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "review.threads.sync", Grant: registry.Open, Title: "Mirror the session's pull requests' review threads now", Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 			se, ok := x.session(a)
 			if !ok {
 				return errors.New("no session")
@@ -136,11 +136,11 @@ func (x *Mirror) commands() []registry.Command {
 			x.sync(se.ID, true)
 			return nil
 		}},
-		{ID: "review.draft.forward", Title: "Forward the agent's draft reply on a review thread to its code host, as you: {thread, comment}", Available: inFront,
+		{ID: "review.draft.forward", Grant: string(plugin.CapGit), Title: "Forward the agent's draft reply on a review thread to its code host, as you: {thread, comment}", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.forward(a) }},
-		{ID: "review.draft.edit", Title: "Edit the agent's draft reply on a review thread before forwarding it: {thread, comment}", Available: inFront,
+		{ID: "review.draft.edit", Grant: registry.Open, Title: "Edit the agent's draft reply on a review thread before forwarding it: {thread, comment}", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.edit(a) }},
-		{ID: "review.draft.save", Title: "Save an edited draft reply: {thread, comment, body}", Available: inFront,
+		{ID: "review.draft.save", Grant: registry.Open, Title: "Save an edited draft reply: {thread, comment, body}", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.save(a) }},
 	}
 }

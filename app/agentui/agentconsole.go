@@ -139,7 +139,7 @@ func (x *Console) commands() []registry.Command {
 	}
 	inFront := func(registry.Args) bool { return h.State().Focus != "" }
 	return []registry.Command{
-		{ID: "agent.console.toggle", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "agent.console.toggle", Grant: registry.Open, Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", open)
 		}},
 		{ID: "agent.queue.remove", Grant: string(plugin.CapAgentPrompt), Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
@@ -150,26 +150,26 @@ func (x *Console) commands() []registry.Command {
 				}
 				return c.Unqueue(hostapi.UnqueueReq{Session: session(a), Index: a.Int("index"), Text: a.String("text")})
 			}},
-		{ID: "agent.console.open", Title: "Show {id}'s agent console: its session in front, and the console open on it",
+		{ID: "agent.console.open", Grant: registry.Open, Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
 					"then": kit.Then(kit.Call{Command: "view.open", Args: open})})
 			}},
-		{ID: "agent.console.next", Title: "Agent console: the next block", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
-		{ID: "agent.console.prev", Title: "Agent console: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
-		{ID: "agent.console.fold", Title: "Agent console: fold or unfold the selected block", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "agent.console.next", Grant: registry.Open, Title: "Agent console: the next block", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
+		{ID: "agent.console.prev", Grant: registry.Open, Title: "Agent console: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
+		{ID: "agent.console.fold", Grant: registry.Open, Title: "Agent console: fold or unfold the selected block", Run: func(registry.Ctx, registry.Args) error {
 			if st := x.state(h.State().Focus); st != nil && st.sel != "" {
 				st.flip[st.sel] = !st.flip[st.sel]
 			}
 			return nil
 		}},
-		{ID: "agent.console.compose", Title: "Agent console: write to the agent", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "agent.console.compose", Grant: registry.Open, Title: "Agent console: write to the agent", Run: func(registry.Ctx, registry.Args) error {
 			if st := x.state(h.State().Focus); st != nil {
 				st.compose = true
 			}
 			return nil
 		}},
-		{ID: "agent.console.cancel", Title: "Agent console: interrupt the turn, or close the console when the agent is idle",
+		{ID: "agent.console.cancel", Grant: string(plugin.CapSessionControl), Title: "Agent console: interrupt the turn, or close the console when the agent is idle",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				if se, ok := x.front(); ok && se.Agent.Working {
 					return h.Run(ctx, "session.interrupt", nil)
@@ -213,10 +213,10 @@ func (x *Console) commands() []registry.Command {
 				}
 				return x.fork(session(a), prompt)
 			}},
-		{ID: "agent.terminal.open", Title: "Show the raw terminal of {id}'s agent, or the session in front's",
+		{ID: "agent.terminal.open", Grant: registry.Open, Title: "Show the raw terminal of {id}'s agent, or the session in front's",
 			Available: func(a registry.Args) bool { return inFront(a) && x.hasTerminal(session(a)) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
-		{ID: "agent.login.start", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
+		{ID: "agent.login.start", Grant: string(plugin.CapSessionControl), Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
 		{ID: "ask.answer", Grant: string(plugin.CapGate), Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope} (a network rule's host pattern), {for} (\"all\": an always for every session, else for this one), {answers}",

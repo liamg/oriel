@@ -122,13 +122,13 @@ func (x *End) commands() []registry.Command {
 				}
 				return fmt.Errorf("a session ends by archive or delete, not %q", a.String("how"))
 			}},
-		{ID: "session.close", Title: "Close {id}, or the session in front: stop its agent and archive it, asking first when something would be lost, or archive or delete it when it's done",
+		{ID: "session.close", Grant: string(plugin.CapSessionControl), Title: "Close {id}, or the session in front: stop its agent and archive it, asking first when something would be lost, or archive or delete it when it's done",
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error {
 				return x.close(core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus))))
 			}},
 		{ID: "session.end.confirm", Grant: string(plugin.CapSessionControl), Title: "End the session as the End session dialog says", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.confirm(ctx) }},
-		{ID: "session.end.cancel", Title: "Close the End session dialog, ending nothing", Available: open,
+		{ID: "session.end.cancel", Grant: registry.Open, Title: "Close the End session dialog, ending nothing", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.ask = nil; return nil }},
 	}
 }

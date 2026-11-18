@@ -71,15 +71,15 @@ func (x *HUD) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Option(registry.OptionSpec{Name: HoldDelayOption, Type: registry.Int, Min: 0, Max: 2000, Step: 50, Default: 250, Scopes: registry.ScopeUser,
 		Help: "How long, in milliseconds, the hold key is held on its own before the HUD comes down, so a chord (⌥O) doesn't flash it."}))
 	for _, c := range []registry.Command{
-		{ID: "hud.toggle", Title: "Pin the HUD down, or put it away", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "hud.toggle", Grant: registry.Open, Title: "Pin the HUD down, or put it away", Run: func(registry.Ctx, registry.Args) error {
 			x.pinned, x.held = !x.pinned, false
 			return nil
 		}},
-		{ID: "hud.close", Title: "Put the HUD away", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "hud.close", Grant: registry.Open, Title: "Put the HUD away", Run: func(registry.Ctx, registry.Args) error {
 			x.pinned, x.held = false, false
 			return nil
 		}},
-		{ID: "hud.refresh", Title: "Build an indicator again now: {name}, or every one", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "hud.refresh", Grant: registry.Open, Title: "Build an indicator again now: {name}, or every one", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.refresh(a.String("name"))
 			return nil
 		}},

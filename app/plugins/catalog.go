@@ -275,7 +275,7 @@ func (x *Catalog) commands() []registry.Command {
 				return h.Run(context.Background(), "settings.reset", registry.Args{"name": PluginsOption, "key": str(a, "id"),
 					"scope": cmp.Or(str(a, "scope"), "user")})
 			}},
-		{ID: "plugins.review", Title: "Open the consent screen for {id}, which waits for it", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.review", Grant: registry.Open, Title: "Open the consent screen for {id}, which waits for it", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.review(str(a, "id"))
 		}},
 		{ID: "plugins.accept", UserOnly: true, Title: "Record consent to the plugin waiting in {dir}, and load it", Run: func(_ registry.Ctx, a registry.Args) error {
@@ -288,7 +288,7 @@ func (x *Catalog) commands() []registry.Command {
 			x.kick()
 			return nil
 		}},
-		{ID: "plugins.refresh", Title: "Fetch the plugin registries' indexes now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "plugins.refresh", Grant: registry.Open, Title: "Fetch the plugin registries' indexes now", Run: func(registry.Ctx, registry.Args) error {
 			x.work.Go(x.refresh)
 			return nil
 		}},

@@ -69,7 +69,7 @@ func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "s
 
 func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	focus := func(id core.SessionID, then ...kit.Call) error { return kit.Focus(h, id, then) }
-	t.Add(h.Command(registry.Command{ID: "session.focus", Title: "Focus a session: {n} counting from 1, or {id}; {then} is a list of {command, args} run once the window is on it", Run: func(_ registry.Ctx, a registry.Args) error {
+	t.Add(h.Command(registry.Command{ID: "session.focus", Grant: registry.Open, Title: "Focus a session: {n} counting from 1, or {id}; {then} is a list of {command, args} run once the window is on it", Run: func(_ registry.Ctx, a registry.Args) error {
 		if id, _ := a["id"].(string); id != "" {
 			then, err := kit.CallsOf(a["then"])
 			if err != nil {
@@ -84,10 +84,10 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return focus(ss[n-1].ID())
 	}}))
-	t.Add(h.Command(registry.Command{ID: "session.tab.close", Title: "Close the tab of {id}, or of the session in front; the session stays",
+	t.Add(h.Command(registry.Command{ID: "session.tab.close", Grant: registry.Open, Title: "Close the tab of {id}, or of the session in front; the session stays",
 		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
 		Run:       func(_ registry.Ctx, a registry.Args) error { return t.close(h, core.SessionID(a.String("id"))) }}))
-	t.Add(h.Command(registry.Command{ID: "session.tab.move", Title: "Move the tab of {id}, or of the session in front, to the {index}th place",
+	t.Add(h.Command(registry.Command{ID: "session.tab.move", Grant: registry.Open, Title: "Move the tab of {id}, or of the session in front, to the {index}th place",
 		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 1 },
 		Run: func(_ registry.Ctx, a registry.Args) error {
 			st := h.State()
@@ -100,7 +100,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 		t.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<D-%d>", n), Command: "session.focus", Args: registry.Args{"n": n},
 			Desc: fmt.Sprintf("Session %d", n)}))
 	}
-	t.Add(h.Command(registry.Command{ID: "session.tab.rename", Title: "Rename session {id}, or the one in front, in its tab",
+	t.Add(h.Command(registry.Command{ID: "session.tab.rename", Grant: string(plugin.CapSessionControl), Title: "Rename session {id}, or the one in front, in its tab",
 		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
 		Run: func(_ registry.Ctx, a registry.Args) error {
 			id := core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus)))

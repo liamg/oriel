@@ -230,14 +230,14 @@ func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.OverlayPrefix+"quit", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "quit", Fn: x.drainView}
 	})))
-	x.Add(h.Command(registry.Command{ID: "app.quit", Title: "Quit Oriel, handing its agents over",
+	x.Add(h.Command(registry.Command{ID: "app.quit", UserOnly: true, Title: "Quit Oriel, handing its agents over",
 		Run: func(registry.Ctx, registry.Args) error {
 			if q, ok := services.QuitOf(h); ok {
 				q.Quit()
 			}
 			return nil
 		}}))
-	x.Add(h.Command(registry.Command{ID: "app.quit.confirm", Title: "Quit now, not waiting for the agents' turns",
+	x.Add(h.Command(registry.Command{ID: "app.quit.confirm", UserOnly: true, Title: "Quit now, not waiting for the agents' turns",
 		Available: func(registry.Args) bool { return x.draining.Load() != nil },
 		Run: func(registry.Ctx, registry.Args) error {
 			if r := x.draining.Load(); r != nil {

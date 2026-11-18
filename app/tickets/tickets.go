@@ -105,35 +105,35 @@ func (x *Tickets) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Ex: "Tickets", ExArg: "tracker", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "tickets.open", Grant: registry.Open, Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Ex: "Tickets", ExArg: "tracker", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("tracker"))
 		}},
-		{ID: "ticket.open", Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "ticket.open", Grant: registry.Open, Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
 			key := strings.TrimSpace(a.String("ticket"))
 			if key == "" {
 				return fmt.Errorf("say which {ticket}")
 			}
 			return x.h.Run(ctx, "view.open", registry.Args{"id": kit.TicketView, "instance": key, "place": "tab"})
 		}},
-		{ID: "tickets.refresh", Title: "Ask every tracker for your tickets again now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "tickets.refresh", Grant: registry.Open, Title: "Ask every tracker for your tickets again now", Run: func(registry.Ctx, registry.Args) error {
 			x.refreshAll()
 			return nil
 		}},
-		{ID: "tickets.plan.start", Title: "Plan the ticket selected on the tickets page, or continue its session", Available: open,
+		{ID: "tickets.plan.start", Grant: string(plugin.CapSessionControl), Title: "Plan the ticket selected on the tickets page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("plan") }},
-		{ID: "tickets.work.start", Title: "Start work on the ticket selected on the tickets page, with no plan", Available: open,
+		{ID: "tickets.work.start", Grant: string(plugin.CapSessionControl), Title: "Start work on the ticket selected on the tickets page, with no plan", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("work") }},
-		{ID: "tickets.browse", Title: "Open the ticket selected on the tickets page in its tracker, in the browser", Available: open,
+		{ID: "tickets.browse", Grant: registry.Open, Title: "Open the ticket selected on the tickets page in its tracker, in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
-		{ID: "tickets.filter", Title: "Filter the tickets page's list", Available: open,
+		{ID: "tickets.filter", Grant: registry.Open, Title: "Filter the tickets page's list", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
-		{ID: "tickets.key.set", Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Ex: "TicketKey", ExArg: "tracker", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "tickets.key.set", UserOnly: true, Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Ex: "TicketKey", ExArg: "tracker", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, a.String("tracker"))
 		}},
-		{ID: "tickets.done.set", Title: "Mark a {ticket} done in its tracker", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "tickets.done.set", UserOnly: true, Title: "Mark a {ticket} done in its tracker", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.markDone(strings.TrimSpace(a.String("ticket")))
 		}},
-		{ID: "tickets.done.ask", Title: "Ask whether a {ticket} is done, as merging its session's last PR does; {session} is the session it's for",
+		{ID: "tickets.done.ask", Grant: registry.Open, Title: "Ask whether a {ticket} is done, as merging its session's last PR does; {session} is the session it's for",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				x.askDone(strings.TrimSpace(a.String("ticket")), core.SessionID(a.String("session")))
 				return nil

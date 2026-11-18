@@ -58,13 +58,13 @@ func (a *siteAsk) site() (registry.HostSite, bool) {
 func (x *CodeSites) activateSetup(h plugin.Host) {
 	open := func(registry.Args) bool { return x.ask != nil }
 	for _, c := range []registry.Command{
-		{ID: "code.setup.open", Title: "Set up a code host's server: {hostname}, as {code_host} if known; asks which host it is, its API URL and its token",
+		{ID: "code.setup.open", UserOnly: true, Title: "Set up a code host's server: {hostname}, as {code_host} if known; asks which host it is, its API URL and its token",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				return x.openSetup(a.String("hostname"), a.String("code_host"))
 			}},
-		{ID: "code.setup.save", Title: "Save the code host setup dialog", Available: open,
+		{ID: "code.setup.save", UserOnly: true, Title: "Save the code host setup dialog", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.saveSetup() }},
-		{ID: "code.setup.cancel", Title: "Close the code host setup dialog", Available: open,
+		{ID: "code.setup.cancel", Grant: registry.Open, Title: "Close the code host setup dialog", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.ask = nil; return nil }},
 	} {
 		x.Add(h.Command(c))

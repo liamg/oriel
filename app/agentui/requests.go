@@ -184,7 +184,7 @@ func (x *Requests) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "request.comment", Grant: string(plugin.CapAgentPrompt), Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
-		{ID: "request.rename", Title: "Rename a request: {thread} of {id}, the one selected by default, to {name}; with no {name}, edit it in its header",
+		{ID: "request.rename", Grant: string(plugin.CapAgentPrompt), Title: "Rename a request: {thread} of {id}, the one selected by default, to {name}; with no {name}, edit it in its header",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				a = selected(a)
 				if a.String("thread") == "" {
@@ -214,7 +214,7 @@ func (x *Requests) commands() []registry.Command {
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, false) }},
 		{ID: "request.queued.delete", Grant: string(plugin.CapAgentPrompt), Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, true) }},
-		{ID: "comment.markdown.open", Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "comment.markdown.open", Grant: registry.Open, Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.md = mdViewer{title: a.String("title"), body: a.String("body"), open: true}
 			return nil
 		}},
@@ -234,7 +234,7 @@ func (x *Requests) commands() []registry.Command {
 			}},
 		{ID: "request.new", Grant: string(plugin.CapAgentPrompt), Title: "Write a new request: {text} to start from, {context} attached, about {file}:{line} or the whole change", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.newRequest(ctx, a) }},
-		{ID: "request.open", Title: "Open a request: {thread}, the one selected by default, or with {first} the session's first, in the main area",
+		{ID: "request.open", Grant: registry.Open, Title: "Open a request: {thread}, the one selected by default, or with {first} the session's first, in the main area",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				st := x.state("")
 				if t := a.String("thread"); t != "" {
@@ -244,29 +244,29 @@ func (x *Requests) commands() []registry.Command {
 				}
 				return x.openRequest(ctx)
 			}},
-		{ID: "request.next", Title: "Requests: the next request", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
-		{ID: "request.prev", Title: "Requests: the request before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
-		{ID: "request.compose", Title: "Requests: write to the selected request", Available: inFront, Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "request.next", Grant: registry.Open, Title: "Requests: the next request", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
+		{ID: "request.prev", Grant: registry.Open, Title: "Requests: the request before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
+		{ID: "request.compose", Grant: registry.Open, Title: "Requests: write to the selected request", Available: inFront, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			st := x.state("")
 			x.draftFor(st, x.target(st)).compose = true
 			return x.openRequest(ctx)
 		}},
-		{ID: "request.anchor", Title: "Requests: open the selected request's anchor in the editor, where it is now, or at {line}", Available: inFront,
+		{ID: "request.anchor", Grant: registry.Open, Title: "Requests: open the selected request's anchor in the editor, where it is now, or at {line}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.openAnchor(ctx, a.Int("line")) }},
 		{ID: "request.send", Grant: string(plugin.CapAgentPrompt), Title: "Requests: send what's in the composer; {urgent} interrupts the turn", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				st := x.state("")
 				return x.send(ctx, st, x.target(st), a.Bool("urgent"))
 			}},
-		{ID: "request.attach", Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
+		{ID: "request.attach", Grant: registry.Open, Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
 		{ID: "thread.new", Grant: string(plugin.CapAgentPrompt), Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
-		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
+		{ID: "threads.toggle", Grant: registry.Open, Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
-		{ID: "threads.open", Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
+		{ID: "threads.open", Grant: registry.Open, Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.showThreads(a) }},
-		{ID: "requests.summary.toggle", Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "requests.summary.toggle", Grant: registry.Open, Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", registry.Args{"id": SummaryView, "place": "dock", "edge": "right", "size": 380, "title": "Session"})
 		}},
 	}

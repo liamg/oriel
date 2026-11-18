@@ -187,7 +187,7 @@ func (s *Settings) fresh(ctx context.Context, files ...*settingsFile) {
 func (s *Settings) commands() []registry.Command {
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return strings.TrimSpace(v) }
 	return []registry.Command{
-		{ID: "settings.open", Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: "Settings", ExArg: "query",
+		{ID: "settings.open", Grant: registry.Open, Title: "Open the settings page at a {section}, or a {query}: one naming a section opens it", Ex: "Settings", ExArg: "query",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if sec := str(a, "section"); sec != "" {
 					s.open, s.section, s.query = true, sec, str(a, "query")
@@ -218,7 +218,7 @@ func (s *Settings) commands() []registry.Command {
 			return s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope)
 		}},
 		{ID: "settings.undo", UserOnly: true, Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
-		{ID: "settings.reload", Title: "Read the settings files again", Run: func(registry.Ctx, registry.Args) error { s.Reload(); return nil }},
+		{ID: "settings.reload", Grant: registry.Open, Title: "Read the settings files again", Run: func(registry.Ctx, registry.Args) error { s.Reload(); return nil }},
 		{ID: "settings.trust", UserOnly: true, Title: "Trust a project's settings file, as it is now: {path}",
 			Run: func(_ registry.Ctx, a registry.Args) error { return s.trustFile(str(a, "path")) }},
 	}

@@ -202,24 +202,24 @@ func (x *Diff) commands() []registry.Command {
 		return on(func(st *diffState, _ registry.Args) error { fn(st, d); return nil })
 	}
 	return []registry.Command{
-		{ID: "diff.open", Title: "Open the diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch, or {against} \"head\" for what isn't committed; at the file's {line}, of its {side} old or new (the default)",
+		{ID: "diff.open", Grant: registry.Open, Title: "Open the diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch, or {against} \"head\" for what isn't committed; at the file's {line}, of its {side} old or new (the default)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.open(ctx, a.String("path"), a.Int("line"), a.String("side") == "old", a.String("against") == "head")
 			}},
-		{ID: "diff.layout.toggle", Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "diff.layout.toggle", Grant: registry.Open, Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
 			if l == "" {
 				l = map[string]string{"split": "unified", "unified": "split"}[x.layout()]
 			}
 			return h.Options().Set("diff.layout", registry.LayerUser, registry.At{}, l)
 		}},
-		{ID: "diff.hunk.next", Title: "Diff: the next hunk", Available: has, Run: move(x.moveHunk, 1)},
-		{ID: "diff.hunk.prev", Title: "Diff: the hunk before", Available: has, Run: move(x.moveHunk, -1)},
-		{ID: "diff.line.next", Title: "Diff: the next line", Available: has, Run: move(x.moveLine, 1)},
-		{ID: "diff.line.prev", Title: "Diff: the line before", Available: has, Run: move(x.moveLine, -1)},
-		{ID: "diff.review", Title: "Mark the selected hunk reviewed, or not again; or {path}'s hunk {hunk} (0-based)", Available: has,
+		{ID: "diff.hunk.next", Grant: registry.Open, Title: "Diff: the next hunk", Available: has, Run: move(x.moveHunk, 1)},
+		{ID: "diff.hunk.prev", Grant: registry.Open, Title: "Diff: the hunk before", Available: has, Run: move(x.moveHunk, -1)},
+		{ID: "diff.line.next", Grant: registry.Open, Title: "Diff: the next line", Available: has, Run: move(x.moveLine, 1)},
+		{ID: "diff.line.prev", Grant: registry.Open, Title: "Diff: the line before", Available: has, Run: move(x.moveLine, -1)},
+		{ID: "diff.review", Grant: registry.Open, Title: "Mark the selected hunk reviewed, or not again; or {path}'s hunk {hunk} (0-based)", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error { return x.reviewHunk(st, hunkArg(st, a)) })},
-		{ID: "diff.file.review", Title: "Mark every hunk of {path} (the selected file if none) reviewed, or {reviewed}", Available: has,
+		{ID: "diff.file.review", Grant: registry.Open, Title: "Mark every hunk of {path} (the selected file if none) reviewed, or {reviewed}", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				var want *bool
 				if v, ok := a["reviewed"].(bool); ok {
@@ -227,24 +227,24 @@ func (x *Diff) commands() []registry.Command {
 				}
 				return x.reviewFile(st, cmp.Or(a.String("path"), st.sel.file), want)
 			})},
-		{ID: "diff.comment", Title: "Open a thread on the selected line of the diff, or its hunk's lines: {to} the agent or the author, as thread.new", Available: has, Run: on(x.comment)},
-		{ID: "diff.explain", Title: "Explain the code unit of the selected line (" + ExplainUnit + ")", Available: has, Run: on(x.explain)},
-		{ID: "diff.source.open", Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
-		{ID: "diff.wrap.toggle", Title: "Wrap the diff's long lines, or stop wrapping them: {wrap}, or the other way (the editor's 'wrap')", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "diff.comment", Grant: string(plugin.CapAgentPrompt), Title: "Open a thread on the selected line of the diff, or its hunk's lines: {to} the agent or the author, as thread.new", Available: has, Run: on(x.comment)},
+		{ID: "diff.explain", Grant: string(plugin.CapAgentPrompt), Title: "Explain the code unit of the selected line (" + ExplainUnit + ")", Available: has, Run: on(x.explain)},
+		{ID: "diff.source.open", Grant: registry.Open, Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
+		{ID: "diff.wrap.toggle", Grant: registry.Open, Title: "Wrap the diff's long lines, or stop wrapping them: {wrap}, or the other way (the editor's 'wrap')", Run: func(_ registry.Ctx, a registry.Args) error {
 			on, ok := a["wrap"].(bool)
 			if !ok {
 				on = !x.wraps()
 			}
 			return x.setWrap(on)
 		}},
-		{ID: "diff.context.expand", Title: "Show unchanged lines the diff hides: {path}'s (the selected file's) gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines} (20); without a gap, both ways around the selected hunk, or with {all} every one",
+		{ID: "diff.context.expand", Grant: registry.Open, Title: "Show unchanged lines the diff hides: {path}'s (the selected file's) gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines} (20); without a gap, both ways around the selected hunk, or with {all} every one",
 			Available: has, Run: on(x.moreContext)},
-		{ID: "diff.lines.scroll", Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
+		{ID: "diff.lines.scroll", Grant: registry.Open, Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				st.pan = append(st.pan, diffPan{file: st.sel.file, columns: a.Int("columns"), halves: a.Int("halves")})
 				return nil
 			})},
-		{ID: "diff.expand", Title: "Show or fold a file of the diff: {path}, the selected one if none", Available: has,
+		{ID: "diff.expand", Grant: registry.Open, Title: "Show or fold a file of the diff: {path}, the selected one if none", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				p := cmp.Or(a.String("path"), st.sel.file)
 				st.open[p] = !st.open[p]
