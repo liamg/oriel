@@ -283,7 +283,7 @@ function oriel.inbox.remove(id) end
 ---@class oriel.keymap
 oriel.keymap = {}
 
---- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
+--- Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping). A plugin needs the keymap capability, and may bind only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.
 ---@param modes string|string[]
 ---@param lhs string
 ---@param rhs any

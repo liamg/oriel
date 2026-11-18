@@ -71,7 +71,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.inbox.remove(id)", Doc: "Takes the inbox card id away: answered, it stays in the inbox's history.", Cap: "ui"},
 	},
 	"keymap": {
-		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).", Cap: "ui"},
+		{Call: "oriel.keymap.set(modes, lhs, rhs, opts?)", Doc: "Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping). A plugin needs the keymap capability, and may bind only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.", Cap: "keymap"},
 	},
 	"language": {
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.", Cap: "ui"},

@@ -79,7 +79,7 @@ says which it needs. Some take a scope:
 | `agent.tools` | `tools = [...]` |
 
 The rest take only `why`: `editor.read`, `editor.write`, `input.observe`, `agent.read`, `agent.prompt`,
-`agent.provider`, `gate`, `session.control`, `git`, `clipboard`, `settings`. The install help page
+`agent.provider`, `gate`, `session.control`, `git`, `clipboard`, `settings`, `keymap`. The install help page
 (`plugins/install`) gives each one's risk, and what needs it.
 
 Installing is all or nothing: the user grants every capability listed, or none. Anything not declared is refused when
@@ -202,7 +202,9 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
   who may do what is yours alone, and no plugin can run it: installing, enabling or updating plugins and accepting
   their consent, settings, secrets, code hosts, updating Oriel, and running Lua as your config (`lua.eval`).
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
-  panel's own mode.
+  panel's own mode. It needs the `keymap` capability, and a key may run only what the plugin could run itself with
+  `oriel.run`: a command already registered, whose capability it holds, never one that's yours alone. Binding one
+  that isn't fails at once, naming the command.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`
   (the default), `project` or `global`.
 

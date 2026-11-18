@@ -187,6 +187,8 @@ func Explain(g Grant) string {
 		return "start, stop and resume sessions"
 	case CapGit:
 		return "stage, commit and push, and raise and review pull requests, as you"
+	case CapKeymap:
+		return "bind keys to commands it may run itself"
 	case CapClipboard:
 		return "read the clipboard, by pasting it"
 	case CapSettings:

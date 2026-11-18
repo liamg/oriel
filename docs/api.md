@@ -92,7 +92,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.keymap
 
-- `oriel.keymap.set(modes, lhs, rhs, opts?)` (`ui`): Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping).
+- `oriel.keymap.set(modes, lhs, rhs, opts?)` (`keymap`): Map keys in one or more modes (n, i, x, a panel's own) to a command id, or a Lua function. opts: desc, args, nowait (run at once, not waiting for a longer mapping). A plugin needs the keymap capability, and may bind only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.
 
 ## oriel.language
 

@@ -40,7 +40,7 @@ func TestPluginLuaGuard(t *testing.T) {
 		t.Fatal(err)
 	}
 	vm := s.PluginVM(p)
-	if err := luaErr(t, vm, `oriel.keymap.set("n", "<leader>x", "noop"); oriel.command("X", function() end)
+	if err := luaErr(t, vm, `oriel.command("X", function() end)
 own = oriel.read("notes.txt")`); err != "" {
 		t.Fatalf("ui and its own files: %s", err)
 	}
@@ -48,6 +48,7 @@ own = oriel.read("notes.txt")`); err != "" {
 		t.Errorf("reading its own file: %v", got)
 	}
 	for src, capability := range map[string]string{
+		`oriel.keymap.set("n", "<leader>x", "X")`:                             `"keymap"`,
 		`oriel.exec({ "true" })`:                                              `"exec"`,
 		`oriel.process.spawn("true")`:                                         `"exec"`,
 		`oriel.read("/etc/hostname")`:                                         `"fs.read"`,
@@ -184,6 +185,57 @@ func TestPluginRewritesNeedTheGateCapability(t *testing.T) {
 	commit = &ship.ShipCommit{Message: "fix: routes"}
 	if _, errs := s.Registry().Fire(context.Background(), "ShipCommit", "", commit); len(errs) != 0 || commit.Message != "fix: routes (tidied)" {
 		t.Errorf("granted gate, the rewrite: %q, errors %v", commit.Message, errs)
+	}
+}
+
+// A plugin binds keys only with the keymap capability, and only to what it could run itself with oriel.run: a key
+// it binds runs as the user when pressed. A command needing exec needs exec too; one that's the user's alone, or a
+// function of the user's own config, can't be bound at all. The user's own init.lua maps anything.
+func TestPluginKeysNeedTheKeymapCapability(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.keymap.set("n", "<leader>ue", "lua.eval", { args = { args = "print(1)" } })
+mine = function() end
+oriel.keymap.set("n", "<leader>um", mine)
+`)
+	if len(s.Registry().KeymapsFor("lua.eval")) == 0 {
+		t.Fatal("init.lua's binding of lua.eval is gone")
+	}
+	var own string
+	for _, k := range s.Registry().Keymaps() {
+		if k.Keys == "<Space>um" || strings.HasSuffix(k.Keys, "um") {
+			own = k.Command
+		}
+	}
+	if own == "" {
+		t.Fatal("init.lua's binding of its own function is gone")
+	}
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/keys", Guard: g})
+	bind := func(cmd, args string) string {
+		return luaErr(t, vm, `oriel.keymap.set("n", "<leader>k", "`+cmd+`", { args = `+args+` })`)
+	}
+	if err := bind("about.toggle", "{}"); !strings.Contains(err, `"keymap" capability isn't declared`) {
+		t.Errorf("binding a key without keymap: %q", err)
+	}
+	g.Grant("acme/keys", []plugin.Grant{{Cap: plugin.CapKeymap}})
+	for cmd, want := range map[string]string{
+		"term.open": `"exec" capability`,
+		"lua.eval":  "only you can run lua.eval",
+		own:         "only you can run " + own,
+		"acme.none": "no command acme.none to bind yet",
+	} {
+		if err := bind(cmd, `{ cmd = "bash" }`); !strings.Contains(err, want) {
+			t.Errorf("binding %s: %q, want %q", cmd, err, want)
+		}
+	}
+	if err := bind("about.toggle", "{}"); err != "" {
+		t.Errorf("binding an open command with keymap: %q", err)
+	}
+	g.Grant("acme/keys", []plugin.Grant{{Cap: plugin.CapKeymap}, {Cap: plugin.CapExec, Scope: []string{"bash"}}})
+	if err := bind("term.open", `{ cmd = "bash" }`); err != "" {
+		t.Errorf("binding term.open with keymap and exec for bash: %q", err)
+	}
+	if len(s.Registry().KeymapsFor("term.open")) == 0 {
+		t.Error("the granted binding of term.open isn't there")
 	}
 }
 
