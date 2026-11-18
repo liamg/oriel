@@ -182,6 +182,7 @@ func TestUpdateCardShowsEveryVersionItGoesPast(t *testing.T) {
 		t.Errorf("the card shows a release older than the running one:\n%s", text)
 	}
 	s.Lint("the update card over three versions")
+	s.Golden("update-card-versions")
 }
 
 func hasNotice(st core.State, id string) bool {

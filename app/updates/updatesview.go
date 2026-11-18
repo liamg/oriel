@@ -189,6 +189,19 @@ func updateStepRow(c *ui.Ctx, key any, l updateLine) {
 	})
 }
 
+// versionRule heads one release's notes on the card: its version in the accent, when it came out, and a rule across.
+func versionRule(c *ui.Ctx, m update.Manifest) {
+	th := c.Theme()
+	c.Row("v", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Text("n", m.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12.5, Weight: typeset.Medium},
+			Color: th.C(theme.Accent)})
+		if !m.Published.IsZero() {
+			c.Text("at", m.Published.Format("2 Jan 2006"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+		}
+		widget.Rule(c, "rule")
+	})
+}
+
 // notesOf is a release's notes as the card shows them: those with nothing say so, as a generated release's notes do.
 func notesOf(m update.Manifest) string {
 	if n := strings.TrimSpace(m.Notes); n != "" {
@@ -228,12 +241,12 @@ func (x *Update) cardView(c *ui.Ctx) {
 			if len(changes) == 0 {
 				changes = []update.Manifest{m}
 			}
-			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}, Gap: 12},
+			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}, Gap: 14},
 				func(c *ui.Ctx) {
 					for i, ch := range changes {
-						c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
+						c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 							if len(changes) > 1 {
-								c.Text("v", ch.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
+								versionRule(c, ch)
 							}
 							markdown.Text(c, x.h, "md", notesOf(ch), 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 						})
