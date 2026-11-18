@@ -188,7 +188,10 @@ L.keymap.set("n", "<leader>S", "Saves", { desc = "Saves" })
 L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggle", args = panel, order = 60 }
 ```
 
-- `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
+- `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments. With
+  `opts.args`, a list of `{ name, type, required, doc }`, a run with a key it doesn't name, a value of the wrong type
+  or a required one missing fails, saying so; without it, the command takes anything. Every built-in command
+  declares its arguments, so `oriel.run` with a misspelled key fails rather than doing the wrong thing.
 - `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. Every built-in command says what a plugin
   needs to run it, and one that does what a capability guards needs it: `term.open`, the `test.*` runs and
   `debug.start` need `exec` (a terminal's for the program it runs), `git.commit`, `ship.push` and `ship.raise` `git`,
