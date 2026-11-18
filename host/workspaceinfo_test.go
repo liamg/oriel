@@ -42,14 +42,14 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	a := s.agent()
 	b := s.keptBox(id)
 	a.WaitSent(t)
-	ws, err := s.w.Workspace(context.Background(), id)
+	ws, err := s.w.boxes.Workspace(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ws.Sandboxed || !ws.Running || ws.Backend != "fake" || ws.Image != "img:1" || !ws.Rebuild || ws.Root != b.Root() {
 		t.Errorf("workspace = %+v", ws)
 	}
-	if c, err := s.w.SandboxShell(context.Background(), id, ""); err != nil || len(c.Argv) != 3 || c.Argv[2] != b.Root() {
+	if c, err := s.w.boxes.SandboxShell(context.Background(), id, ""); err != nil || len(c.Argv) != 3 || c.Argv[2] != b.Root() {
 		t.Errorf("the sandbox's shell = %+v, %v", c, err)
 	}
 	i := slices.IndexFunc(ws.Paths, func(p hostapi.WorkspacePath) bool { return p.Name == "Scratchpad" })
@@ -59,7 +59,7 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	if len(ws.Paths) == 0 || ws.Paths[0].Host == "" || ws.Paths[0].Name == "Scratchpad" {
 		t.Errorf("the project doesn't lead the paths: %+v", ws.Paths)
 	}
-	if err := s.w.RebuildSandbox(context.Background(), id); err != nil {
+	if err := s.w.boxes.RebuildSandbox(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
 	if got := <-ib.rebuilt; got != b.Root() {
@@ -74,17 +74,17 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 func TestWorkspaceUnsandboxed(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: r.repo.Dir})
-	ws, err := r.w.Workspace(context.Background(), id)
+	ws, err := r.w.boxes.Workspace(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if ws.Sandboxed || ws.Root == "" {
 		t.Errorf("workspace = %+v", ws)
 	}
-	if _, err := r.w.SandboxShell(context.Background(), id, ""); err == nil {
+	if _, err := r.w.boxes.SandboxShell(context.Background(), id, ""); err == nil {
 		t.Error("a shell in a sandbox that isn't there")
 	}
-	if err := r.w.RestartSandbox(id); err == nil {
+	if err := r.w.boxes.RestartSandbox(id); err == nil {
 		t.Error("restarted a sandbox that isn't there")
 	}
 }
@@ -106,7 +106,7 @@ func TestOpenNetworkStillGoesThroughTheHost(t *testing.T) {
 	if se := s.session(id); len(se.Asks) != 0 {
 		t.Errorf("an open session asked: %+v", se.Asks)
 	}
-	if p, _ := s.w.Permissions(context.Background(), id); p.Filtered {
+	if p, _ := s.w.boxes.Permissions(context.Background(), id); p.Filtered {
 		t.Error("an open session reads as filtered")
 	}
 }

@@ -35,7 +35,7 @@ func (k *kinds) Get(kind core.Kind) (core.KindSpec, bool) {
 }
 
 // SetKinds sets where the host finds its kinds of session; nil is the built-ins.
-func (w *Host) SetKinds(src hostapi.KindSource) {
+func (w *Host) setKinds(src hostapi.KindSource) {
 	defer w.env.Recover("SetKinds", nil)
 	w.kinds.mu.Lock()
 	defer w.kinds.mu.Unlock()

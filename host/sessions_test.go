@@ -125,11 +125,11 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 		t.Error("a plan made worktrees before Start work")
 	}
 	// The plan's own thread doesn't hold up Start work; another open one does.
-	tid, _ := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "PLAN.md", Line: 3}, Body: "half-up?"})
+	tid, _ := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "PLAN.md", Line: 3}, Body: "half-up?"})
 	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err == nil {
 		t.Fatal("Start work with a thread open")
 	}
-	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadDeferred}); err != nil {
+	if err := r.w.run.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadDeferred}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
@@ -326,7 +326,7 @@ func TestReviewChecksOutTheSourcesRef(t *testing.T) {
 	origin.Git("checkout", "-q", "main")
 	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
 	clone.Git("clone", "-q", origin.Dir, ".")
-	if _, err := r.w.Add(ctx, clone.Dir, core.RepoAdded); err != nil {
+	if _, err := r.w.repos.Add(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
 	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://gitlab.com/group/gateway/-/merge_requests/57",
@@ -356,7 +356,7 @@ func TestNewRepoInitsAndRegisters(t *testing.T) {
 	if out := (&gittest.Repo{T: t, Dir: dir}).Git("log", "--oneline"); strings.Count(out, "\n") != 1 {
 		t.Errorf("log = %q, want one commit", out)
 	}
-	if _, ok := r.w.Find(dir); !ok {
+	if _, ok := r.w.repos.Find(dir); !ok {
 		t.Error("the new repo isn't registered")
 	}
 	se := r.session(id)
@@ -432,14 +432,14 @@ func TestArchiveKeepsThreadsAndTranscriptSearchable(t *testing.T) {
 	if !se.Archived || se.Status != core.StatusOff || len(se.Threads) != 1 || len(se.Transcript) != 1 {
 		t.Fatalf("archived session after a restart: %+v", se)
 	}
-	if hits := r.w.Search(hostapi.SearchReq{Query: "banker"}); len(hits) != 0 {
+	if hits := r.w.logs.Search(hostapi.SearchReq{Query: "banker"}); len(hits) != 0 {
 		t.Errorf("archived sessions show without asking: %+v", hits)
 	}
-	hits := r.w.Search(hostapi.SearchReq{Query: "BANKER", Archived: true})
+	hits := r.w.logs.Search(hostapi.SearchReq{Query: "BANKER", Archived: true})
 	if len(hits) != 1 || hits[0].Thread == "" {
 		t.Errorf("thread hits = %+v", hits)
 	}
-	hits = r.w.Search(hostapi.SearchReq{Query: "minus infinity", Archived: true})
+	hits = r.w.logs.Search(hostapi.SearchReq{Query: "minus infinity", Archived: true})
 	if len(hits) != 1 || hits[0].Item != "i1" {
 		t.Errorf("transcript hits = %+v", hits)
 	}
@@ -517,7 +517,7 @@ func TestNextPRAfterMergingIntoTheDefaultBranch(t *testing.T) {
 	if _, err := wt.Run(ctx, "commit", "-qm", "round half even"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.w.ShipMergeDefault(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
+	if _, err := r.w.code.ShipMergeDefault(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name}); err != nil {

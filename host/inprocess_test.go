@@ -33,7 +33,7 @@ func TestTheAppSharesTheHostsStore(t *testing.T) {
 	if st.Machine.OS == "" || st.Machine.Sampled.IsZero() {
 		t.Errorf("machine = %+v", st.Machine)
 	}
-	if hits := r.w.Search(hostapi.SearchReq{Query: "hi"}); len(hits) != 1 {
+	if hits := r.w.logs.Search(hostapi.SearchReq{Query: "hi"}); len(hits) != 1 {
 		t.Errorf("search = %+v", hits)
 	}
 }
@@ -123,11 +123,11 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 	<-sampled
 	r.clock.breakWith("")
 
-	r.w.SetApp(hostapi.App{Decide: func(context.Context, hostapi.Decide) hostapi.Verdict { panic("a hook broke") }})
+	r.w.setApp(hostapi.App{Decide: func(context.Context, hostapi.Decide) hostapi.Verdict { panic("a hook broke") }})
 	id, a := r.workSession("Work")
 	ans := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "ls"})
 	r.eventually(id, "the card, as no hook answered", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "allow"}); err != nil {
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow {

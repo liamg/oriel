@@ -21,7 +21,7 @@ import (
 // prompt's first line when there's none (crit's internal/job).
 func TestJobsAreOneFileEach(t *testing.T) {
 	r := newRig(t)
-	j, err := r.w.SaveJob(hostapi.Job{Prompt: "# Sweep stale deps, keep major versions\nIn api, web and pricing, bump every dependency."})
+	j, err := r.w.jobs.SaveJob(hostapi.Job{Prompt: "# Sweep stale deps, keep major versions\nIn api, web and pricing, bump every dependency."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,27 +37,27 @@ func TestJobsAreOneFileEach(t *testing.T) {
 		t.Errorf("on disk: %s (%v)", b, err)
 	}
 	// A new job whose name is taken steps aside; an edit names its job and rewrites it.
-	again, _ := r.w.SaveJob(hostapi.Job{Title: j.Title, Prompt: "something else"})
+	again, _ := r.w.jobs.SaveJob(hostapi.Job{Title: j.Title, Prompt: "something else"})
 	if again.Name != j.Name+"-2" {
 		t.Errorf("second job = %q", again.Name)
 	}
 	r.setNow(r.now().Add(time.Hour))
 	j.Prompt, j.Schedule = "Bump the deps.", hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}
-	edited, err := r.w.SaveJob(j)
+	edited, err := r.w.jobs.SaveJob(j)
 	if err != nil || edited.Name != j.Name || edited.Prompt != "Bump the deps." || !edited.CreatedAt.Equal(onDisk.CreatedAt) || !edited.UpdatedAt.Equal(r.now()) {
 		t.Errorf("edited = %+v (%v)", edited, err)
 	}
-	if _, err := r.w.SaveJob(hostapi.Job{Title: "nothing to do"}); err == nil {
+	if _, err := r.w.jobs.SaveJob(hostapi.Job{Title: "nothing to do"}); err == nil {
 		t.Error("a job with no prompt saved")
 	}
-	jobs := r.w.Jobs()
+	jobs := r.w.jobs.Jobs()
 	if len(jobs) != 2 || jobs[0].Name != j.Name {
 		t.Errorf("jobs = %+v", jobs)
 	}
-	if err := r.w.DeleteJob(again.Name); err != nil {
+	if err := r.w.jobs.DeleteJob(again.Name); err != nil {
 		t.Fatal(err)
 	}
-	if len(r.w.Jobs()) != 1 {
+	if len(r.w.jobs.Jobs()) != 1 {
 		t.Error("the deleted job is still listed")
 	}
 }
@@ -65,8 +65,8 @@ func TestJobsAreOneFileEach(t *testing.T) {
 // A run is a session of kind job in a fresh workspace, given the prompt as JOB.md, on the job's pins.
 func TestAJobRunsAsAJobSession(t *testing.T) {
 	r := newRig(t)
-	j, _ := r.w.SaveJob(hostapi.Job{Title: "Sweep stale deps", Prompt: "Bump every dependency that's behind.", Effort: "high"})
-	id, err := r.w.RunJob(context.Background(), j.Name)
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Title: "Sweep stale deps", Prompt: "Bump every dependency that's behind.", Effort: "high"})
+	id, err := r.w.jobs.RunJob(context.Background(), j.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 	if se.Name != "job: sweep stale deps" {
 		t.Errorf("the run's name = %q", se.Name)
 	}
-	if _, err := r.w.RunJob(context.Background(), "nope"); err == nil {
+	if _, err := r.w.jobs.RunJob(context.Background(), "nope"); err == nil {
 		t.Error("ran a job that isn't there")
 	}
 }
@@ -99,9 +99,9 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 // stopped by you before either.
 func TestRunStatuses(t *testing.T) {
 	r := newRig(t)
-	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
 	run := func() (core.SessionID, string, *agenttest.FakeSession) {
-		id, err := r.w.RunJob(context.Background(), j.Name)
+		id, err := r.w.jobs.RunJob(context.Background(), j.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -148,9 +148,9 @@ func TestRunStatuses(t *testing.T) {
 // A stop records who (you, the agent, the worker on shutdown), so the row says "Stopped by you".
 func TestAStopSaysWho(t *testing.T) {
 	r := newRig(t)
-	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
 	ctx := context.Background()
-	quits, _ := r.w.RunJob(ctx, j.Name)
+	quits, _ := r.w.jobs.RunJob(ctx, j.Name)
 	// the agent's process ends by itself
 	if err := r.agent().Close(); err != nil {
 		t.Fatal(err)
@@ -158,7 +158,7 @@ func TestAStopSaysWho(t *testing.T) {
 	if got := hostapi.RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Live() })); got.StoppedBy != core.StoppedByAgent {
 		t.Errorf("an agent that quit: %+v", got)
 	}
-	shut, _ := r.w.RunJob(ctx, j.Name)
+	shut, _ := r.w.jobs.RunJob(ctx, j.Name)
 	r.agent()
 	r.restart()
 	if got := hostapi.RunOf(r.session(shut)); got.Status != hostapi.RunStopped {
@@ -178,11 +178,11 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 12, 6, 0, 0, 0, time.UTC)) // Monday
 	r.restart()
-	j, err := r.w.SaveJob(hostapi.Job{Prompt: "Triage CI on my open PRs", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
+	j, err := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Triage CI on my open PRs", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, _ := r.w.SaveJob(hostapi.Job{Prompt: "Weekly changelog", Schedule: hostapi.Schedule{Every: hostapi.EveryWeek, Days: []time.Weekday{time.Sunday}, At: "09:00"}})
+	other, _ := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Weekly changelog", Schedule: hostapi.Schedule{Every: hostapi.EveryWeek, Days: []time.Weekday{time.Sunday}, At: "09:00"}})
 	runs := func(name string) int {
 		n := 0
 		for _, se := range r.w.store.State().Sessions {
@@ -197,7 +197,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	}
 	r.setNow(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)) // Wednesday: Monday's, Tuesday's and Wednesday's 07:00 missed
 	r.open()
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := runs(j.Name); n != 1 {
 		t.Fatalf("after three missed occurrences, %d runs; want one", n)
 	}
@@ -205,7 +205,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 		t.Errorf("a job with nothing missed ran %d times", n)
 	}
 	r.setNow(r.now().Add(time.Minute))
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := runs(j.Name); n != 1 {
 		t.Errorf("the next look ran it again: %d runs", n)
 	}
@@ -216,20 +216,20 @@ func TestSkippedRunsAreKept(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
 	r.restart()
-	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Triage CI", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Triage CI", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
 	r.setNow(time.Date(2026, 10, 14, 7, 0, 30, 0, time.UTC))
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	r.agent()
 	for _, day := range []int{15, 16} {
 		r.setNow(time.Date(2026, 10, day, 7, 0, 30, 0, time.UTC))
-		r.w.RunDue(context.Background())
+		r.w.jobs.RunDue(context.Background())
 	}
-	got := r.w.Jobs()[0].Skips
+	got := r.w.jobs.Jobs()[0].Skips
 	if len(got) != 2 || got[0].Day() != 15 || got[1].Day() != 16 {
 		t.Errorf("skips = %v", got)
 	}
 	j.Prompt = "Triage CI, quickly"
-	if saved, _ := r.w.SaveJob(j); len(saved.Skips) != 2 {
+	if saved, _ := r.w.jobs.SaveJob(j); len(saved.Skips) != 2 {
 		t.Errorf("an edit forgot the skips: %v", saved.Skips)
 	}
 }
@@ -237,9 +237,9 @@ func TestSkippedRunsAreKept(t *testing.T) {
 // Delete throws the workspace away: its worktrees and the session go, the repos stay.
 func TestDeleteThrowsARunAway(t *testing.T) {
 	r := newRig(t)
-	j, _ := r.w.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Sweep stale deps"})
 	ctx := context.Background()
-	id, _ := r.w.RunJob(ctx, j.Name)
+	id, _ := r.w.jobs.RunJob(ctx, j.Name)
 	r.agent()
 	if err := r.w.AddRepo(ctx, hostapi.AddRepoReq{Session: id, Repo: core.RepoID(r.repo.Dir)}); err != nil {
 		t.Fatal(err)
@@ -269,7 +269,7 @@ func TestDeleteThrowsARunAway(t *testing.T) {
 	if _, err := r.w.session(id); err == nil {
 		t.Error("the deleted run came back after a restart")
 	}
-	if len(r.w.Jobs()) != 1 {
+	if len(r.w.jobs.Jobs()) != 1 {
 		t.Error("deleting a run deleted its job")
 	}
 }
@@ -279,7 +279,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
 	r.restart()
-	j, err := r.w.SaveJob(hostapi.Job{Prompt: "Triage CI on my open PRs", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
+	j, err := r.w.jobs.SaveJob(hostapi.Job{Prompt: "Triage CI on my open PRs", Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,33 +292,33 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 		}
 		return out
 	}
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := len(runs()); n != 0 {
 		t.Fatalf("%d runs before 07:00", n)
 	}
 	r.setNow(time.Date(2026, 10, 14, 7, 0, 20, 0, time.UTC))
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := len(runs()); n != 1 {
 		t.Fatalf("%d runs at 07:00, want 1", n)
 	}
 	a := r.agent()
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := len(runs()); n != 1 {
 		t.Fatalf("a second run in the same minute: %d", n)
 	}
 	// Thursday 07:00, and Wednesday's run is still going: skipped.
 	r.setNow(time.Date(2026, 10, 15, 7, 0, 5, 0, time.UTC))
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := len(runs()); n != 1 {
 		t.Fatalf("a run started while the last was still going: %d", n)
 	}
-	if got := r.w.Jobs()[0].Skips; len(got) != 1 || !got[0].Equal(time.Date(2026, 10, 15, 7, 0, 0, 0, time.UTC)) {
+	if got := r.w.jobs.Jobs()[0].Skips; len(got) != 1 || !got[0].Equal(time.Date(2026, 10, 15, 7, 0, 0, 0, time.UTC)) {
 		t.Errorf("skips = %v", got)
 	}
 	tid := string(runs()[0].Threads[0].ID)
 	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Nothing failing."})
 	r.setNow(time.Date(2026, 10, 16, 7, 1, 0, 0, time.UTC))
-	r.w.RunDue(context.Background())
+	r.w.jobs.RunDue(context.Background())
 	if n := len(runs()); n != 2 {
 		t.Fatalf("Friday's run didn't start: %d runs", n)
 	}
@@ -328,11 +328,11 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 // names itself: it starts with none, and add_project adds one as a worktree it can work in.
 func TestAJobRunsInAutoModeAndAddsItsProjects(t *testing.T) {
 	r := newRig(t)
-	if _, err := r.w.AddRepoPath(context.Background(), r.repo.Dir); err != nil {
+	if _, err := r.w.repos.AddRepoPath(context.Background(), r.repo.Dir); err != nil {
 		t.Fatal(err)
 	}
-	j, _ := r.w.SaveJob(hostapi.Job{Title: "Sweep stale deps", Prompt: "Bump every dependency in pricing."})
-	id, err := r.w.RunJob(context.Background(), j.Name)
+	j, _ := r.w.jobs.SaveJob(hostapi.Job{Title: "Sweep stale deps", Prompt: "Bump every dependency in pricing."})
+	id, err := r.w.jobs.RunJob(context.Background(), j.Name)
 	if err != nil {
 		t.Fatal(err)
 	}

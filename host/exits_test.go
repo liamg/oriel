@@ -87,7 +87,7 @@ func TestNoRestartAfterAStopOrWithTheOptionOff(t *testing.T) {
 		t.Fatal(err)
 	}
 	a = r.agent()
-	r.w.SetRestartOnExit(false)
+	r.w.run.SetRestartOnExit(false)
 	exitsAlone(a)
 	r.eventually(id, "the agent stopped", func(se core.SessionState) bool { return !se.Agent.Running })
 	r.noStart("with the option off")

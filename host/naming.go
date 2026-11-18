@@ -43,7 +43,7 @@ func (w *Host) autoName(id core.SessionID, was, prompt string) {
 	first := core.Summary(prompt)
 	for _, t := range se.Threads {
 		if t.Title == first {
-			if err := w.SetThread(hostapi.ThreadReq{Session: id, Thread: t.ID, Title: name}); err != nil {
+			if err := w.run.SetThread(hostapi.ThreadReq{Session: id, Thread: t.ID, Title: name}); err != nil {
 				w.log.Warn("naming the request", "session", id, "err", err)
 			}
 			break
@@ -56,7 +56,7 @@ func (w *Host) askName(ctx context.Context, prompt string) (string, error) {
 	if len(prompt) > 4000 {
 		prompt = prompt[:4000]
 	}
-	u, err := w.StartUtility(ctx, hostapi.UtilitySpec{Name: "namer", Pack: namerPack, Prompt: prompt})
+	u, err := w.utility.StartUtility(ctx, hostapi.UtilitySpec{Name: "namer", Pack: namerPack, Prompt: prompt})
 	if err != nil {
 		return "", err
 	}

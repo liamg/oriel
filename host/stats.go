@@ -12,13 +12,13 @@ import (
 // StatsQuery answers a stats query over every session the host has.
 func (w *Host) StatsQuery(q stats.Query) stats.Report {
 	defer w.env.Recover("StatsQuery", nil)
-	return w.Query(q)
+	return w.stats.Query(q)
 }
 
 // SessionStats is one session's stats.
 func (w *Host) SessionStats(r hostapi.StatsSessionReq) (_ stats.Detail, err error) {
 	defer w.env.Recover("SessionStats", &err)
-	return w.Session(r)
+	return w.stats.Session(r)
 }
 
 // RefreshPrices keeps the price book fresh until ctx ends: cost.dev's list now, then once a day.
@@ -30,4 +30,4 @@ func (w *Host) RefreshPrices(ctx context.Context) {
 }
 
 // Logs is each session's log of notices, kept with the session.
-func (w *Host) Logs() logs.SessionLogs { return w.Notices() }
+func (w *Host) Logs() logs.SessionLogs { return w.logs.Notices() }

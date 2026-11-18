@@ -19,7 +19,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty`, `term/tty` (a terminal's modes) |
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
 | `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `UsageLogs`, `Discovered`) and transcript types; `agent/usage` (what a log says an agent used, as provider-neutral events: each provider reads its own log format into them, and one with no log writes them, which `agent/usage/stats` counts: the stats a provider's log adds up to, shared by the host and the app); `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite); `agent/eventq` (an unbounded queue in front of a session's events), `agent/guard` (the guard rails every agent is held to, ahead of its own gate), `agent/release` (an agent's release for its sandbox, fetched and checked against its checksum), `agent/hostexec` (a provider's processes on this machine, outside any sandbox), `agent/packs` (each kind's prompt pack and the Oriel tools it expects), `agent/prompts` (the prompts the user can edit) |
-| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/ship`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State; it embeds the parts whose calls are its own, so their entry points are the host's methods |
+| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/ship`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State; it holds them as named fields and writes out its API, the `host/hostapi` contracts, on `host.Host` (`host/api.go`), each method calling the part that does the work, so no part's own methods leak onto it (`TestTheHostsAPIIsItsContracts`) |
 | `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds, and OS confinement: `sandbox/ossandbox` confines plugin processes (Landlock and seccomp on Linux, sandbox-exec on macOS) and `sandbox/seatbelt` agents, sharing `sandbox/sbpl`'s Seatbelt plumbing |
 | `gitx` | git |
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
@@ -48,7 +48,8 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
   `lsp` or `dap`; `registry/lang` the reverse.
 - `plugin` never reaches `ui/widget`.
 - The host's parts never import each other, nor does `host/hostcore`; only the `host` facade wires them together.
-  What one part needs of another, the facade hands it as a func.
+  What one part needs of another, the facade hands it as a func in the part's `Deps`, all in one place
+  (`Host.parts`), whose comment lists who calls whom.
 - An `app/<feature>` package never imports another feature or the root `app`. Features share `app/kit`, meet through
   registry services, commands and events, and their tests drive the app through `app/apptest`.
 
@@ -62,7 +63,7 @@ Every seam that may be swapped is an interface in the consuming package, with im
 - The UI reads the materialised `core.State` and never asks the host on a frame. Calls into the host run off the UI
   goroutine.
 - Event logs are JSON lines; `core.Replay` reproduces a state byte for byte. Times are stored in UTC.
-- Every exported host method (a part's own, for one the host embeds), every goroutine it starts and every callback
+- Every exported host method (the part's, for one the host hands on), every goroutine it starts and every callback
   into the app recovers a panic (`hostcore.Env.Recover`), logs it and returns it as an error.
 
 ## Registry and services

@@ -3,38 +3,27 @@ package host
 import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
-	"github.com/liamg/oriel/host/hostcore"
 )
 
 // Connect sets the app's tools and answers and its kinds before its providers, whose setting resumes the agents
 // handed over: they come back with all of it in place.
 func (w *Host) Connect(c hostapi.Connection) {
-	w.SetApp(c.App)
-	w.SetKinds(c.Kinds)
-	w.SetProviders(c.Providers)
+	w.setApp(c.App)
+	w.setKinds(c.Kinds)
+	w.setProviders(c.Providers)
 }
 
-// SetApp is agentrun.Runner.SetApp.
-func (w *Host) SetApp(a hostapi.App) {
+func (w *Host) setApp(a hostapi.App) {
 	defer w.env.Recover("SetApp", nil)
-	w.runPart.SetApp(a)
+	w.run.SetApp(a)
 }
 
 // EditQueued changes or deletes a comment of the user's the agent hasn't been given yet.
 func (w *Host) EditQueued(r hostapi.QueuedReq) (err error) {
 	defer w.env.Recover("EditQueued", &err)
-	err = w.runPart.EditQueued(r)
+	err = w.run.EditQueued(r)
 	w.restatus(r.Session)
 	return err
-}
-
-// RecordRun keeps a test run in its session, and returns its ID.
-func (w *Host) RecordRun(id core.SessionID, run core.TestRun) (_ string, err error) {
-	defer w.env.Recover("RecordRun", &err)
-	if run.ID == "" {
-		run.ID = hostcore.NewID(4)
-	}
-	return run.ID, w.emit(core.TestRunRecorded{Session: id, Run: run})
 }
 
 // SetReviewed marks a file's changes reviewed, or takes the marks off.

@@ -12,10 +12,10 @@ import (
 // ShipRename renames a project's branch. The app refuses first when its PR is open on it.
 func (w *Host) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error) {
 	defer w.env.Recover("ShipRename", &err)
-	if err := w.codePart.ShipRename(ctx, r); err != nil {
+	if err := w.code.ShipRename(ctx, r); err != nil {
 		return err
 	}
-	w.WriteNotes(r.Session)
+	w.run.WriteNotes(r.Session)
 	return nil
 }
 
@@ -23,22 +23,22 @@ func (w *Host) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error) 
 // the session's branch for it; the one it leaves is kept. It answers the new branch's name.
 func (w *Host) NewBranch(ctx context.Context, r hostapi.NewBranchReq) (_ string, err error) {
 	defer w.env.Recover("NewBranch", &err)
-	name, err := w.workPart.NewBranch(ctx, r)
+	name, err := w.work.NewBranch(ctx, r)
 	if err != nil {
 		return "", err
 	}
-	w.WriteNotes(r.Session)
+	w.run.WriteNotes(r.Session)
 	return name, nil
 }
 
 // ShipSwitchBack puts a project's worktree back on the session's branch for it.
 func (w *Host) ShipSwitchBack(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipSwitchBack", &err)
-	if err := w.SwitchBack(ctx, r.Session, r.Project); err != nil {
+	if err := w.work.SwitchBack(ctx, r.Session, r.Project); err != nil {
 		return err
 	}
 	if p, ok := w.projectOf(r); ok {
-		w.Note(r.Session, fmt.Sprintf("The user switched %s back to this session's branch %s. Stay on it.", p.Name, p.Branch))
+		w.run.Note(r.Session, fmt.Sprintf("The user switched %s back to this session's branch %s. Stay on it.", p.Name, p.Branch))
 	}
 	return nil
 }
@@ -46,12 +46,12 @@ func (w *Host) ShipSwitchBack(ctx context.Context, r hostapi.ShipRef) (err error
 // ShipAdopt makes the branch a project's worktree is on the session's branch for it, when that's safe.
 func (w *Host) ShipAdopt(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer w.env.Recover("ShipAdopt", &err)
-	if err := w.Adopt(ctx, r.Session, r.Project); err != nil {
+	if err := w.work.Adopt(ctx, r.Session, r.Project); err != nil {
 		return err
 	}
-	w.WriteNotes(r.Session)
+	w.run.WriteNotes(r.Session)
 	if p, ok := w.projectOf(r); ok {
-		w.Note(r.Session, fmt.Sprintf("The user made %s this session's branch for %s: Oriel pushes it now.", p.Branch, p.Name))
+		w.run.Note(r.Session, fmt.Sprintf("The user made %s this session's branch for %s: Oriel pushes it now.", p.Branch, p.Name))
 	}
 	return nil
 }

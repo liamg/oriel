@@ -37,7 +37,7 @@ func TestUtilityAgent(t *testing.T) {
 	r.fake.Offers = []agent.Model{{ID: "big", Default: true}, {ID: "small", Small: true}}
 	var asked hostapi.ToolsReq
 	calls := make(chan hostapi.ToolCall, 1)
-	r.w.SetApp(hostapi.App{
+	r.w.setApp(hostapi.App{
 		Tools: func(q hostapi.ToolsReq) []agent.Tool {
 			asked = q
 			return []agent.Tool{{Name: "sessions", Description: "Every session.", ReadOnly: true, Schema: json.RawMessage(`{"type":"object"}`)}}
@@ -46,10 +46,10 @@ func TestUtilityAgent(t *testing.T) {
 			calls <- call
 			return "rounding: needs you", nil
 		}})
-	if _, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
+	if _, err := r.w.utility.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
 		t.Error("a utility agent named ../x started")
 	}
-	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
+	u, err := r.w.utility.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
 		Web: true})
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestUtilityAgent(t *testing.T) {
 // that terminal, so it would hold the turn for good.
 func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
 	r := newRig(t)
-	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "p", Prompt: "hi"})
+	u, err := r.w.utility.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "p", Prompt: "hi"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
 func TestSessionToolsAreAskedForByKind(t *testing.T) {
 	r := newRig(t)
 	var asked hostapi.ToolsReq
-	r.w.SetApp(hostapi.App{Tools: func(q hostapi.ToolsReq) []agent.Tool {
+	r.w.setApp(hostapi.App{Tools: func(q hostapi.ToolsReq) []agent.Tool {
 		asked = q
 		return nil
 	}})
@@ -154,7 +154,7 @@ func TestUtilityAgentThatPanicsFailsToStart(t *testing.T) {
 	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Provider: "codex", Pack: "p", Prompt: "hi"})
+		_, err := r.w.utility.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Provider: "codex", Pack: "p", Prompt: "hi"})
 		done <- err
 	}()
 	select {

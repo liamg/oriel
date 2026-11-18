@@ -164,7 +164,7 @@ func (r *rig) eventually(id core.SessionID, what string, cond func(core.SessionS
 // settle waits for the host's work off its callers to end: agents starting, resumes, marks, notices.
 func (r *rig) settle() {
 	r.t.Helper()
-	until(r.t, "the host's work to end", func() bool { return len(r.w.Busy()) == 0 }, func() string { return fmt.Sprintf("still running %q", r.w.Busy()) })
+	until(r.t, "the host's work to end", func() bool { return len(r.w.busy()) == 0 }, func() string { return fmt.Sprintf("still running %q", r.w.busy()) })
 }
 
 // noneSent checks a was given nothing: once its events are handled and the host's work has ended, nothing is on its way.
@@ -192,8 +192,8 @@ func (r *rig) noStart(what string) {
 
 // withKind gives the host a kind beside the built-ins, as a plugin would, until the func it returns.
 func (r *rig) withKind(k core.KindSpec) func() {
-	r.w.SetKinds(plusKind{k})
-	return func() { r.w.SetKinds(nil) }
+	r.w.setKinds(plusKind{k})
+	return func() { r.w.setKinds(nil) }
 }
 
 type plusKind struct{ core.KindSpec }

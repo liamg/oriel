@@ -28,7 +28,7 @@ func cloneAt(t *testing.T, src, dir string, like *gittest.Repo) *gittest.Repo {
 func (r *rig) cloned() (core.Repo, *gittest.Repo) {
 	r.t.Helper()
 	g := cloneAt(r.t, r.repo.Dir, filepath.Join(r.t.TempDir(), "pricing"), r.repo)
-	repo, err := r.w.AddRepoPath(context.Background(), g.Dir)
+	repo, err := r.w.repos.AddRepoPath(context.Background(), g.Dir)
 	if err != nil {
 		r.t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestHousekeeping(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plan, err := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID, Fetch: true})
+	plan, err := r.w.repos.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID, Fetch: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestHousekeeping(t *testing.T) {
 		t.Errorf("dirty = %+v", plan.Branches[i])
 	}
 
-	res, err := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"done", "squashed", "dirty", "live"}, Prune: true})
+	res, err := r.w.repos.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"done", "squashed", "dirty", "live"}, Prune: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,10 +121,10 @@ func TestHousekeeping(t *testing.T) {
 	if !strings.Contains(branches, "live\n") || !strings.Contains(branches, "dirty\n") {
 		t.Errorf("kept branches went: %s", branches)
 	}
-	if again, _ := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID}); len(again.Stale) != 0 {
+	if again, _ := r.w.repos.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID}); len(again.Stale) != 0 {
 		t.Errorf("stale after prune = %v", again.Stale)
 	}
-	if res, _ := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"dirty"}, Force: []string{"dirty"}}); res[0].Error != "" {
+	if res, _ := r.w.repos.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"dirty"}, Force: []string{"dirty"}}); res[0].Error != "" {
 		t.Errorf("forcing a dirty worktree: %v", res)
 	}
 	if _, err := os.Stat(wt); err == nil {
@@ -138,7 +138,7 @@ func TestHousekeepingKeepsSessionBranches(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := r.cloned()
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "x", Branch: "eng-1", Repos: []core.RepoID{repo.ID}})
-	plan, err := r.w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID})
+	plan, err := r.w.repos.Housekeeping(ctx, hostapi.HousekeepReq{Repo: repo.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestHousekeepingKeepsSessionBranches(t *testing.T) {
 	if i < 0 || plan.Branches[i].Session != string(id) {
 		t.Fatalf("plan = %+v", plan)
 	}
-	res, _ := r.w.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"eng-1"}})
+	res, _ := r.w.repos.Housekeep(ctx, hostapi.HousekeepReq{Repo: repo.ID, Apply: []string{"eng-1"}})
 	if len(res) != 1 || !strings.Contains(res[0].Error, "session") {
 		t.Errorf("cleaning a session's branch: %v", res)
 	}
@@ -161,7 +161,7 @@ func TestTagPullsAndPushes(t *testing.T) {
 	g := cloneAt(t, bare, filepath.Join(t.TempDir(), "pricing"), r.repo)
 	g.Git("tag", "-a", "-m", "v0.4.2", "v0.4.2")
 	g.Git("tag", "-a", "-m", "old", "old-local")
-	repo, err := r.w.AddRepoPath(ctx, g.Dir)
+	repo, err := r.w.repos.AddRepoPath(ctx, g.Dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,11 +171,11 @@ func TestTagPullsAndPushes(t *testing.T) {
 	other.Commit("Bob", "the release fix")
 	other.Git("push", "-q", "origin", "main")
 
-	p, err := r.w.TagPreview(ctx, repo.ID, "")
+	p, err := r.w.repos.TagPreview(ctx, repo.ID, "")
 	if err != nil || p.Latest != "v0.4.2" || p.Default != "main" || !p.Remote {
 		t.Fatalf("preview = %+v, %v", p, err)
 	}
-	tg, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "v0.4.3", Pull: true, Push: true})
+	tg, err := r.w.repos.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "v0.4.3", Pull: true, Push: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,11 +189,11 @@ func TestTagPullsAndPushes(t *testing.T) {
 	if typ := strings.TrimSpace(g.Git("cat-file", "-t", "v0.4.3")); typ != "tag" {
 		t.Errorf("not annotated: %s", typ)
 	}
-	if _, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "again"}); err == nil {
+	if _, err := r.w.repos.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.3", Message: "again"}); err == nil {
 		t.Error("tagging an existing name")
 	}
 	g.Git("remote", "set-url", "origin", filepath.Join(t.TempDir(), "gone.git"))
-	tg, err = r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.4", Message: "v0.4.4", Push: true})
+	tg, err = r.w.repos.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v0.4.4", Message: "v0.4.4", Push: true})
 	if err != nil || tg.Pushed || tg.PushErr == "" {
 		t.Fatalf("a failed push: %+v, %v", tg, err)
 	}
@@ -210,7 +210,7 @@ func TestTagRefusesDirtyPull(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(g.Dir, "round.go"), []byte("changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.w.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v1.0.0", Message: "v1", Pull: true}); err == nil || !strings.Contains(err.Error(), "uncommitted") {
+	if _, err := r.w.repos.Tag(ctx, hostapi.TagReq{Repo: repo.ID, Name: "v1.0.0", Message: "v1", Pull: true}); err == nil || !strings.Contains(err.Error(), "uncommitted") {
 		t.Fatalf("tag over a dirty branch: %v", err)
 	}
 	if strings.Contains(g.Git("tag"), "v1.0.0") {
@@ -223,7 +223,7 @@ func TestRepoFacts(t *testing.T) {
 	repo, g := r.cloned()
 	g.Git("tag", "-a", "-m", "v1.2.3", "v1.2.3")
 	g.Git("branch", "other")
-	f, err := r.w.RepoFacts(context.Background(), repo.ID)
+	f, err := r.w.repos.RepoFacts(context.Background(), repo.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

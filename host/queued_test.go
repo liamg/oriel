@@ -22,7 +22,7 @@ func TestQueuedCommentsEditAndDelete(t *testing.T) {
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
 	ctx := context.Background()
 	for _, b := range []string{"second", "third", "fourth"} {
-		if _, err := r.w.Comment(ctx, hostapi.CommentReq{Session: id, Thread: tid, Body: b}); err != nil {
+		if _, err := r.w.run.Comment(ctx, hostapi.CommentReq{Session: id, Thread: tid, Body: b}); err != nil {
 			t.Fatal(err)
 		}
 	}

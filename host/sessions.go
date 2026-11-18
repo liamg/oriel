@@ -34,7 +34,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
 		return "", fmt.Errorf("this machine can't run a %s sandbox", b)
 	}
-	se, err := w.New(ctx, spec, k)
+	se, err := w.work.New(ctx, spec, k)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +42,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
 	}
-	if err := w.Begin(ctx, se.ID, spec, k); err != nil {
+	if err := w.run.Begin(ctx, se.ID, spec, k); err != nil {
 		return se.ID, err
 	}
 	if spec.AutoName && !w.opts.NoAutoName && spec.Title == "" && strings.TrimSpace(spec.Prompt) != "" {
@@ -70,7 +70,7 @@ func (w *Host) Resume(ctx context.Context, id core.SessionID) (err error) {
 		w.restatus(id)
 		return nil
 	}
-	return w.runPart.Resume(id)
+	return w.run.Resume(id)
 }
 
 // Stop stops the session's agent. Its threads wait for it.
@@ -79,7 +79,7 @@ func (w *Host) Stop(_ context.Context, id core.SessionID) (err error) {
 	if _, err := w.session(id); err != nil {
 		return err
 	}
-	w.runPart.Stop(id, "stopped", core.StoppedByYou)
+	w.run.Stop(id, "stopped", core.StoppedByYou)
 	return nil
 }
 
@@ -122,9 +122,9 @@ func (w *Host) archive(ctx context.Context, se core.SessionState, discard bool) 
 			return err
 		}
 	}
-	w.runPart.Stop(se.ID, "archived", core.StoppedByYou)
+	w.run.Stop(se.ID, "archived", core.StoppedByYou)
 	w.reap(se.ID)
-	return w.workPart.Archive(ctx, se, discard)
+	return w.work.Archive(ctx, se, discard)
 }
 
 // reapRounds bounds how often reap looks again for what the processes it killed started meanwhile.
@@ -155,13 +155,13 @@ func (w *Host) delete(ctx context.Context, se core.SessionState) error {
 	if !w.kinds.Spec(se).Can(core.Delete) {
 		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", se.ID)
 	}
-	w.runPart.Stop(se.ID, "deleted", "")
+	w.run.Stop(se.ID, "deleted", "")
 	w.reap(se.ID)
-	if err := w.workPart.Delete(ctx, se); err != nil {
+	if err := w.work.Delete(ctx, se); err != nil {
 		return err
 	}
-	w.runPart.Forget(se.ID)
-	return w.logsPart.Forget(se.ID)
+	w.run.Forget(se.ID)
+	return w.logs.Forget(se.ID)
 }
 
 // StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan), as r asks: on the branches
@@ -179,15 +179,15 @@ func (w *Host) StartWork(ctx context.Context, r hostapi.StartWorkReq) (err error
 	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {
 		return errors.New("this machine can't run a sandbox")
 	}
-	prompt, err := w.workPart.StartWork(ctx, se, r.Branches, r.KeepThreads)
+	prompt, err := w.work.StartWork(ctx, se, r.Branches, r.KeepThreads)
 	if err != nil {
 		return err
 	}
-	w.WriteNotes(se.ID)
-	if err := w.WorkAgent(se.ID, r, "start work"); err != nil {
+	w.run.WriteNotes(se.ID)
+	if err := w.run.WorkAgent(se.ID, r, "start work"); err != nil {
 		return err
 	}
-	_, err = w.Comment(ctx, hostapi.CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
+	_, err = w.run.Comment(ctx, hostapi.CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
 	return err
 }
 
@@ -195,7 +195,7 @@ func (w *Host) StartWork(ctx context.Context, r hostapi.StartWorkReq) (err error
 // which a restart would cut off.
 func (w *Host) Configure(ctx context.Context, r hostapi.ConfigureReq) (err error) {
 	defer w.env.Recover("Configure", &err)
-	running, err := w.runPart.Configure(r)
+	running, err := w.run.Configure(r)
 	if err != nil || !running {
 		return err
 	}
@@ -213,12 +213,12 @@ func (w *Host) AddRepo(ctx context.Context, r hostapi.AddRepoReq) (err error) {
 	if !w.kinds.Spec(se).Can(core.AddProjects) {
 		return fmt.Errorf("a %s session can't have repos added", se.Kind)
 	}
-	repo, p, err := w.workPart.AddRepo(ctx, se, ref)
+	repo, p, err := w.work.AddRepo(ctx, se, ref)
 	if err != nil {
 		return err
 	}
-	w.WriteNotes(id)
-	w.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", repo.ID, p.Dir))
+	w.run.WriteNotes(id)
+	w.run.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", repo.ID, p.Dir))
 	return nil
 }
 
@@ -226,10 +226,10 @@ func (w *Host) AddRepo(ctx context.Context, r hostapi.AddRepoReq) (err error) {
 // It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
 func (w *Host) NextPR(ctx context.Context, r hostapi.NextPRReq) (err error) {
 	defer w.env.Recover("NextPR", &err)
-	if err := w.workPart.NextPR(ctx, r); err != nil {
+	if err := w.work.NextPR(ctx, r); err != nil {
 		return err
 	}
-	w.WriteNotes(r.Session)
+	w.run.WriteNotes(r.Session)
 	return nil
 }
 
@@ -241,5 +241,5 @@ func (w *Host) Rename(r hostapi.SessionRenameReq) (err error) {
 
 // resumeHandedOver is agentrun.Runner.ResumeHandedOver, resuming through Resume.
 func (w *Host) resumeHandedOver() {
-	w.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
+	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
 }

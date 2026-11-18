@@ -194,7 +194,7 @@ func TestUsageHistory(t *testing.T) {
 			Windows: []core.UsageWindow{{Name: "weekly", Used: used}}})
 	}
 	r.w.usageSampled(core.ProviderUsage{Provider: "codex", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "5h", Used: .5}}})
-	h := r.w.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude"})
+	h := r.w.stats.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude"})
 	if len(h) != 2 || h[1].Windows[0].Used != .2 {
 		t.Errorf("history = %+v", h)
 	}
@@ -225,7 +225,7 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("usage after restart = %v, want %v", got, want)
 	}
-	if h := r.w.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude", Since: r.now().Add(-persist.UsageKeep)}); len(h) != 3 {
+	if h := r.w.stats.UsageHistory(hostapi.UsageHistoryReq{Provider: "claude", Since: r.now().Add(-persist.UsageKeep)}); len(h) != 3 {
 		t.Errorf("restoring wrote the readings again: %d kept", len(h))
 	}
 }

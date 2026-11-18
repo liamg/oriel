@@ -16,7 +16,7 @@ import (
 func (w *Host) ProviderInfo(ctx context.Context) []hostapi.ProviderInfo {
 	defer w.env.Recover("ProviderInfo", nil)
 	st := w.store.State()
-	lost := w.LostLogins()
+	lost := w.run.LostLogins()
 	ps := w.opts.Providers.List()
 	out := make([]hostapi.ProviderInfo, len(ps))
 	var wg sync.WaitGroup
@@ -55,7 +55,7 @@ func (w *Host) ProviderInfo(ctx context.Context) []hostapi.ProviderInfo {
 // SetProviders sets where the host finds providers past its own (Options.Providers): the app's registry
 // (services.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
 // windows read; nil takes them away.
-func (w *Host) SetProviders(src func() []agent.Provider) {
+func (w *Host) setProviders(src func() []agent.Provider) {
 	defer w.env.Recover("SetProviders", nil)
 	w.opts.Providers.SetSource(src)
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
@@ -73,6 +73,6 @@ func (w *Host) SetProviders(src func() []agent.Provider) {
 			case <-ctx.Done():
 			}
 		}()
-		_ = w.ReadUsage(ctx) // each provider's failure is logged and kept in the state
+		_ = w.stats.ReadUsage(ctx) // each provider's failure is logged and kept in the state
 	})
 }

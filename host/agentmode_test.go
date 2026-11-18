@@ -31,7 +31,7 @@ func TestAProjectJoiningKeepsTheAgentsMode(t *testing.T) {
 	res := make(chan mcp.CallResult, 1)
 	go func() { res <- gatewayCall(t, b.Root(), "oriel__add_project", map[string]any{"repo": other.Dir}) }()
 	ask := s.waitAsk(id, core.AskGateway)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError {
@@ -99,7 +99,7 @@ func TestLeavingTheSandboxDropsTheMode(t *testing.T) {
 	res := make(chan mcp.CallResult, 1)
 	go func() { res <- gatewayCall(t, b.Root(), "oriel__request_host", map[string]any{"why": "needs docker"}) }()
 	ask := s.waitAsk(id, core.AskGateway)
-	if err := s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+	if err := s.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
 		t.Fatal(err)
 	}
 	if r := <-res; r.IsError {
