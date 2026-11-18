@@ -1,4 +1,4 @@
-package kit
+package services
 
 import "github.com/liamg/oriel/registry"
 
@@ -14,4 +14,7 @@ type Inbox interface {
 	Calling(session string) (key, tone string, ok bool)
 }
 
-func InboxOf(r registry.Registry) (Inbox, bool) { return registry.ServiceOf[Inbox](r, InboxService) }
+// InboxOf is the window's inbox, if a plugin keeps one.
+func InboxOf(r registry.Contributions) (Inbox, bool) {
+	return registry.ServiceOf[Inbox](r, InboxService)
+}

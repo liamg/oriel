@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -248,7 +249,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 				}
 				c.Text("mini", w, ui.TextStyle{Font: mono(10, typeset.Medium), Color: col})
 			}
-			if inbox, ok := kit.InboxOf(h); ok {
+			if inbox, ok := services.InboxOf(h); ok {
 				if n, tone := inbox.Count(string(s.ID())); n > 0 {
 					fill, ok := th.Color(tone)
 					if !ok {
@@ -280,7 +281,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 // callFrom washes the tab of s, behind, in the tone of a prompt waiting in it: a few pulses as each comes, then
 // steady until it's seen.
 func callFrom(c *ui.Ctx, h plugin.Host, s core.Session) {
-	inbox, ok := kit.InboxOf(h)
+	inbox, ok := services.InboxOf(h)
 	if !ok {
 		return
 	}

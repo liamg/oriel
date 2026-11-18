@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -117,7 +118,7 @@ func (x *Inbox) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.OverlayPrefix+"inbox", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "inbox", Fn: x.overlay}
 	})))
-	x.Add(h.Contribute(registry.Service{Name: kit.InboxService, Impl: inboxService{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.InboxService, Impl: inboxService{x}}))
 	x.Add(h.Option(registry.OptionSpec{Name: PromptPauseOption, Type: registry.Duration, Default: 3 * time.Second, Scopes: registry.ScopeUser,
 		Validate: func(v any) error {
 			if v.(time.Duration) < 0 {
@@ -276,7 +277,7 @@ func (x *Inbox) dismiss(k string) error {
 	return nil
 }
 
-// inboxService is the inbox as kit.Inbox.
+// inboxService is the inbox as services.Inbox.
 type inboxService struct{ x *Inbox }
 
 func (s inboxService) Count(session string) (int, string) { return s.x.Count(session) }
