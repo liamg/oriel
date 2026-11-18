@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/procgroup"
 )
 
 // Process is a running command and the connection to it. It's reaped once it exits, whatever becomes of it.
@@ -19,12 +21,14 @@ type Process struct {
 	conn io.ReadWriteCloser
 }
 
-// Spawn starts cmd with no connection yet; Connect gives it one. A grandchild holding a pipe open doesn't hold up
-// Wait for more than a second.
+// Spawn starts cmd with no connection yet; Connect gives it one. It runs in a process group of its own, so Kill
+// stops what it started too (a language server's helpers, an MCP server npx started). A grandchild holding a pipe
+// open doesn't hold up Wait for more than a second.
 func Spawn(cmd *exec.Cmd) (*Process, error) {
 	if cmd.WaitDelay == 0 {
 		cmd.WaitDelay = time.Second
 	}
+	procgroup.Own(cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -112,13 +116,14 @@ func (p *Process) Wait() error {
 	return p.err
 }
 
+// Kill kills the process and everything in its process group.
 func (p *Process) Kill() error {
 	select {
 	case <-p.exited:
 		return nil
 	default:
 	}
-	return p.cmd.Process.Kill()
+	return procgroup.Kill(p.cmd)
 }
 
 // Stop kills the process, closes the connection and waits for it.

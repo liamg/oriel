@@ -3,11 +3,11 @@ package hostexec
 
 import (
 	"context"
+	"github.com/liamg/oriel/internal/procgroup"
 	"io"
 	"os"
 	"os/exec"
 	"sync"
-	"syscall"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/term/pty"
@@ -66,10 +66,7 @@ func (Exec) Start(ctx context.Context, cmd *exec.Cmd) (agent.Process, error) {
 		return nil, err
 	}
 	cmd.Stdout = w
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-	cmd.SysProcAttr.Setpgid = true
+	procgroup.Own(cmd)
 	err = cmd.Start()
 	_ = w.Close()
 	if err != nil {
@@ -105,10 +102,4 @@ func (p *proc) Wait() error           { <-p.done; return p.err }
 func (p *proc) Kill() error           { killGroup(p.cmd); return nil }
 
 // killGroup ends the process and everything it started: an agent leaves tools running otherwise.
-func killGroup(cmd *exec.Cmd) {
-	if cmd.Process == nil {
-		return
-	}
-	_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-	_ = cmd.Process.Kill()
-}
+func killGroup(cmd *exec.Cmd) { _ = procgroup.Kill(cmd) }
