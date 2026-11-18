@@ -201,11 +201,11 @@ echo "[core]
 		}
 	}
 	// The commit landed in the real repository's worktree branch.
-	if log, err := sandbox.Git(proj, "log", "--format=%s", "-1"); err != nil || strings.TrimSpace(log) != "inside" {
+	if log, err := sandbox.Git(context.Background(), proj, "log", "--format=%s", "-1"); err != nil || strings.TrimSpace(log) != "inside" {
 		t.Errorf("host sees last commit %q (%v), want inside", log, err)
 	}
 	// Host git refuses the workspace repo whose config the agent planted.
-	if _, err := sandbox.Git(f.root, "status"); err == nil || !strings.Contains(err.Error(), "core.fsmonitor") {
+	if _, err := sandbox.Git(context.Background(), f.root, "status"); err == nil || !strings.Contains(err.Error(), "core.fsmonitor") {
 		t.Errorf("host git in a tampered workspace: err = %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(f.home, "pwned")); err == nil {
@@ -222,7 +222,7 @@ func TestSandboxWorktreeFileIgnored(t *testing.T) {
 	evil := filepath.Join(f.home, "evil.git")
 	mustGit(t, "", "init", "-q", "--bare", evil)
 	mustWrite(t, filepath.Join(proj, ".git"), "gitdir: "+evil+"\n")
-	out, err := sandbox.Git(proj, "rev-parse", "--absolute-git-dir")
+	out, err := sandbox.Git(context.Background(), proj, "rev-parse", "--absolute-git-dir")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -90,7 +90,7 @@ func Binds(root, cwd string, n agent.SandboxNeeds) ([]Bind, error) {
 // checkout's HEAD and index) read-only.
 func GitBinds(repo, wt string) ([]Bind, error) {
 	common := filepath.Join(repo, ".git")
-	if out, err := Git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir"); err == nil {
+	if out, err := Git(context.Background(), repo, "rev-parse", "--path-format=absolute", "--git-common-dir"); err == nil {
 		common = strings.TrimSpace(out)
 	}
 	admin, err := WorktreeAdmin(filepath.Dir(common), wt)

@@ -132,14 +132,18 @@ func (g gatewayHost) Commit(ctx context.Context, project, message string, files 
 	if len(files) > 0 {
 		add = append([]string{"add", "--"}, files...)
 	}
-	if _, err := g.b.d.Env.Git.Git(p.Dir, add...); err != nil {
-		return 0, err
-	}
-	staged, err := g.b.d.Env.Git.Git(p.Dir, "diff", "--cached", "--name-only")
+	repo, err := g.b.d.Env.Git.Repo(p.Dir)
 	if err != nil {
 		return 0, err
 	}
-	n := len(strings.Fields(staged))
+	if _, err := repo.Run(ctx, add...); err != nil {
+		return 0, err
+	}
+	staged, err := repo.StagedFiles(ctx)
+	if err != nil {
+		return 0, err
+	}
+	n := len(staged)
 	if n == 0 {
 		return 0, errors.New("nothing to commit")
 	}
@@ -184,7 +188,7 @@ func (g gatewayHost) Fetch(ctx context.Context, project string) error {
 // keyed runs host git in a project for the gateway, asking for a security-key touch while it waits on one.
 func (g gatewayHost) keyed(ctx context.Context, p core.Project, what string, args ...string) error {
 	return g.b.d.RunAwaitingKey(ctx, g.b.id, what, p.Name, func(ctx context.Context) error {
-		_, err := g.b.d.Env.Git.GitContext(ctx, p.Dir, args...)
+		_, err := g.b.d.Env.Git.Git(ctx, p.Dir, args...)
 		return err
 	})
 }
