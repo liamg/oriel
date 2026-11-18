@@ -31,7 +31,10 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			k := it.Data.(registry.Keymap)
+			k, ok := uireg.DataOf[registry.Keymap](it)
+			if !ok {
+				return nil
+			}
 			return &ui.Func{Key: "keymap", Fn: func(c *ui.Ctx) {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					draw.PreviewHead(c, k.Mode, ui.TextStyle{Color: c.Theme().C(tOmniMatch)}, kit.KeyLabel(k.Keys))
@@ -47,11 +50,17 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			k := it.Data.(registry.Keymap)
+			k, ok := uireg.DataOf[registry.Keymap](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
 			return h.Run(ctx, k.Command, k.Args)
 		},
 		Actions: []uireg.PickerAction{{Key: "<C-e>", Title: "go to definition", Run: func(ctx registry.Ctx, items []uireg.PickerItem) error {
-			k := items[0].Data.(registry.Keymap)
+			k, ok := uireg.DataOf[registry.Keymap](items[0])
+			if !ok {
+				return uireg.ForeignItem(items[0])
+			}
 			file, line := script.SplitLoc(k.Source)
 			if line == 0 {
 				return fmt.Errorf("%s isn't a place in a file", k.Source)

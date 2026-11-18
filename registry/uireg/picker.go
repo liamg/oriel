@@ -2,6 +2,7 @@ package uireg
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 
 	"github.com/liamg/oriel/registry"
@@ -25,6 +26,18 @@ type PickerItem struct {
 	Line, Col  int    // 1-based; 0 for the file's start
 	Data       any    // the source's own, for its Preview and Run
 	Current    bool   // the one in use now (the current theme): the picker opens on it
+}
+
+// DataOf is item's Data as its source made it, false when it's anything else: a Preview shows nothing then, and a Run
+// says so (ForeignItem).
+func DataOf[T any](item PickerItem) (T, bool) {
+	v, ok := item.Data.(T)
+	return v, ok
+}
+
+// ForeignItem is the error a source's Run gives for an item it didn't make.
+func ForeignItem(item PickerItem) error {
+	return fmt.Errorf("the picker item %q isn't one this source made", item.Label)
 }
 
 // PickerAction is something a picker does to the selected items (or the highlighted one) on a key.

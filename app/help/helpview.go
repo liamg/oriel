@@ -358,11 +358,11 @@ func (v *View) body(c *ui.Ctx, id string, width float32) {
 		c.Text("title", head.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 20, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
 		for i, b := range blocks {
 			switch b.Kind {
-			case "heading":
+			case BlockHeading:
 				c.Text(i, strings.ToUpper(b.Text), label)
-			case "para":
+			case BlockPara:
 				widget.Wrap(c, i, plainText(b.Text), width, text)
-			case "list":
+			case BlockList:
 				c.Column(i, ui.Style{Gap: 6}, func(c *ui.Ctx) {
 					for j, it := range b.Items {
 						c.Row(j, ui.Style{Gap: 8}, func(c *ui.Ctx) {
@@ -371,24 +371,24 @@ func (v *View) body(c *ui.Ctx, id string, width float32) {
 						})
 					}
 				})
-			case "code":
+			case BlockCode:
 				c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Fill: th.C(theme.BgBase), Radius: 6}, func(c *ui.Ctx) {
 					for j, l := range strings.Split(b.Text, "\n") {
 						c.Text(j, kit.ExpandTabs(l), ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.Fg)})
 					}
 				})
-			case "keys":
+			case BlockKeys:
 				v.keys(c, i, b.Text)
-			case "options":
+			case BlockOptions:
 				v.options(c, i, b.Text)
-			case "live":
+			case BlockLive:
 				if fn, ok := v.h.HelpLiveByName(b.Text); ok {
 					c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.Pad(14), Stroke: th.C(theme.Warn), Border: 1, Radius: 6, Gap: 6}, func(c *ui.Ctx) {
 						c.Text("now", "RIGHT NOW", label)
 						fn(c)
 					})
 				}
-			case "api":
+			case BlockAPI:
 				v.api(c, i, b.Text)
 			}
 		}
@@ -526,7 +526,7 @@ func (v *View) toolOpen(ctx registry.Ctx, p registry.Args) (any, error) {
 func (v *View) expand(b Block) string {
 	var lines []string
 	switch b.Kind {
-	case "keys":
+	case BlockKeys:
 		for _, k := range v.h.Keymaps() {
 			if ok, _ := path.Match(b.Text, k.Command); ok && k.Command != "" {
 				lines = append(lines, fmt.Sprintf("- %s (%s, %s mode): %s", kit.KeyLabel(k.Keys), k.Keys, k.Mode, cmp.Or(k.Desc, k.Command)))
@@ -535,7 +535,7 @@ func (v *View) expand(b Block) string {
 		if len(lines) > 0 {
 			return "Keys:\n" + strings.Join(lines, "\n")
 		}
-	case "options":
+	case BlockOptions:
 		for _, s := range v.h.Options().Specs() {
 			if s.Name == b.Text || strings.HasPrefix(s.Name, b.Text+".") {
 				val, _, _ := v.h.Options().Get(s.Name, registry.At{})
@@ -545,7 +545,7 @@ func (v *View) expand(b Block) string {
 		if len(lines) > 0 {
 			return "Settings:\n" + strings.Join(lines, "\n")
 		}
-	case "api":
+	case BlockAPI:
 		for _, f := range api.Reference[strings.TrimPrefix(strings.TrimPrefix(b.Text, "oriel"), ".")] {
 			lines = append(lines, fmt.Sprintf("- `%s`: %s", f.Call, f.Doc))
 		}

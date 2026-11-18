@@ -153,7 +153,11 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 				})
 				return nil
 			}
-			return sh.openDir(ctx, h, it.Data.(string))
+			dir, ok := uireg.DataOf[string](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
+			return sh.openDir(ctx, h, dir)
 		},
 	}, registry.DisposeFunc(func() { all.work.Stop(); all.busy.Wait() })
 }

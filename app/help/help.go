@@ -23,9 +23,25 @@ func Builtin() fs.FS {
 	return sub
 }
 
+// BlockKind is what a page's block is.
+type BlockKind string
+
+// The kinds of block: a page's own, then the generated sections ({{keys "glob"}}, {{options "prefix"}}, {{live "name"}},
+// {{api "namespace"}}).
+const (
+	BlockHeading BlockKind = "heading"
+	BlockPara    BlockKind = "para"
+	BlockList    BlockKind = "list"
+	BlockCode    BlockKind = "code"
+	BlockKeys    BlockKind = "keys"
+	BlockOptions BlockKind = "options"
+	BlockLive    BlockKind = "live"
+	BlockAPI     BlockKind = "api"
+)
+
 // Block is a part of a page: a heading, paragraph, list, code block, or a generated section ({{keys "glob"}}).
 type Block struct {
-	Kind   string // "heading", "para", "list", "code", "keys", "options", "live", "api"
+	Kind   BlockKind
 	Level  int    // a heading's
 	Anchor string // a heading's
 	Text   string // a heading's, a paragraph's, a code block's, a directive's argument
@@ -47,7 +63,7 @@ type Page struct {
 func (p *Page) Anchors() []string {
 	var out []string
 	for _, b := range p.Blocks {
-		if b.Kind == "heading" {
+		if b.Kind == BlockHeading {
 			out = append(out, b.Anchor)
 		}
 	}
@@ -57,15 +73,15 @@ func (p *Page) Anchors() []string {
 // Section is the blocks under the heading with anchor, down to the next heading as high; the whole page for "".
 func (p *Page) Section(anchor string) (Block, []Block, bool) {
 	if anchor == "" {
-		return Block{Kind: "heading", Level: 1, Text: p.Title}, p.Blocks, true
+		return Block{Kind: BlockHeading, Level: 1, Text: p.Title}, p.Blocks, true
 	}
 	for i, b := range p.Blocks {
-		if b.Kind != "heading" || b.Anchor != anchor {
+		if b.Kind != BlockHeading || b.Anchor != anchor {
 			continue
 		}
 		end := len(p.Blocks)
 		for j := i + 1; j < len(p.Blocks); j++ {
-			if p.Blocks[j].Kind == "heading" && p.Blocks[j].Level <= b.Level {
+			if p.Blocks[j].Kind == BlockHeading && p.Blocks[j].Level <= b.Level {
 				end = j
 				break
 			}
@@ -117,7 +133,7 @@ func Parse(src, source, file string) (*Page, error) {
 	var para []string
 	flush := func() {
 		if len(para) > 0 {
-			p.Blocks = append(p.Blocks, Block{Kind: "para", Text: strings.Join(para, " ")})
+			p.Blocks = append(p.Blocks, Block{Kind: BlockPara, Text: strings.Join(para, " ")})
 			para = nil
 		}
 	}
@@ -133,7 +149,7 @@ func Parse(src, source, file string) (*Page, error) {
 			for i++; i < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[i]), "```"); i++ {
 				code = append(code, lines[i])
 			}
-			p.Blocks = append(p.Blocks, Block{Kind: "code", Text: strings.Join(code, "\n")})
+			p.Blocks = append(p.Blocks, Block{Kind: BlockCode, Text: strings.Join(code, "\n")})
 		case headingRe.MatchString(t) && strings.HasPrefix(t, "#"):
 			flush()
 			m := headingRe.FindStringSubmatch(t)
@@ -145,19 +161,19 @@ func Parse(src, source, file string) (*Page, error) {
 				p.Title = m[2]
 				continue
 			}
-			p.Blocks = append(p.Blocks, Block{Kind: "heading", Level: len(m[1]), Text: m[2], Anchor: anchor})
+			p.Blocks = append(p.Blocks, Block{Kind: BlockHeading, Level: len(m[1]), Text: m[2], Anchor: anchor})
 		case directiveRe.MatchString(t):
 			flush()
 			m := directiveRe.FindStringSubmatch(t)
-			p.Blocks = append(p.Blocks, Block{Kind: m[1], Text: m[2]})
+			p.Blocks = append(p.Blocks, Block{Kind: BlockKind(m[1]), Text: m[2]})
 		case strings.HasPrefix(t, "- "):
 			flush()
-			if n := len(p.Blocks); n > 0 && p.Blocks[n-1].Kind == "list" {
+			if n := len(p.Blocks); n > 0 && p.Blocks[n-1].Kind == BlockList {
 				p.Blocks[n-1].Items = append(p.Blocks[n-1].Items, t[2:])
 			} else {
-				p.Blocks = append(p.Blocks, Block{Kind: "list", Items: []string{t[2:]}})
+				p.Blocks = append(p.Blocks, Block{Kind: BlockList, Items: []string{t[2:]}})
 			}
-		case strings.HasPrefix(l, "  ") && len(p.Blocks) > 0 && p.Blocks[len(p.Blocks)-1].Kind == "list" && len(para) == 0:
+		case strings.HasPrefix(l, "  ") && len(p.Blocks) > 0 && p.Blocks[len(p.Blocks)-1].Kind == BlockList && len(para) == 0:
 			items := p.Blocks[len(p.Blocks)-1].Items
 			items[len(items)-1] += " " + t
 		default:
@@ -259,7 +275,7 @@ func (ix *Index) Topics() []Hit {
 	for _, p := range ix.Pages() {
 		out = append(out, Hit{ID: p.ID, Title: p.Title, Page: p})
 		for _, b := range p.Blocks {
-			if b.Kind == "heading" {
+			if b.Kind == BlockHeading {
 				out = append(out, Hit{ID: p.ID + "#" + b.Anchor, Title: b.Text, Page: p})
 			}
 		}

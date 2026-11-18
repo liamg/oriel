@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"io"
 	"net/http"
 	"regexp"
@@ -147,12 +148,12 @@ func (x *Host) requested(ctx context.Context, s registry.Site) ([]registry.Revie
 }
 
 // reviewWord is a GitHub review's state as a reviewer's is said: "approved", "changes" or "commented".
-func reviewWord(state string) string {
-	return cmp.Or(map[string]string{gh.ReviewApproved: "approved", gh.ReviewChangesRequested: "changes"}[state], "commented")
+func reviewWord(state string) registry.ReviewState {
+	return cmp.Or(map[string]registry.ReviewState{gh.ReviewApproved: registry.ReviewApproved, gh.ReviewChangesRequested: registry.ReviewChanges}[state], registry.ReviewCommented)
 }
 
 // ciWord is a check state as a review request says it.
-func ciWord(state string) string {
+func ciWord(state string) registry.CheckState {
 	switch state {
 	case gh.CheckPass:
 		return registry.CheckOK
@@ -177,9 +178,9 @@ func (x *Host) lookup(ctx context.Context, s registry.Site, url string) (registr
 	}
 	d := registry.ReviewDetail{Request: registry.ReviewRequest{URL: cmp.Or(p.URL, url), Repo: repo.String(), Number: n, Title: p.Title, Author: p.Author,
 		Draft: p.Draft, Adds: p.Additions, Dels: p.Deletions, Files: p.ChangedFiles}, Base: p.Base, Head: p.Head, Commit: p.HeadSHA, Labels: p.Labels, Body: p.Body,
-		Clone: "https://github.com/" + repo.String() + ".git", State: p.State}
+		Clone: "https://github.com/" + repo.String() + ".git", State: core.PRState(p.State)}
 	if p.Merged {
-		d.State = "merged"
+		d.State = core.PRMerged
 	}
 	if p.Mergeable != nil {
 		d.Mergeable = "conflicts"
@@ -372,13 +373,13 @@ func prOf(p *gh.PR) *registry.PR {
 	if p == nil {
 		return nil
 	}
-	return &registry.PR{Number: p.Number, ID: p.NodeID, Title: p.Title, Body: p.Body, URL: p.URL, Author: p.Author, State: p.State,
+	return &registry.PR{Number: p.Number, ID: p.NodeID, Title: p.Title, Body: p.Body, URL: p.URL, Author: p.Author, State: core.PRState(p.State),
 		Draft: p.Draft, Merged: p.Merged, Branch: p.Head, Base: p.Base, Head: p.SHA, Reviewers: p.Reviewers}
 }
 
 // ghPR is a code host's PR as gh takes it.
 func ghPR(p registry.PR) *gh.PR {
-	return &gh.PR{Number: p.Number, NodeID: p.ID, Title: p.Title, Body: p.Body, URL: p.URL, State: p.State, Draft: p.Draft, Merged: p.Merged,
+	return &gh.PR{Number: p.Number, NodeID: p.ID, Title: p.Title, Body: p.Body, URL: p.URL, State: string(p.State), Draft: p.Draft, Merged: p.Merged,
 		Head: p.Branch, Base: p.Base, SHA: p.Head}
 }
 

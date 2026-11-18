@@ -164,8 +164,8 @@ func (s *session) Send(_ context.Context, in agent.Input) error {
 
 // prompt is a turn's content: the pack first, on a new session's first turn; images as images when the agent
 // takes them, else their paths.
-func (s *session) prompt(in agent.Input) ([]any, error) {
-	var blocks []any
+func (s *session) prompt(in agent.Input) ([]contentBlock, error) {
+	var blocks []contentBlock
 	s.mu.Lock()
 	first := !s.history && s.spec.Pack.Text != ""
 	s.history = true
@@ -187,16 +187,13 @@ func (s *session) prompt(in agent.Input) ([]any, error) {
 		if mt == "" {
 			mt = "image/png"
 		}
-		blocks = append(blocks, map[string]any{"type": "image", "mimeType": mt, "data": base64.StdEncoding.EncodeToString(b),
-			"uri": "file://" + img})
+		blocks = append(blocks, contentBlock{Type: "image", MimeType: mt, Data: base64.StdEncoding.EncodeToString(b), URI: "file://" + img})
 	}
 	return append(blocks, text(body)), nil
 }
 
-func text(t string) map[string]any { return map[string]any{"type": "text", "text": t} }
-
 // turn runs a prompt turn, and the turns that hand the agent a denial's reason, as one turn of Oriel's.
-func (s *session) turn(blocks []any) {
+func (s *session) turn(blocks []contentBlock) {
 	s.turns.Lock()
 	defer s.turns.Unlock()
 	s.mu.Lock()
@@ -215,7 +212,7 @@ func (s *session) turn(blocks []any) {
 		if cancelled {
 			break
 		}
-		err := s.rpc.Call(context.Background(), "session/prompt", map[string]any{"sessionId": s.ID(), "prompt": blocks}, &r)
+		err := s.rpc.Call(context.Background(), "session/prompt", promptParams{SessionID: s.ID(), Prompt: blocks}, &r)
 		s.mu.Lock()
 		s.prompting = false
 		s.mu.Unlock()
@@ -235,7 +232,7 @@ func (s *session) turn(blocks []any) {
 		if len(notes) == 0 || cancelled {
 			break
 		}
-		blocks = []any{text(strings.Join(notes, "\n"))}
+		blocks = []contentBlock{text(strings.Join(notes, "\n"))}
 	}
 	s.mu.Lock()
 	u := agent.Usage{Context: s.used.Used, ContextMax: s.used.Size, Duration: time.Since(began)}

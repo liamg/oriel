@@ -72,7 +72,7 @@ func AllMerged(se core.SessionState, ships []services.ProjectShip) bool {
 func movedOnMerged(se core.SessionState, project string) bool {
 	for _, pr := range slices.Backward(se.Past) {
 		if pr.Project == project {
-			return pr.State == "merged"
+			return pr.State == core.PRMerged
 		}
 	}
 	return false
@@ -105,15 +105,15 @@ const (
 // PrSeen is the PrSeen hook's event: a session's pull request, the first time the app reads it, whoever raised it
 // (the Ship page, the agent, gh by hand).
 type PrSeen struct {
-	Session string `json:"session"`
-	Project string `json:"project"`
-	Ticket  string `json:"ticket,omitempty"`
-	Number  int    `json:"number"`
-	URL     string `json:"url"`
-	Title   string `json:"title"`
-	State   string `json:"state"`
-	Draft   bool   `json:"draft,omitempty"`
-	Merged  bool   `json:"merged,omitempty"`
+	Session string       `json:"session"`
+	Project string       `json:"project"`
+	Ticket  string       `json:"ticket,omitempty"`
+	Number  int          `json:"number"`
+	URL     string       `json:"url"`
+	Title   string       `json:"title"`
+	State   core.PRState `json:"state"`
+	Draft   bool         `json:"draft,omitempty"`
+	Merged  bool         `json:"merged,omitempty"`
 }
 
 // PrMerged is the PrMerged hook's event: a session's pull request read as merged, the first time the app sees it so,
@@ -144,7 +144,7 @@ var (
 )
 
 // ReviewWord is a reviewer's state as a code host gives it (registry.ReviewChanges…), in words.
-func ReviewWord(s string) (string, theme.TokenID) {
+func ReviewWord(s registry.ReviewState) (string, theme.TokenID) {
 	switch s {
 	case registry.ReviewChanges:
 		return "changes requested", TReviewChanges

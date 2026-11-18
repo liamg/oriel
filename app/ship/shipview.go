@@ -601,7 +601,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 	prui.SectionCap(c, "PREVIOUS")
 	for i, pr := range past {
 		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-			state := cmp.Or(pr.State, "merged here")
+			state := cmp.Or(string(pr.State), "merged here")
 			widget.Chip(c, "state", state, prui.PRStateTone(c, state), "git/ship#next")
 			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 				label := pr.Branch

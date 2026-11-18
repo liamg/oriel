@@ -56,7 +56,7 @@ func (x *PRReview) PRDetail(url string) (state string, done bool) {
 	d := x.detail(s, url)
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return d.d.State, d.done
+	return string(d.d.State), d.done
 }
 
 // RefreshPR asks the host for it again.

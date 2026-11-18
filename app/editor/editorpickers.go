@@ -72,7 +72,13 @@ func (x *Editor) quickfixSource() uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node { return x.filePreview(it.Path, it.Line-1) },
-		Run:     func(ctx registry.Ctx, it uireg.PickerItem) error { return x.e.QuickfixJump(it.Data.(int)) },
+		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
+			n, ok := uireg.DataOf[int](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
+			return x.e.QuickfixJump(n)
+		},
 	}
 }
 

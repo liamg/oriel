@@ -25,13 +25,24 @@ type Project struct {
 }
 
 // PastPR is a pull request a session has finished with; Start next PR moves on from it.
+// PRState is where a pull request stands on its code host.
+type PRState string
+
+// The states of a pull request. A PR read from its host (registry.PR) is open or closed, with Merged saying a closed one
+// was merged, as the code-host protocol has it; a detail or a past PR says merged as its state.
+const (
+	PROpen   PRState = "open"
+	PRClosed PRState = "closed"
+	PRMerged PRState = "merged"
+)
+
 type PastPR struct {
 	Project string    `json:"project"`
 	Branch  string    `json:"branch"`
 	Number  int       `json:"number,omitempty"`
 	URL     string    `json:"url,omitempty"`
 	Title   string    `json:"title,omitempty"`
-	State   string    `json:"state,omitempty"`
+	State   PRState   `json:"state,omitempty"` // PRMerged or PRClosed: where it ended
 	Closed  time.Time `json:"closed,omitzero"`
 }
 

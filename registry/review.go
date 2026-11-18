@@ -4,39 +4,45 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// ReviewState is where a reviewer stands on a pull request: you, on one you were asked to review, or the reviewer of
+// a thread.
+type ReviewState string
+
 // Where you stand on a pull request you were asked to review.
 const (
-	ReviewNew         = "new"          // asked, and no review from you yet
-	ReviewReRequested = "re-requested" // you reviewed, and were asked again
-	ReviewChanges     = "changes"      // you asked for changes: their move
-	ReviewCommented   = "commented"    // you commented: their move
-	ReviewApproved    = "approved"
+	ReviewNew         ReviewState = "new"          // asked, and no review from you yet
+	ReviewReRequested ReviewState = "re-requested" // you reviewed, and were asked again
+	ReviewChanges     ReviewState = "changes"      // you asked for changes: their move
+	ReviewCommented   ReviewState = "commented"    // you commented: their move
+	ReviewApproved    ReviewState = "approved"
+	ReviewRequested   ReviewState = "requested" // a PR's reviewer asked, and not reviewed yet
 )
 
 // ReviewRequest is a pull request waiting on your review, as its source tells it: a row of the Reviews page. Its JSON
 // is the same shape Lua and a plugin's process give it in.
 type ReviewRequest struct {
-	URL    string    `json:"url"`
-	Repo   string    `json:"repo"` // "acme/api"
-	Number int       `json:"number"`
-	Title  string    `json:"title"`
-	Author string    `json:"author,omitempty"`
-	Draft  bool      `json:"draft,omitempty"`
-	Asked  time.Time `json:"asked,omitzero"`  // when you were (last) asked
-	Via    string    `json:"via,omitempty"`   // "" asked directly, else the team: "@acme/platform"
-	State  string    `json:"state,omitempty"` // ReviewNew when ""
-	Since  int       `json:"since,omitempty"` // commits since your last review
-	Adds   int       `json:"adds,omitempty"`
-	Dels   int       `json:"dels,omitempty"`
-	Files  int       `json:"files,omitempty"`
-	CI     string    `json:"ci,omitempty"`     // "ok", "failed", "running"; "" none
-	Source string    `json:"source,omitempty"` // the source's Title, filled in by RequestedReviews
+	URL    string      `json:"url"`
+	Repo   string      `json:"repo"` // "acme/api"
+	Number int         `json:"number"`
+	Title  string      `json:"title"`
+	Author string      `json:"author,omitempty"`
+	Draft  bool        `json:"draft,omitempty"`
+	Asked  time.Time   `json:"asked,omitzero"`  // when you were (last) asked
+	Via    string      `json:"via,omitempty"`   // "" asked directly, else the team: "@acme/platform"
+	State  ReviewState `json:"state,omitempty"` // ReviewNew when ""
+	Since  int         `json:"since,omitempty"` // commits since your last review
+	Adds   int         `json:"adds,omitempty"`
+	Dels   int         `json:"dels,omitempty"`
+	Files  int         `json:"files,omitempty"`
+	CI     CheckState  `json:"ci,omitempty"`     // CheckOK, CheckFailed or CheckRunning; "" none
+	Source string      `json:"source,omitempty"` // the source's Title, filled in by RequestedReviews
 	// Reviewers are who's asked (State "requested", a team as "@org/team") and who has reviewed, by their latest
 	// review ("approved", "changes", "commented").
 	Reviewers []PRReviewer `json:"reviewers,omitempty"`
@@ -65,7 +71,7 @@ type ReviewDetail struct {
 	Base      string         `json:"base,omitempty"`
 	Head      string         `json:"head,omitempty"`
 	Commit    string         `json:"commit,omitempty"`    // the head's commit
-	State     string         `json:"state,omitempty"`     // "open", "closed" or "merged"; "" unknown
+	State     core.PRState   `json:"state,omitempty"`     // core.PROpen, core.PRClosed or core.PRMerged; "" unknown
 	Mergeable string         `json:"mergeable,omitempty"` // "yes", "conflicts", "yes · behind main"; "" unknown
 	Labels    []string       `json:"labels,omitempty"`
 	Reviewers []PRReviewer   `json:"reviewers,omitempty"`
@@ -104,8 +110,8 @@ type PREvent struct {
 
 // PRReviewer is someone asked to review, or who did: "requested", "approved", "changes", "commented".
 type PRReviewer struct {
-	Login string `json:"login"`
-	State string `json:"state"`
+	Login string      `json:"login"`
+	State ReviewState `json:"state"` // ReviewRequested, or a review's ReviewApproved, ReviewChanges or ReviewCommented
 }
 
 // PRFileChange is a file a pull request changes.

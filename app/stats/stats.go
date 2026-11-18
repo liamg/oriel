@@ -831,7 +831,10 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 			return out
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			e := it.Data.(uireg.RailEntry)
+			e, ok := uireg.DataOf[uireg.RailEntry](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
 			return h.Run(ctx, e.Command, e.Args)
 		},
 	}

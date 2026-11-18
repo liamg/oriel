@@ -61,12 +61,12 @@ type ManifestEntry struct {
 }
 
 type ManifestPR struct {
-	Branch   string    `json:"branch"`
-	Number   int       `json:"number"`
-	URL      string    `json:"url"`
-	Title    string    `json:"title"`
-	State    string    `json:"state"`
-	ClosedAt time.Time `json:"closedAt"`
+	Branch   string       `json:"branch"`
+	Number   int          `json:"number"`
+	URL      string       `json:"url"`
+	Title    string       `json:"title"`
+	State    core.PRState `json:"state"`
+	ClosedAt time.Time    `json:"closedAt"`
 }
 
 // The workspace layout is crit's, unchanged: a directory holding the manifest, its own git repo

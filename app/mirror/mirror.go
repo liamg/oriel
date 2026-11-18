@@ -77,7 +77,7 @@ type prRead struct {
 	host    registry.CodeHost
 	repo    registry.CodeRepo
 	pr      registry.PR
-	reviews map[string]string // reviewer → registry.ReviewChanges, ReviewApproved, ReviewCommented
+	reviews map[string]registry.ReviewState // reviewer → registry.ReviewChanges, ReviewApproved, ReviewCommented
 }
 
 // prCached is a branch's PR as its code host last answered, and when.
@@ -88,7 +88,7 @@ type prCached struct {
 
 // ended says every PR the sync read is closed or merged.
 func (m read) ended() bool {
-	return len(m.prs) > 0 && !slices.ContainsFunc(m.prs, func(p prRead) bool { return p.pr.State != "closed" && !p.pr.Merged })
+	return len(m.prs) > 0 && !slices.ContainsFunc(m.prs, func(p prRead) bool { return p.pr.State != core.PRClosed && !p.pr.Merged })
 }
 
 func (x *Mirror) Manifest() plugin.Manifest { return plugin.Manifest{ID: "mirror"} }
@@ -423,7 +423,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 		req := hostapi.MirrorReviewReq{Session: se.ID, Project: p.Name, Host: h.Name, Repo: name, PR: pr.Number, URL: pr.URL, Author: pr.Author}
 		for _, t := range ts {
 			rt := hostapi.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,
-				Reviewer: t.Reviewer, State: t.State, URL: t.URL}
+				Reviewer: t.Reviewer, State: string(t.State), URL: t.URL}
 			for _, n := range t.Comments {
 				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
 					Trusted: n.Member || sites.TrustedUser(n.Author), Mine: n.Mine, Written: n.Written})
@@ -482,8 +482,8 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 	if n == 0 || d.Request.Repo == "" {
 		return nil, "", fmt.Errorf("%s isn't one of %s's pull requests", link, h.Label())
 	}
-	pr := &registry.PR{Number: n, URL: link, Author: d.Request.Author, Head: d.Commit, Merged: d.State == "merged", State: "open"}
-	if d.State == "closed" || d.State == "merged" {
+	pr := &registry.PR{Number: n, URL: link, Author: d.Request.Author, Head: d.Commit, Merged: d.State == core.PRMerged, State: core.PROpen}
+	if d.State == core.PRClosed || d.State == core.PRMerged {
 		pr.State = "closed"
 	}
 	return pr, d.Request.Repo, nil
@@ -491,9 +491,9 @@ func (x *Mirror) reviewed(ctx context.Context, hs registry.HostSite, link string
 
 // verdicts are each reviewer's latest among a PR's review threads and its conversation's reviewers: approved or
 // changes over commented.
-func verdicts(ts []registry.ReviewThread) map[string]string {
-	out := map[string]string{}
-	add := func(who, state string) {
+func verdicts(ts []registry.ReviewThread) map[string]registry.ReviewState {
+	out := map[string]registry.ReviewState{}
+	add := func(who string, state registry.ReviewState) {
 		if who == "" || state == "" || state == registry.ReviewCommented && out[who] != "" {
 			return
 		}
@@ -657,7 +657,7 @@ func (x *Mirror) head(c *ui.Ctx, session, thread string) {
 	if g.Reviewer != "" {
 		widget.Chip(c, "who", "@"+g.Reviewer, th.C(prui.TReviewAccent), "git/github#threads")
 	}
-	if word, tok := prui.ReviewWord(g.State); word != "" {
+	if word, tok := prui.ReviewWord(registry.ReviewState(g.State)); word != "" {
 		widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
 	}
 	if !t.Open() {
@@ -755,7 +755,7 @@ func (x *Mirror) comment(c *ui.Ctx, session, thread, comment string, width float
 // reviews is the PRReviewsService from what the last sync of each session's PRs found.
 type reviews struct{ x *Mirror }
 
-func (r reviews) Reviews(id core.SessionID, url string) map[string]string {
+func (r reviews) Reviews(id core.SessionID, url string) map[string]registry.ReviewState {
 	m, ok := r.x.read(id)
 	if !ok {
 		return nil
@@ -775,14 +775,14 @@ func (x *Mirror) statusSegment(c *ui.Ctx) {
 	if !ok || len(m.prs) == 0 {
 		return
 	}
-	counts := map[string]int{}
+	counts := map[registry.ReviewState]int{}
 	for _, p := range m.prs {
 		for _, s := range p.reviews {
 			counts[s]++
 		}
 	}
 	var parts []string
-	for _, s := range []string{registry.ReviewChanges, registry.ReviewApproved} {
+	for _, s := range []registry.ReviewState{registry.ReviewChanges, registry.ReviewApproved} {
 		if n := counts[s]; n > 0 {
 			word, _ := prui.ReviewWord(s)
 			parts = append(parts, fmt.Sprintf("%d %s", n, word))

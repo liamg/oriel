@@ -43,7 +43,7 @@ func TestSearch(t *testing.T) {
 func TestSearchExpands(t *testing.T) {
 	ix := searchIndex(t)
 	expand := func(b Block) string {
-		if b.Kind == "keys" && b.Text == "pane.*" {
+		if b.Kind == BlockKeys && b.Text == "pane.*" {
 			return "Keys:\n- ⌃w v: split vertically"
 		}
 		return ""

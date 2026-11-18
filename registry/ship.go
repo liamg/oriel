@@ -84,14 +84,14 @@ type PullRequest struct {
 	Repo             string // owner/name
 	Number           int
 	Title, URL       string
-	State            string // open or closed
+	State            core.PRState // core.PROpen or core.PRClosed
 	Draft, Merged    bool
 }
 
 // Args are the PR as a command's arguments.
 func (p PullRequest) Args() Args {
 	return Args{"session": p.Session, "project": p.Project, "repo": p.Repo, "number": p.Number, "title": p.Title, "url": p.URL,
-		"state": p.State, "draft": p.Draft, "merged": p.Merged}
+		"state": string(p.State), "draft": p.Draft, "merged": p.Merged}
 }
 
 // PRAction is a button on a raised PR, beside Ready for review and Open on GitHub: the Ship page's

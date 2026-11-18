@@ -223,14 +223,10 @@ func (p *Provider) start(ctx context.Context, resume string, spec agent.StartSpe
 	}
 	ictx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	err = s.rpc.Call(ictx, "initialize", map[string]any{
-		"protocolVersion": Version,
-		"clientCapabilities": map[string]any{
-			"fs":          map[string]any{"readTextFile": true, "writeTextFile": true},
-			"terminal":    spec.Sandbox != nil,
-			"elicitation": map[string]any{"form": map[string]any{}},
-		},
-		"clientInfo": map[string]any{"name": "oriel", "title": "Oriel", "version": "0"},
+	err = s.rpc.Call(ictx, "initialize", initializeParams{
+		ProtocolVersion:    Version,
+		ClientCapabilities: clientCapabilities{FS: fsCapabilities{ReadTextFile: true, WriteTextFile: true}, Terminal: spec.Sandbox != nil},
+		ClientInfo:         clientInfo{Name: "oriel", Title: "Oriel", Version: "0"},
 	}, &init)
 	if err != nil {
 		return fail(p.failed("initialize", err))

@@ -273,7 +273,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 				if r := t.Hosted.Reviewer; r != "" {
 					widget.Chip(c, "who", "@"+r, th.C(prui.TReviewAccent), "git/github#threads")
 				}
-				if word, tok := prui.ReviewWord(t.Hosted.State); word != "" {
+				if word, tok := prui.ReviewWord(registry.ReviewState(t.Hosted.State)); word != "" {
 					widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
 				}
 				if !t.Open() {

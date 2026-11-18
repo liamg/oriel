@@ -356,7 +356,10 @@ func (x *Tickets) source() uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			r, _ := it.Data.(ticketRow)
+			r, ok := uireg.DataOf[ticketRow](it)
+			if !ok {
+				return nil
+			}
 			return &ui.Func{Key: "ticket", Fn: func(c *ui.Ctx) {
 				th := c.Theme()
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
@@ -390,7 +393,10 @@ func (x *Tickets) source() uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			r, _ := it.Data.(ticketRow)
+			r, ok := uireg.DataOf[ticketRow](it)
+			if !ok {
+				return uireg.ForeignItem(it)
+			}
 			switch r.action {
 			case "key":
 				return x.h.Run(ctx, "secrets.set", registry.Args{"name": r.tracker.Secret})
@@ -462,7 +468,7 @@ func (x *Tickets) prSeen(ev prui.PrSeen) {
 			}
 			x.stale(tr.Name)
 		}
-		if tr.Review == nil || ev.State != "open" || ev.Merged {
+		if tr.Review == nil || ev.State != core.PROpen || ev.Merged {
 			return nil
 		}
 		m, err := tr.Review(ctx, key)

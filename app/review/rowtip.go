@@ -96,7 +96,7 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 			reviewed = append(reviewed, rv.Login+" changes requested")
 		case "":
 		default:
-			reviewed = append(reviewed, rv.Login+" "+rv.State)
+			reviewed = append(reviewed, rv.Login+" "+string(rv.State))
 		}
 	}
 	if len(asked) > 0 {
