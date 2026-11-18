@@ -316,7 +316,8 @@ func TestStartWorkOpensItsRequest(t *testing.T) {
 	w.WaitFor("the Requests panel and the plan's request open", func() bool {
 		return kit.Showing(w.Host, kit.RequestsView, "") && kit.Showing(w.Host, kit.RequestView, "")
 	})
+	// The worktree's path wraps where the comment's column ends, so it's looked for in the text with the lines run together.
 	w.WaitFrame("the request's Start work comment on screen", func(s string) bool {
-		return apptest.HasAll(s, "REQUESTS", "Start work", p.Dir)
+		return apptest.HasAll(s, "REQUESTS", "Start work") && strings.Contains(strings.ReplaceAll(s, "\n", ""), p.Dir)
 	})
 }
