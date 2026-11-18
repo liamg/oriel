@@ -210,8 +210,8 @@ clip 260,160 1080x680 r 10
       text "CRIT" @301,767.3952 #ff5f6d JetBrains Mono 9.5
       text "gate" @344.28,768.29517 #ece6d8 JetBrains Mono 12
     pop
-    text "veto and decide hooks: block commits and answer permission prompts" @476,750.0028 #ece6d8 Inter 12.5
-    text "automatically" @476,768.1273 #ece6d8 Inter 12.5
+    text "veto, decide and rewrite hooks: block or change commits, PRs and saves, and" @476,750.0028 #ece6d8 Inter 12.5
+    text "answer permission prompts automatically" @476,768.1273 #ece6d8 Inter 12.5
     text "AUTHOR SAYS" @476,785.83246 #4f4a40 JetBrains Mono 9.5
     text "Skip prompts for our read-only jira-cli commands" @564.63,787.2831 #b3ab99 Inter 11.5
   pop
