@@ -212,7 +212,7 @@ func (r *Rail) entries(h plugin.Host) {
 // commands are project.open, project.move, project.fold, project.panel.toggle and sidebar.form.
 func (r *Rail) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
-		{ID: "project.open", Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
+		{ID: "project.open", Grant: registry.Open, Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
 			Available: func(a registry.Args) bool { _, ok := r.target(a); return ok },
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				p, ok := r.target(a)
@@ -221,7 +221,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return r.open(ctx, p)
 			}},
-		{ID: "project.move", Title: "Move a project of the session in front, {project}, to the {index}th place in the sidebar",
+		{ID: "project.move", Grant: registry.Open, Title: "Move a project of the session in front, {project}, to the {index}th place in the sidebar",
 			Available: func(a registry.Args) bool {
 				_, ok := r.target(registry.Args{"project": a.String("project")})
 				return ok
@@ -237,7 +237,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return h.Apply(core.ProjectMoved{ID: w.Session.ID, Project: p.Name, Index: a.Int("index") - 1})
 			}},
-		{ID: "project.fold", Title: "Fold the open project's panels away in the sidebar, or unfold them: {folded}; with neither, switch",
+		{ID: "project.fold", Grant: registry.Open, Title: "Fold the open project's panels away in the sidebar, or unfold them: {folded}; with neither, switch",
 			Available: func(registry.Args) bool { w := kit.ProjectsHere(h); return w.Session != nil && w.Many() },
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				w := kit.ProjectsHere(h)
@@ -250,7 +250,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return h.Apply(core.ProjectFolded{ID: w.Session.ID, Folded: folded})
 			}},
-		{ID: "project.panel.toggle", Title: "Show or hide a panel of the open project, or of {project}: {name}, a project entry's",
+		{ID: "project.panel.toggle", Grant: registry.Open, Title: "Show or hide a panel of the open project, or of {project}: {name}, a project entry's",
 			Available: func(a registry.Args) bool {
 				e, ok := r.entry(a.String("name"))
 				return ok && h.Available(e.Command, e.ArgsFor(r.scopeOf(a)))
@@ -262,7 +262,7 @@ func (r *Rail) commands(h plugin.Host) []registry.Command {
 				}
 				return r.run(ctx, e, r.scopeOf(a))
 			}},
-		{ID: "sidebar.form.set", Title: "Make this window's sidebar {form}: wide or narrow; with neither, switch",
+		{ID: "sidebar.form.set", Grant: registry.Open, Title: "Make this window's sidebar {form}: wide or narrow; with neither, switch",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				f := a.String("form")
 				if f == "" {

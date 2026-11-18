@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 
@@ -132,20 +131,51 @@ func (a *APIs) contributed(kind, id string, fn *script.Fn, args ...any) (out []a
 	return out, err == nil
 }
 
-// commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant), and
-// for any plugin when the command is the user's own (Command.UserOnly). The user's config runs anything.
-func (a *APIs) commandGrant(id string) error {
-	cs := a.Host.Commands()
-	i, ok := slices.BinarySearchFunc(cs, id, func(c registry.Command, id string) int { return strings.Compare(c.ID, id) })
-	switch {
-	case !ok:
-		return nil
-	case cs[i].UserOnly && !a.Plugin.Trusted():
-		return fmt.Errorf("%s: only you can run %s, not a plugin", a.Plugin.ID, id)
-	case cs[i].Grant == "":
-		return nil
+// commandGrant refuses to run command id with args for a plugin without the capability the command names
+// (Command.Grant, checked against what its GrantOn says), and for any plugin when the command is the user's own
+// (Command.UserOnly); and the same for each command its {then} runs after it. The user's config runs anything.
+func (a *APIs) commandGrant(id string, args registry.Args) error {
+	if c, ok := a.Host.CommandFor(id); ok {
+		switch {
+		case c.UserOnly && !a.Plugin.Trusted():
+			return fmt.Errorf("%s: only you can run %s, not a plugin", a.Plugin.ID, id)
+		case c.Grant != "" && c.Grant != registry.Open:
+			target := ""
+			if c.GrantOn != nil {
+				target = c.GrantOn(args)
+			}
+			if err := a.Plugin.Check(plugin.Capability(c.Grant), target); err != nil {
+				return fmt.Errorf("%s: %w", id, err)
+			}
+		}
 	}
-	return a.Plugin.Check(plugin.Capability(cs[i].Grant), "")
+	for _, t := range thenCalls(args["then"]) {
+		if err := a.commandGrant(t.id, t.args); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type thenCall struct {
+	id   string
+	args registry.Args
+}
+
+// thenCalls are the commands a command's {then} runs after it: a list of {command, args}.
+func thenCalls(v any) []thenCall {
+	list, _ := v.([]any)
+	var out []thenCall
+	for _, it := range list {
+		m, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		id, _ := m["command"].(string)
+		args, _ := m["args"].(map[string]any)
+		out = append(out, thenCall{id: id, args: args})
+	}
+	return out
 }
 
 // Check asks the guard whether the VM's plugin may use c on target.

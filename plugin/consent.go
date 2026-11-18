@@ -151,7 +151,7 @@ func Explain(g Grant) string {
 	case CapEditorRead:
 		return "read open buffers and the worktree files the session can see"
 	case CapEditorWrite:
-		return "edit buffers, as plugin:<id> in blame"
+		return "edit and save buffers, and make, rename and delete the worktree's files, as plugin:<id> in blame"
 	case CapInputObserve:
 		return "see every key you press, not only its own mappings"
 	case CapFSRead:
@@ -186,9 +186,9 @@ func Explain(g Grant) string {
 	case CapSessionControl:
 		return "start, stop and resume sessions"
 	case CapGit:
-		return "commit, push and open PRs through the gateway, still subject to its approvals"
+		return "stage, commit and push, and raise and review pull requests, as you"
 	case CapClipboard:
-		return "read the clipboard"
+		return "read the clipboard, by pasting it"
 	case CapSettings:
 		return "change your settings, except the sandbox's"
 	}

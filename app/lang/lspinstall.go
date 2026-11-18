@@ -90,7 +90,7 @@ func (x *LSP) missing(language string) {
 func (x *LSP) installCommands(h plugin.Host) {
 	x.Add(h.Option(registry.OptionSpec{Name: "lsp.missing_notice", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Say when a file's language has language servers but none is installed, with a button to install one when Oriel can."}))
-	x.Add(h.Command(registry.Command{ID: "lsp.server.install", Title: "Install a language server Oriel can't find: {name}, into Oriel's own directory",
+	x.Add(h.Command(registry.Command{ID: "lsp.server.install", UserOnly: true, Title: "Install a language server Oriel can't find: {name}, into Oriel's own directory",
 		Available: func(registry.Args) bool { return x.InstallDir != "" },
 		Run:       func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("name")) }}))
 }

@@ -184,19 +184,19 @@ func (x *Tests) runCommands() []registry.Command {
 		}
 	}
 	return []registry.Command{
-		{ID: "test.run", Title: "Run a test: {key}, as the gutter's ▶ does; with coverage if {coverage}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "test.run", Grant: string(plugin.CapExec), Title: "Run a test: {key}, as the gutter's ▶ does; with coverage if {coverage}", Run: func(_ registry.Ctx, a registry.Args) error {
 			mode := testrun.ModeRun
 			if a.Bool("coverage") {
 				mode = testrun.ModeCoverage
 			}
 			return x.runKeys(a.String("file"), []string{a.String("key")}, "gutter", mode)
 		}},
-		{ID: "test.nearest.run", Title: "Run the test at the cursor", Run: scope("nearest")},
-		{ID: "test.file.run", Title: "Run this file's tests, or {file}'s", Run: scope("file")},
-		{ID: "test.package.run", Title: "Run this package's tests", Run: scope("package")},
-		{ID: "test.all.run", Title: "Run every test", Run: scope("all")},
-		{ID: "test.failed.run", Title: "Run the tests that failed last time", Run: scope("failed")},
-		{ID: "test.last.run", Title: "Run the last run again", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.nearest.run", Grant: string(plugin.CapExec), Title: "Run the test at the cursor", Run: scope("nearest")},
+		{ID: "test.file.run", Grant: string(plugin.CapExec), Title: "Run this file's tests, or {file}'s", Run: scope("file")},
+		{ID: "test.package.run", Grant: string(plugin.CapExec), Title: "Run this package's tests", Run: scope("package")},
+		{ID: "test.all.run", Grant: string(plugin.CapExec), Title: "Run every test", Run: scope("all")},
+		{ID: "test.failed.run", Grant: string(plugin.CapExec), Title: "Run the tests that failed last time", Run: scope("failed")},
+		{ID: "test.last.run", Grant: string(plugin.CapExec), Title: "Run the last run again", Run: func(registry.Ctx, registry.Args) error {
 			x.mu.Lock()
 			last := x.last
 			x.mu.Unlock()
@@ -213,19 +213,19 @@ func (x *Tests) runCommands() []registry.Command {
 // controlCommands toggle coverage and watching, stop a run and step through failures.
 func (x *Tests) controlCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "test.coverage.run", Title: "Run this file's tests with coverage", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.coverage.run", Grant: string(plugin.CapExec), Title: "Run this file's tests with coverage", Run: func(registry.Ctx, registry.Args) error {
 			return x.runScope("file", "", testrun.ModeCoverage)
 		}},
-		{ID: "test.coverage.toggle", Title: "Show or hide the coverage gutter", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.coverage.toggle", Grant: registry.Open, Title: "Show or hide the coverage gutter", Run: func(registry.Ctx, registry.Args) error {
 			x.showCov = !x.showCov
 			x.h.DecorationsChanged("tests")
 			return nil
 		}},
-		{ID: "test.watch", Title: "Re-run the tests a save affects (toggle)", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.watch", Grant: string(plugin.CapExec), Title: "Re-run the tests a save affects (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			x.watch = !x.watch
 			return nil
 		}},
-		{ID: "test.cancel", Title: "Stop the run", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "test.cancel", Grant: registry.Open, Title: "Stop the run", Run: func(registry.Ctx, registry.Args) error {
 			x.mu.Lock()
 			defer x.mu.Unlock()
 			if x.exec != nil {
@@ -233,16 +233,16 @@ func (x *Tests) controlCommands() []registry.Command {
 			}
 			return nil
 		}},
-		{ID: "test.failure.next", Title: "Go to the next failure", Run: func(registry.Ctx, registry.Args) error { return x.nextFailure() }},
+		{ID: "test.failure.next", Grant: registry.Open, Title: "Go to the next failure", Run: func(registry.Ctx, registry.Args) error { return x.nextFailure() }},
 	}
 }
 
 // debugCommands debug and explain tests, and show the panel.
 func (x *Tests) debugCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "test.debug", Title: "Debug a test: {key} as found in {file}, as ⇧ on the gutter's ▶ does; {line} sets a breakpoint to stop at",
+		{ID: "test.debug", Grant: string(plugin.CapExec), Title: "Debug a test: {key} as found in {file}, as ⇧ on the gutter's ▶ does; {line} sets a breakpoint to stop at",
 			Available: x.debugAvailable, Run: x.debugTest},
-		{ID: "test.nearest.debug", Title: "Debug the test at the cursor", Available: func(registry.Args) bool { return x.h.Available("test.debug", nil) },
+		{ID: "test.nearest.debug", Grant: string(plugin.CapExec), Title: "Debug the test at the cursor", Available: func(registry.Args) bool { return x.h.Available("test.debug", nil) },
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				it, ok := x.nearest()
 				if !ok {
@@ -250,7 +250,7 @@ func (x *Tests) debugCommands() []registry.Command {
 				}
 				return x.h.Run(ctx, "test.debug", registry.Args{"key": it.Key(), "file": it.File})
 			}},
-		{ID: "test.explain", Title: "Ask to explain a failure: {key}; the answer shows under it", Available: func(registry.Args) bool { return x.h.Available(registry.ExplainCommand, nil) },
+		{ID: "test.explain", Grant: string(plugin.CapAgentPrompt), Title: "Ask to explain a failure: {key}; the answer shows under it", Available: func(registry.Args) bool { return x.h.Available(registry.ExplainCommand, nil) },
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				res, _ := x.result(a.String("key"))
 				if res == nil || res.Failure == nil {
@@ -270,10 +270,10 @@ func (x *Tests) debugCommands() []registry.Command {
 						return x.h.Run(ctx, registry.ExplainCommand, args)
 					})
 			}},
-		{ID: "tests.open", Title: "Show the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "tests.open", Grant: registry.Open, Title: "Show the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.h.Run(ctx, "view.open", testsPanelArgs())
 		}},
-		{ID: "tests.toggle", Title: "Show or hide the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "tests.toggle", Grant: registry.Open, Title: "Show or hide the Tests panel", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.h.Run(ctx, "view.toggle", testsPanelArgs())
 		}},
 	}

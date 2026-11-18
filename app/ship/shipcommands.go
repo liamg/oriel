@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/words"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -57,19 +58,19 @@ func (x *Ship) onProject(fn func(ctx registry.Ctx, se core.SessionState, project
 func (x *Ship) shipCommands() []registry.Command {
 	inFront, run := x.inFront, x.onProject
 	return []registry.Command{
-		{ID: "ship.open", Title: "Open the Ship page: every project's way to a merged PR", Available: inFront,
+		{ID: "ship.open", Grant: registry.Open, Title: "Open the Ship page: every project's way to a merged PR", Available: inFront,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return x.h.Run(ctx, "view.open", registry.Args{"id": prui.ShipView, "place": "tab", "title": "Ship"})
 			}},
-		{ID: "ship.refresh", Title: "Read the session's projects again, from their worktrees and GitHub", Available: inFront,
+		{ID: "ship.refresh", Grant: registry.Open, Title: "Read the session's projects again, from their worktrees and GitHub", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				x.refresh(se.ID, true)
 				return nil
 			}},
-		{ID: "ship.commit", Title: "Commit a project's changes: {project}, {message} (its draft by default), {files} (all by default)",
+		{ID: "ship.commit", Grant: string(plugin.CapGit), Title: "Commit a project's changes: {project}, {message} (its draft by default), {files} (all by default)",
 			Available: inFront, Run: run(x.commit)},
-		{ID: "ship.all.commit", Title: "Commit every project's changes, each with its message", Available: inFront,
+		{ID: "ship.all.commit", Grant: string(plugin.CapGit), Title: "Commit every project's changes, each with its message", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -80,13 +81,13 @@ func (x *Ship) shipCommands() []registry.Command {
 				}
 				return errors.Join(errs...)
 			}},
-		{ID: "ship.push", Title: "Push a project's branch to origin: {project}", Available: inFront,
+		{ID: "ship.push", Grant: string(plugin.CapGit), Title: "Push a project's branch to origin: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Pushing", func(ctx context.Context, c hostapi.ShipCalls) error {
 					return c.ShipPush(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.all.push", Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
+		{ID: "ship.all.push", Grant: string(plugin.CapGit), Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -100,11 +101,11 @@ func (x *Ship) shipCommands() []registry.Command {
 				}
 				return errors.Join(errs...)
 			}},
-		{ID: "ship.sync", Title: "Rebase a project's branch onto its base, fetched: {project}", Available: inFront,
+		{ID: "ship.sync", Grant: string(plugin.CapGit), Title: "Rebase a project's branch onto its base, fetched: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.sync(se, p)
 			})},
-		{ID: "ship.all.sync", Title: "Rebase every project that's behind its base", Available: inFront,
+		{ID: "ship.all.sync", Grant: string(plugin.CapGit), Title: "Rebase every project that's behind its base", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				var errs []error
@@ -115,9 +116,9 @@ func (x *Ship) shipCommands() []registry.Command {
 				}
 				return errors.Join(errs...)
 			}},
-		{ID: "ship.raise", Title: "Push a project and raise its PR, or update the open one: {project}, {title}, {body}, {draft}, {reviewers}",
+		{ID: "ship.raise", Grant: string(plugin.CapGit), Title: "Push a project and raise its PR, or update the open one: {project}, {title}, {body}, {draft}, {reviewers}",
 			Available: inFront, Run: run(x.raise)},
-		{ID: "ship.all.raise", Title: "Push and raise every project's PR, in merge order", Available: inFront,
+		{ID: "ship.all.raise", Grant: string(plugin.CapGit), Title: "Push and raise every project's PR, in merge order", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, _ := x.session(a)
 				return x.raiseAll(ctx, se)
@@ -129,7 +130,7 @@ func (x *Ship) shipCommands() []registry.Command {
 func (x *Ship) branchCommands() []registry.Command {
 	inFront, run := x.inFront, x.onProject
 	return []registry.Command{
-		{ID: "ship.rename", Title: "Rename a project's branch: {project}, {name}; with no name, ask for one", Available: inFront,
+		{ID: "ship.rename", Grant: string(plugin.CapGit), Title: "Rename a project's branch: {project}, {name}; with no name, ask for one", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				name := strings.TrimSpace(a.String("name"))
 				if name == "" {
@@ -145,32 +146,32 @@ func (x *Ship) branchCommands() []registry.Command {
 					return c.ShipRename(ctx, hostapi.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
-		{ID: "ship.branch.back", Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
+		{ID: "ship.branch.back", Grant: string(plugin.CapGit), Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Switching back", func(ctx context.Context, c hostapi.ShipCalls) error {
 					return c.ShipSwitchBack(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.branch.adopt", Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
+		{ID: "ship.branch.adopt", Grant: string(plugin.CapGit), Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
 			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.step(se.ID, p, "Adopting", func(ctx context.Context, c hostapi.ShipCalls) error {
 					return c.ShipAdopt(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
-		{ID: "ship.default_branch.merge", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
+		{ID: "ship.default_branch.merge", Grant: string(plugin.CapGit), Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
 			Available: inFront, Run: run(x.mergeDefault)},
-		{ID: "ship.next_pr.start", Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",
+		{ID: "ship.next_pr.start", Grant: string(plugin.CapGit), Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",
 			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.nextPR(se, p, nil)
 			})},
-		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
+		{ID: "ship.ready", Grant: string(plugin.CapGit), Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				return x.step(se.ID, p, "Marking ready", func(ctx context.Context, _ hostapi.ShipCalls) error {
 					return x.markReady(ctx, se, s)
 				})
 			})},
-		{ID: "ship.pr.open", Title: "Open a project's PR tab: Raise PR, or the raised PR's overview; {edit} true for its form, false back to the overview: {project}",
+		{ID: "ship.pr.open", Grant: registry.Open, Title: "Open a project's PR tab: Raise PR, or the raised PR's overview; {edit} true for its form, false back to the overview: {project}",
 			Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				if _, ok := a["edit"]; ok {
@@ -180,7 +181,7 @@ func (x *Ship) branchCommands() []registry.Command {
 				}
 				return x.h.Run(ctx, "view.open", registry.Args{"id": prui.PRView, "instance": p, "place": "tab"})
 			})},
-		{ID: "ship.ci.fix", Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
+		{ID: "ship.ci.fix", Grant: string(plugin.CapAgentPrompt), Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				t, ok := ciTrouble(s)
@@ -196,7 +197,7 @@ func (x *Ship) branchCommands() []registry.Command {
 func (x *Ship) draftCommands() []registry.Command {
 	inFront, run := x.inFront, x.onProject
 	return []registry.Command{
-		{ID: "ship.redraft", Title: "Ask the agent to draft a project's {kind} again: commit or pr", Available: inFront,
+		{ID: "ship.redraft", Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent to draft a project's {kind} again: commit or pr", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				kind := cmp.Or(a.String("kind"), "commit")
 				id := "drafts.commit.again"
@@ -225,7 +226,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				}
 				return agent.Send(hostapi.SendReq{Session: se.ID, Text: text})
 			})},
-		{ID: "ship.draft.save", Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
+		{ID: "ship.draft.save", Grant: registry.Open, Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
 			Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				kind := cmp.Or(a.String("kind"), "pr")
@@ -242,7 +243,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				}
 				return x.step(se.ID, p, "Saving", func(ctx context.Context, c hostapi.ShipCalls) error { return c.ShipDraft(ctx, req) })
 			})},
-		{ID: "ship.browse", Title: "Open a project's PR, or a past one by {number}, in the browser: {project}", Available: inFront,
+		{ID: "ship.browse", Grant: registry.Open, Title: "Open a project's PR, or a past one by {number}, in the browser: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				if n := a.Int("number"); n > 0 {
 					for _, pr := range se.Past {
@@ -258,7 +259,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				}
 				return kit.OpenURL(x.h, s.PR.URL)
 			})},
-		{ID: "ship.link.copy", Title: "Copy the link to a project's PR to the clipboard: {project}", Available: inFront,
+		{ID: "ship.link.copy", Grant: registry.Open, Title: "Copy the link to a project's PR to the clipboard: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
 				if s.PR == nil || s.PR.URL == "" {

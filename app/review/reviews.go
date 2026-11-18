@@ -164,23 +164,23 @@ func (x *Reviews) commands() []registry.Command {
 	has := func(registry.Args) bool { return x.any() }
 	open := func(registry.Args) bool { return x.page.open }
 	out := []registry.Command{
-		{ID: "reviews.open", Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: "Reviews", ExArg: "source", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "reviews.open", Grant: registry.Open, Title: "Open the Reviews page: every source's pull requests waiting on your review, or one {source}'s", Ex: "Reviews", ExArg: "source", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("source"))
 		}},
-		{ID: "reviews.refresh", Title: "Ask every review source for the pull requests waiting on you again now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "reviews.refresh", Grant: registry.Open, Title: "Ask every review source for the pull requests waiting on you again now", Run: func(registry.Ctx, registry.Args) error {
 			x.refreshAll()
 			return nil
 		}},
-		{ID: "reviews.start", Title: "Start a review of the pull request selected on the Reviews page, or continue its session", Available: open,
+		{ID: "reviews.start", Grant: string(plugin.CapSessionControl), Title: "Start a review of the pull request selected on the Reviews page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("start") }},
-		{ID: "reviews.background.start", Title: "Start a review of pull request {url} behind the session in front, on the default agent",
+		{ID: "reviews.background.start", Grant: string(plugin.CapSessionControl), Title: "Start a review of pull request {url} behind the session in front, on the default agent",
 			Available: func(registry.Args) bool { return sessionkit.HasSessions(x.h) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.startBehind(ctx, a.String("url")) }},
-		{ID: "reviews.browse", Title: "Open the pull request selected on the Reviews page in the browser", Available: open,
+		{ID: "reviews.browse", Grant: registry.Open, Title: "Open the pull request selected on the Reviews page in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
-		{ID: "reviews.filter", Title: "Filter the Reviews page's list", Available: open,
+		{ID: "reviews.filter", Grant: registry.Open, Title: "Filter the Reviews page's list", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.page.focusFilter = true; return nil }},
-		{ID: "reviews.scope.set", Title: "Narrow the Reviews page to {scope}: all, me (asked of you) or teams (asked of a team of yours); with none, the next", Available: open,
+		{ID: "reviews.scope.set", Grant: registry.Open, Title: "Narrow the Reviews page to {scope}: all, me (asked of you) or teams (asked of a team of yours); with none, the next", Available: open,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.setScope(a.String("scope")) }},
 	}
 	for i := range out {

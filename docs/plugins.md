@@ -80,7 +80,7 @@ says which it needs. Some take a scope:
 
 The rest take only `why`: `editor.read`, `editor.write`, `input.observe`, `agent.read`, `agent.prompt`,
 `agent.provider`, `gate`, `session.control`, `git`, `clipboard`, `settings`. The install help page
-(`plugins/install`) gives each one's risk.
+(`plugins/install`) gives each one's risk, and what needs it.
 
 Installing is all or nothing: the user grants every capability listed, or none. Anything not declared is refused when
 the plugin tries it, with an error naming the capability.
@@ -189,11 +189,14 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 ```
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
-- `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. A command that does what a capability
-  guards needs it: `ask.answer`, `rules.add` and `permissions.tool.set` need `gate`, `session.start`, `session.stop` and
-  `jobs.run` `session.control`, `agent.send` `agent.prompt`. What changes who may do what is yours alone, and no
-  plugin can run it: installing, enabling or updating plugins and accepting their consent, settings, secrets and
-  updating Oriel.
+- `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. Every built-in command says what a plugin
+  needs to run it, and one that does what a capability guards needs it: `term.open`, the `test.*` runs and
+  `debug.start` need `exec` (a terminal's for the program it runs), `git.commit`, `ship.push` and `ship.raise` `git`,
+  `editor.save` and the Explorer's file commands `editor.write`, `editor.paste` `clipboard`, `ask.answer` and
+  `rules.add` `gate`, `session.start` and `jobs.run` `session.control`, `agent.send` `agent.prompt`. Opening, showing
+  and moving through things needs nothing. A command a `then` runs after another needs what it needs. What changes
+  who may do what is yours alone, and no plugin can run it: installing, enabling or updating plugins and accepting
+  their consent, settings, secrets, code hosts, updating Oriel, and running Lua as your config (`lua.eval`).
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
   panel's own mode.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`

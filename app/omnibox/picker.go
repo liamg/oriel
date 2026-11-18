@@ -88,7 +88,7 @@ func (p *Picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker
 func (p *Picker) Activate(_ context.Context, h plugin.Host) error {
 	p.h, p.picked, p.ranks = h, map[string]bool{}, newRankings(h)
 	p.Add(registry.DisposeFunc(p.ranks.reset))
-	p.Add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
+	p.Add(h.Command(registry.Command{ID: "picker.open", Grant: registry.Open, Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
 		src := a.String("source")
 		return src == "" || slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src })
 	}, Run: func(_ registry.Ctx, a registry.Args) error {
@@ -104,7 +104,7 @@ func (p *Picker) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return nil
 	}}))
-	p.Add(h.Command(registry.Command{ID: "picker.resume", Title: "Reopen the last picker where it was left", Run: func(registry.Ctx, registry.Args) error {
+	p.Add(h.Command(registry.Command{ID: "picker.resume", Grant: registry.Open, Title: "Reopen the last picker where it was left", Run: func(registry.Ctx, registry.Args) error {
 		if p.source == "" {
 			return fmt.Errorf("no picker yet")
 		}

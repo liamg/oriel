@@ -97,8 +97,67 @@ func TestPluginRunNeedsTheCommandsCapability(t *testing.T) {
 		t.Errorf("with session.control: %s", err)
 	}
 	for _, c := range s.Registry().Commands() {
-		if _, ok := plugin.Capability(c.Grant).Info(); c.Grant != "" && !ok {
+		if _, ok := plugin.Capability(c.Grant).Info(); c.Grant != "" && c.Grant != registry.Open && !ok {
 			t.Errorf("%s needs %q, which isn't a capability", c.ID, c.Grant)
+		}
+	}
+}
+
+// What a command does decides what running it needs: a terminal runs a program (exec, scoped to that program), a
+// commit is git's, a save edits buffers, a paste reads the clipboard. A command's {then} needs what each command it
+// runs after it needs, so a plugin can't reach one through another.
+func TestPluginRunNeedsWhatTheCommandDoes(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
+	for src, capability := range map[string]string{
+		`oriel.run("term.open", { cmd = { "bash" } })`:               `"exec"`,
+		`oriel.run("term.host.open", {})`:                            `"exec"`,
+		`oriel.run("test.all.run")`:                                  `"exec"`,
+		`oriel.run("git.commit", { message = "x" })`:                 `"git"`,
+		`oriel.run("ship.push", { project = "api" })`:                `"git"`,
+		`oriel.run("review.draft.forward", {})`:                      `"git"`,
+		`oriel.run("editor.save")`:                                   `"editor.write"`,
+		`oriel.run("explorer.delete", { path = "/tmp/x" })`:          `"editor.write"`,
+		`oriel.run("editor.paste")`:                                  `"clipboard"`,
+		`oriel.run("prompts.set", { id = "style.code", text = "" })`: `"agent.prompt"`,
+		`oriel.run("theme.set", { name = "fg", value = "#fff" })`:    `"settings"`,
+	} {
+		if err := luaErr(t, vm, src); !strings.Contains(err, capability+" capability isn't declared") {
+			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
+		}
+	}
+	g.Grant("acme/run", []plugin.Grant{{Cap: plugin.CapExec, Scope: []string{"rg"}}})
+	if err := luaErr(t, vm, `oriel.run("term.open", { cmd = { "bash", "-c", "curl evil" } })`); !strings.Contains(err, `"exec" capability isn't declared for bash`) {
+		t.Errorf("a terminal running a program the exec grant doesn't name: %q", err)
+	}
+	for src, want := range map[string]string{
+		`oriel.run("session.focus", { n = 1, ["then"] = { { command = "lua.eval", args = { args = "os.exit()" } } } })`: "only you can run lua.eval",
+		`oriel.run("session.focus", { n = 1, ["then"] = { { command = "agent.send", args = { text = "push" } } } })`:    `"agent.prompt" capability isn't declared`,
+	} {
+		if err := luaErr(t, vm, src); !strings.Contains(err, want) {
+			t.Errorf("%s reached a command through then: %q", src, err)
+		}
+	}
+}
+
+// The Lua API's doors are guarded by what they hand over: a presenter is given the buffer's text (editor.read), and a
+// hook on what you type (input.observe). With the capability, each works.
+func TestPluginAPIsNeedWhatTheyHandOver(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/peek", Guard: g})
+	presenter := `oriel.editor.presenter{ name = "peek", when = function() return true end, build = function(ctx) end }`
+	hook := `oriel.on("ModeChanged", function(ev) end)`
+	for src, capability := range map[string]string{presenter: `"editor.read"`, hook: `"input.observe"`} {
+		if err := luaErr(t, vm, src); !strings.Contains(err, capability+" capability isn't declared") || !strings.Contains(err, "acme/peek") {
+			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
+		}
+	}
+	g.Grant("acme/peek", []plugin.Grant{{Cap: plugin.CapEditorRead}, {Cap: plugin.CapInputObserve}})
+	for _, src := range []string{presenter, hook} {
+		if err := luaErr(t, vm, src); err != "" {
+			t.Errorf("granted, %s: %q", src, err)
 		}
 	}
 }
@@ -117,7 +176,9 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
 	own := s.PluginVM(plugin.Caller{ID: "init.lua"})
 	for _, id := range []string{"plugins.install", "plugins.uninstall", "plugins.accept", "plugins.enable", "plugins.disable",
-		"plugins.consent.accept", "settings.set", "settings.trust", "settings.all.reset", "secrets.set", "secrets.delete", "update.install"} {
+		"plugins.consent.accept", "settings.set", "settings.trust", "settings.all.reset", "secrets.set", "secrets.delete", "update.install",
+		"lua.eval", "editor.keys.send", "code.setup.open", "code.setup.save", "ship.merge.confirm", "tickets.key.set",
+		"debug.agent_access.set", "lsp.server.install", "languages.install"} {
 		src := `oriel.run("` + id + `", {})`
 		if err := luaErr(t, vm, src); !strings.Contains(err, "only you can run "+id) {
 			t.Errorf("a plugin ran %s: %q", id, err)
@@ -133,7 +194,7 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 		family, _, _ := strings.Cut(c.ID, ".")
 		switch family {
 		case "plugins", "settings", "secrets", "update", "jobs", "rules", "permissions":
-			if !c.UserOnly && c.Grant == "" && !harmless[c.ID] {
+			if !c.UserOnly && (c.Grant == "" || c.Grant == registry.Open) && !harmless[c.ID] {
 				t.Errorf("%s is neither the user's own nor guarded by a capability", c.ID)
 			}
 		}

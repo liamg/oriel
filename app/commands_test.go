@@ -16,6 +16,8 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 )
 
 // commandScene is the whole app, its lazy plugins loaded, and every command it registers.
@@ -197,5 +199,31 @@ func TestCommandNamesFollowTheConvention(t *testing.T) {
 	if len(off) > 0 {
 		t.Errorf("%d built-in commands aren't named by the convention. Name one as noun[.noun].verb, lower-case, its "+
 			"verb from commandVerbs, and give it an Ex for its ex name. Those off it:\n  %s", len(off), strings.Join(off, "\n  "))
+	}
+}
+
+// Every built-in command says what a plugin needs to run it with oriel.run: a capability it must hold, Open on
+// purpose, or UserOnly. A new command that acts has to choose, so none is left open by forgetting.
+func TestBuiltinCommandsDeclareTheirGrant(t *testing.T) {
+	s, _ := commandScene(t)
+	var none, unknown []string
+	for _, c := range s.Registry().Commands() {
+		if !strings.HasPrefix(c.Source, "builtin") || strings.HasPrefix(c.ID, "load:") {
+			continue
+		}
+		switch _, known := plugin.Capability(c.Grant).Info(); {
+		case c.UserOnly:
+		case c.Grant == "":
+			none = append(none, c.ID)
+		case c.Grant != registry.Open && !known:
+			unknown = append(unknown, c.ID+" ("+c.Grant+")")
+		}
+	}
+	if len(none) > 0 {
+		t.Errorf("%d built-in commands say nothing of who may run them. Give each a Grant: the capability a plugin "+
+			"needs (string(plugin.CapExec)…), registry.Open when any plugin may, or UserOnly:\n  %s", len(none), strings.Join(none, "\n  "))
+	}
+	if len(unknown) > 0 {
+		t.Errorf("built-in commands name a Grant that isn't a capability:\n  %s", strings.Join(unknown, "\n  "))
 	}
 }

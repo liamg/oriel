@@ -85,7 +85,7 @@ func (x *Ship) activateMerge(h plugin.Host) {
 	open := func(registry.Args) bool { return x.merging != nil }
 	inFront := func(registry.Args) bool { _, ok := x.session(nil); return ok }
 	for _, c := range []registry.Command{
-		{ID: "ship.merge", Title: "Merge a project's open PR, after showing what stands in the way: {project}", Available: inFront,
+		{ID: "ship.merge", Grant: registry.Open, Title: "Merge a project's open PR, after showing what stands in the way: {project}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				se, p, err := x.project(a)
 				if err != nil {
@@ -97,9 +97,9 @@ func (x *Ship) activateMerge(h plugin.Host) {
 				}
 				return x.openMerge(se, p)
 			}},
-		{ID: "ship.merge.confirm", Title: "Merge the PR the merge dialog shows: past what it warns of, unless the host would refuse", Available: open,
+		{ID: "ship.merge.confirm", UserOnly: true, Title: "Merge the PR the merge dialog shows: past what it warns of, unless the host would refuse", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.confirmMerge() }},
-		{ID: "ship.merge.cancel", Title: "Close the merge dialog without merging", Available: open,
+		{ID: "ship.merge.cancel", Grant: registry.Open, Title: "Close the merge dialog without merging", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.merging = nil; return nil }},
 	} {
 		x.Add(h.Command(c))

@@ -107,12 +107,12 @@ func (x *Plan) commands() []registry.Command {
 		return ok && se.StartWork
 	}
 	return []registry.Command{
-		{ID: "plan.open", Title: "Open the plan of the session in front: its docs ({doc}, PLAN.md first), threads and readiness", Available: hasPlan,
+		{ID: "plan.open", Grant: registry.Open, Title: "Open the plan of the session in front: its docs ({doc}, PLAN.md first), threads and readiness", Available: hasPlan,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.open(ctx, a.String("doc")) }},
-		{ID: "plan.work.start", Title: "Start work on the plan in front: a dialog of how, which runs session.work.start",
+		{ID: "plan.work.start", Grant: registry.Open, Title: "Start work on the plan in front: a dialog of how, which runs session.work.start",
 			Available: func(registry.Args) bool { se, ok := x.front(); return ok && se.Planning() },
 			Run:       func(registry.Ctx, registry.Args) error { return x.openStartWork() }},
-		{ID: "plan.work.confirm", Title: "Start work as the Start work dialog says", Available: func(registry.Args) bool { return x.dialog != nil },
+		{ID: "plan.work.confirm", Grant: string(plugin.CapSessionControl), Title: "Start work as the Start work dialog says", Available: func(registry.Args) bool { return x.dialog != nil },
 			Run: func(registry.Ctx, registry.Args) error { return x.runStartWork() }},
 	}
 }

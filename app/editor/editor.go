@@ -196,7 +196,7 @@ func (x *Editor) follow(dir string) {
 // commands are the editor's commands.
 func (x *Editor) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
-		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given, in a {place}: tab, split or vsplit",
+		{ID: "editor.open", Grant: registry.Open, Title: "Open a file in the editor, at {line} if given, in a {place}: tab, split or vsplit",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				viewed, err := x.open(ctx, a.String("path"), a.String("place"))
 				if err != nil {
@@ -207,27 +207,27 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 				}
 				return nil
 			}},
-		{ID: "editor.keys.send", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "editor.keys.send", UserOnly: true, Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
 			noremap, _ := a["noremap"].(bool)
 			x.e.TypeMapped(keymap.Parse(a.String("keys")), noremap)
 			return nil
 		}},
-		{ID: "editor.copy", Title: "Copy the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("copy") }},
-		{ID: "editor.cut", Title: "Cut the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("cut") }},
-		{ID: "editor.all.select", Title: "Select the whole buffer", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.copy", Grant: registry.Open, Title: "Copy the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("copy") }},
+		{ID: "editor.cut", Grant: string(plugin.CapEditorWrite), Title: "Cut the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("cut") }},
+		{ID: "editor.all.select", Grant: registry.Open, Title: "Select the whole buffer", Run: func(registry.Ctx, registry.Args) error {
 			b := x.e.Buf()
 			last := max(b.Lines()-1, 0)
 			x.e.Select(vim.Pos{}, vim.Pos{Line: last, Col: max(len(b.Line(last))-1, 0)}, 'v')
 			return nil
 		}},
-		{ID: "editor.paste", Title: "Paste the system clipboard: at the cursor, or over the selection", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.paste", Grant: string(plugin.CapClipboard), Title: "Paste the system clipboard: at the cursor, or over the selection", Run: func(registry.Ctx, registry.Args) error {
 			return x.clip("paste")
 		}},
-		{ID: "editor.back", Title: "Back in the jumplist (CTRL-O), or to the session or page before once it has nothing older",
+		{ID: "editor.back", Grant: registry.Open, Title: "Back in the jumplist (CTRL-O), or to the session or page before once it has nothing older",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.jumpOr(ctx, -1) }},
-		{ID: "editor.forward", Title: "Forward in the jumplist (CTRL-I), or to the session or page after once it has nothing newer",
+		{ID: "editor.forward", Grant: registry.Open, Title: "Forward in the jumplist (CTRL-I), or to the session or page after once it has nothing newer",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.jumpOr(ctx, 1) }},
-		{ID: "editor.reload", Title: "Reload a buffer from its file", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "editor.reload", Grant: string(plugin.CapEditorWrite), Title: "Reload a buffer from its file", Run: func(_ registry.Ctx, a registry.Args) error {
 			n, _ := a["buffer"].(int)
 			if f, ok := a["buffer"].(float64); ok {
 				n = int(f)
@@ -235,8 +235,8 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			delete(x.disk.asked, n)
 			return x.e.ReloadBuffer(n)
 		}},
-		{ID: "editor.keep", Title: "Keep a buffer's changes over its file's", Run: func(registry.Ctx, registry.Args) error { return nil }},
-		{ID: "editor.input.set", Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "editor.keep", Grant: string(plugin.CapEditorWrite), Title: "Keep a buffer's changes over its file's", Run: func(registry.Ctx, registry.Args) error { return nil }},
+		{ID: "editor.input.set", Grant: registry.Open, Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
 			id := a.String("engine")
 			if id == "" {
 				id = a.String("args")
@@ -246,25 +246,25 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			}
 			return h.Options().Set(InputOption, registry.LayerBuffer, registry.At{Buffer: x.e.Name()}, id)
 		}},
-		{ID: "editor.wrap.toggle", Title: "Wrap long lines, or stop wrapping them", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.wrap.toggle", Grant: registry.Open, Title: "Wrap long lines, or stop wrapping them", Run: func(registry.Ctx, registry.Args) error {
 			x.e.Run("set wrap!")
 			return nil
 		}},
-		{ID: "editor.save", Title: "Write the current buffer", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.save", Grant: string(plugin.CapEditorWrite), Title: "Write the current buffer", Run: func(registry.Ctx, registry.Args) error {
 			x.e.Run("w")
 			return nil
 		}},
-		{ID: "editor.cmdline.complete", Title: "Complete the command line", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.cmdline.complete", Grant: registry.Open, Title: "Complete the command line", Run: func(registry.Ctx, registry.Args) error {
 			x.complete()
 			return nil
 		}},
-		{ID: "buffers.pick", Title: "Switch to an open buffer", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "buffers.pick", Grant: registry.Open, Title: "Switch to an open buffer", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "buffers"})
 		}},
-		{ID: "quickfix.open", Title: "Show the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "quickfix.open", Grant: registry.Open, Title: "Show the quickfix list", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "quickfix"})
 		}},
-		{ID: "quickfix.set", Title: "Make a new quickfix list: {title}, {items} of {path, line, col, text}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "quickfix.set", Grant: registry.Open, Title: "Make a new quickfix list: {title}, {items} of {path, line, col, text}", Run: func(_ registry.Ctx, a registry.Args) error {
 			var items []vim.QfItem
 			for _, it := range a.Maps("items") {
 				items = append(items, vim.QfItem{Name: it.String("path"), Line: it.Int("line"), Col: it.Int("col"), Text: it.String("text")})
@@ -272,21 +272,21 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			x.e.SetQuickfix(a.String("title"), items)
 			return nil
 		}},
-		{ID: "editor.multi.next", Title: "Add a cursor at the next match of the word under the cursor", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.multi.next", Grant: registry.Open, Title: "Add a cursor at the next match of the word under the cursor", Run: func(registry.Ctx, registry.Args) error {
 			x.e.MultiNext()
 			return nil
 		}},
-		{ID: "editor.multi.down", Title: "Add a cursor on the line below", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.multi.down", Grant: registry.Open, Title: "Add a cursor on the line below", Run: func(registry.Ctx, registry.Args) error {
 			x.e.MultiVertical(1)
 			return nil
 		}},
-		{ID: "editor.multi.up", Title: "Add a cursor on the line above", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "editor.multi.up", Grant: registry.Open, Title: "Add a cursor on the line above", Run: func(registry.Ctx, registry.Args) error {
 			x.e.MultiVertical(-1)
 			return nil
 		}},
-		{ID: "editor.presenter.open", Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
+		{ID: "editor.presenter.open", Grant: registry.Open, Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(a.String("window"), a.String("name")) }},
-		{ID: "editor.word.search", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "editor.word.search", Grant: registry.Open, Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
 	}

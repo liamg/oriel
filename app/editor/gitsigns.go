@@ -144,17 +144,17 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}))
 	for _, c := range []registry.Command{
-		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(true, g.stage)},
-		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(true, g.unstage)},
-		{ID: "git.hunk.reset", Title: "Put the hunk under the cursor back as the index has it", Run: g.cmd(true, g.reset)},
-		{ID: "git.hunk.preview", Title: "Show what the hunk under the cursor replaced (toggle)", Run: g.cmd(false, g.preview)},
-		{ID: "git.hunk.next", Title: "Go to the next hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.stage", Grant: string(plugin.CapGit), Title: "Stage the hunk under the cursor", Run: g.cmd(true, g.stage)},
+		{ID: "git.hunk.unstage", Grant: string(plugin.CapGit), Title: "Unstage the staged hunk at the cursor", Run: g.cmd(true, g.unstage)},
+		{ID: "git.hunk.reset", Grant: string(plugin.CapGit), Title: "Put the hunk under the cursor back as the index has it", Run: g.cmd(true, g.reset)},
+		{ID: "git.hunk.preview", Grant: registry.Open, Title: "Show what the hunk under the cursor replaced (toggle)", Run: g.cmd(false, g.preview)},
+		{ID: "git.hunk.next", Grant: registry.Open, Title: "Go to the next hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, 1)
 		})},
-		{ID: "git.hunk.prev", Title: "Go to the previous hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.prev", Grant: registry.Open, Title: "Go to the previous hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, -1)
 		})},
-		{ID: "git.blame.toggle", Title: "Show or hide the cursor line's blame", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "git.blame.toggle", Grant: registry.Open, Title: "Show or hide the cursor line's blame", Run: func(registry.Ctx, registry.Args) error {
 			on, _ := registry.Option[bool](h.Options(), "git.blame.inline", h.Here())
 			return h.Options().Set("git.blame.inline", registry.LayerUser, registry.At{}, !on)
 		}},

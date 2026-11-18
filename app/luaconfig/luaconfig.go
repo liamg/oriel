@@ -83,7 +83,7 @@ const (
 
 // Events features fire later, declared now so hooks on them show what they wait for.
 var laterEvents = []registry.EventInfo{
-	{Name: "ModeChanged", Doc: "The editor's mode changing (not fired yet). { old, new }"},
+	{Name: "ModeChanged", Doc: "The editor's mode changing (not fired yet): it tells what you type, so hooking it needs input.observe. { old, new }", Grant: string(plugin.CapInputObserve)},
 }
 
 func (x *Lua) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lua"} }
@@ -123,18 +123,18 @@ func (x *Lua) Activate(_ context.Context, h plugin.Host) error {
 
 func (x *Lua) commands() []registry.Command {
 	return []registry.Command{
-		{ID: "lua.eval", Title: "Run a line of Lua, {args}, or open the Lua REPL", Ex: "lua", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "lua.eval", UserOnly: true, Title: "Run a line of Lua, {args}, or open the Lua REPL", Ex: "lua", Run: func(_ registry.Ctx, a registry.Args) error {
 			if line, _ := a["args"].(string); strings.TrimSpace(line) != "" {
 				x.eval(line)
 				return nil
 			}
 			return x.h.Run(context.Background(), "view.open", registry.Args{"id": "lua", "place": "dock", "edge": "bottom", "title": "Lua", "size": 260})
 		}},
-		{ID: "lua.reload", Title: "Load init.lua again", Run: func(registry.Ctx, registry.Args) error { x.Reload(true); return nil }},
-		{ID: "hooks.open", Ex: "Hooks", Title: "List every hook, who registered it and its p99 time", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lua.reload", Grant: registry.Open, Title: "Load init.lua again", Run: func(registry.Ctx, registry.Args) error { x.Reload(true); return nil }},
+		{ID: "hooks.open", Grant: registry.Open, Ex: "Hooks", Title: "List every hook, who registered it and its p99 time", Run: func(registry.Ctx, registry.Args) error {
 			return x.h.Run(context.Background(), "view.open", registry.Args{"id": "hooks", "place": "dock", "edge": "right", "title": "Hooks", "size": 640})
 		}},
-		{ID: "inspect.open", Ex: "Inspect", Title: "What's under the cursor: syntax, highlight, decorations, keymaps and views", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "inspect.open", Grant: registry.Open, Ex: "Inspect", Title: "What's under the cursor: syntax, highlight, decorations, keymaps and views", Run: func(registry.Ctx, registry.Args) error {
 			x.inspect = true
 			x.modes = x.h.KeyModes()
 			if x.modes == nil {

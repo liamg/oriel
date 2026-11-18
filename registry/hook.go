@@ -58,6 +58,9 @@ type EventInfo struct {
 	Doc     string
 	Payload any  // a zero value of its struct
 	Fired   bool // something fires it today; a hook on one that isn't waits for its feature
+	// Grant is the plugin capability a plugin must hold to hook it at all, for an event that tells what a
+	// capability guards (input.observe for what you type); "" for none.
+	Grant string
 }
 
 type hookEntry struct {

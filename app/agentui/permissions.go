@@ -69,11 +69,11 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 		return h.State().Focus
 	}
 	for _, c := range []registry.Command{
-		{ID: "agent.permissions.open", Title: "Show what the sandboxed agent of the session in front may do, and its connections: the Workspace page's Permissions",
+		{ID: "agent.permissions.open", Grant: registry.Open, Title: "Show what the sandboxed agent of the session in front may do, and its connections: the Workspace page's Permissions",
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "workspace.open", registry.Args{"tab": "permissions"})
 			}},
-		{ID: "agent.permissions.dock.toggle", Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
+		{ID: "agent.permissions.dock.toggle", Grant: registry.Open, Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return h.Run(ctx, "view.toggle", open) }},
 		{ID: "permissions.tool.set", Grant: string(plugin.CapGate), Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {

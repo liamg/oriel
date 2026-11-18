@@ -97,16 +97,16 @@ func (x *LSP) navigation(h plugin.Host) {
 		return run
 	}
 	for _, c := range []registry.Command{
-		{ID: "lsp.definition.open", Title: "Go to the definition", Run: goTo("definition", (*lsp.Client).Definition, "gd")},
-		{ID: "lsp.declaration.open", Title: "Go to the declaration", Run: goTo("declaration", (*lsp.Client).Declaration, "gD")},
-		{ID: "lsp.type_definition.open", Title: "Go to the type's definition", Run: goTo("type definition", (*lsp.Client).TypeDefinition, "")},
-		{ID: "lsp.implementation.open", Title: "Go to the implementations", Run: goTo("implementation", (*lsp.Client).Implementation, "")},
-		{ID: "lsp.references.open", Title: "Peek at the references to the symbol under the cursor", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "lsp.definition.open", Grant: registry.Open, Title: "Go to the definition", Run: goTo("definition", (*lsp.Client).Definition, "gd")},
+		{ID: "lsp.declaration.open", Grant: registry.Open, Title: "Go to the declaration", Run: goTo("declaration", (*lsp.Client).Declaration, "gD")},
+		{ID: "lsp.type_definition.open", Grant: registry.Open, Title: "Go to the type's definition", Run: goTo("type definition", (*lsp.Client).TypeDefinition, "")},
+		{ID: "lsp.implementation.open", Grant: registry.Open, Title: "Go to the implementations", Run: goTo("implementation", (*lsp.Client).Implementation, "")},
+		{ID: "lsp.references.open", Grant: registry.Open, Title: "Peek at the references to the symbol under the cursor", Run: func(registry.Ctx, registry.Args) error {
 			return x.references()
 		}},
-		{ID: "peek.next", Title: "Highlight the next reference", Run: func(registry.Ctx, registry.Args) error { x.peekMove(1); return nil }},
-		{ID: "peek.prev", Title: "Highlight the previous reference", Run: func(registry.Ctx, registry.Args) error { x.peekMove(-1); return nil }},
-		{ID: "peek.open", Title: "Go to the highlighted reference", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "peek.next", Grant: registry.Open, Title: "Highlight the next reference", Run: func(registry.Ctx, registry.Args) error { x.peekMove(1); return nil }},
+		{ID: "peek.prev", Grant: registry.Open, Title: "Highlight the previous reference", Run: func(registry.Ctx, registry.Args) error { x.peekMove(-1); return nil }},
+		{ID: "peek.open", Grant: registry.Open, Title: "Go to the highlighted reference", Run: func(registry.Ctx, registry.Args) error {
 			if x.peek != nil {
 				l := x.peek.refs[x.peek.sel]
 				x.peek = nil
@@ -114,14 +114,14 @@ func (x *LSP) navigation(h plugin.Host) {
 			}
 			return nil
 		}},
-		{ID: "peek.close", Title: "Close the references peek", Run: func(registry.Ctx, registry.Args) error { x.peek = nil; return nil }},
-		{ID: "lsp.rename", Title: "Rename the symbol under the cursor everywhere, after a preview", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "peek.close", Grant: registry.Open, Title: "Close the references peek", Run: func(registry.Ctx, registry.Args) error { x.peek = nil; return nil }},
+		{ID: "lsp.rename", Grant: string(plugin.CapEditorWrite), Title: "Rename the symbol under the cursor everywhere, after a preview", Run: func(registry.Ctx, registry.Args) error {
 			return x.startRename()
 		}},
-		{ID: "lsp.callers.open", Title: "List what calls the function under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.callers.open", Grant: registry.Open, Title: "List what calls the function under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.calls(ctx, true)
 		}},
-		{ID: "lsp.callees.open", Title: "List what the function under the cursor calls", Run: func(ctx registry.Ctx, _ registry.Args) error {
+		{ID: "lsp.callees.open", Grant: registry.Open, Title: "List what the function under the cursor calls", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return x.calls(ctx, false)
 		}},
 	} {
@@ -681,7 +681,7 @@ func (x *LSP) substituteHints(h plugin.Host) {
 	}}))
 	x.Add(h.Contribute(registry.KeyLayer{Name: "lsp.substitute", Mode: "lsp.substitute", Active: func() bool { _, _, ok := x.substitution(); return ok }}))
 	x.Add(h.Keymap(registry.Keymap{Mode: "lsp.substitute", Keys: "<Tab>", Command: "lsp.substitute.rename", Desc: "Use LSP rename"}))
-	x.Add(h.Command(registry.Command{ID: "lsp.substitute.rename", Title: "Rename the word the :s on the command line replaces, with the language server",
+	x.Add(h.Command(registry.Command{ID: "lsp.substitute.rename", Grant: string(plugin.CapEditorWrite), Title: "Rename the word the :s on the command line replaces, with the language server",
 		Run: func(ctx registry.Ctx, _ registry.Args) error {
 			old, nw, ok := x.substitution()
 			if !ok {

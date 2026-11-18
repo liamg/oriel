@@ -86,8 +86,8 @@ func (x *navPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "nav
 func (x *navPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	for _, c := range []registry.Command{
-		{ID: "nav.back", Title: "Back to the session or page before", Run: func(ctx registry.Ctx, _ registry.Args) error { return x.move(ctx, -1) }},
-		{ID: "nav.forward", Title: "Forward to the session or page after", Run: func(ctx registry.Ctx, _ registry.Args) error { return x.move(ctx, 1) }},
+		{ID: "nav.back", Grant: registry.Open, Title: "Back to the session or page before", Run: func(ctx registry.Ctx, _ registry.Args) error { return x.move(ctx, -1) }},
+		{ID: "nav.forward", Grant: registry.Open, Title: "Forward to the session or page after", Run: func(ctx registry.Ctx, _ registry.Args) error { return x.move(ctx, 1) }},
 	} {
 		x.Add(h.Command(c))
 	}

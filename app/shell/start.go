@@ -113,7 +113,7 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		s.Add(h.Contribute(e))
 	}
-	s.Add(h.Command(registry.Command{ID: "directory.open", Title: "Open a directory as it is, with no worktree or branch: {path}, or pick one",
+	s.Add(h.Command(registry.Command{ID: "directory.open", Grant: string(plugin.CapSessionControl), Title: "Open a directory as it is, with no worktree or branch: {path}, or pick one",
 		Run: func(ctx registry.Ctx, a registry.Args) error {
 			p := a.String("path")
 			if p == "" {
@@ -123,21 +123,21 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 		}}))
 	showing := func(registry.Args) bool { return s.sh.cfg.WorkDir == "" }
 	for _, c := range []registry.Command{
-		{ID: "start.next", Title: "Select the next row of the start view", Available: showing, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "start.next", Grant: registry.Open, Title: "Select the next row of the start view", Available: showing, Run: func(registry.Ctx, registry.Args) error {
 			s.sel++
 			return nil
 		}},
-		{ID: "start.prev", Title: "Select the row before on the start view", Available: showing, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "start.prev", Grant: registry.Open, Title: "Select the row before on the start view", Available: showing, Run: func(registry.Ctx, registry.Args) error {
 			s.sel = max(s.sel-1, 0)
 			return nil
 		}},
-		{ID: "start.run", Title: "Run the start view's selected row", Available: showing, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "start.run", Grant: registry.Open, Title: "Run the start view's selected row", Available: showing, Run: func(registry.Ctx, registry.Args) error {
 			if rows := s.all(h); s.sel < len(rows) && rows[s.sel].ok {
 				rows[s.sel].run()
 			}
 			return nil
 		}},
-		{ID: "start.recent.remove", Title: "Forget the selected recent directory", Available: showing, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "start.recent.remove", Grant: registry.Open, Title: "Forget the selected recent directory", Available: showing, Run: func(registry.Ctx, registry.Args) error {
 			if rows := s.all(h); s.sel < len(rows) && rows[s.sel].forget != nil {
 				rows[s.sel].forget()
 			}

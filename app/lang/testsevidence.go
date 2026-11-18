@@ -22,7 +22,7 @@ const TestRunView = "test.run"
 
 func (x *Tests) evidence() []registry.Disposable {
 	return []registry.Disposable{
-		x.h.Command(registry.Command{ID: "test.results.open", Title: "Show a session's test run: {id}, of {session} (the one in front by default)",
+		x.h.Command(registry.Command{ID: "test.results.open", Grant: registry.Open, Title: "Show a session's test run: {id}, of {session} (the one in front by default)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				session := cmp.Or(a.String("session"), string(x.h.State().Focus))
 				id := a.String("id")

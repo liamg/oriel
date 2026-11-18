@@ -37,7 +37,7 @@ func (p *Problems) Manifest() plugin.Manifest { return plugin.Manifest{ID: "prob
 
 func (p *Problems) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
-	p.Add(h.Command(registry.Command{ID: "problems.open", Ex: "Problems", Title: "List every diagnostic: Lua errors, language servers'", Run: func(ctx registry.Ctx, _ registry.Args) error {
+	p.Add(h.Command(registry.Command{ID: "problems.open", Grant: registry.Open, Ex: "Problems", Title: "List every diagnostic: Lua errors, language servers'", Run: func(ctx registry.Ctx, _ registry.Args) error {
 		return h.Run(ctx, "view.open", registry.Args{"id": "problems", "place": "dock", "edge": "bottom", "title": "Problems", "size": 260})
 	}}))
 	p.Add(h.View("problems", problemsView{p}))

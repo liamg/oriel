@@ -130,6 +130,17 @@ names is registered: a keymap's, any contribution's `Command` (menu items, start
 `{{keys}}`, and an id written out in a `Run` in the code. Ids are strings, so a rename that misses one would
 otherwise leave a key or button doing nothing.
 
+### Who may run a command
+
+A plugin runs a command with `oriel.run`, so every built-in command says what that takes: a `Grant`, the capability
+a plugin must hold (`string(plugin.CapExec)`, `string(plugin.CapGit)`…); `registry.Open` when it only opens, shows or
+moves through something and any plugin may; or `UserOnly`, for what changes who may do what (plugins, settings,
+secrets, code hosts, updates, `lua.eval`), which no plugin may run. `GrantOn` says what the capability is checked
+against for a command's args: a terminal checks `exec` against the program it runs. A command's `then` list needs
+what each command in it needs, and a lazy plugin's command is checked as it is once loaded, not as its stand-in.
+`TestBuiltinCommandsDeclareTheirGrant` fails on a built-in command that says none of these. An event can need a
+capability to be hooked at all (`EventInfo.Grant`: `ModeChanged` needs `input.observe`).
+
 ### Plugin ids
 
 A built-in plugin's id is kebab-case (`stats-page`, `session-end`, `which-key`), as a third-party manifest's

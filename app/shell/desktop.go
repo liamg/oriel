@@ -34,7 +34,7 @@ type desktopPlugin struct {
 func (x *desktopPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "desktop"} }
 
 func (x *desktopPlugin) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Command(registry.Command{ID: "system.open", Title: "Open a file {path} (relative to the work dir) or a {url} in the OS's default app for it",
+	x.Add(h.Command(registry.Command{ID: "system.open", Grant: string(plugin.CapExec), Title: "Open a file {path} (relative to the work dir) or a {url} in the OS's default app for it",
 		Run: func(_ registry.Ctx, a registry.Args) error {
 			target := cmp.Or(a.String("url"), a.String("path"))
 			if target == "" {
@@ -48,7 +48,7 @@ func (x *desktopPlugin) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return (*x.desktop).OpenURL(target)
 		}}))
-	x.Add(h.Command(registry.Command{ID: "system.reveal", Title: "Show a file or folder {path} in the file manager: Finder on macOS, its folder elsewhere",
+	x.Add(h.Command(registry.Command{ID: "system.reveal", Grant: registry.Open, Title: "Show a file or folder {path} in the file manager: Finder on macOS, its folder elsewhere",
 		Run: func(_ registry.Ctx, a registry.Args) error {
 			p := a.String("path")
 			if p == "" {
@@ -62,7 +62,7 @@ func (x *desktopPlugin) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return (*x.desktop).Reveal(p)
 		}}))
-	x.Add(h.Command(registry.Command{ID: "system.copy", Title: "Copy {text} to the system clipboard",
+	x.Add(h.Command(registry.Command{ID: "system.copy", Grant: registry.Open, Title: "Copy {text} to the system clipboard",
 		Run: func(_ registry.Ctx, a registry.Args) error {
 			if *x.desktop == nil {
 				return errors.New("there's no clipboard to copy to")
