@@ -26,6 +26,13 @@ thread in Requests with the question in it. `Esc` or `q` closes the panel.
 
 {{keys "inbox.*"}}
 
+## Mark all read {#read}
+
+**Mark all read** in the panel's header (`inbox.unread.clear`) marks every card the panel shows read, under its
+filter: they leave the stack over the window and stop counting on the title bar and the sessions' tabs, but wait on in
+the panel to be answered. Prompts aren't marked: they hold an agent until they're answered. A card that comes after
+is new again. With nothing unread the button is off.
+
 ## Filters {#filters}
 
 **All**, **Me** (for you by name), **Agents** (your own agents' asks), **Bus** (other people's agents),
