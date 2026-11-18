@@ -37,7 +37,7 @@ func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, wher
 		return fmt.Errorf("%s: the right-hand side is a command id or a function, not %T", lhs, rhs)
 	}
 	args, _ := opts["args"].(script.Table)
-	if err := k.mayBind(cmd, registry.Args(args)); err != nil {
+	if err := k.a.bindable(cmd, registry.Args(args)); err != nil {
 		return fmt.Errorf("%s: %w", lhs, err)
 	}
 	nowait, _ := opts["nowait"].(bool)
@@ -46,19 +46,6 @@ func (k Keymap) Set(modes []string, lhs string, rhs any, opts script.Table, wher
 			Nowait: nowait}))
 	}
 	return nil
-}
-
-// mayBind says whether the plugin may bind a key to id with args: a key it binds runs as the user when pressed, so
-// it's held to what the plugin could run itself. A command not yet registered can't be checked, so it's refused
-// until it is.
-func (k Keymap) mayBind(id string, args registry.Args) error {
-	if k.a.Plugin.Trusted() {
-		return nil
-	}
-	if _, ok := k.a.Host.CommandFor(id); !ok {
-		return fmt.Errorf("%s: no command %s to bind yet: register it first", k.a.Plugin.ID, id)
-	}
-	return k.a.commandGrant(id, args)
 }
 
 //oriel:api name=view cap=ui

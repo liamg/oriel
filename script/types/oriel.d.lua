@@ -307,7 +307,7 @@ function oriel.lsp.server(spec) end
 ---@class oriel.menu
 oriel.menu = {}
 
---- Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
+--- Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args. A plugin's entry may run only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone.
 ---@param spec table
 function oriel.menu.add(spec) end
 

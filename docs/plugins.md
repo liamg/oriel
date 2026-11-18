@@ -209,7 +209,9 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
   (the default), `project` or `global`.
 
 Other places to add things: `oriel.start.add` (the start view), `oriel.menu.add` (right-click), `oriel.editor.action`
-(the editor's breadcrumb), `oriel.picker.source` (the omnibox), `oriel.inbox.add` (an inbox card).
+(the editor's breadcrumb), `oriel.picker.source` (the omnibox), `oriel.inbox.add` (an inbox card). A right-click entry
+runs as the user when clicked, so, as with a key, a plugin's entry may run only a command it could run itself with
+`oriel.run` (registered already, its capability held, never yours alone); adding one that can't fails at once.
 
 ## Step 7: secrets and HTTP
 
