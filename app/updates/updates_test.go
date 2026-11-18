@@ -1,6 +1,7 @@
 package updates_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/update"
 )
 
@@ -183,6 +185,45 @@ func TestUpdateCardShowsEveryVersionItGoesPast(t *testing.T) {
 	}
 	s.Lint("the update card over three versions")
 	s.Golden("update-card-versions")
+}
+
+// shown says a run of text reading text shows in the frame: drawn, and not clipped out of view.
+func shown(s *apptest.Scene, text string) bool {
+	for _, r := range s.List().Runs() {
+		if r.Text == text && r.Visible() {
+			return true
+		}
+	}
+	return false
+}
+
+// An update past many versions has more notes than the card has room for: they scroll, by the wheel over them, to
+// the oldest, while the card's buttons stay where they are.
+func TestUpdateCardNotesScroll(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	for v := 1; v <= 8; v++ {
+		r.Publish(fmt.Sprintf("1.%d.0", v), fmt.Sprintf("## Features\n\n- Feature %d.a\n- Feature %d.b\n\n## Fixes\n\n- Fix %d.a\n- Fix %d.b", v, v, v, v))
+	}
+	s.Run("update.check", nil)
+	s.Frame()
+	s.Until("the card with the release", func() bool { return strings.Contains(s.Text(), "Oriel 1.8.0") })
+	s.Quiet()
+	if !shown(s, "1.8.0") || shown(s, "1.1.0") {
+		t.Fatalf("before scrolling: the newest shows %v, the oldest %v; want only the newest:\n%s", shown(s, "1.8.0"), shown(s, "1.1.0"), s.Text())
+	}
+	button := s.TextPoint("Update")
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("1.8.0")})
+	s.Frame()
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: s.TextPoint("1.8.0"), Scroll: render.Point{Y: 4000}})
+	s.Until("the oldest version scrolled into view", func() bool { return shown(s, "1.1.0") && shown(s, "Fix 1.b") })
+	if shown(s, "1.8.0") {
+		t.Error("the newest version still shows at the foot of the notes: they didn't scroll")
+	}
+	if got := s.TextPoint("Update"); got != button || !shown(s, "Update") || !shown(s, "Later") {
+		t.Errorf("the card's buttons moved with the notes: Update at %v, was %v", got, button)
+	}
 }
 
 func hasNotice(st core.State, id string) bool {
