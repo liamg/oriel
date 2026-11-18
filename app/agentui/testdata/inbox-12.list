@@ -281,75 +281,77 @@ clip 1220,50 380x924 r 0
   rect 1220,80 380x1 fill #24221d
   clip 1220,81 380x893 r 0
     rect 1230,91 360x873 fill #0c0c0b
-    rect 1246,103 73.130005x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
-    text "6 WAITING" @1253,114.69 #b98aff JetBrains Mono 9.5
-    text "⇧⌘I" @1556,114.869995 #4f4a40 JetBrains Mono 10
-    clip 1230,129.54001 360x28 r 0
-      rect 1246,129.54001 30x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
-      text "All" @1252,142.14 #ffd23f JetBrains Mono 10
-      rect 1282,129.54001 24x18 radius 4 stroke 1 #332f27
-      text "Me" @1288,142.14 #7c7566 JetBrains Mono 10
-      rect 1312,129.54001 48x18 radius 4 stroke 1 #332f27
-      text "Agents" @1318,142.14 #7c7566 JetBrains Mono 10
-      rect 1366,129.54001 30x18 radius 4 stroke 1 #332f27
-      text "Bus" @1372,142.14 #7c7566 JetBrains Mono 10
-      rect 1402,129.54001 30x18 radius 4 stroke 1 #332f27
-      text "PRs" @1408,142.14 #7c7566 JetBrains Mono 10
-      rect 1438,129.54001 54x18 radius 4 stroke 1 #332f27
-      text "Sandbox" @1444,142.14 #7c7566 JetBrains Mono 10
+    rect 1246,107.73 73.130005x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
+    text "6 WAITING" @1253,119.420006 #b98aff JetBrains Mono 9.5
+    rect 1451.6875,103 94.3125x26 radius 6 stroke 1 #332f27
+    text "Mark all read" @1461.6875,120.365234 #ece6d8 Inter 12
+    text "⇧⌘I" @1556,119.6 #4f4a40 JetBrains Mono 10
+    clip 1230,139 360x28 r 0
+      rect 1246,139 30x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "All" @1252,151.59999 #ffd23f JetBrains Mono 10
+      rect 1282,139 24x18 radius 4 stroke 1 #332f27
+      text "Me" @1288,151.59999 #7c7566 JetBrains Mono 10
+      rect 1312,139 48x18 radius 4 stroke 1 #332f27
+      text "Agents" @1318,151.59999 #7c7566 JetBrains Mono 10
+      rect 1366,139 30x18 radius 4 stroke 1 #332f27
+      text "Bus" @1372,151.59999 #7c7566 JetBrains Mono 10
+      rect 1402,139 30x18 radius 4 stroke 1 #332f27
+      text "PRs" @1408,151.59999 #7c7566 JetBrains Mono 10
+      rect 1438,139 54x18 radius 4 stroke 1 #332f27
+      text "Sandbox" @1444,151.59999 #7c7566 JetBrains Mono 10
     pop
-    clip 1230,157.54001 360x806.45996 r 0
-      rect 1244,167.54001 24x24 radius 5 stroke 1 #4cc9f080
+    clip 1230,167 360x797 r 0
+      rect 1244,177 24x24 radius 5 stroke 1 #4cc9f080
       path 6 segments stroke 1.25 #4cc9f0
       path 2 segments stroke 1.25 #4cc9f0
       path 2 segments stroke 1.25 #4cc9f0
       path 2 segments stroke 1.25 #4cc9f0
-      text "Touch your security key" @1278,179.64938 #ece6d8 Inter 12.5
-      text "git push · pricing-rounding" @1278,195.86452 #7c7566 JetBrains Mono 10
-      text "now" @1558,177.23001 #4f4a40 JetBrains Mono 9.5
-      rect 1244,218.86452 24x24 radius 5 stroke 1 #ff5f6d80
+      text "Touch your security key" @1278,189.10938 #ece6d8 Inter 12.5
+      text "git push · pricing-rounding" @1278,205.32451 #7c7566 JetBrains Mono 10
+      text "now" @1558,186.69 #4f4a40 JetBrains Mono 9.5
+      rect 1244,228.32451 24x24 radius 5 stroke 1 #ff5f6d80
       path 2 segments stroke 1.25 #ff5f6d
       path 2 segments stroke 1.25 #ff5f6d
       path 6 segments stroke 1.25 #ff5f6d
-      text "tom's agent asks about RoundMinor" @1278,230.97389 #ece6d8 Inter 12.5
-      text "agentbus · search-service" @1278,247.18903 #7c7566 JetBrains Mono 10
-      text "now" @1558,228.55452 #4f4a40 JetBrains Mono 9.5
-      rect 1244,270.18903 24x24 radius 5 stroke 1 #b98aff80
+      text "tom's agent asks about RoundMinor" @1278,240.43388 #ece6d8 Inter 12.5
+      text "agentbus · search-service" @1278,256.64902 #7c7566 JetBrains Mono 10
+      text "now" @1558,238.01451 #4f4a40 JetBrains Mono 9.5
+      rect 1244,279.64902 24x24 radius 5 stroke 1 #b98aff80
       path 4 segments stroke 1.25 #b98aff
       path 4 segments stroke 1.25 #b98aff
       path 6 segments stroke 1.25 #b98aff
-      text "priya → you: #4418 Add saved searches" @1278,282.2984 #ece6d8 Inter 12.5
-      text "agentbus · acme/api · +212 -40" @1278,298.51355 #7c7566 JetBrains Mono 10
-      text "2m" @1564,279.87903 #4f4a40 JetBrains Mono 9.5
-      rect 1244,321.51355 24x24 radius 5 stroke 1 #4cc9f080
+      text "priya → you: #4418 Add saved searches" @1278,291.7584 #ece6d8 Inter 12.5
+      text "agentbus · acme/api · +212 -40" @1278,307.97354 #7c7566 JetBrains Mono 10
+      text "2m" @1564,289.33902 #4f4a40 JetBrains Mono 9.5
+      rect 1244,330.97354 24x24 radius 5 stroke 1 #4cc9f080
       path 2 segments stroke 1.25 #4cc9f0
       path 3 segments stroke 1.25 #4cc9f0
       path 2 segments stroke 1.25 #4cc9f0
       path 3 segments stroke 1.25 #4cc9f0
-      text "Network: proxy.golang.org:443" @1278,333.62292 #ece6d8 Inter 12.5
-      text "sandbox · requested by go mod download · CONN…" @1278,349.83807 #7c7566 JetBrains Mono 10
-      text "2m" @1564,331.20355 #4f4a40 JetBrains Mono 9.5
-      rect 1244,372.83807 24x24 radius 5 stroke 1 #ff9b4580
+      text "Network: proxy.golang.org:443" @1278,343.08292 #ece6d8 Inter 12.5
+      text "sandbox · requested by go mod download · CONN…" @1278,359.29807 #7c7566 JetBrains Mono 10
+      text "2m" @1564,340.66354 #4f4a40 JetBrains Mono 9.5
+      rect 1244,382.29803 24x24 radius 5 stroke 1 #ff9b4580
       path 2 segments stroke 1.25 #ff9b45
       path 3 segments stroke 1.25 #ff9b45
-      text "git push origin rethink/rounding" @1278,384.94745 #ece6d8 Inter 12.5
-      text "gateway · 3 commits · +184 -22 · pricing-roun…" @1278,401.1626 #7c7566 JetBrains Mono 10
-      text "3m" @1564,382.52808 #4f4a40 JetBrains Mono 9.5
-      rect 1244,424.16257 24x24 radius 5 stroke 1 #b98aff80
+      text "git push origin rethink/rounding" @1278,394.4074 #ece6d8 Inter 12.5
+      text "gateway · 3 commits · +184 -22 · pricing-roun…" @1278,410.62256 #7c7566 JetBrains Mono 10
+      text "3m" @1564,391.98804 #4f4a40 JetBrains Mono 9.5
+      rect 1244,433.62256 24x24 radius 5 stroke 1 #b98aff80
       path 7 segments stroke 1.25 #b98aff
-      text "Permission: Bash(make e2e)" @1278,436.27194 #ece6d8 Inter 12.5
-      text "claude · ENG-2231 search api" @1278,452.4871 #7c7566 JetBrains Mono 10
-      text "4m" @1564,433.85257 #4f4a40 JetBrains Mono 9.5
-      rect 1244,475.4871 24x24 radius 5 stroke 1 #4f4a4080
-      text "✓" @1252.3984,491.4651 #4f4a40 JetBrains Mono 11.05
-      text "CI passed · #4417 dash-filters" @1278,487.59647 #b3ab99 Inter 12.5
-      text "github · 12 checks" @1278,503.8116 #4f4a40 JetBrains Mono 10
-      text "11m" @1558,485.1771 #4f4a40 JetBrains Mono 9.5
-      rect 1244,526.81165 24x24 radius 5 stroke 1 #4f4a4080
-      text "✓" @1252.3984,542.7896 #4f4a40 JetBrains Mono 11.05
-      text "sam commented on #4417" @1278,538.921 #b3ab99 Inter 12.5
-      text "github · review · mirrored" @1278,555.13617 #4f4a40 JetBrains Mono 10
-      text "24m" @1558,536.50165 #4f4a40 JetBrains Mono 9.5
+      text "Permission: Bash(make e2e)" @1278,445.73193 #ece6d8 Inter 12.5
+      text "claude · ENG-2231 search api" @1278,461.94708 #7c7566 JetBrains Mono 10
+      text "4m" @1564,443.31256 #4f4a40 JetBrains Mono 9.5
+      rect 1244,484.94708 24x24 radius 5 stroke 1 #4f4a4080
+      text "✓" @1252.3984,500.92508 #4f4a40 JetBrains Mono 11.05
+      text "CI passed · #4417 dash-filters" @1278,497.05646 #b3ab99 Inter 12.5
+      text "github · 12 checks" @1278,513.2716 #4f4a40 JetBrains Mono 10
+      text "11m" @1558,494.6371 #4f4a40 JetBrains Mono 9.5
+      rect 1244,536.2716 24x24 radius 5 stroke 1 #4f4a4080
+      text "✓" @1252.3984,552.2496 #4f4a40 JetBrains Mono 11.05
+      text "sam commented on #4417" @1278,548.381 #b3ab99 Inter 12.5
+      text "github · review · mirrored" @1278,564.5961 #4f4a40 JetBrains Mono 10
+      text "24m" @1558,545.9616 #4f4a40 JetBrains Mono 9.5
     pop
   pop
 pop

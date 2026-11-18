@@ -65,6 +65,7 @@ type Inbox struct {
 	rows      map[string]*inboxRow // by card key
 	order     []string             // card keys, as first seen
 	dismissed map[string]bool      // taken off the stack; they wait on in the panel
+	read      map[string]bool      // marked read: they wait on, but don't count
 	filter    int
 	sel       string // the panel's selected row, its card open under it
 	list      widget.Scroll
@@ -106,7 +107,7 @@ func (x *Inbox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "inbox"}
 
 func (x *Inbox) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.rows, x.dismissed = map[string]*inboxRow{}, map[string]bool{}
+	x.rows, x.dismissed, x.read = map[string]*inboxRow{}, map[string]bool{}, map[string]bool{}
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -175,6 +176,13 @@ func (x *Inbox) commands() []registry.Command {
 				}
 				return x.dismiss(id)
 			}},
+		{ID: "inbox.unread.clear", Grant: registry.Open, Title: "Mark every card the Inbox panel shows (under its filter) read: off the stack, not counted, still waiting to be answered there",
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
+				if x.markAllRead() == 0 {
+					return fmt.Errorf("nothing in the Inbox panel is unread")
+				}
+				return nil
+			}},
 		{ID: "inbox.next", Grant: registry.Open, Title: "Inbox: the next card", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "inbox.prev", Grant: registry.Open, Title: "Inbox: the card before", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
 		{ID: "inbox.card.open", Grant: registry.Open, Title: "Inbox: go where the selected card is answered (a question's thread), or open it",
@@ -206,6 +214,7 @@ func (x *Inbox) gather() []*inboxRow {
 			if !r.gone {
 				r.gone, r.card.Draw, r.card.Body = true, nil, nil
 				delete(x.dismissed, k)
+				delete(x.read, k)
 			}
 		}
 		if !r.waiting() {
@@ -278,6 +287,55 @@ func (x *Inbox) dismiss(k string) error {
 	return nil
 }
 
+// readable says r can be marked read: it waits, and isn't a prompt, which holds an agent until it's answered.
+func readable(r *inboxRow) bool { return r.waiting() && !r.card.Prompt }
+
+// unreadIn are the rows of rows that can be marked read and aren't.
+func (x *Inbox) unreadIn(rows []*inboxRow) []*inboxRow {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	var out []*inboxRow
+	for _, r := range rows {
+		if readable(r) && !x.read[r.card.Key()] {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// counts says r counts on the title bar and its session's tab: it waits, and hasn't been marked read.
+func (x *Inbox) counts(r *inboxRow) bool {
+	if !r.waiting() {
+		return false
+	}
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return !x.read[r.card.Key()]
+}
+
+// markAllRead marks read every unread card the panel shows: taken off the stack as a dismissal is (its source hears
+// of it), and no longer counted. It answers how many it marked.
+func (x *Inbox) markAllRead() int {
+	rows := x.unreadIn(x.visible())
+	var heard []func()
+	x.mu.Lock()
+	for _, r := range rows {
+		k := r.card.Key()
+		x.read[k] = true
+		if !x.dismissed[k] {
+			x.dismissed[k] = true
+			if fn := r.card.Dismissed; fn != nil {
+				heard = append(heard, fn)
+			}
+		}
+	}
+	x.mu.Unlock()
+	for _, fn := range heard {
+		registry.IgnorePanic(fn)
+	}
+	return len(rows)
+}
+
 // inboxService is the inbox as services.Inbox.
 type inboxService struct{ x *Inbox }
 
@@ -289,7 +347,7 @@ func (s inboxService) Calling(session string) (string, string, bool) {
 // Count is how many cards wait in session, and the tone of the first: its tab's badge.
 func (x *Inbox) Count(session string) (n int, tone string) {
 	for _, r := range x.gather() {
-		if r.waiting() && r.card.Session == session {
+		if x.counts(r) && r.card.Session == session {
 			if n == 0 {
 				tone = r.card.Tone
 			}
@@ -396,6 +454,17 @@ func (x *Inbox) promptDialog(c *ui.Ctx, r *inboxRow) {
 	}) {
 		x.dismissDrawn(k)
 	}
+}
+
+// unreadCount is how many cards wait unread, in every session and none: the title bar's count.
+func (x *Inbox) unreadCount() int {
+	n := 0
+	for _, r := range x.gather() {
+		if x.counts(r) {
+			n++
+		}
+	}
+	return n
 }
 
 // waitingCount is how many cards wait, in every session and none.
@@ -690,6 +759,11 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 				widget.Chip(c, "n", fmt.Sprintf("%d waiting", waiting), th.C(tInboxCount), inboxHelp)
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			unread := len(x.unreadIn(rows)) > 0
+			if widget.Button(c, "read", "Mark all read", widget.ButtonOpts{Ghost: true, Disabled: !unread, Why: "Nothing here is unread",
+				Help: inboxHelp + "#read"}) {
+				x.markAllRead()
+			}
 			if k := kit.BoundKey(x.h, "inbox.open", nil); k != "" {
 				c.Text("keys", k, widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
@@ -788,7 +862,7 @@ func (x *Inbox) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 // indicator is the title bar's INBOX and its count; a click opens the panel.
 func (x *Inbox) indicator(c *ui.Ctx) {
 	th := c.Theme()
-	n := x.waitingCount()
+	n := x.unreadCount()
 	label := "Inbox"
 	if n > 0 {
 		label = fmt.Sprintf("Inbox: %d waiting", n)
