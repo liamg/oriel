@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/procgroup"
 )
 
 // Token is the user's github.com token, for private repos' releases and the plugin registries: TokenFor github.com.
@@ -61,6 +63,8 @@ func gitCredential(ctx context.Context, host string) string {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", "-c", "core.askPass=", "credential", "fill")
+	procgroup.Own(cmd) // a helper still asking when the time's up stops with git
+	cmd.Cancel = func() error { return procgroup.Kill(cmd) }
 	cmd.Stdin = strings.NewReader("protocol=https\nhost=" + host + "\n\n")
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=", "SSH_ASKPASS=", "GCM_INTERACTIVE=never")
 	out, err := cmd.Output()

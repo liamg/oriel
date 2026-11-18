@@ -11,8 +11,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
+
+	"github.com/liamg/oriel/internal/procgroup"
 )
 
 // Repo is a git work tree, read by running git in it. Env is added to git's environment: a sandboxed workspace's
@@ -35,10 +36,12 @@ func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
 	return r.gitEnv(ctx, nil, args...)
 }
 
-// command is git, stopped by SIGTERM when ctx ends: a killed git can't remove its lock files.
+// command is git in a process group of its own, stopped by SIGTERM when ctx ends: a killed git can't remove its lock
+// files, and the group takes what git started with it (the program signing a commit, a credential helper).
 func command(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	procgroup.Own(cmd)
+	cmd.Cancel = func() error { return procgroup.Terminate(cmd) }
 	cmd.WaitDelay = 5 * time.Second
 	return cmd
 }
