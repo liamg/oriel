@@ -28,9 +28,9 @@ type PickerItem struct {
 	Current    bool   // the one in use now (the current theme): the picker opens on it
 }
 
-// DataOf is item's Data as its source made it, false when it's anything else: a Preview shows nothing then, and a Run
+// PickerData is item's Data as its source made it, false when it's anything else: a Preview shows nothing then, and a Run
 // says so (ForeignItem).
-func DataOf[T any](item PickerItem) (T, bool) {
+func PickerData[T any](item PickerItem) (T, bool) {
 	v, ok := item.Data.(T)
 	return v, ok
 }

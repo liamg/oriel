@@ -710,7 +710,7 @@ func (x *Reviews) source() uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			r, ok := uireg.DataOf[reviewRow](it)
+			r, ok := uireg.PickerData[reviewRow](it)
 			if !ok {
 				return nil
 			}
@@ -737,7 +737,7 @@ func (x *Reviews) source() uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			r, ok := uireg.DataOf[reviewRow](it)
+			r, ok := uireg.PickerData[reviewRow](it)
 			if !ok {
 				return uireg.ForeignItem(it)
 			}

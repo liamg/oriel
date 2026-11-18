@@ -393,7 +393,7 @@ func sessionsSource(h plugin.Host) uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			s, ok := uireg.DataOf[core.Session](it)
+			s, ok := uireg.PickerData[core.Session](it)
 			if !ok {
 				return nil
 			}

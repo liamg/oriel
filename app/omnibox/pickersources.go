@@ -31,7 +31,7 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			k, ok := uireg.DataOf[registry.Keymap](it)
+			k, ok := uireg.PickerData[registry.Keymap](it)
 			if !ok {
 				return nil
 			}
@@ -50,14 +50,14 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			k, ok := uireg.DataOf[registry.Keymap](it)
+			k, ok := uireg.PickerData[registry.Keymap](it)
 			if !ok {
 				return uireg.ForeignItem(it)
 			}
 			return h.Run(ctx, k.Command, k.Args)
 		},
 		Actions: []uireg.PickerAction{{Key: "<C-e>", Title: "go to definition", Run: func(ctx registry.Ctx, items []uireg.PickerItem) error {
-			k, ok := uireg.DataOf[registry.Keymap](items[0])
+			k, ok := uireg.PickerData[registry.Keymap](items[0])
 			if !ok {
 				return uireg.ForeignItem(items[0])
 			}

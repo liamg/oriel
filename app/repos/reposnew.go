@@ -119,10 +119,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 // repoField is one of the Add repo dialog's fields: Tab moves on, Escape closes, ⌘↵ adds; focus moves to it this frame
 // (the mode's first field, as the dialog opens or its mode changes, or after a completion is picked).
 func (x *Repos) repoField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
-	o.Help, o.TabMoves, o.KeyMode = "agent/repos#add", true, RepoNewKeyMode
-	if focus {
-		c.RequestFocus(c.Next(key))
-	}
+	o.Help, o.TabMoves, o.KeyMode, o.TakeFocus = "agent/repos#add", true, RepoNewKeyMode, focus
 	widget.DialogField(c, key, text, o, x.closeDialog, x.submitDialog)
 }
 

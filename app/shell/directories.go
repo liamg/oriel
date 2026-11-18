@@ -153,7 +153,7 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 				})
 				return nil
 			}
-			dir, ok := uireg.DataOf[string](it)
+			dir, ok := uireg.PickerData[string](it)
 			if !ok {
 				return uireg.ForeignItem(it)
 			}

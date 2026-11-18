@@ -47,7 +47,7 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			cmd, ok := uireg.DataOf[registry.Command](it)
+			cmd, ok := uireg.PickerData[registry.Command](it)
 			if !ok {
 				return nil
 			}

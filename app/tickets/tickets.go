@@ -356,7 +356,7 @@ func (x *Tickets) source() uireg.PickerSource {
 			return out
 		},
 		Preview: func(it uireg.PickerItem) ui.Node {
-			r, ok := uireg.DataOf[ticketRow](it)
+			r, ok := uireg.PickerData[ticketRow](it)
 			if !ok {
 				return nil
 			}
@@ -393,7 +393,7 @@ func (x *Tickets) source() uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			r, ok := uireg.DataOf[ticketRow](it)
+			r, ok := uireg.PickerData[ticketRow](it)
 			if !ok {
 				return uireg.ForeignItem(it)
 			}
