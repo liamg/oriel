@@ -139,10 +139,12 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	s.Run("view.open", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "title": "Requests"})
 	// In full, as the dock beside the run's own views cuts it short.
 	s.Until("the question in Requests", func() bool { return strings.Contains(s.FullText(), question) })
-	blocked, _ := s.Store().State().Session(se.ID)
-	if th := blocked.Threads()[0]; !th.Open() || th.Busy || !th.AgentAnswered() || th.Btw {
-		t.Errorf("the blocked run's request doesn't wait on you: %+v", th)
-	}
+	// The question shows as the agent replies; its turn ends after, and only then is the request no longer busy.
+	s.UntilState("the blocked run's request waiting on you", func(st core.State) bool {
+		blocked, _ := st.Session(se.ID)
+		th := blocked.Threads()[0]
+		return th.Open() && !th.Busy && th.AgentAnswered() && !th.Btw
+	})
 
 	// A stopped run resumes.
 	s.Run("jobs.open", nil)

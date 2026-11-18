@@ -101,7 +101,7 @@ dmg: app
 	scripts/macos-dmg.sh $(APP) $(DMG)
 
 # The icon is rendered by bin/oriel, so an Intel app cross-built on Apple silicon reuses one made by a native build.
-$(ICNS): app/shell/icon.go app/kit/parts.go
+$(ICNS): app/shell/icon.go app/kit/icons/icons.go
 	rm -rf bin/oriel.iconset
 	./bin/oriel dev icon bin/oriel.iconset
 	iconutil -c icns -o $@ bin/oriel.iconset
