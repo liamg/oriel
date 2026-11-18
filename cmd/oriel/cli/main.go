@@ -104,10 +104,11 @@ func runApp(args []string) {
 	cfg.Closed = watch.start
 	go func() {
 		err := app.Run(context.Background(), be, cfg)
-		os.Exit(shutdown(err, cfg.Logs, cancel, func() { _ = w.Close(); sandboxes.Close() }, stopProfile))
+		code := shutdown(err, cfg.Logs, cancel, func() { _ = w.Close(); sandboxes.Close() }, stopProfile)
+		runtime.KeepAlive(held) // the lock is the process's until it exits: a collected file would let it go
+		os.Exit(code)
 	}()
 	gio.Main()
-	runtime.KeepAlive(held) // the lock is the process's until it ends: a collected file would let it go
 }
 
 // loginPath gives the process the PATH and ssh agent the user's login shell sets up, when it wasn't started from a
