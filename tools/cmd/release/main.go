@@ -6,6 +6,7 @@
 //
 //	go run ./tools/cmd/release -version v0.5.0 -in dist -out release [-notes notes.md]
 //	go run ./tools/cmd/release -genkey    (a new key: the secret's value, and the public half builds trust)
+//	git tag --list 'v*' | go run ./tools/cmd/release -version v0.5.0 -check-new    (above every version so far)
 package main
 
 import (
@@ -14,11 +15,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/semver"
 	"github.com/liamg/oriel/update"
 )
 
@@ -28,7 +31,19 @@ func main() {
 	out := flag.String("out", "release", "where the release is written")
 	notes := flag.String("notes", "", "a markdown file of release notes")
 	genkey := flag.Bool("genkey", false, "print a new key pair and exit")
+	checkNew := flag.Bool("check-new", false, "check -version is above every version tag read from stdin, and exit")
 	flag.Parse()
+	if *checkNew {
+		b, err := io.ReadAll(os.Stdin)
+		if err == nil {
+			err = newVersion(*version, strings.Fields(string(b)))
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "release:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if *genkey {
 		pub, priv, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -46,6 +61,25 @@ func main() {
 		fmt.Fprintln(os.Stderr, "release:", err)
 		os.Exit(1)
 	}
+}
+
+// newVersion says version may be released after tags: a full semantic version with a v, above every tag that is
+// one (a pre-release comes before its release, as semver.org orders them). Tags that aren't versions are passed over.
+func newVersion(version string, tags []string) error {
+	v, err := semver.Parse(version)
+	if err != nil || !strings.HasPrefix(version, "v") {
+		return fmt.Errorf("version %q isn't a full semantic version with a v (v0.0.15, v0.1.0-rc.1)", version)
+	}
+	for _, t := range tags {
+		w, err := semver.Parse(t)
+		if err != nil || !strings.HasPrefix(t, "v") {
+			continue
+		}
+		if v.Compare(w) <= 0 {
+			return fmt.Errorf("version %s isn't above %s", version, t)
+		}
+	}
+	return nil
 }
 
 func parseKey(s string) (ed25519.PrivateKey, error) {

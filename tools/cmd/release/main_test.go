@@ -12,6 +12,25 @@ import (
 	"github.com/liamg/oriel/update"
 )
 
+// A version is released only once, and above every version before it: release.yml's preflight refuses one that
+// isn't, before anything is built. A pre-release comes before its release, as semver.org orders them.
+func TestANewVersionIsAboveEveryOneSoFar(t *testing.T) {
+	tags := []string{"v0.0.12", "v0.0.13", "v0.1.0-rc.1", "not-a-version", "1.0.0"}
+	for v, ok := range map[string]bool{
+		"v0.1.0":      true,  // the release after its pre-release
+		"v0.1.0-rc.2": true,  // a later pre-release
+		"v0.0.14":     false, // below v0.1.0-rc.1
+		"v0.1.0-rc.1": false, // already made
+		"v0.0.13":     false,
+		"0.2.0":       false, // no v
+		"v0.2":        false, // not a full version
+	} {
+		if err := newVersion(v, tags); (err == nil) != ok {
+			t.Errorf("newVersion(%q) = %v, want ok %v", v, err, ok)
+		}
+	}
+}
+
 // What release.yml publishes is a release the app's updater accepts: signed by the key whose public half the build
 // trusts, listing each Linux archive, binary and macOS bundle by platform and kind with its size and sha256. A DMG is
 // uploaded but isn't the updater's, and neither is another version's archive.

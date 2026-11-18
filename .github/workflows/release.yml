@@ -1,10 +1,20 @@
 name: release
 
-# A v-tag makes a release, once ci.yml passes on it and the sandbox base image is published (sandbox-image.yml, whose
-# digest the builds pin): the app for each platform, each with its Linux sandbox helper
-# embedded (make build), and a manifest signed for the updater. A tag with a "-" (v0.5.0-rc.1) is a pre-release, on
-# nightly. Linux ships oriel-<version>-linux-<arch>.tar.gz (scripts/linux-archive.sh); macOS a DMG, the binary and
-# Oriel.app as a .tar.gz.
+# A release is started by hand, and its tag is made only once everything else has passed:
+#
+#   gh workflow run release.yml -f version=v0.0.15            # main, as it is now
+#   gh workflow run release.yml -f version=v0.0.15 -f ref=<sha or branch>
+#
+# preflight pins ref to one commit, and every job builds that commit: ci.yml passes on it, the sandbox base image
+# is published (sandbox-image.yml, whose digest the builds pin; it's named by its content, not the version), then
+# the app for each platform, each with its Linux sandbox helper embedded (make build), goes into a draft release
+# with no tag yet, with a manifest signed for the updater (which never reads drafts). Only publish, once all of
+# that has passed, makes the annotated tag on the commit and puts the release out. A run that fails makes no tag,
+# so the same version can be run again ("Re-run failed jobs", or a new run, which reuses the draft); one given up
+# on leaves its draft, to delete by hand.
+#
+# A version with a "-" (v0.5.0-rc.1) is a pre-release, on nightly. Linux ships oriel-<version>-linux-<arch>.tar.gz
+# (scripts/linux-archive.sh); macOS a DMG, the binary and Oriel.app as a .tar.gz.
 #
 # Needs the repository secret ORIEL_RELEASE_KEY (the ed25519 key, hex) and the variable ORIEL_RELEASE_PUBKEYS (its
 # public half, hex; two, comma-separated, during a rotation), which the builds trust. Oriel.app is signed with the
@@ -12,21 +22,38 @@ name: release
 # scripts/macos-signing-cert.sh; without them it's signed ad hoc.
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to release: v0.0.15, or v0.1.0-rc.1 for nightly"
+        required: true
+        type: string
+      ref:
+        description: "The branch or commit to release"
+        required: true
+        default: main
+        type: string
 
 permissions:
   contents: write
 
+# One release at a time; a second waits rather than cancelling the first.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
-  TAG: ${{ github.ref_name }}
+  TAG: ${{ inputs.version }}
   GH_TOKEN: ${{ github.token }}
   GH_REPO: ${{ github.repository }}
 
 jobs:
   preflight:
     # A build without the public keys can never update itself, and a release without the key can't be signed.
+    # The version must be a new one above the last, and ref is pinned to the one commit every job builds.
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.ref.outputs.sha }}
     steps:
       - env:
           PUBKEYS: ${{ vars.ORIEL_RELEASE_PUBKEYS }}
@@ -36,10 +63,38 @@ jobs:
           if [ -z "$PUBKEYS" ]; then echo "::error::the repository variable ORIEL_RELEASE_PUBKEYS is empty"; ok=false; fi
           if [ -z "$KEY" ]; then echo "::error::the repository secret ORIEL_RELEASE_KEY is empty"; ok=false; fi
           $ok
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - id: ref
+        name: Check the version, and pin the commit
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          git fetch --quiet --tags --force origin
+          if git rev-parse -q --verify "refs/tags/$TAG" > /dev/null; then
+            echo "::error::$TAG is already a tag: a version is never released twice, so pick the next one"; exit 1
+          fi
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = false ]; then
+            echo "::error::$TAG is already a published release"; exit 1
+          fi
+          # A full semantic version with a v, above every version tag so far (tools/cmd/release -check-new).
+          if ! git tag --list 'v*' | go run ./tools/cmd/release -version "$TAG" -check-new; then
+            echo "::error::$TAG can't be released: see above"; exit 1
+          fi
+          sha=$(git rev-parse --verify 'HEAD^{commit}')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Releasing $TAG from $sha ($REF)" >> "$GITHUB_STEP_SUMMARY"
 
   tests:
     needs: preflight
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.preflight.outputs.sha }}
     permissions:
       contents: read
 
@@ -47,21 +102,31 @@ jobs:
     # The sandbox base image the builds pin by digest (sandbox-image.yml).
     needs: preflight
     uses: ./.github/workflows/sandbox-image.yml
+    with:
+      ref: ${{ needs.preflight.outputs.sha }}
     permissions:
       contents: read
       packages: write
 
   draft:
-    needs: tests
+    # A draft on the pinned commit, with no tag: GitHub makes a draft's tag only when it's published. A draft left by
+    # an earlier run of this version is reused, the builds replacing its assets.
+    needs: [preflight, tests]
     runs-on: ubuntu-latest
+    env:
+      SHA: ${{ needs.preflight.outputs.sha }}
     steps:
       - run: |
           pre=""
           case "$TAG" in *-*) pre="--prerelease" ;; esac
-          gh release create "$TAG" --draft --title "$TAG" --generate-notes $pre
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
+            gh release edit "$TAG" --target "$SHA"
+          else
+            gh release create "$TAG" --draft --target "$SHA" --title "$TAG" --generate-notes $pre
+          fi
 
   linux:
-    needs: [draft, sandbox-image]
+    needs: [preflight, draft, sandbox-image]
     strategy:
       matrix:
         include:
@@ -77,6 +142,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
       - name: Restore the downloads (.github/fetch.sh)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -100,15 +167,17 @@ jobs:
         run: |
           ./bin/oriel dev icon bin/oriel.iconset
           scripts/linux-archive.sh dist bin/oriel bin/oriel.iconset/icon_128x128@2x.png "$TAG" ${{ matrix.arch }}
-          gh release upload "$TAG" dist/*
+          gh release upload --clobber "$TAG" dist/*
 
   macos:
     # One Apple-silicon runner builds both Macs: zig and clang cross-compile the Intel build. Each is uploaded as the
     # binary (for the CLI), Oriel.app as the updater's bundle (a .tar.gz of paths relative to the bundle), and a DMG.
-    needs: [draft, sandbox-image]
+    needs: [preflight, draft, sandbox-image]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
       - name: Restore the downloads (.github/fetch.sh)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -164,18 +233,23 @@ jobs:
             COPYFILE_DISABLE=1 tar --no-mac-metadata -C bin/Oriel.app -czf "dist/oriel-darwin-$arch.app.tar.gz" .
             mv bin/Oriel-*-$arch.dmg dist/
           done
-          gh release upload "$TAG" dist/*
+          gh release upload --clobber "$TAG" dist/*
       - name: Delete the signing keychain
         if: always()
         run: if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN"; fi
 
   publish:
-    # The manifest lists every archive, binary and bundle with its sha256, signed; then the draft goes out. The DMGs
-    # (Oriel-*.dmg) are for first install, not the updater, so they aren't downloaded or listed.
-    needs: [linux, macos]
+    # The manifest lists every archive, binary and bundle with its sha256, signed; then the tag is made on the pinned
+    # commit and the draft goes out. Nothing before this job makes anything that stays. The DMGs (Oriel-*.dmg) are
+    # for first install, not the updater, so they aren't downloaded or listed.
+    needs: [preflight, linux, macos]
     runs-on: ubuntu-latest
+    env:
+      SHA: ${{ needs.preflight.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.11"
@@ -186,5 +260,16 @@ jobs:
         env:
           ORIEL_RELEASE_KEY: ${{ secrets.ORIEL_RELEASE_KEY }}
       - run: |
-          gh release upload "$TAG" release/manifest.json release/manifest.sig
-          gh release edit "$TAG" --draft=false
+          gh release upload --clobber "$TAG" release/manifest.json release/manifest.sig
+      - name: Tag the commit, then publish
+        # A re-run after the tag went up but the release didn't go out finds the tag on this commit and goes on.
+        run: |
+          git fetch --quiet --tags --force origin
+          if have=$(git rev-parse -q --verify "refs/tags/$TAG^{commit}"); then
+            if [ "$have" != "$SHA" ]; then echo "::error::$TAG is already a tag, on $have, not $SHA"; exit 1; fi
+          else
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              tag -a "$TAG" -m "$TAG" "$SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+          gh release edit "$TAG" --tag "$TAG" --draft=false
