@@ -1,6 +1,7 @@
 package updates_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/update"
 )
 
@@ -151,6 +153,76 @@ func TestUpdateOptions(t *testing.T) {
 	}
 	if s.Registry().Available("update.install", nil) {
 		t.Error("a build without updates offers update.install")
+	}
+}
+
+// An update that goes past several versions shows what each changed, newest first, under its version: not only the
+// newest's notes. One whose changes were all internal says so; a release older than the running one isn't shown.
+func TestUpdateCardShowsEveryVersionItGoesPast(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	r.Publish("0.9.0", "## Fixes\n\n- An old fix")
+	r.Publish("1.1.0", "## Features\n\n- **Inbox:** Mark all read")
+	r.Publish("1.2.0", "No notable changes.")
+	r.Publish("2.0.0", "## Fixes\n\n- **LSP:** Language servers stop when their session ends")
+
+	s.Run("update.check", nil)
+	s.Frame()
+	s.Until("the card with the release", func() bool { return strings.Contains(s.Text(), "Oriel 2.0.0") })
+	text := strings.ReplaceAll(s.FullText(), "\n", " ")
+	at := -1
+	for _, want := range []string{"WHAT'S NEW", "2.0.0", "Language servers stop when their session ends", "1.2.0", "No notable changes.",
+		"1.1.0", "Mark all read"} {
+		i := strings.Index(text[at+1:], want)
+		if i < 0 {
+			t.Fatalf("the card lacks %q after what came before it:\n%s", want, text)
+		}
+		at += 1 + i
+	}
+	if strings.Contains(text, "0.9.0") || strings.Contains(text, "An old fix") {
+		t.Errorf("the card shows a release older than the running one:\n%s", text)
+	}
+	s.Lint("the update card over three versions")
+	s.Golden("update-card-versions")
+}
+
+// shown says a run of text reading text shows in the frame: drawn, and not clipped out of view.
+func shown(s *apptest.Scene, text string) bool {
+	for _, r := range s.List().Runs() {
+		if r.Text == text && r.Visible() {
+			return true
+		}
+	}
+	return false
+}
+
+// An update past many versions has more notes than the card has room for: they scroll, by the wheel over them, to
+// the oldest, while the card's buttons stay where they are.
+func TestUpdateCardNotesScroll(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	for v := 1; v <= 8; v++ {
+		r.Publish(fmt.Sprintf("1.%d.0", v), fmt.Sprintf("## Features\n\n- Feature %d.a\n- Feature %d.b\n\n## Fixes\n\n- Fix %d.a\n- Fix %d.b", v, v, v, v))
+	}
+	s.Run("update.check", nil)
+	s.Frame()
+	s.Until("the card with the release", func() bool { return strings.Contains(s.Text(), "Oriel 1.8.0") })
+	s.Quiet()
+	if !shown(s, "1.8.0") || shown(s, "1.1.0") {
+		t.Fatalf("before scrolling: the newest shows %v, the oldest %v; want only the newest:\n%s", shown(s, "1.8.0"), shown(s, "1.1.0"), s.Text())
+	}
+	button := s.TextPoint("Update")
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("1.8.0")})
+	s.Frame()
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: s.TextPoint("1.8.0"), Scroll: render.Point{Y: 4000}})
+	s.Until("the oldest version scrolled into view", func() bool { return shown(s, "1.1.0") && shown(s, "Fix 1.b") })
+	if shown(s, "1.8.0") {
+		t.Error("the newest version still shows at the foot of the notes: they didn't scroll")
+	}
+	if got := s.TextPoint("Update"); got != button || !shown(s, "Update") || !shown(s, "Later") {
+		t.Errorf("the card's buttons moved with the notes: Update at %v, was %v", got, button)
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 )
 
@@ -22,9 +23,10 @@ type Updater struct {
 	// Progress is told how a download or an install is getting on.
 	Progress Progress
 
-	mu  sync.Mutex
-	rel *Release
-	m   Manifest
+	mu      sync.Mutex
+	rel     *Release
+	m       Manifest
+	changes []Manifest
 }
 
 // ErrNoRelease is asking to install before a release was found.
@@ -36,10 +38,51 @@ func (u *Updater) Check(ctx context.Context, channel string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	changes := Changes(ctx, u.Source, u.Keys, channel, u.Version, m)
 	u.mu.Lock()
-	u.rel, u.m = &rel, m
+	u.rel, u.m, u.changes = &rel, m, changes
 	u.mu.Unlock()
 	return m, nil
+}
+
+// Changes is every release Check last found between this copy and the newest, newest first, the newest included.
+func (u *Updater) Changes() []Manifest {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return slices.Clone(u.changes)
+}
+
+// Changes is each verified release on channel after current, up to and including newest, newest first: what an
+// update to newest brings. A source that can't list its releases, or a list that fails, gives newest alone.
+func Changes(ctx context.Context, src Source, keys []ed25519.PublicKey, channel, current string, newest Manifest) []Manifest {
+	out := []Manifest{newest}
+	h, ok := src.(History)
+	if !ok {
+		return out
+	}
+	rels, err := h.Releases(ctx, channel)
+	if err != nil {
+		return out
+	}
+	seen := map[string]bool{newest.Version: true}
+	for _, rel := range rels {
+		m, err := rel.Verify(keys)
+		if err != nil || seen[m.Version] || !Newer(m.Version, current) || Newer(m.Version, newest.Version) {
+			continue
+		}
+		seen[m.Version] = true
+		out = append(out, m)
+	}
+	slices.SortStableFunc(out, func(a, b Manifest) int {
+		switch {
+		case Newer(a.Version, b.Version):
+			return -1
+		case Newer(b.Version, a.Version):
+			return 1
+		}
+		return 0
+	})
+	return out
 }
 
 // Latest is the release Check last kept.

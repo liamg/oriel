@@ -110,19 +110,40 @@ jobs:
 
   draft:
     # A draft on the pinned commit, with no tag: GitHub makes a draft's tag only when it's published. A draft left by
-    # an earlier run of this version is reused, the builds replacing its assets.
+    # an earlier run of this version is reused, the builds replacing its assets. Its notes are the commits since the
+    # last published release (tools/cmd/changelog), not the last tag, so a version that failed and never went out
+    # doesn't hide its changes; publish signs them into the manifest, which the update card shows.
     needs: [preflight, tests]
     runs-on: ubuntu-latest
     env:
       SHA: ${{ needs.preflight.outputs.sha }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Write the notes
+        run: |
+          git fetch --quiet --tags --force origin
+          # The newest published release: a stable version's notes run from the last stable one, a pre-release's from
+          # the last of either.
+          case "$TAG" in
+            *-*) since=$(gh api "repos/$GH_REPO/releases?per_page=100" --jq '[.[] | select(.draft | not)][0].tag_name // ""') ;;
+            *) since=$(gh api "repos/$GH_REPO/releases?per_page=100" --jq '[.[] | select((.draft | not) and (.prerelease | not))][0].tag_name // ""') ;;
+          esac
+          go run ./tools/cmd/changelog -since "$since" -until "$SHA" -repo "$GH_REPO" > notes.md
+          echo "Notes since ${since:-the first commit}:" >> "$GITHUB_STEP_SUMMARY"
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
       - run: |
           pre=""
           case "$TAG" in *-*) pre="--prerelease" ;; esac
           if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
-            gh release edit "$TAG" --target "$SHA"
+            gh release edit "$TAG" --target "$SHA" --notes-file notes.md
           else
-            gh release create "$TAG" --draft --target "$SHA" --title "$TAG" --generate-notes $pre
+            gh release create "$TAG" --draft --target "$SHA" --title "$TAG" --notes-file notes.md $pre
           fi
 
   linux:

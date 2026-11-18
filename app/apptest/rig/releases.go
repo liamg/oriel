@@ -37,7 +37,7 @@ func NewReleases(t *testing.T) *Releases {
 	return r
 }
 
-// Publish puts version out on the stable channel, with notes.
+// Publish puts version out on the stable channel, with notes, beside the releases before it (update.Dirs).
 func (r *Releases) Publish(version, notes string) []byte {
 	r.t.Helper()
 	body := []byte("oriel " + version)
@@ -46,7 +46,7 @@ func (r *Releases) Publish(version, notes string) []byte {
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	if err := update.Write(r.Src, rel, map[string][]byte{a.Name: body}); err != nil {
+	if err := update.Write(filepath.Join(r.Src, version), rel, map[string][]byte{a.Name: body}); err != nil {
 		r.t.Fatal(err)
 	}
 	return body
@@ -54,7 +54,7 @@ func (r *Releases) Publish(version, notes string) []byte {
 
 // Updater updates the installed copy from the releases.
 func (r *Releases) Updater() *update.Updater {
-	return &update.Updater{Source: update.Dir(r.Src), Keys: r.trust, Version: "1.0.0", Installer: r.Self, CacheDir: r.t.TempDir()}
+	return &update.Updater{Source: update.Dirs(r.Src), Keys: r.trust, Version: "1.0.0", Installer: r.Self, CacheDir: r.t.TempDir()}
 }
 
 // Relaunch counts a relaunch.
