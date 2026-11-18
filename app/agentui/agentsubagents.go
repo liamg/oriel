@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/render"
@@ -103,7 +104,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 				}
 				c.Column("box", ui.Style{W: ui.Flex(1), H: ui.Px(200), Pad: ui.Pad(12), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1,
 					Radius: 6, ScrollY: true}, func(c *ui.Ctx) {
-					kit.MarkdownText(c, x.h, "md", part.body, 630, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+					markdown.Text(c, x.h, "md", part.body, 630, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				})
 			})
 		}

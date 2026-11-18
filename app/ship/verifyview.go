@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -144,7 +145,7 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 						c.Row("a", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 							c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 							c.Column("b", ui.Style{Pad: ui.PadXY(12, 9), Radius: 12, Fill: th.C(tVerifyMine), Stroke: th.C(tVerifyBorder), Border: 1}, func(c *ui.Ctx) {
-								widget.Rich(c, "t", kit.MDSpans(qq.Answer), width*.74, widget.UIFont(13, th.C(tVerifyMineFg)), widget.RichOpts{})
+								widget.Rich(c, "t", markdown.Spans(qq.Answer), width*.74, widget.UIFont(13, th.C(tVerifyMineFg)), widget.RichOpts{})
 							})
 						})
 					}
@@ -180,7 +181,7 @@ func (x *Verify) theirs(c *ui.Ctx, key any, q *quiz, text string, width float32)
 			c.Text("c", strings.ToUpper(cmp.Or(q.by, "a")[:1]), widget.Mono(11, typeset.Bold, th.C(theme.AccentInk)))
 		})
 		c.Column("b", ui.Style{Pad: ui.PadXY(12, 9), Radius: 12, Fill: th.C(tVerifyTheirs)}, func(c *ui.Ctx) {
-			widget.Rich(c, "t", kit.MDSpans(text), width*.74, widget.UIFont(13, th.C(theme.Fg)), widget.RichOpts{})
+			widget.Rich(c, "t", markdown.Spans(text), width*.74, widget.UIFont(13, th.C(theme.Fg)), widget.RichOpts{})
 		})
 	})
 }
@@ -202,7 +203,7 @@ func (x *Verify) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 		}
 		c.Column("t", ui.Style{Gap: 4, Pad: ui.PadXY(0, 3)}, func(c *ui.Ctx) {
 			note := cmp.Or(qq.Note, map[string]string{core.VerdictRight: "Right.", core.VerdictPartly: "Partly.", core.VerdictWrong: "Not quite."}[qq.Verdict])
-			widget.Rich(c, "note", kit.MDSpans(note), width*.7, widget.UIFont(12, th.C(theme.FgMuted)), widget.RichOpts{})
+			widget.Rich(c, "note", markdown.Spans(note), width*.7, widget.UIFont(12, th.C(theme.FgMuted)), widget.RichOpts{})
 			if qq.File != "" && qq.Verdict != core.VerdictRight {
 				c.Row("file", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 					c.Text("w", "Worth a look:", widget.UIFont(12, th.C(theme.FgFaint)))

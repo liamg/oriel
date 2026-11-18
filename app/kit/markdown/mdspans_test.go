@@ -1,4 +1,4 @@
-package kit_test
+package markdown_test
 
 import (
 	"html"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/ui/widget"
 )
 
@@ -88,7 +88,7 @@ var plainPara = regexp.MustCompile(`^<p>(?:[^<]|</?(?:em|strong|del|code)>)*</p>
 // ref:   gfm/spec.md#Strikethrough (extension)
 // quote: "Strikethrough text is any text wrapped in two tildes (`~`)."
 func TestMDSpansReadEmphasisAsTheSpecDoes(t *testing.T) {
-	b, err := os.ReadFile("../../spec/gfm/spec.md")
+	b, err := os.ReadFile("../../../spec/gfm/spec.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestMDSpansReadEmphasisAsTheSpecDoes(t *testing.T) {
 				continue
 			}
 			n++
-			got, exp := fromSpans(kit.MDSpans(md)), fromHTML(strings.TrimSuffix(strings.TrimPrefix(want, "<p>"), "</p>\n"))
+			got, exp := fromSpans(markdown.Spans(md)), fromHTML(strings.TrimSuffix(strings.TrimPrefix(want, "<p>"), "</p>\n"))
 			if got.String() != exp.String() {
 				t.Errorf("%q:\n got  %s\n want %s", md, got, exp)
 			}
@@ -130,7 +130,7 @@ func TestMDSpansReadGitHubEmojiCodes(t *testing.T) {
 		{"`:rocket:` stays code", "[c]:rocket:[] stays code"},
 		{"at 10:30:00, :nope: and a:rocket:b", "[]at 10:30:00, :nope: and a:rocket:b"},
 	} {
-		if got := fromSpans(kit.MDSpans(tt.in)).String(); got != tt.want {
+		if got := fromSpans(markdown.Spans(tt.in)).String(); got != tt.want {
 			t.Errorf("%q:\n got  %s\n want %s", tt.in, got, tt.want)
 		}
 	}

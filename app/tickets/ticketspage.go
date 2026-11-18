@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/icons"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -467,7 +468,7 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 		}
 		switch {
 		case full.Description != "":
-			kit.MarkdownText(c, x.h, "description", full.Description, 640, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+			markdown.Text(c, x.h, "description", full.Description, 640, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		case full.Summary != "":
 			widget.Wrap(c, "summary", full.Summary, 640, widget.UIFont(13, th.C(theme.FgMuted)))
 		}

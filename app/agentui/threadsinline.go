@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/edits"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -437,7 +438,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 							}
 							askedChip(c, cm)
 						})
-						kit.MarkdownText(c, h, "body", cm.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						markdown.Text(c, h, "body", cm.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), markdown.ForThread(se, t))
 						if sourced && src.Comment != nil {
 							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
 						}

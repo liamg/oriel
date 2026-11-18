@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render/typeset"
@@ -141,7 +142,7 @@ func (x *Explain) cardView(c *ui.Ctx, cd *explainCard) {
 				}
 				widget.Async(c, "answer", st, widget.AsyncOpts{Label: "Asking", Retry: func() { run("explain.refresh", nil) }, Help: help},
 					func(c *ui.Ctx) {
-						kit.MarkdownText(c, x.h, "md", a.text, width-28, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+						markdown.Text(c, x.h, "md", a.text, width-28, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 					})
 				if x.changed(cd) {
 					c.Row("changed", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

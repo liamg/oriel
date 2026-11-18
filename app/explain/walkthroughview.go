@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/diagrams"
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/internal/words"
 
 	"github.com/liamg/oriel/app/kit"
@@ -343,7 +344,7 @@ func (x *Walkthrough) notes(c *ui.Ctx, w *walkthrough, lay stageLayout, ps []pla
 			id := widget.Annotation(c, "card", widget.AnnotationOpts{N: noteMark(p.i), Title: n.Title, Tone: noteTone(th, p.i),
 				Width: ui.Px(notesW), Ground: th.C(draw.TEditorBg), Help: walkHelp}, func(c *ui.Ctx) {
 				if n.Text != "" {
-					kit.MarkdownText(c, x.h, "md", n.Text, notesW-28, widget.AnnotationBody(c), kit.MarkdownOpts{})
+					markdown.Text(c, x.h, "md", n.Text, notesW-28, widget.AnnotationBody(c), kit.MarkdownOpts{})
 				}
 			})
 			if r, ok := c.Rect(id); ok && r.Dy() != w.cardH[p.i] {
@@ -451,7 +452,7 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 			c.Column("text", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 				c.Text("title", s.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 19, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if s.Prose != "" {
-					kit.MarkdownText(c, x.h, "prose", s.Prose, width, widget.UIFont(13.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+					markdown.Text(c, x.h, "prose", s.Prose, width, widget.UIFont(13.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				}
 				c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 					if widget.Button(c, "ask", "Ask about this step", widget.ButtonOpts{Ghost: true, Help: walkHelp,

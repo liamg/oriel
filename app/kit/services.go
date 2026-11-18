@@ -54,6 +54,16 @@ type Markdown interface {
 	Title(src string) (string, bool)
 }
 
+// MarkdownOpts are where a document's relative images are, the lightbox group its images make (one of its own if
+// ""), and whether a newline in a paragraph is a line break (a comment's) or a space (a document's: CommonMark's soft
+// break).
+type MarkdownOpts struct {
+	Dir    string
+	Group  string
+	Help   string
+	Breaks bool
+}
+
 // Indicators build indicators to draw inside another panel, as the HUD keeps them.
 type Indicators interface {
 	// Node is ind's node to draw, or its error in its place; nil once it's been turned off.

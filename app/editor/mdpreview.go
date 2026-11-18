@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -137,7 +138,7 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 	th := c.Theme()
 	width := d.Width
 	body := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14.5}, Color: th.C(theme.Fg)}
-	spans := kit.MDSpans(b.Text)
+	spans := markdown.Spans(b.Text)
 	if b.Line == b.End {
 		for _, dc := range d.Decorations {
 			if dc.Kind == uireg.LineBg && dc.Was != "" {
@@ -225,7 +226,7 @@ func wordDiff(was, now string, b mdBlock) []widget.Span {
 	var out []widget.Span
 	add := func(words []string) {
 		if len(words) > 0 {
-			out = append(out, kit.MDSpans(strings.Join(words, " ")+" ")...)
+			out = append(out, markdown.Spans(strings.Join(words, " ")+" ")...)
 		}
 	}
 	add(nw[:p])

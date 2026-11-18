@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -164,7 +165,7 @@ func threadsPopover(c *ui.Ctx, h plugin.Host, se core.SessionState, line int, ts
 					}
 					c.Column(j, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 						c.Text("who", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-						kit.MarkdownText(c, h, "body", cm.Body, 340, widget.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						markdown.Text(c, h, "body", cm.Body, 340, widget.UIFont(12, th.C(theme.FgMuted)), markdown.ForThread(se, t))
 					})
 				}
 			})

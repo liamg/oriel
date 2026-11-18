@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/internal/words"
 	"github.com/liamg/oriel/registry/services"
 
@@ -219,7 +220,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 				notes = "This release has no notes."
 			}
 			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx) {
-				kit.MarkdownText(c, x.h, "md", notes, 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+				markdown.Text(c, x.h, "md", notes, 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 			})
 		case busy != "":
 		default:
