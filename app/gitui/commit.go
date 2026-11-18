@@ -55,15 +55,15 @@ func (g *Git) activateCommit(h plugin.Host) {
 	open := func(registry.Args) bool { return g.ask != nil }
 	for _, c := range []registry.Command{
 		{ID: "git.commit", Grant: string(plugin.CapGit), Title: "Commit what's staged in {path}'s repo ({all}: everything uncommitted) with {message}, asking for one if none",
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.AnyArg("all"), registry.StringArg("message"), registry.StringArg("path")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return atTarget(ctx, g.h, cmp.Or(a.String("path"), g.h.Here().Project), func(root, _ string) error {
 					return g.commit(root, a, time.Now())
 				})
 			}},
 		{ID: "git.commit.confirm", Grant: string(plugin.CapGit), Title: "Commit with the message written", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { return g.resume(nil) }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return g.resume(nil) }},
 		{ID: "git.commit.cancel", Grant: registry.Open, Title: "Close the commit dialog without committing", Available: open,
-			Run: func(registry.Ctx, registry.Args) error { g.ask = nil; return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { g.ask = nil; return nil }},
 	} {
 		g.Add(h.Command(c))
 	}

@@ -106,11 +106,11 @@ func (x *Repos) commands() []registry.Command {
 	dialogOpen := func(registry.Args) bool { return x.dialog != nil }
 	return []registry.Command{
 		{ID: "repos.open", Grant: registry.Open, Title: "The Repos page, at a {repo}", Available: has, Ex: "Repos", ExArg: "repo",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(core.RepoID(a.String("repo"))) }},
+			Args: []registry.Arg{registry.StringArg("repo")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.openPage(core.RepoID(a.String("repo"))) }},
 		{ID: "repos.new", Grant: registry.Open, Title: "Add a repo: the dialog, with {mode} (directory or clone), {path}, {url}, {parent} or {name} filled in, and {note} saying why over them; {then} is a list of {command, args} run with {repo} once it's added",
-			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { return x.newDialog(a) }},
+			Available: has, Args: []registry.Arg{registry.StringArg("mode"), registry.StringArg("name"), registry.StringArg("note"), registry.StringArg("parent"), registry.StringArg("path"), registry.AnyArg("repo"), registry.AnyArg("then"), registry.StringArg("url")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.newDialog(a) }},
 		{ID: "repos.add", Grant: registry.Open, Title: "Register the checkout at {path}; {then} runs with {repo} once it's added", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("path"), registry.AnyArg("repo"), registry.AnyArg("then")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				path := expandTilde(a.String("path"))
 				if path == "" {
 					return errors.New("add which checkout? Give its {path}")
@@ -125,7 +125,7 @@ func (x *Repos) commands() []registry.Command {
 					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
 			}},
 		{ID: "repos.clone", Grant: string(plugin.CapGit), Title: "Clone {url} into {parent} as {name}, and register it; {then} runs with {repo} once it's added", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("name"), registry.StringArg("parent"), registry.AnyArg("repo"), registry.AnyArg("then"), registry.StringArg("url")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				then, err := kit.CallsOf(a["then"])
 				if err != nil {
 					return err
@@ -137,7 +137,7 @@ func (x *Repos) commands() []registry.Command {
 					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
 			}},
 		{ID: "repos.remove", Grant: registry.Open, Title: "Unregister {repo} and stop discovery adding it back; its files stay", Available: has,
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("repo")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				w, err := sessionkit.RepoCalls(x.h)
 				if err != nil {
 					return err
@@ -145,9 +145,9 @@ func (x *Repos) commands() []registry.Command {
 				return w.RemoveRepo(x.repoArg(a))
 			}},
 		{ID: "repos.scan", Grant: registry.Open, Title: "Register the git repos in the folders your repos are in", Available: has,
-			Run: func(registry.Ctx, registry.Args) error { x.discover(true); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.discover(true); return nil }},
 		{ID: "repos.fetch", Grant: string(plugin.CapGit), Title: "Fetch {repo}'s remote, pruning branches it deleted", Available: has,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("repo")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				w, _ := sessionkit.RepoCalls(x.h)
 				id := x.repoArg(a)
 				if id == "" {
@@ -157,11 +157,11 @@ func (x *Repos) commands() []registry.Command {
 					func(ctx context.Context) (struct{}, error) { return struct{}{}, w.FetchRepo(ctx, id) }, nil)
 			}},
 		{ID: "repos.housekeep", Grant: string(plugin.CapGit), Title: "Clean up {repo}: delete the branches in {apply} (merged, or upstream gone) with their worktrees; {force} lists dirty worktrees that go anyway; {prune} prunes stale worktrees. With no {apply}, the Repos page at its housekeeping",
-			Available: has, Run: x.housekeepCommand},
+			Available: has, Args: []registry.Arg{registry.ListArg("apply"), registry.ListArg("force"), registry.BoolArg("prune"), registry.StringArg("repo")}, Run: x.housekeepCommand},
 		{ID: "repos.tag", Grant: string(plugin.CapGit), Title: "Tag {repo}: an annotated tag {name} on {branch} (the default branch), {message}; {pull}, {sign} and {push} default to the repos.tag options",
-			Available: has, Run: x.tagCommand},
+			Available: has, Args: []registry.Arg{registry.StringArg("branch"), registry.StringArg("message"), registry.StringArg("name"), registry.BoolArg("pull"), registry.BoolArg("push"), registry.StringArg("repo"), registry.BoolArg("sign")}, Run: x.tagCommand},
 		{ID: "repos.new.submit", Grant: string(plugin.CapGit), Title: "Add the repo the Add repo dialog holds", Available: dialogOpen,
-			Run: func(registry.Ctx, registry.Args) error { x.submitDialog(); return nil }},
+			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.submitDialog(); return nil }},
 	}
 }
 
@@ -247,14 +247,16 @@ func (x *Repos) find(ref string) (core.Repo, bool) {
 	return core.Repo{}, false
 }
 
-// then runs each of then's calls with {repo} merged into its args.
+// then runs each of then's calls with {repo} merged into its args, for a command that takes one.
 func (x *Repos) then(ctx context.Context, then []kit.Call, id core.RepoID) error {
 	for _, c := range then {
 		a := registry.Args{}
 		for k, v := range c.Args {
 			a[k] = v
 		}
-		a["repo"] = string(id)
+		if cmd, ok := x.h.CommandFor(c.Command); !ok || cmd.Takes("repo") {
+			a["repo"] = string(id)
+		}
 		if err := x.h.Run(ctx, c.Command, a); err != nil {
 			return err
 		}

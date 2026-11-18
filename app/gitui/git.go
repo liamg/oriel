@@ -246,14 +246,14 @@ func (g *Git) commands() []registry.Command {
 		}
 	}
 	return []registry.Command{
-		{ID: "git.stage", Grant: string(plugin.CapGit), Title: "Stage files: {path}", Available: inRepo, Run: op(func(ctx context.Context, r gitx.Repo, ps []string) error {
+		{ID: "git.stage", Grant: string(plugin.CapGit), Title: "Stage files: {path}", Available: inRepo, Args: []registry.Arg{registry.AnyArg("path")}, Run: op(func(ctx context.Context, r gitx.Repo, ps []string) error {
 			return r.Stage(ctx, ps...)
 		})},
-		{ID: "git.unstage", Grant: string(plugin.CapGit), Title: "Unstage files: {path}", Available: inRepo, Run: op(func(ctx context.Context, r gitx.Repo, ps []string) error {
+		{ID: "git.unstage", Grant: string(plugin.CapGit), Title: "Unstage files: {path}", Available: inRepo, Args: []registry.Arg{registry.AnyArg("path")}, Run: op(func(ctx context.Context, r gitx.Repo, ps []string) error {
 			return r.Unstage(ctx, ps...)
 		})},
 		{ID: "git.discard", Grant: string(plugin.CapGit), Title: "Throw away files' unstaged changes, after asking: {path}", Available: inRepo,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.BoolArg("confirm"), registry.AnyArg("path")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				if !a.Bool("confirm") {
 					ps := paths(a)
 					for i, p := range ps {
@@ -270,7 +270,7 @@ func (g *Git) commands() []registry.Command {
 				h.Dismiss("git.discard")
 				return op(func(ctx context.Context, r gitx.Repo, ps []string) error { return r.Discard(ctx, ps...) })(ctx, a)
 			}},
-		{ID: "git.refresh", Grant: registry.Open, Title: "Read the work tree's git status again", Available: inRepo, Run: func(registry.Ctx, registry.Args) error {
+		{ID: "git.refresh", Grant: registry.Open, Title: "Read the work tree's git status again", Available: inRepo, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error {
 			g.async(func(context.Context) error { return nil })
 			return nil
 		}},

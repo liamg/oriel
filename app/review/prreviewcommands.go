@@ -45,9 +45,9 @@ func (x *PRReview) onItem(fn func(ctx registry.Ctx, se core.SessionState, it rev
 func (x *PRReview) fetchCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.fetch", Grant: string(plugin.CapGit), Title: "Fetch what the author has pushed to session {id}'s pull request (the one in front by default)", Available: x.inReview,
-			Run: x.fetch},
+			Args: []registry.Arg{registry.StringArg("id")}, Run: x.fetch},
 		{ID: "review.pr.recheck", Grant: string(plugin.CapAgentPrompt), Title: "Ask session {id}'s agent to review the commits the last fetch brought, and where its earlier comments stand",
-			Available: x.inReview, Run: x.recheck},
+			Available: x.inReview, Args: []registry.Arg{registry.StringArg("id")}, Run: x.recheck},
 	}
 }
 
@@ -55,7 +55,7 @@ func (x *PRReview) fetchCommands() []registry.Command {
 func (x *PRReview) triageCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.pick", Grant: registry.Open, Title: "Keep the review's {item} (the selected one by default) for the review you submit, or drop it: {state} keep, drop, or '' undecided",
-			Available: x.inReview, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
+			Available: x.inReview, Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item"), registry.StringArg("state")}, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
 				s := a.String("state")
 				if !slices.Contains([]string{core.PickKeep, core.PickDrop, ""}, s) {
 					return fmt.Errorf("a comment is kept or dropped, not %q", s)
@@ -65,7 +65,7 @@ func (x *PRReview) triageCommands() []registry.Command {
 				return x.settle(ctx, se, it, s)
 			})},
 		{ID: "review.pr.include", Grant: registry.Open, Title: "Put the review's {item} in the review you submit, or leave it out with {on} false", Available: x.inReview,
-			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item"), registry.AnyArg("on")}, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
 				s := core.PickKeep
 				if v, ok := a["on"].(bool); ok && !v {
 					s = core.PickDrop
@@ -74,7 +74,7 @@ func (x *PRReview) triageCommands() []registry.Command {
 				return x.settle(ctx, se, it, s)
 			})},
 		{ID: "review.pr.severity.set", Grant: registry.Open, Title: "Rate the review's {item}: {severity} critical, high, medium, low or nit; '' for the reviewer's", Available: x.inReview,
-			Run: x.onItem(func(_ registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item"), registry.StringArg("severity")}, Run: x.onItem(func(_ registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
 				s := a.String("severity")
 				if s != "" && !slices.Contains(core.Severities, s) {
 					return fmt.Errorf("no severity %q", s)
@@ -86,7 +86,7 @@ func (x *PRReview) triageCommands() []registry.Command {
 				return nil
 			})},
 		{ID: "review.pr.edit", Grant: registry.Open, Title: "Edit what the author gets of the review's {item}: {body}, or '' for the reviewer's words; without a body, open it to edit",
-			Available: x.inReview, Run: x.onItem(func(_ registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
+			Available: x.inReview, Args: []registry.Arg{registry.AnyArg("body"), registry.StringArg("id"), registry.StringArg("item")}, Run: x.onItem(func(_ registry.Ctx, se core.SessionState, it reviewItem, a registry.Args) error {
 				if _, ok := a["body"]; !ok {
 					f := x.form(se.ID)
 					f.sel, f.editing, f.edit = it.id, it.id, it.words()
@@ -107,9 +107,9 @@ func (x *PRReview) triageCommands() []registry.Command {
 func (x *PRReview) reworkCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.rework", Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent to reword the review's {item} for the author: {how} shorter, friendlier, suggestion or detail, or {ask} in your words",
-			Available: x.inReview, Run: x.onItem(x.rework)},
+			Available: x.inReview, Args: []registry.Arg{registry.StringArg("ask"), registry.StringArg("how"), registry.StringArg("id"), registry.StringArg("item")}, Run: x.onItem(x.rework)},
 		{ID: "review.pr.rework.accept", Grant: registry.Open, Title: "Use the agent's rewording of the review's {item}", Available: x.inReview,
-			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item")}, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				text, ok := reworded(se, it.pick)
 				if !ok {
 					return errors.New("the agent hasn't reworded it yet")
@@ -118,12 +118,12 @@ func (x *PRReview) reworkCommands() []registry.Command {
 				return x.endRework(ctx, se, it)
 			})},
 		{ID: "review.pr.rework.discard", Grant: registry.Open, Title: "Keep your words for the review's {item}, not the agent's rewording", Available: x.inReview,
-			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item")}, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				x.setPick(se.ID, it.id, func(p *core.ReviewPick) { p.Rework, p.ReworkAt = "", 0 })
 				return x.endRework(ctx, se, it)
 			})},
 		{ID: "review.pr.summary.ask", Grant: string(plugin.CapAgentPrompt), Title: "Ask session {id}'s agent to draft the review's summary from the comments kept; it fills the summary box",
-			Available: x.inReview, Run: x.askSummary},
+			Available: x.inReview, Args: []registry.Arg{registry.StringArg("id")}, Run: x.askSummary},
 	}
 }
 
@@ -131,7 +131,7 @@ func (x *PRReview) reworkCommands() []registry.Command {
 func (x *PRReview) moveCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.next", Grant: registry.Open, Title: "Select the review's next comment, or the one before with {back}", Available: x.inReview,
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.BoolArg("back"), registry.StringArg("id")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				se, err := x.session(a)
 				if err != nil {
 					return err
@@ -140,7 +140,7 @@ func (x *PRReview) moveCommands() []registry.Command {
 				return nil
 			}},
 		{ID: "review.pr.item.reveal", Grant: registry.Open, Title: "Show the review's {item} (the selected one by default) at its line in the diff", Available: x.inReview,
-			Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("item")}, Run: x.onItem(func(ctx registry.Ctx, se core.SessionState, it reviewItem, _ registry.Args) error {
 				x.form(se.ID).sel = it.id
 				return x.h.Run(ctx, "diff.open", registry.Args{"path": filepath.Join(reviewDir(se, it.at.Project), filepath.FromSlash(it.at.File)), "line": it.at.Line, "side": it.at.Side})
 			})},
@@ -151,7 +151,7 @@ func (x *PRReview) moveCommands() []registry.Command {
 func (x *PRReview) postCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "review.pr.preview", Grant: registry.Open, Title: "Preview the review as it would be posted with {verdict}: approve, changes or comment; '' closes it", Available: x.inReview,
-			Run: func(_ registry.Ctx, a registry.Args) error {
+			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("verdict")}, Run: func(_ registry.Ctx, a registry.Args) error {
 				se, err := x.session(a)
 				if err != nil {
 					return err
@@ -165,6 +165,6 @@ func (x *PRReview) postCommands() []registry.Command {
 				return nil
 			}},
 		{ID: "review.pr.submit", Grant: string(plugin.CapGit), Title: "Submit your review of session {id}'s pull request: {verdict} approve, changes or comment, with {body} or the summary, and the comments kept",
-			Available: x.inReview, Run: x.submit},
+			Available: x.inReview, Args: []registry.Arg{registry.StringArg("body"), registry.StringArg("id"), registry.StringArg("verdict")}, Run: x.submit},
 	}
 }
