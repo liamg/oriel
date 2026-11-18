@@ -15,14 +15,6 @@ import (
 
 func (x *LSP) CompletionOpen() bool   { return x.comp.open }
 func (x *LSP) Clients() []*lsp.Client { return x.m.Clients() }
-func (x *LSP) AddToHover(md string)   { x.hover.md.Text += md }
-
-// ForgetDocs forgets every buffer's server document, as if no file had opened on a server yet.
-func (x *LSP) ForgetDocs() {
-	x.mu.Lock()
-	clear(x.docs)
-	x.mu.Unlock()
-}
 
 func (x *Tests) History() *testrun.History { return x.history }
 func (x *Tests) Rescan(path string)        { x.rescan(path) }
@@ -101,11 +93,4 @@ func (x *Debug) HasVariable(expr string) bool {
 		}
 	}
 	return false
-}
-
-// Scans counts the whole scans of the window's directory for its tests.
-func (x *Tests) Scans() int {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	return x.scans
 }

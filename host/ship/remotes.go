@@ -59,7 +59,7 @@ func (x *Ships) remoteURL(ctx context.Context, repo gitx.Repo, fresh bool) strin
 // ProjectRemote is origin's URL in a session's project.
 func (x *Ships) ProjectRemote(ctx context.Context, r hostapi.ShipRef) (_ string, err error) {
 	defer x.env.Recover("ProjectRemote", &err)
-	_, _, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
+	_, _, repo, err := hostcore.ProjectRepo(ctx, x.env.Git, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return "", err
 	}

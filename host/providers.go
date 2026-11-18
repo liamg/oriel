@@ -63,7 +63,7 @@ func (w *Host) SetProviders(src func() []agent.Provider) {
 		return
 	}
 	w.resumeHandedOver()
-	w.env.Go("usage", func() {
+	w.env.GoLasting("usage", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {

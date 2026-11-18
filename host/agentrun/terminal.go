@@ -24,7 +24,7 @@ func (x *Runner) Terminal(ctx context.Context, id core.SessionID) (_ <-chan []by
 	}
 	backlog, live, detach := sess.Terminal().Attach()
 	out := make(chan []byte, 64)
-	x.env.Go("Terminal", func() {
+	x.env.GoLasting("Terminal", func() {
 		defer close(out)
 		defer detach()
 		send := func(b []byte) bool {

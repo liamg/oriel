@@ -274,7 +274,7 @@ func TestCloseWaitsOnlySoLongAndSaysForWhat(t *testing.T) {
 	r.w.opts.CloseWait = time.Millisecond
 	stuck := make(chan struct{})
 	t.Cleanup(func() { close(stuck) })
-	r.w.env.Go("a stuck fetch", func() { <-stuck })
+	r.w.env.GoLasting("a stuck fetch", func() { <-stuck })
 	if err := r.w.Close(); err != nil {
 		t.Fatal(err)
 	}

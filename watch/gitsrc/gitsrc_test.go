@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/leaktest"
+	"github.com/liamg/oriel/internal/waitfor"
 	"github.com/liamg/oriel/watch"
 )
 
@@ -88,17 +89,7 @@ func (r *rig) change(t *testing.T, rel ...string) {
 // until waits for a reading of s's that ok accepts, as each new one arrives.
 func until[T any](t *testing.T, s watch.Sub[T], what string, ok func(v T) bool) {
 	t.Helper()
-	deadline := time.After(10 * time.Second)
-	for {
-		if v, _, has := s.Get(); has && ok(v) {
-			return
-		}
-		select {
-		case <-s.Changed():
-		case <-deadline:
-			t.Fatalf("never: %s", what)
-		}
-	}
+	waitfor.Change(t, what, func() bool { v, _, has := s.Get(); return has && ok(v) }, s.Changed)
 }
 
 func anyReading[T any](T) bool { return true }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/liamg/oriel/internal/waitfor"
 	"github.com/liamg/oriel/render"
 )
 
@@ -83,12 +84,7 @@ func (d *a11yDesktop) enable(on bool) error {
 
 func eventually(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
-		if ok() {
-			return
-		}
-	}
-	t.Fatalf("timed out waiting for %s", what)
+	waitfor.Poll(t, what, ok)
 }
 
 func testATSPI(t *testing.T, addr string) {

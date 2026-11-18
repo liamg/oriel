@@ -192,7 +192,7 @@ func (x *Runner) StartLogin(ctx context.Context, provider string) (_ string, err
 	if err != nil {
 		return "", err
 	}
-	x.env.Go("a sign-in", func() {
+	x.env.GoLasting("a sign-in", func() {
 		var err error
 		select {
 		case err = <-l.Done:

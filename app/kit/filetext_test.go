@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
-	"time"
 
+	"github.com/liamg/oriel/internal/waitfor"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 )
@@ -21,16 +21,6 @@ func testReads(t *testing.T) (*Reads, registry.Registry) {
 	return rd, r
 }
 
-// until asks again until ok, failing the test after a few seconds: a hang guard, not a wait for a while.
-func until(t *testing.T, what string, ok func() bool) {
-	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("%s never came", what)
-		}
-	}
-}
-
 // A file's text is read off the loop: the first ask finds it loading, a later one has it.
 func TestFileTextReadsOffTheLoop(t *testing.T) {
 	_, r := testReads(t)
@@ -42,7 +32,7 @@ func TestFileTextReadsOffTheLoop(t *testing.T) {
 	if f := fs.Of(r, path); !f.Loading() || f.Src != nil {
 		t.Fatalf("the first ask read the file on the loop: %q", f.Src)
 	}
-	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
+	waitfor.Poll(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	if got := fs.Of(r, path).Lines(); !slices.Equal(got, []string{"package a"}) {
 		t.Errorf("lines = %q", got)
 	}
@@ -56,12 +46,12 @@ func TestFileTextHighlightsOffTheLoop(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := FileTexts{}
-	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
+	waitfor.Poll(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
 	if hl := f.Around(r, path, 3, 1, 1); f.hlDone || len(hl.lines) == 0 {
 		t.Fatalf("the first frame highlighted on the loop, or showed %q", hl.lines)
 	}
-	until(t, "the highlighting", func() bool { f.Around(r, path, 3, 1, 1); return f.hlDone })
+	waitfor.Poll(t, "the highlighting", func() bool { f.Around(r, path, 3, 1, 1); return f.hlDone })
 }
 
 // A file's text is read again when the file changes on disk or its buffer's version moves, and what's made from it
@@ -73,9 +63,9 @@ func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 		t.Fatal(err)
 	}
 	fs := FileTexts{}
-	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
+	waitfor.Poll(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
-	until(t, "the highlighting", func() bool { f.Around(registry.New(), path, 1, 0, 2); return f.hlDone })
+	waitfor.Poll(t, "the highlighting", func() bool { f.Around(registry.New(), path, 1, 0, 2); return f.hlDone })
 	ls, hl := f.Lines(), f.Around(registry.New(), path, 1, 0, 2)
 	if !slices.Equal(ls, []string{"package a", "", "func A() {}"}) {
 		t.Fatalf("lines = %q", ls)
@@ -87,7 +77,7 @@ func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 	if err := os.WriteFile(path, []byte("package b\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	until(t, "the changed file", func() bool { return slices.Equal(fs.Of(r, path).Lines(), []string{"package b"}) })
+	waitfor.Poll(t, "the changed file", func() bool { return slices.Equal(fs.Of(r, path).Lines(), []string{"package b"}) })
 
 	buf := text.New([]byte("one\ntwo\n"), text.Author{})
 	if got := f.Load(rd, buf, path).Lines(); !slices.Equal(got, []string{"one", "two"}) {
@@ -103,5 +93,5 @@ func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
-	until(t, "the file missing", func() bool { return fs.Of(r, path).Missing() })
+	waitfor.Poll(t, "the file missing", func() bool { return fs.Of(r, path).Missing() })
 }

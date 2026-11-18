@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sysload"
 )
 
@@ -24,6 +25,9 @@ type Env struct {
 	Work   *Jobs // what Go starts, which the host waits for as it closes
 	// SessionIDs makes a new session's id; NewSessionID if nil.
 	SessionIDs func() string
+	// Git vets sandboxed workspaces' git config before host git runs there, remembering each verdict; nil vets
+	// every time.
+	Git *sandbox.Guard
 }
 
 // NewSessionID is a new session's id, from SessionIDs or NewSessionID.
@@ -49,16 +53,25 @@ func (e Env) Recover(where string, err *error) {
 }
 
 // Go runs fn on its own goroutine, recovering a panic in it; the host's Close waits for it.
-func (e Env) Go(where string, fn func()) {
+func (e Env) Go(where string, fn func()) { e.goJob(where, false, fn) }
+
+// GoLasting is Go for work that lasts as long as what it serves (an agent's event loop, a sign-in), so never ends on
+// its own: closing still waits for it, a wait for the host's work to settle doesn't (Jobs.Transient).
+func (e Env) GoLasting(where string, fn func()) { e.goJob(where, true, fn) }
+
+func (e Env) goJob(where string, lasting bool, fn func()) {
 	run := func() {
 		defer e.Recover(where, nil)
 		fn()
 	}
-	if e.Work == nil {
+	switch {
+	case e.Work == nil:
 		go run()
-		return
+	case lasting:
+		e.Work.GoLasting(where, run)
+	default:
+		e.Work.Go(where, run)
 	}
-	e.Work.Go(where, run)
 }
 
 // SessionDir is where a session's log and files are kept.

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/internal/waitfor"
 )
 
 // Recv waits for ch to send, and answers what it sent; it fails the test after Timeout, naming what. It's the hang
@@ -27,9 +28,5 @@ func Recv[T any](t testing.TB, what string, ch <-chan T) T {
 // no scene or window draws: a file, a fake's record, a goroutine's result. A scene's own conditions are Until's.
 func Poll(t testing.TB, what string, ok func() bool) {
 	t.Helper()
-	for deadline := time.Now().Add(Timeout); !ok(); time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s%s", what, rig.Stuck())
-		}
-	}
+	waitfor.PollFor(t, Timeout, what, ok, rig.Stuck)
 }

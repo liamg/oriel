@@ -23,14 +23,26 @@ var hostGitConfig = [][2]string{
 	{"core.fsmonitor", "false"},
 }
 
+// Guard vets a sandboxed workspace's git config before host git runs there, and remembers each file's verdict until
+// the file changes. The session host keeps one for its life; a nil Guard vets every time.
+type Guard struct {
+	mu       sync.Mutex
+	worktree map[string]wtResult    // a repo's config → whether it turns per-worktree config on
+	configs  map[string]checkResult // a config file → whether it holds only safe keys
+}
+
 // GitEnv returns the environment host git needs to run in dir, or nil when
 // dir is not in a sandboxed workspace. An error means git must not run there.
-func GitEnv(dir string) ([]string, error) {
+// It vets afresh each time: the session host's Guard remembers.
+func GitEnv(dir string) ([]string, error) { return (*Guard)(nil).GitEnv(dir) }
+
+// GitEnv is the package's GitEnv, remembering what it vetted.
+func (g *Guard) GitEnv(dir string) ([]string, error) {
 	root, ok := managedRoot(dir)
 	if !ok {
 		return nil, nil
 	}
-	gitDir, workTree, err := hostGitDirs(root, dir)
+	gitDir, workTree, err := g.hostGitDirs(root, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -62,14 +74,14 @@ func managedRoot(dir string) (string, bool) {
 
 // hostGitDirs picks the git directory and work tree for dir from what oriel
 // recorded, never from the .git file in the workspace.
-func hostGitDirs(root, dir string) (gitDir, workTree string, err error) {
+func (g *Guard) hostGitDirs(root, dir string) (gitDir, workTree string, err error) {
 	abs, _ := filepath.Abs(dir)
 	if rec, ok := Load(root); ok && rec.Repo != "" {
 		admin, err := WorktreeAdmin(rec.Repo, root)
 		if err != nil {
 			return "", "", err
 		}
-		if err := checkWorktreeConfig(rec.Repo, admin); err != nil {
+		if err := g.checkWorktreeConfig(rec.Repo, admin); err != nil {
 			return "", "", err
 		}
 		return admin, root, nil
@@ -84,7 +96,7 @@ func hostGitDirs(root, dir string) (gitDir, workTree string, err error) {
 		if err != nil {
 			return "", "", err
 		}
-		if err := checkWorktreeConfig(p.Repo, admin); err != nil {
+		if err := g.checkWorktreeConfig(p.Repo, admin); err != nil {
 			return "", "", err
 		}
 		return admin, proj, nil
@@ -99,7 +111,7 @@ func hostGitDirs(root, dir string) (gitDir, workTree string, err error) {
 			return "", "", fmt.Errorf("the workspace's .git has a %s Oriel did not write", f)
 		}
 	}
-	if err := CheckConfig(filepath.Join(gitDir, "config")); err != nil {
+	if err := g.CheckConfig(filepath.Join(gitDir, "config")); err != nil {
 		return "", "", err
 	}
 	return gitDir, root, nil
@@ -133,39 +145,74 @@ func resolved(path string) string {
 
 // checkWorktreeConfig vets the per-worktree config, which sits in the admin
 // directory the agent can write, when the repo turns it on.
-func checkWorktreeConfig(repo, admin string) error {
+func (g *Guard) checkWorktreeConfig(repo, admin string) error {
 	cfg := filepath.Join(repo, ".git", "config")
 	fi, err := os.Stat(cfg)
 	if err != nil {
 		return nil
 	}
 	stamp := fmt.Sprintf("%d/%d", fi.ModTime().UnixNano(), fi.Size())
-	wtMu.Lock()
-	prev, ok := wtConfig[cfg]
-	wtMu.Unlock()
+	prev, ok := g.lookWorktree(cfg)
 	on := prev.on
 	if !ok || prev.stamp != stamp {
 		out, err := exec.Command("git", "config", "--file", cfg, "--bool", "extensions.worktreeConfig").Output()
 		on = err == nil && strings.TrimSpace(string(out)) == "true"
-		wtMu.Lock()
-		wtConfig[cfg] = wtResult{stamp, on}
-		wtMu.Unlock()
+		g.keepWorktree(cfg, wtResult{stamp, on})
 	}
 	if !on {
 		return nil
 	}
-	return CheckConfig(filepath.Join(admin, "config.worktree"))
+	return g.CheckConfig(filepath.Join(admin, "config.worktree"))
+}
+
+func (g *Guard) lookWorktree(cfg string) (wtResult, bool) {
+	if g == nil {
+		return wtResult{}, false
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	r, ok := g.worktree[cfg]
+	return r, ok
+}
+
+func (g *Guard) keepWorktree(cfg string, r wtResult) {
+	if g == nil {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.worktree == nil {
+		g.worktree = map[string]wtResult{}
+	}
+	g.worktree[cfg] = r
+}
+
+func (g *Guard) lookConfig(path string) (checkResult, bool) {
+	if g == nil {
+		return checkResult{}, false
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	r, ok := g.configs[path]
+	return r, ok
+}
+
+func (g *Guard) keepConfig(path string, r checkResult) {
+	if g == nil {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.configs == nil {
+		g.configs = map[string]checkResult{}
+	}
+	g.configs[path] = r
 }
 
 type wtResult struct {
 	stamp string
 	on    bool
 }
-
-var (
-	wtMu     sync.Mutex
-	wtConfig = map[string]wtResult{}
-)
 
 // safeKeys are config keys host git may read from an agent-writable file:
 // none of them runs a command or pulls in another file.
@@ -196,7 +243,10 @@ var safeRemoteKeys = map[string]bool{"url": true, "fetch": true, "pushurl": true
 
 // CheckConfig refuses a config file holding anything outside the safe keys.
 // A missing file is fine.
-func CheckConfig(path string) error {
+func CheckConfig(path string) error { return (*Guard)(nil).CheckConfig(path) }
+
+// CheckConfig is the package's CheckConfig, remembering its verdict until the file changes.
+func (g *Guard) CheckConfig(path string) error {
 	fi, err := os.Lstat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -208,16 +258,11 @@ func CheckConfig(path string) error {
 		return fmt.Errorf("%s is a symlink", path)
 	}
 	stamp := fmt.Sprintf("%d/%d", fi.ModTime().UnixNano(), fi.Size())
-	checkedMu.Lock()
-	prev, ok := checked[path]
-	checkedMu.Unlock()
-	if ok && prev.stamp == stamp {
+	if prev, ok := g.lookConfig(path); ok && prev.stamp == stamp {
 		return prev.err
 	}
 	err = checkConfig(path)
-	checkedMu.Lock()
-	checked[path] = checkResult{stamp, err}
-	checkedMu.Unlock()
+	g.keepConfig(path, checkResult{stamp, err})
 	return err
 }
 
@@ -225,11 +270,6 @@ type checkResult struct {
 	stamp string
 	err   error
 }
-
-var (
-	checkedMu sync.Mutex
-	checked   = map[string]checkResult{}
-)
 
 func checkConfig(path string) error {
 	cmd := exec.Command("git", "config", "--file", path, "--no-includes", "--list", "--name-only")
@@ -272,12 +312,22 @@ func within(p, dir string) bool {
 // Git runs host git in dir with GitEnv applied, returning stdout. Host git
 // in a sandboxed workspace goes through here, or through GitEnv.
 func Git(dir string, args ...string) (string, error) {
-	return GitContext(context.Background(), dir, args...)
+	return (*Guard)(nil).GitContext(context.Background(), dir, args...)
 }
 
 // GitContext is Git, killed when ctx ends.
 func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
-	env, err := GitEnv(dir)
+	return (*Guard)(nil).GitContext(ctx, dir, args...)
+}
+
+// Git is the package's Git, vetting through g.
+func (g *Guard) Git(dir string, args ...string) (string, error) {
+	return g.GitContext(context.Background(), dir, args...)
+}
+
+// GitContext is the package's GitContext, vetting through g.
+func (g *Guard) GitContext(ctx context.Context, dir string, args ...string) (string, error) {
+	env, err := g.GitEnv(dir)
 	if err != nil {
 		return "", err
 	}

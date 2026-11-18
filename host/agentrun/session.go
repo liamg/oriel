@@ -128,7 +128,7 @@ func (h *session) start() error {
 		// After "The agent exited", the transcript says it's back.
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "The agent started again, resuming its conversation"})
 	}
-	h.r.env.Go("an agent's events", func() { h.loop(sess) })
+	h.r.env.GoLasting("an agent's events", func() { h.loop(sess) })
 	h.askLogins(h.snapshot().Agent.Provider)
 	h.kick()
 	if resumed {

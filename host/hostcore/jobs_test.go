@@ -26,3 +26,19 @@ func TestJobsSayWhatsStillRunning(t *testing.T) {
 		t.Errorf("Running after Wait = %q", got)
 	}
 }
+
+// A job that lasts as long as what it serves says so as it starts: Running still lists it, Transient doesn't.
+func TestLastingJobsAreNotTransient(t *testing.T) {
+	var j Jobs
+	hold := make(chan struct{})
+	j.GoLasting("an agent's events", func() { <-hold })
+	j.Go("a resume", func() { <-hold })
+	if got, want := j.Running(), []string{"a resume", "an agent's events"}; !slices.Equal(got, want) {
+		t.Errorf("Running = %q, want %q", got, want)
+	}
+	if got, want := j.Transient(), []string{"a resume"}; !slices.Equal(got, want) {
+		t.Errorf("Transient = %q, want %q", got, want)
+	}
+	close(hold)
+	j.Wait()
+}

@@ -18,7 +18,6 @@ func (x *Tests) scan() {
 	x.scanFrom = kit.WindowNow(x.h)
 	watched := kit.Git(x.h).Tree("").Root() != ""
 	x.mu.Lock()
-	x.scans++
 	x.watched = watched
 	gen := x.scanGen
 	x.foundNow = map[string]bool{}

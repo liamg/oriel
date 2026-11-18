@@ -29,18 +29,18 @@ var ceilings = map[string]int{
 	"mutable package-level vars":           0,
 	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
 	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
-	"mutable package-level vars elsewhere": 97,
+	"mutable package-level vars elsewhere": 49,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 21,
+	"time.Sleep in tests": 16,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
 	// plugin.Load, work.Busy or work.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,
 	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
 	"wall-clock measures in tests": 3,
 	// A timer in a test either guards a hang or guesses how long work takes; a test waits for the work instead.
-	"timers in tests": 80,
+	"timers in tests": 78,
 	// A test frames and runs the loop's queue through apptest's waits (Until, Quiet), not a loop of its own.
 	"RunQueued in tests outside apptest": 2,
 }
@@ -59,9 +59,8 @@ var stateAllowed = map[string]string{
 	"core.eventsMu":         "guards the event types, registered from init",
 	"core.eventTypes":       "event types, registered from init",
 	"core.eventNames":       "event types, registered from init",
-	"agent/packs.builtin":   "the embedded packs, parsed at init",
-	"agent/packs.sources":   "the embedded packs, parsed at init",
-	"agent/prompts.builtin": "the embedded prompts, parsed at init",
+	"agent/packs.loaded":    "the embedded packs, parsed once on first use",
+	"agent/prompts.builtin": "the embedded prompts, parsed once on first use",
 	"text.boundaryCache":    "a test's memo of a pure function",
 }
 

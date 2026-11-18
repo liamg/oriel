@@ -221,14 +221,21 @@ func TestLSPStartsWithTheProject(t *testing.T) {
 
 // Text stays inside the hover card and the references peek, however long the lines in them.
 func TestLSPCardsKeepTheirText(t *testing.T) {
-	s, _ := lspScene(t, "go", "gopls", "main.go")
+	root := rig.LSPProject(t, "go")
+	resp := rig.Recorded(t, "go")
+	long := "```go\nfunc greeting(name string, salutation string, punctuation string, locale string, formal bool) (string, error)\n```\n" +
+		"A_paragraph_word_far_wider_than_the_card_that_has_nowhere_to_wrap_and_would_run_out_of_the_card_on_the_right"
+	if err := resp.Answer("textDocument/hover", map[string]any{"contents": map[string]string{"kind": "markdown", "value": long}}); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: root})
+	s.Registry().Contribute(rig.ServerAnswering(t, "gopls", resp))
+	s.Run("editor.open", registry.Args{"path": filepath.Join(root, "main.go")})
+	lspSettle(s)
 	cursorAt(s, 8, 11)
 	s.Press("K")
 	lspSettle(s)
-	lspOf(s).AddToHover("\n\n```go\nfunc greeting(name string, salutation string, punctuation string, locale string, formal bool) (string, error)\n```\n" +
-		"A_paragraph_word_far_wider_than_the_card_that_has_nowhere_to_wrap_and_would_run_out_of_the_card_on_the_right")
-	s.Frame()
-	s.Frame()
+	wantText(t, s, "the long hover", "A_paragraph_word_far_wider")
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		t.Errorf("the hover card's text runs out of its box:\n%s", strings.Join(o, "\n"))
 	}

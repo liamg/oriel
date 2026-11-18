@@ -23,6 +23,8 @@ type Responder struct {
 	mu       sync.Mutex
 	asked    []string // methods asked, in order
 	launches int
+	results  map[string]json.RawMessage // method → the result every request of it gets, over the transcript's
+	holds    map[string]chan struct{}   // method → closed when its answers may go
 }
 
 func NewResponder(t *Transcript) *Responder { return &Responder{t: t} }
@@ -38,6 +40,36 @@ func (r *Responder) Launcher() lsp.Launcher {
 		go r.serve(server, root, done)
 		return &fakeProcess{Conn: client, done: done}, nil
 	}
+}
+
+// Answer has every request of method answered with result from now on, in place of what the transcript recorded:
+// a server answering something no recording has.
+func (r *Responder) Answer(method string, result any) error {
+	b, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.results == nil {
+		r.results = map[string]json.RawMessage{}
+	}
+	r.results[method] = b
+	return nil
+}
+
+// Hold keeps the answers to method back until release, as a server still starting keeps back its initialize: the
+// server reads nothing more meanwhile. release may be called more than once.
+func (r *Responder) Hold(method string) (release func()) {
+	ch := make(chan struct{})
+	r.mu.Lock()
+	if r.holds == nil {
+		r.holds = map[string]chan struct{}{}
+	}
+	r.holds[method] = ch
+	r.mu.Unlock()
+	var once sync.Once
+	return func() { once.Do(func() { close(ch) }) }
 }
 
 // Asked are the methods clients asked for, in order.
@@ -137,6 +169,15 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 		}
 		var out map[string]json.RawMessage
 		_ = json.Unmarshal(reply, &out)
+		r.mu.Lock()
+		if res, ok := r.results[m.Method]; ok {
+			out = map[string]json.RawMessage{"jsonrpc": json.RawMessage(`"2.0"`), "result": res}
+		}
+		held := r.holds[m.Method]
+		r.mu.Unlock()
+		if held != nil {
+			<-held
+		}
 		out["id"], _ = json.Marshal(m.ID)
 		b, _ := json.Marshal(out)
 		write(b)

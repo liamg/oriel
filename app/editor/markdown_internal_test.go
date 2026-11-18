@@ -15,9 +15,9 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/waitfor"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
@@ -293,7 +293,7 @@ func TestMarkdownPictureSources(t *testing.T) {
 		{svgData, "", 90, ""},
 		{"docs/a b.png", "", 0, "There's no folder to find docs/a b.png in"},
 	} {
-		pc, why := settledPicture(testPictures(t, offlineNet(t)), c.src, c.dir)
+		pc, why := settledPicture(t, testPictures(t, offlineNet(t)), c.src, c.dir)
 		var w float32
 		switch {
 		case pc.Img != nil:
@@ -306,20 +306,17 @@ func TestMarkdownPictureSources(t *testing.T) {
 		}
 	}
 	for _, src := range []string{filepath.Join(dir, "nope.png"), "broken.svg"} {
-		if pc, why := settledPicture(testPictures(t, offlineNet(t)), src, dir); why == "" || pc.Img != nil || pc.Doc != nil {
+		if pc, why := settledPicture(t, testPictures(t, offlineNet(t)), src, dir); why == "" || pc.Img != nil || pc.Doc != nil {
 			t.Errorf("%s has no reason", src)
 		}
 	}
 }
 
-// settledPicture is mdPicture once its read is in: asked again until it isn't loading.
-func settledPicture(pics *kit.Pictures, src, dir string) (pc *kit.Picture, why string) {
-	for range 5000 {
-		if pc, why = mdPicture(pics, src, dir); !pc.Loading {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
+// settledPicture is mdPicture once its read is in: asked again until it isn't loading, failing the test if it
+// never stops.
+func settledPicture(t *testing.T, pics *kit.Pictures, src, dir string) (pc *kit.Picture, why string) {
+	t.Helper()
+	waitfor.Poll(t, src+" to load", func() bool { pc, why = mdPicture(pics, src, dir); return !pc.Loading })
 	return pc, why
 }
 

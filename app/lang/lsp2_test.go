@@ -251,14 +251,14 @@ func TestLSPServerFromLuaSaysHowToInstallIt(t *testing.T) {
 
 // gd typed while the file's server is still starting waits for it, saying so, rather than falling back to vim's gd.
 func TestLSPDefinitionWaitsForTheServer(t *testing.T) {
-	s, root := lspScene(t, "go", "gopls", "main.go")
-	lspOf(s).ForgetDocs()
+	s, root, release := startingServer(t)
 	s.Editor().SetCursor(text.Pos{Line: 8, Col: 11})
 	s.Press("gd")
 	ns := s.Store().State().Notifications
 	if !slices.ContainsFunc(ns, func(n core.Notification) bool { return strings.Contains(n.Text, "Starting the go language server") }) {
 		t.Errorf("no word that the server is starting: %+v", ns)
 	}
+	release()
 	lspSettle(s)
 	p := s.EditorWindow()
 	if filepath.Join(root, "lib.go") != p.Path || p.Cursor.Line != 5 || p.Cursor.Col != 5 {
@@ -270,8 +270,7 @@ func TestLSPDefinitionWaitsForTheServer(t *testing.T) {
 // go to definition does.
 func TestLSPRequestsWaitForTheServer(t *testing.T) {
 	for _, keys := range []string{"grr", "grn", "gra"} {
-		s, _ := lspScene(t, "go", "gopls", "main.go")
-		lspOf(s).ForgetDocs()
+		s, _, release := startingServer(t)
 		s.Editor().SetCursor(text.Pos{Line: 8, Col: 11})
 		s.Press(keys)
 		ns := s.Store().State().Notifications
@@ -280,8 +279,24 @@ func TestLSPRequestsWaitForTheServer(t *testing.T) {
 		}
 		s.Frame()
 		s.Midway(func() { s.WantFrame("◌", "starting") })
+		release()
 		lspSettle(s)
 	}
+}
+
+// startingServer is main.go of the go fixture open with gopls still starting: its answer to initialize is kept back
+// until release.
+func startingServer(t *testing.T) (*apptest.Scene, string, func()) {
+	t.Helper()
+	root := rig.LSPProject(t, "go")
+	resp := rig.Recorded(t, "go")
+	release := resp.Hold("initialize")
+	t.Cleanup(release)
+	s := apptest.New(t, apptest.Options{WorkDir: root})
+	s.Registry().Contribute(rig.ServerAnswering(t, "gopls", resp))
+	s.Run("editor.open", registry.Args{"path": filepath.Join(root, "main.go")})
+	s.Frame()
+	return s, root, release
 }
 
 // editorWindows is how many editor windows the layout has.

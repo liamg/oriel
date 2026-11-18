@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // Effects with no value anywhere in the stack.
@@ -21,6 +22,15 @@ type Resolved struct {
 	effects map[string]float64
 	links   map[string]Link
 	probes  map[Color]string // a probe theme's colours, back to their names
+
+	late *lateTokens
+}
+
+// lateTokens resolves the tokens declared after a theme was (a plugin loaded later declares its own), each once.
+type lateTokens struct {
+	mu     sync.Mutex
+	ev     *evaluator
+	colors map[TokenID]Color
 }
 
 // Syntax is a resolved highlight group.
@@ -41,7 +51,29 @@ func (r *Resolved) C(id TokenID) Color {
 	if int(id) < len(r.colors) {
 		return r.colors[id]
 	}
-	return Color{}
+	return r.lateToken(id)
+}
+
+// lateToken is a token declared after r was resolved: what the theme set for its name, else its default, evaluated
+// against r's palette and tokens on first use. Zero for an id never declared.
+func (r *Resolved) lateToken(id TokenID) Color {
+	name := id.Name()
+	l := r.late
+	if name == "" || l == nil {
+		return Color{}
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if c, ok := l.colors[id]; ok {
+		return c
+	}
+	if _, set := l.ev.tokens[name]; !set {
+		t := Tokens()[id]
+		l.ev.tokens[name] = TokenDef{Expr: t.Default, On: t.On}
+	}
+	c, _ := l.ev.token(name, nil)
+	l.colors[id] = c
+	return c
 }
 
 // Tone is a colour a plugin names: a token or palette name the theme resolves, else a colour as written (#rrggbb,
@@ -154,7 +186,8 @@ func Resolve(stack []*Spec, v Variant) (*Resolved, error) {
 		r.links[l.Name] = l
 	}
 
-	ev := evaluator{palette: palette, tokens: tokenDefs, pal: map[string]Color{}, tok: map[string]Color{}}
+	ev := &evaluator{palette: palette, tokens: tokenDefs, pal: map[string]Color{}, tok: map[string]Color{}}
+	r.late = &lateTokens{ev: ev, colors: map[TokenID]Color{}}
 	var errs []string
 	names := make([]string, 0, len(palette))
 	for k := range palette {

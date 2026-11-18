@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/clock/clocktest"
+	"github.com/liamg/oriel/internal/waitfor"
 )
 
 // A remote image's client dials no loopback or private address, whatever the URL names.
@@ -93,7 +94,7 @@ func TestRemotePictureRetries(t *testing.T) {
 	settled := func() *Picture {
 		t.Helper()
 		pc := pics.Remote(src)
-		until(t, src+" read", func() bool { pc = pics.Remote(src); return !pc.Loading })
+		waitfor.Poll(t, src+" read", func() bool { pc = pics.Remote(src); return !pc.Loading })
 		return pc
 	}
 	if pc := settled(); pc.Err == nil {
@@ -115,7 +116,7 @@ func TestRemotePictureFails(t *testing.T) {
 	release, client := remotePictures(t, nil)
 	release()
 	pics := testPictures(t, client)
-	until(t, "the fetch to fail", func() bool { return !pics.Remote("https://example.com/gone.png").Loading })
+	waitfor.Poll(t, "the fetch to fail", func() bool { return !pics.Remote("https://example.com/gone.png").Loading })
 	if pc := pics.Remote("https://example.com/gone.png"); pc.Loading || pc.Err == nil || !strings.Contains(pc.Err.Error(), "404") {
 		t.Errorf("a failed fetch: loading %v, err %v", pc.Loading, pc.Err)
 	}
@@ -183,7 +184,7 @@ func TestPictureFileDecodesOffTheLoop(t *testing.T) {
 		t.Fatalf("the first ask decoded on the loop: %+v", pc)
 	}
 	pc := pics.File(path)
-	until(t, "the picture decoded", func() bool { pc = pics.File(path); return !pc.Loading })
+	waitfor.Poll(t, "the picture decoded", func() bool { pc = pics.File(path); return !pc.Loading })
 	if pc.Img == nil || pc.Img.Bounds().Dx() != 3 {
 		t.Errorf("the picture: %+v", pc)
 	}

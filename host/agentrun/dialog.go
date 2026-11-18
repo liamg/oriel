@@ -33,7 +33,7 @@ func (h *session) terminalDialog(ev agent.Dialog) {
 	if mine == nil {
 		return
 	}
-	h.r.env.Go("a terminal dialog", func() {
+	h.r.env.GoLasting("a terminal dialog", func() {
 		h.askUser(ctx, core.Ask{Kind: core.AskTerminal, Summary: ev.Title})
 		h.mu.Lock()
 		if h.dialog == mine {

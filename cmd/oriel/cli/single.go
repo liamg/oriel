@@ -13,9 +13,6 @@ import (
 // ErrRunning is a second Oriel on the same home: its sessions are the first's.
 var ErrRunning = errors.New("Oriel is already running") //nolint:staticcheck // ST1005: it starts with a name
 
-// held is the lock lock took, kept for the life of the process.
-var held *os.File
-
 // lock takes ~/.oriel/oriel.lock for this process, so only one Oriel runs on a home. The OS lets it go when the
 // process ends, however it ends.
 func lock(home string) (*os.File, error) {
@@ -34,14 +31,6 @@ func lock(home string) (*os.File, error) {
 		return nil, err
 	}
 	return f, nil
-}
-
-// unlock lets the lock go before the process ends.
-func unlock() {
-	if held != nil {
-		_ = held.Close()
-		held = nil
-	}
 }
 
 // oldWorker refuses to start while an `oriel worker` from an earlier release still answers on ~/.oriel/worker.sock:

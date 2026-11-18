@@ -29,10 +29,13 @@ func Window(name string, auto bool, phases string) error {
 	if !ok {
 		return fmt.Errorf("no scene %q", name)
 	}
+	r := &autoRun{script: defaultScript}
 	if auto {
-		if err := pickPhases(phases); err != nil {
+		script, err := pickPhases(phases)
+		if err != nil {
 			return err
 		}
+		r.script = script
 		fmt.Println("Keep the window visible and in front, and don't touch the mouse or keyboard until it prints.")
 	}
 	go func() {
@@ -44,9 +47,9 @@ func Window(name string, auto bool, phases string) error {
 		w.Option(app.Title("oriel dev"), app.Size(width, height))
 		w.Perform(system.ActionRaise)
 		if auto {
-			go kick(w)
+			go r.kick(w)
 		}
-		if err := loop(w, s, auto); err != nil {
+		if err := loop(w, s, auto, r); err != nil {
 			fmt.Fprintln(os.Stderr, "oriel dev:", err)
 			os.Exit(1)
 		}
@@ -64,7 +67,8 @@ type phase struct {
 	invalidate time.Duration // HUD redraw interval
 }
 
-var script = []phase{
+// defaultScript is every phase, in order.
+var defaultScript = []phase{
 	{scene: "ide", frames: 120},
 	{scene: "scroll", frames: 1200},
 	{scene: "glow", frames: 600},
@@ -73,25 +77,24 @@ var script = []phase{
 	{scene: "ide", dur: 5 * time.Second},
 }
 
-// pickPhases keeps the script's phases for the named scenes, in order.
-func pickPhases(names string) error {
+// pickPhases are the default script's phases for the named scenes, in order; all of them for "".
+func pickPhases(names string) ([]phase, error) {
 	if names == "" {
-		return nil
+		return defaultScript, nil
 	}
 	var out []phase
 	for _, n := range strings.Split(names, ",") {
 		found := false
-		for _, p := range script {
+		for _, p := range defaultScript {
 			if p.scene == n {
 				out, found = append(out, p), true
 			}
 		}
 		if !found {
-			return fmt.Errorf("-phases: no phase for scene %q", n)
+			return nil, fmt.Errorf("-phases: no phase for scene %q", n)
 		}
 	}
-	script = out
-	return nil
+	return out, nil
 }
 
 // stallAt is the frame interval treated as a stall (window hidden, occluded, or the display asleep)
@@ -106,35 +109,37 @@ type phaseStats struct {
 	gcs                    uint32
 }
 
-// nextFrame is when -auto expects its next frame (unix nanos), for kick.
-var nextFrame atomic.Int64
-
-// kicks counts frames kick had to request; kickedAt is when the latest kicked frame was due
-// (unix nanos), cleared when it arrives.
-var (
+// autoRun is one -auto run: its script, and what kick did to keep frames coming.
+type autoRun struct {
+	script []phase
+	// nextFrame is when the run expects its next frame (unix nanos), for kick.
+	nextFrame atomic.Int64
+	// kicks counts frames kick had to request; kickedAt is when the latest kicked frame was due (unix nanos),
+	// cleared when it arrives; kickLate is how late each kicked frame came, read on the loop alone.
 	kicks    atomic.Int64
 	kickedAt atomic.Int64
 	kickLate Durations
-)
+}
 
 // kick invalidates the window when an expected frame is 50 ms late. On macOS the
 // display link can stall until the window gets an input event.
-func kick(w *app.Window) {
+func (r *autoRun) kick(w *app.Window) {
 	const late = 50 * time.Millisecond
-	nextFrame.Store(time.Now().UnixNano())
+	r.nextFrame.Store(time.Now().UnixNano())
 	for {
-		if wait := time.Until(time.Unix(0, nextFrame.Load()).Add(late)); wait > 0 {
+		if wait := time.Until(time.Unix(0, r.nextFrame.Load()).Add(late)); wait > 0 {
 			time.Sleep(wait)
 			continue
 		}
-		kicks.Add(1)
-		kickedAt.CompareAndSwap(0, nextFrame.Load())
+		r.kicks.Add(1)
+		r.kickedAt.CompareAndSwap(0, r.nextFrame.Load())
 		w.Invalidate()
 		time.Sleep(late)
 	}
 }
 
-func loop(w *app.Window, s scenes.Scene, auto bool) error {
+func loop(w *app.Window, s scenes.Scene, auto bool, r *autoRun) error {
+	script := r.script
 	ts, err := typeset.New(w.Invalidate)
 	if err != nil {
 		return err
@@ -210,8 +215,8 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 			gtx.Execute(key.SnippetCmd{Tag: tag, Snippet: key.Snippet{Range: key.Range{Start: 0, End: n}, Text: string(st.Typed)}})
 			gtx.Execute(key.SelectionCmd{Tag: tag, Range: key.Range{Start: n, End: n}})
 			st.T = time.Since(start).Seconds()
-			if at := kickedAt.Swap(0); at != 0 {
-				kickLate = append(kickLate, t0.Sub(time.Unix(0, at)))
+			if at := r.kickedAt.Swap(0); at != 0 {
+				r.kickLate = append(r.kickLate, t0.Sub(time.Unix(0, at)))
 			}
 			// The next frame is requested before Frame: Gio reads InvalidateCmd while it processes
 			// this frame, and one executed after Frame returns can be missed.
@@ -231,7 +236,7 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 				}
 				if !ends || pi+1 < len(script) {
 					gtx.Execute(op.InvalidateCmd{At: next})
-					nextFrame.Store(next.UnixNano())
+					r.nextFrame.Store(next.UnixNano())
 				}
 			} else if s.Name() == "glow" || s.Name() == "hud" {
 				gtx.Execute(op.InvalidateCmd{})
@@ -289,7 +294,7 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 				stats[pi].gcs = numGC() - pgc
 				pi, pframes = pi+1, 0
 				if pi == len(script) {
-					report(firstFrame, firstRSS, size, stats, keyLat)
+					r.report(firstFrame, firstRSS, size, stats, keyLat)
 					return nil
 				}
 				s, _ = scenes.ByName(script[pi].scene)
@@ -332,16 +337,16 @@ func mean(ds Durations) time.Duration {
 	return t / time.Duration(len(ds))
 }
 
-func report(first time.Duration, firstRSS float64, size string, stats []phaseStats, keys Durations) {
+func (r *autoRun) report(first time.Duration, firstRSS float64, size string, stats []phaseStats, keys Durations) {
 	fmt.Printf("window %s\n", size)
 	fmt.Printf("startup: first frame presented %s after start; RSS then %.0f MB\n", first.Round(time.Millisecond), firstRSS)
-	if n := kicks.Load(); n > 0 {
-		fmt.Printf("kicked %d times for %d late frames, which then came %s after they were due\n", n, len(kickLate), kickLate)
+	if n := r.kicks.Load(); n > 0 {
+		fmt.Printf("kicked %d times for %d late frames, which then came %s after they were due\n", n, len(r.kickLate), r.kickLate)
 	} else {
 		fmt.Println("no late frames to kick")
 	}
 	stalled := false
-	for i, p := range script {
+	for i, p := range r.script {
 		ps := stats[i]
 		fmt.Printf("%-7s", p.scene)
 		if p.frames > 0 {

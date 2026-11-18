@@ -40,6 +40,9 @@ var mu sync.Mutex
 var made = newThing()
 var fromInit []string
 var allowed = newThing()
+var prefix = netip.MustParsePrefix("10.0.0.0/8")
+var mark = []byte("\x1b]133;")
+var stringers = []fmt.Stringer(nil)
 
 func init() { fromInit = append(fromInit, "x") }
 
@@ -53,7 +56,8 @@ func TestX() { table["b"] = 2 }
 `),
 	}
 	got := whats(MutableVars(files, "m", map[string]string{"p.allowed": "why"}))
-	want := []string{"cache written after it's declared", "made holds a lock, atomic, channel or pointer", "mu is a sync.Mutex for its methods to change"}
+	want := []string{"cache written after it's declared", "made holds a lock, atomic, channel or pointer",
+		"mu is a sync.Mutex for its methods to change", "stringers holds a lock, atomic, channel or pointer"}
 	if !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}

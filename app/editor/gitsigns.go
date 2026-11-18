@@ -52,7 +52,6 @@ type GitSigns struct {
 	hunks    map[bufAgainst]*bufHunks
 	previews map[gitFile]int // the hunk previewed in each file, by its new start
 	typing   work.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
-	diffs    int             // diffs begun off the loop, for the tests
 	busy     work.Busy
 }
 
@@ -287,7 +286,6 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 	case bh.diffed && bh.gen == b.gen && !g.typing.Ready(key, version): // typed in: the last hunks stand a moment
 	case !bh.diffing:
 		bh.diffing = true
-		g.diffs++
 		base, gen, contents := b.data, b.gen, fileBytes()
 		g.busy.Go(func() {
 			hs := gitx.DiffLines(base, contents)

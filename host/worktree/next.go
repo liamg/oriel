@@ -17,14 +17,14 @@ import (
 // NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
 // It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
 func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
-	se, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
+	se, p, repo, err := hostcore.ProjectRepo(ctx, x.env.Git, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return err
 	}
 	if p.Repo == "" || p.Dir == p.Repo {
 		return fmt.Errorf("%s has no worktree of this session's to move on", p.Name)
 	}
-	branch, err := hostcore.OwnBranch(p)
+	branch, err := hostcore.OwnBranch(x.env.Git, p)
 	if err != nil {
 		return err
 	}

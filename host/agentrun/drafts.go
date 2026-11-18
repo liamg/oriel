@@ -10,7 +10,6 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/sandbox"
 )
 
 // Commit and PR drafts when the agent goes idle: the pack tells the agent to fill them before it ends a turn,
@@ -35,7 +34,7 @@ func (x *Runner) draftsDue(ctx context.Context, id core.SessionID) []dueDraft {
 		if p.ReadOnly || p.Detached || p.Dir == "" {
 			continue
 		}
-		env, err := sandbox.GitEnv(p.Dir)
+		env, err := x.env.Git.GitEnv(p.Dir)
 		if err != nil {
 			continue
 		}

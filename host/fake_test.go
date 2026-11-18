@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
+	"github.com/liamg/oriel/internal/waitfor"
 )
 
 type nopExec struct{ agent.Exec }
@@ -149,17 +150,7 @@ const waitTimeout = 30 * time.Second
 // until waits for cond, failing with what (and more, if given) once the host looks hung.
 func until(t testing.TB, what string, cond func() bool, more ...func() string) {
 	t.Helper()
-	deadline := time.Now().Add(waitTimeout)
-	for !cond() {
-		if time.Now().After(deadline) {
-			detail := ""
-			for _, m := range more {
-				detail += "; " + m()
-			}
-			t.Fatalf("waiting for %s%s", what, detail)
-		}
-		time.Sleep(time.Millisecond) // a poll: the condition is the host's work, not a while
-	}
+	waitfor.PollFor(t, waitTimeout, what, cond, more...)
 }
 
 // eventually waits for cond on the session's state.
