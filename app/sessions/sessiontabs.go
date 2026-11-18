@@ -1,8 +1,9 @@
-package shell
+package sessions
 
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"image/color"
 	"slices"
@@ -58,17 +59,16 @@ func statusWord(s core.Session) string {
 	return ""
 }
 
-// sessionTabs is the titlebar with a tab per session open in the window, in the order they opened; ⌘1–9 focus them.
-type sessionTabs struct {
+// SessionTabs is the titlebar with a tab per session open in the window, in the order they opened; ⌘1–9 focus them.
+type SessionTabs struct {
 	kit.Disposer
-	sh       *shell
 	renaming core.SessionID // the session whose tab is being renamed
 	rename   widget.Rename
 }
 
-func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "session-tabs"} }
+func (t *SessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "session-tabs"} }
 
-func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
+func (t *SessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	focus := func(id core.SessionID, then ...kit.Call) error { return kit.FrontSession(h, id, then) }
 	t.Add(h.Command(registry.Command{ID: "session.focus", Grant: registry.Open, Title: "Focus a session: {n} counting from 1, or {id}; {then} is a list of {command, args} run once the window is on it", Args: []registry.Arg{registry.AnyArg("id"), registry.IntArg("n"), registry.AnyArg("then")}, Run: func(_ registry.Ctx, a registry.Args) error {
 		if id, _ := a["id"].(string); id != "" {
@@ -138,12 +138,12 @@ const (
 	tabRadius = 9
 )
 
-func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
+func (t *SessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 	th := c.Theme()
 	st := h.State()
 	c.Row("titlebar", ui.Style{W: ui.Flex(1), H: ui.Px(kit.TitleH), Cross: ui.Center, Fill: th.C(tTitleBg), Role: ui.RoleToolbar, Label: "Sessions"}, func(c *ui.Ctx) {
 		c.Row("brand", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			slot(c, h, uireg.SlotTitleBrand, vc)
+			kit.BarSlot(c, h, uireg.SlotTitleBrand, vc)
 		})
 		// More sessions than fit scroll sideways, the one in front brought into view when it changes.
 		open := openTabs(st)
@@ -185,14 +185,14 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 			}
 		})
 		c.Row("right", ui.Style{Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
-			slot(c, h, uireg.SlotTitleBar, vc)
+			kit.BarSlot(c, h, uireg.SlotTitleBar, vc)
 		})
 	})
 }
 
 // tab is s's tab: its name over a line of its state, the asks waiting in it and its key. The one in front is the
 // surface under the title bar, joined to it; the others sit on the band.
-func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bool) {
+func (t *SessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bool) {
 	th := c.Theme()
 	name := th.C(tTabName)
 	if on {
@@ -313,7 +313,7 @@ func weight(on bool) typeset.Weight {
 const tabDragKind = "oriel.session-tab"
 
 // nameField edits s's name in its tab: ⏎ renames it, Escape leaves it as it was.
-func (t *sessionTabs) nameField(c *ui.Ctx, h plugin.Host, s core.Session) {
+func (t *SessionTabs) nameField(c *ui.Ctx, h plugin.Host, s core.Session) {
 	name, done := widget.RenameField(c, "rename", &t.rename, widget.InputOpts{Label: "Rename " + s.Name(), Width: ui.Px(180), Help: "shell/tabs"})
 	if !t.rename.On {
 		t.renaming = ""
@@ -350,7 +350,7 @@ func closeSession(h plugin.Host, id core.SessionID) {
 }
 
 // close closes id's tab, or the front one's. The one in front hands the front to its neighbour, or to the start view.
-func (t *sessionTabs) close(h plugin.Host, id core.SessionID) error {
+func (t *SessionTabs) close(h plugin.Host, id core.SessionID) error {
 	st := h.State()
 	if id == "" {
 		id = st.Focus
@@ -367,7 +367,11 @@ func (t *sessionTabs) close(h plugin.Host, id core.SessionID) error {
 	}
 	rest := slices.Delete(slices.Clone(st.Tabs), i, i+1)
 	if len(rest) == 0 {
-		return t.sh.reopenOn(reopenTo{})
+		w, ok := kit.WindowOf(h)
+		if !ok {
+			return errors.New("no window to go back to the start in")
+		}
+		return w.Reopen("", "")
 	}
 	return h.Run(context.Background(), "session.focus", registry.Args{"id": string(rest[min(i, len(rest)-1)])})
 }

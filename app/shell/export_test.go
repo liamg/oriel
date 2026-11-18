@@ -23,8 +23,8 @@ func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render
 	return lastMove(ev, events)
 }
 
-// TabNameOn is the token the session in front's tab name is drawn in.
-func TabNameOn() theme.TokenID { return tTabNameOn }
+// TabNameOn is the token the session in front's tab name is drawn in (the session tabs declare it).
+func TabNameOn() theme.TokenID { return theme.Declare("session.tab.active.fg", "fg") }
 
 // Reopening is the directory the window was asked to open again on, taking the ask, and whether it was.
 func Reopening(h *Headless) (string, bool) {

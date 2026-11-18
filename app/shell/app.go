@@ -108,7 +108,7 @@ type Parts struct {
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
 
-	UI, Frames, Layout, Start, StatusLine, SessionTabs plugin.Plugin
+	UI, Frames, Layout, Start, StatusLine plugin.Plugin
 	Nav, Notices, Desktop, Quit                        plugin.Plugin
 }
 

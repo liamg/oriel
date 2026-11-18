@@ -1,4 +1,4 @@
-package shell
+package sessions
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 
 // sessionsPanel is every session by status: how many are open and need you, the split as a strip, and the most
 // urgent five with why; a click brings one to the front.
-func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
+func (t *SessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 	th := c.Theme()
 	now := c.Now()
 	var ss []core.SessionState
