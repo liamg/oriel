@@ -189,6 +189,41 @@ func TestAWorkflowRunAgainReplacesItsChecks(t *testing.T) {
 	}
 }
 
+// A job run again whose workflow GitHub won't say (actions/runs refused, or not listing the old run's suite) is
+// still the same check: its newest run stands, so a check that failed and then passed shows once, passing.
+func TestARunAgainWithoutItsWorkflowReplacesItsCheck(t *testing.T) {
+	for _, transport := range []string{"http", "cli"} {
+		t.Run(transport, func(t *testing.T) {
+			s := ghtest.New(t)
+			c := client(t, transport, s)
+			s.SetChecks("acme/api", "rate-limits",
+				gh.Check{ID: 4, Name: "unit", Status: "completed", Conclusion: "failure", Actions: true, Suite: 10},
+				gh.Check{ID: 9, Name: "unit", Status: "completed", Conclusion: "success", Actions: true, Suite: 11},
+				gh.Check{ID: 6, Name: "lint", Status: "completed", Conclusion: "success", Actions: true, Suite: 10},
+			)
+			for _, flows := range []string{"refused", "the old suite unlisted"} {
+				s.Fail("GET /repos/acme/api/actions/runs", nil)
+				if flows == "refused" {
+					s.Fail("GET /repos/acme/api/actions/runs", &gh.Error{Status: 403, Message: "Resource not accessible by integration"})
+				} else {
+					s.SetWorkflow(11, 7)
+				}
+				cs, err := c.Checks(context.Background(), acme, "rate-limits")
+				if err != nil {
+					t.Fatal(err)
+				}
+				var states []string
+				for _, ch := range cs {
+					states = append(states, ch.Name+":"+ch.State())
+				}
+				if want := []string{"unit:pass", "lint:pass"}; !slices.Equal(states, want) {
+					t.Errorf("workflows %s: checks %q, want %q", flows, states, want)
+				}
+			}
+		})
+	}
+}
+
 func TestParseRepo(t *testing.T) {
 	for in, want := range map[string]string{
 		"https://github.com/acme/api.git":       "acme/api",

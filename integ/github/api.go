@@ -213,8 +213,10 @@ func (a API) Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 }
 
 // latestRuns keeps each check's newest run, as GitHub's own page does: a workflow run again on the same commit (a PR's
-// description edited, say) adds runs beside the old ones. Actions jobs are the same check when their workflow and name
-// are; a workflow's runs are looked up only when names repeat, and a job whose workflow isn't known is kept.
+// description edited, say) adds runs beside the old ones. Runs of one app with one name are one check, the newest
+// standing, except that Actions jobs of different workflows sharing a name are kept apart when their workflows are
+// known. A workflow's runs are looked up only when names repeat; a run whose workflow isn't known (the lookup refused,
+// or its suite not listed) is the same check as its name's other runs, so a job that failed then passed shows once.
 func (a API) latestRuns(ctx context.Context, repo Repo, ref string, cs []Check, app func(int) string) []Check {
 	names := map[string]int{}
 	again := false
@@ -230,26 +232,63 @@ func (a API) latestRuns(ctx context.Context, repo Repo, ref string, cs []Check, 
 	if slices.ContainsFunc(cs, func(c Check) bool { return c.Actions && names["github-actions/"+c.Name] > 1 }) {
 		flows = a.workflows(ctx, repo, ref)
 	}
-	at := map[string]int{}
-	var out []Check
+	// A check is a name and a known workflow (0 for a check that isn't Actions'), its newest run standing; runs of no
+	// known workflow are their name's alone.
+	type check struct {
+		name  string
+		w     int64
+		known bool
+	}
+	newest := map[check]int{}
+	var order []check // as each first appears
 	for i, c := range cs {
-		key := app(i) + "/" + c.Name
+		k := check{name: app(i) + "/" + c.Name, known: true}
 		if c.Actions {
-			w, ok := flows[c.Suite]
-			if !ok {
-				out = append(out, c)
-				continue
+			k.w, k.known = flows[c.Suite]
+			if !k.known {
+				k.w = 0
 			}
-			key = fmt.Sprintf("%s/%d/%s", app(i), w, c.Name)
 		}
-		if j, ok := at[key]; ok {
-			if c.ID > out[j].ID {
-				out[j] = c
-			}
+		if j, ok := newest[k]; !ok {
+			newest[k] = i
+			order = append(order, k)
+		} else if c.ID > cs[j].ID {
+			newest[k] = i
+		}
+	}
+	// A name's newest run of no known workflow is its check's run when it's newer than every known run of the name,
+	// which it replaced, and stands where the name first did; older, the known runs replaced it.
+	replaced := map[string]bool{} // names whose known runs a newer unknown one replaced
+	stale := map[check]bool{}     // unknown runs older than a known one
+	for _, k := range order {
+		if k.known {
 			continue
 		}
-		at[key] = len(out)
-		out = append(out, c)
+		u := cs[newest[k]]
+		older := false
+		for _, o := range order {
+			if o.name == k.name && o.known && cs[newest[o]].ID > u.ID {
+				older = true
+			}
+		}
+		if older {
+			stale[k] = true
+		} else {
+			replaced[k.name] = true
+		}
+	}
+	var out []Check
+	done := map[string]bool{}
+	for _, k := range order {
+		switch {
+		case replaced[k.name]:
+			if !done[k.name] {
+				out = append(out, cs[newest[check{name: k.name}]])
+				done[k.name] = true
+			}
+		case !stale[k]:
+			out = append(out, cs[newest[k]])
+		}
 	}
 	return out
 }
