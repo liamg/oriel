@@ -15,8 +15,8 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // writePlugin lays out a plugin's files in a directory of the test's.

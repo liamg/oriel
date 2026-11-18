@@ -17,9 +17,9 @@ import (
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
-	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 )
 
 // Timeout is how long Until, ClickText and CallTool wait.

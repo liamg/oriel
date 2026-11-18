@@ -14,8 +14,8 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
-	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/sandbox/ossandbox"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/script/api"
 )
