@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,12 +24,16 @@ import (
 //oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
-//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang." optional=opts
+//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything." optional=opts
 func (r Root) Command(name string, fn *script.Fn, opts script.Table, where string) error {
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
 	}
-	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: str(opts, "ex"), ExArg: str(opts, "ex_arg"), Source: where,
+	spec, err := argSpec(opts["args"])
+	if err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: str(opts, "ex"), ExArg: str(opts, "ex_arg"), Args: spec, Source: where,
 		Run: func(_ registry.Ctx, args registry.Args) error {
 			_, err := r.a.VM.Call(fn, map[string]any(args))
 			return err
@@ -293,4 +298,32 @@ func (r Root) Statusline(fn *script.Fn, where string) error {
 func mustGetwd() string {
 	d, _ := os.Getwd()
 	return d
+}
+
+// argSpec is oriel.command's args option: a list of { name, type, required, doc }; nil when it's absent.
+func argSpec(v any) ([]registry.Arg, error) {
+	if v == nil {
+		return nil, nil
+	}
+	list, ok := v.([]any)
+	if !ok {
+		return nil, fmt.Errorf("args is a list of { name, type, required, doc }, not %T", v)
+	}
+	spec := []registry.Arg{}
+	for i, x := range list {
+		t, ok := x.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("args[%d] is a table { name, type, required, doc }, not %T", i+1, x)
+		}
+		a := registry.Arg{Name: str(t, "name"), Type: registry.ArgType(str(t, "type")), Doc: str(t, "doc")}
+		a.Required, _ = t["required"].(bool)
+		if a.Name == "" {
+			return nil, fmt.Errorf("args[%d] has no name", i+1)
+		}
+		if a.Type != "" && !slices.Contains(registry.ArgTypes, a.Type) {
+			return nil, fmt.Errorf("args[%d] (%s): no type %q; it's one of %v", i+1, a.Name, a.Type, registry.ArgTypes)
+		}
+		spec = append(spec, a)
+	}
+	return spec, nil
 }

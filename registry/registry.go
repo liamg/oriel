@@ -274,8 +274,12 @@ type Command struct {
 	// Ex is the ex command that runs it too, an alias of its id: ":Settings" runs the command whose Ex is
 	// "Settings". What's typed after the name comes as the argument ExArg names ("args" when ExArg is ""), and a ! as
 	// "bang".
-	Ex     string
-	ExArg  string
+	Ex    string
+	ExArg string
+	// Args are the arguments it takes: a run with a key it doesn't name, a value of the wrong type or a required one
+	// missing fails, saying so (CheckArgs). NoArgs takes none; MoreArgs among them takes other keys too. Every
+	// built-in command declares them; a plugin's command with none (nil) takes anything.
+	Args   []Arg
 	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
@@ -538,6 +542,9 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	}
 	if err := r.faults.whyOff(KindCommand, id); err != nil {
 		return fmt.Errorf("command %q is turned off: %w", id, err)
+	}
+	if err := CheckArgs(c, args); err != nil {
+		return err
 	}
 	err := Call(func() error { return c.Run(ctx, args) })
 	// Only this command's own panic is its fault: one wrapped from a command it ran was the inner one's.
