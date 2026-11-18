@@ -6,7 +6,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/core"
 )
 
@@ -21,5 +21,5 @@ func TestASessionStartedLaterHasItsManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	lw.Fake.WaitStarted(t)
-	s.Until("its manager", func() bool { return kit.ManagerFor(s.Registry(), id) != nil })
+	s.Until("its manager", func() bool { return statefile.ManagerFor(s.Registry(), id) != nil })
 }

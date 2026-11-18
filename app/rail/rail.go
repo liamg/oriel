@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
@@ -68,9 +69,9 @@ type Rail struct {
 	DirState func(name string) string
 	h        plugin.Host
 	sel      int
-	form     string         // the window's own: "wide" or "narrow"; "" follows sidebar.form
-	state    *kit.StateFile // the form, kept for the window's directory
-	counts   []railCount    // the git entries' notes, by the state they were counted in
+	form     string               // the window's own: "wide" or "narrow"; "" follows sidebar.form
+	state    *statefile.StateFile // the form, kept for the window's directory
+	counts   []railCount          // the git entries' notes, by the state they were counted in
 }
 
 // loadForm takes the form the window's directory's sidebar was left in: none for nil.
@@ -119,7 +120,7 @@ var projectPanels = []struct {
 
 func (r *Rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
-	r.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "sidebar", Path: func() string { return r.DirState("sidebar") }, Load: r.loadForm})
+	r.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "sidebar", Path: func() string { return r.DirState("sidebar") }, Load: r.loadForm})
 	r.Add(registry.DisposeFunc(r.state.Close))
 	r.Add(kit.OnDirChanged(h, "the sidebar's selection is of its directory", func(kit.DirChanged) { r.sel = 0 }))
 	r.Add(h.Option(registry.OptionSpec{Name: "sidebar.form", Type: registry.Enum, Values: []string{"auto", "wide", "narrow"}, Default: "auto",

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/syntax"
@@ -46,7 +47,7 @@ type Tests struct {
 	kit.Disposer
 	StateFile func() string // where the runs are kept for the window's directory
 	h         plugin.Host
-	state     *kit.StateFile // the runs of the directory the window is on
+	state     *statefile.StateFile // the runs of the directory the window is on
 
 	set     *testrun.Set
 	history *testrun.History
@@ -109,7 +110,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.set.Languages = func() *syntax.Set { return kit.Languages(h) }
 	x.Add(registry.DisposeFunc(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.StateFile, Load: x.loadHistory})
+	x.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "test runs", Path: x.StateFile, Load: x.loadHistory})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
 	x.Add(kit.Git(h).WatchWindow(func(root string, paths []string) {

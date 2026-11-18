@@ -1,4 +1,4 @@
-package kit
+package statefile
 
 import (
 	"sync/atomic"

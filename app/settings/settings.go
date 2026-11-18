@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -104,7 +105,7 @@ func (s *Settings) Activate(_ context.Context, h plugin.Host) error {
 	s.Add(h.Contribute(registry.Busy{Name: "settings", Busy: s.work.Busy}))
 	s.h = h
 	conf := s.ConfigDir
-	s.files, s.filesDone = kit.FileManager(h, "settings", SettingsPoll)
+	s.files, s.filesDone = statefile.FileManager(h, "settings", SettingsPoll)
 	s.trustPath = filepath.Join(conf, "trusted.toml")
 	s.othersMu.Lock() // a file's first reading may load them all already
 	s.user = s.track(&settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser})

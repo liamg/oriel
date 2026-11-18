@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/registry/uireg"
 
 	"github.com/liamg/oriel/plugin"
@@ -38,7 +39,7 @@ type layoutPlugin struct {
 	live     map[string]layout.Snapshot // each directory left, by its state file: its layout, its views still open
 	keptAt   map[string][]byte          // and its layout as last written
 	saved    []byte                     // the layout kept for the directory the window is on, as its file has it
-	state    *kit.StateFile             // that file
+	state    *statefile.StateFile       // that file
 }
 
 func (l *layoutPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "layout"} }
@@ -62,7 +63,7 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	if l.sh != nil {
 		path = func() string { return l.sh.dirState("layout") }
 	}
-	l.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
+	l.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
 	l.Add(registry.DisposeFunc(l.state.Close))
 	// A view put in front is what the user asked to see: the page over the layout gives way to it.
 	l.root.OnShow(func(layout.ViewRef) { uireg.ClosePlaces(h) })

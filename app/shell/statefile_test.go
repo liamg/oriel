@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -22,7 +23,7 @@ import (
 type keeper struct {
 	kit.Disposer
 	files string // where each directory's file goes
-	f     *kit.StateFile
+	f     *statefile.StateFile
 
 	mu     sync.Mutex
 	text   string
@@ -32,7 +33,7 @@ type keeper struct {
 
 func (p *keeper) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test/keeper"} }
 func (p *keeper) Activate(_ context.Context, h plugin.Host) error {
-	p.f = kit.NewStateFile(h, kit.StateFileOpts{Name: "keeper",
+	p.f = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "keeper",
 		Path: func() string {
 			if d := kit.WindowDir(h); d != "" {
 				return filepath.Join(p.files, filepath.Base(d)+".txt")

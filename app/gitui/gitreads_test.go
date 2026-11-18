@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
@@ -14,7 +15,7 @@ import (
 // readsOf counts the reads of the git sources of the tree at dir, in session id's manager.
 func readsOf(s *apptest.Scene, id core.SessionID, dir string) int {
 	n := 0
-	for _, st := range kit.ManagerFor(s.Registry(), id).Stats() {
+	for _, st := range statefile.ManagerFor(s.Registry(), id).Stats() {
 		if strings.HasPrefix(st.Key, "git.") && strings.HasSuffix(st.Key, ":"+dir) {
 			n += st.Reads
 		}

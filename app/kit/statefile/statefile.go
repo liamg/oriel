@@ -1,4 +1,6 @@
-package kit
+// Package statefile keeps a feature's state in a file of the directory the window is on, and a plugin's freshness
+// subscriptions (watch.Manager), sharing the app's manager when there is one.
+package statefile
 
 import (
 	"bytes"
@@ -6,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/plugin"
@@ -68,7 +71,7 @@ func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
 		cancel()
 		f.reading(gen)
 	}
-	f.moved = OnDirChanged(h, "the "+o.Name+" kept for the directory", func(DirChanged) { f.leave() }).Dispose
+	f.moved = kit.OnDirChanged(h, "the "+o.Name+" kept for the directory", func(kit.DirChanged) { f.leave() }).Dispose
 	return f
 }
 
@@ -144,7 +147,7 @@ func (f *StateFile) follow() int {
 	known, isKnown := f.known[path]
 	f.mu.Unlock()
 	var release func()
-	if w, ok := WindowOf(f.h); ok && path != "" && !isKnown {
+	if w, ok := kit.WindowOf(f.h); ok && path != "" && !isKnown {
 		release = w.Hold()
 	}
 	f.mu.Lock()

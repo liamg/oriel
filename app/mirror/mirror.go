@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/sessionkit"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
@@ -48,8 +49,8 @@ type Mirror struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   work.Busy
-	subs   kit.Subs   // the syncs it keeps, from the sessions' managers
-	budget kit.Budget // review sessions' syncs, behind the one in front
+	subs   statefile.Subs   // the syncs it keeps, from the sessions' managers
+	budget statefile.Budget // review sessions' syncs, behind the one in front
 
 	mu         sync.Mutex
 	reads      map[core.SessionID]read
@@ -177,7 +178,7 @@ func (x *Mirror) follow() {
 				continue
 			}
 		}
-		m := kit.ManagerFor(x.h, se.ID)
+		m := statefile.ManagerFor(x.h, se.ID)
 		if m == nil {
 			continue
 		}
@@ -188,8 +189,8 @@ func (x *Mirror) follow() {
 			need = watch.Need{MaxAge: reviewPoll, Background: watch.Slow, Slow: work.UnfocusedPoll}
 		}
 		keep[key] = true
-		x.subs.Hold(key, m, need, func() kit.Closer {
-			src := kit.Every(key, func(ctx context.Context) error { return x.syncWait(ctx, id) }, func(maxAge time.Duration) time.Duration {
+		x.subs.Hold(key, m, need, func() statefile.Closer {
+			src := statefile.Every(key, func(ctx context.Context) error { return x.syncWait(ctx, id) }, func(maxAge time.Duration) time.Duration {
 				if maxAge < reviewPoll {
 					return maxAge
 				}

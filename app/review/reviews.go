@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -43,7 +44,7 @@ type Reviews struct {
 	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
-	subs   kit.Subs // the lists' poll, from the app's manager
+	subs   statefile.Subs // the lists' poll, from the app's manager
 
 	mu      sync.Mutex
 	lists   map[string]*reviewList   // by source
@@ -222,13 +223,13 @@ const reviewsCheck = 15 * time.Second
 // poll keeps the sources' lists fresh: a subscription to the app's manager whose read asks each source again once
 // its list is older than reviews.poll.
 func (x *Reviews) poll() {
-	m := kit.ManagerFor(x.h, "")
+	m := statefile.ManagerFor(x.h, "")
 	if m == nil {
 		return
 	}
 	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: work.UnfocusedPoll}
-	x.subs.Hold("reviews", m, need, func() kit.Closer {
-		src := kit.Every("reviews.requested", func(ctx context.Context) error {
+	x.subs.Hold("reviews", m, need, func() statefile.Closer {
+		src := statefile.Every("reviews.requested", func(ctx context.Context) error {
 			for _, s := range kit.Sites(x.h).ReviewSources() {
 				kit.Sites(x.h).Warm(ctx, s)
 				x.fresh(s, x.pollEvery())

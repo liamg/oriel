@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -51,7 +52,7 @@ type Terminals struct {
 	StateFile func() string  // where the screens are kept for the window's directory
 	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
 	h         plugin.Host
-	state     *kit.StateFile // the saved screens of the directory the window is on
+	state     *statefile.StateFile // the saved screens of the directory the window is on
 
 	mu    sync.Mutex
 	terms map[string]*terminal
@@ -109,7 +110,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.StateFile, Load: x.loadSaved, Leave: x.leave})
+	x.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "terminal screens", Path: x.StateFile, Load: x.loadSaved, Leave: x.leave})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(h.Option(registry.OptionSpec{Name: "terminal.shell", Type: registry.String, Default: "$SHELL", Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "The program a new terminal runs, with its arguments; $VARS expand, so $SHELL is your login shell."}))

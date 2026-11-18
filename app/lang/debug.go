@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/statefile"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -147,7 +148,7 @@ type Debug struct {
 	StateFile func() string                    // where the breakpoints and watches are kept for the window's directory
 	Logger    func(source string) *slog.Logger // an adapter's stderr goes to the log as source
 	h         plugin.Host
-	state     *kit.StateFile // the breakpoints and watches of the directory the window is on
+	state     *statefile.StateFile // the breakpoints and watches of the directory the window is on
 
 	bps     map[string][]debugBreakpoint // by absolute path
 	watches []string
@@ -195,7 +196,7 @@ func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "debug", Busy: x.work.Busy}))
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
+	x.state = statefile.NewStateFile(h, statefile.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(kit.OnDirChanged(h, "a debug session is of its directory", func(kit.DirChanged) { x.follow() }))
 	x.Add(h.Decoration("debug", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
