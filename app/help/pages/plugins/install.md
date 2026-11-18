@@ -73,15 +73,19 @@ sources. Oriel installs only a pack whose every file matches the checksums it sh
 
 ## editor.read {#editor-read}
 
-Read open buffers and the worktree files the session can see: your code. Medium risk.
+Read open buffers and the worktree files the session can see: your code. A presenter (`oriel.editor.presenter`),
+which is given a buffer's text, needs it. Medium risk.
 
 ## editor.write {#editor-write}
 
-Edit buffers. Its edits are authored as `plugin:<id>`, visible in blame. Medium risk.
+Edit and save buffers, and make, rename and delete the worktree's files: the commands that do (`editor.save`,
+`lsp.rename`, the Explorer's file commands, a search's replace) need it. Its edits are authored as `plugin:<id>`,
+visible in blame. Medium risk.
 
 ## input.observe {#input-observe}
 
-See every key you press, not only its own mappings. **High risk**: this is what a keylogger needs.
+See every key you press, not only its own mappings: hooking an event that tells what you type (`ModeChanged`)
+needs it. **High risk**: this is what a keylogger needs.
 
 ## fs.read {#fs-read}
 
@@ -103,7 +107,8 @@ sees the value. High risk.
 
 ## exec {#exec}
 
-Run the listed programs, as you. **High risk.**
+Run the listed programs, as you: `oriel.exec`, a process, and the commands that run programs (a terminal, for the
+program it runs; the tests; the debugger). **High risk.**
 
 ## agent.read {#agent-read}
 
@@ -135,11 +140,13 @@ Start, stop and resume sessions. Medium risk.
 
 ## git {#git}
 
-Commit, push and open PRs through the gateway, still subject to its approvals. High risk.
+Stage, commit and discard changes, push, rename branches, raise and merge pull requests and post reviews, as you:
+the Git panel's, the Explorer's and the Ship page's commands that do. Merging past the merge dialog's warnings is
+yours alone. High risk.
 
 ## clipboard {#clipboard}
 
-Read the clipboard. Medium risk.
+Read the clipboard: pasting it (`editor.paste`) needs it. Medium risk.
 
 ## settings {#settings}
 
