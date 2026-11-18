@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 	"github.com/liamg/oriel/sandbox/agentsock"
@@ -277,7 +278,7 @@ func toolchains(home, path string) []string {
 	}
 	shared := []string{home, filepath.Join(home, ".local"), filepath.Join(home, ".cargo"), filepath.Join(home, ".bun"), filepath.Join(home, ".deno")}
 	for _, d := range filepath.SplitList(path) {
-		if rel, err := filepath.Rel(home, d); err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		if !pathx.StrictlyInside(d, home) {
 			continue
 		}
 		out = append(out, d)

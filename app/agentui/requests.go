@@ -480,7 +480,7 @@ func relTo(se core.SessionState, path string) string {
 		return filepath.ToSlash(path)
 	}
 	for _, p := range se.Projects {
-		if rel, err := filepath.Rel(p.Dir, path); err == nil && !strings.HasPrefix(rel, "..") {
+		if rel, ok := pathx.Rel(path, p.Dir); ok {
 			return filepath.ToSlash(rel)
 		}
 	}

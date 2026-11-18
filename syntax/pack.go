@@ -79,7 +79,7 @@ func validPackName(n string) bool {
 }
 
 func validPackPath(p string) bool {
-	return p != "" && !strings.Contains(p, `\`) && path.Clean(p) == p && !path.IsAbs(p) && p != ".." && !strings.HasPrefix(p, "../")
+	return !strings.Contains(p, `\`) && path.Clean(p) == p && filepath.IsLocal(p)
 }
 
 // Install unpacks a grammar pack, a .tar.gz of <name>/ holding language.toml, grammar.wasm and queries/, into

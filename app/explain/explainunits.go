@@ -148,7 +148,7 @@ func (x *Explain) baseOf(abs string) (data []byte, gen int, ok bool) {
 		return nil, 0, false
 	}
 	rel := g.Rel(abs)
-	if strings.HasPrefix(rel, "../") || filepath.IsAbs(rel) {
+	if !filepath.IsLocal(rel) {
 		return nil, 0, false
 	}
 	st := g.State()

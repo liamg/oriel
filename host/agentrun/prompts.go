@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/internal/atomicfile"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // promptsPath is where the host keeps the prompts the app last sent, for sessions that start while no app is
@@ -93,7 +94,7 @@ func (x *Runner) WriteNotes(id core.SessionID) {
 	if err != nil || se.Dir == "" {
 		return
 	}
-	if rel, err := filepath.Rel(x.env.WorkspacesDir(), se.Dir); err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+	if !pathx.StrictlyInside(se.Dir, x.env.WorkspacesDir()) {
 		return
 	}
 	if _, err := os.Stat(se.Dir); err != nil {
@@ -135,7 +136,7 @@ func agentNotes(se core.SessionState, style string, branches bool) string {
 		b.WriteString("original checkout, and read its instructions before you change it.\n\n")
 		for _, p := range se.Projects {
 			dir := p.Dir
-			if rel, err := filepath.Rel(se.Dir, p.Dir); err == nil && !strings.HasPrefix(rel, "..") {
+			if rel, ok := pathx.Rel(p.Dir, se.Dir); ok {
 				dir = rel
 			}
 			b.WriteString("- `" + dir + "`")

@@ -5,11 +5,21 @@ import "path/filepath"
 
 // Inside reports whether path is dir or under it, as written; never for an empty path or dir.
 func Inside(path, dir string) bool {
+	_, ok := Rel(path, dir)
+	return ok
+}
+
+// Rel is path relative to dir when path is dir (".") or under it, as written: a child named "..foo" is under it,
+// as filepath.IsLocal says. Never for an empty path or dir.
+func Rel(path, dir string) (string, bool) {
 	if path == "" || dir == "" {
-		return false
+		return "", false
 	}
 	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
-	return err == nil && (rel == "." || filepath.IsLocal(rel))
+	if err != nil || rel != "." && !filepath.IsLocal(rel) {
+		return "", false
+	}
+	return rel, true
 }
 
 // StrictlyInside reports whether path is under dir and not dir itself.

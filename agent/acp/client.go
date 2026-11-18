@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/jsonrpc"
 )
 
@@ -41,7 +42,7 @@ func (s *session) inside(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !within(p, root) {
+	if !pathx.Inside(p, root) {
 		return "", &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: path + " is outside the session's workspace"}
 	}
 	return p, nil
@@ -64,11 +65,6 @@ func realPath(path string) (string, error) {
 		rest = append([]string{filepath.Base(path)}, rest...)
 		path = parent
 	}
-}
-
-func within(p, dir string) bool {
-	rel, err := filepath.Rel(dir, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 func (s *session) readFile(params json.RawMessage) (any, error) {
@@ -111,7 +107,7 @@ func (s *session) writeFile(params json.RawMessage) (any, error) {
 		return nil, err
 	}
 	for _, d := range s.spec.Protect {
-		if r, err := realPath(d); err == nil && within(path, r) {
+		if r, err := realPath(d); err == nil && pathx.Inside(path, r) {
 			return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: p.Path + " is in " + d + ", which the agent must never edit"}
 		}
 	}

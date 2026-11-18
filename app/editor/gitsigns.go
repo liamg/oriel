@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -215,7 +214,7 @@ func (g *GitSigns) fileOf(path string) (gitFile, bool) {
 	}
 	g.watch(f.tree, tree.Status())
 	f.rel = tree.Rel(path)
-	if strings.HasPrefix(f.rel, "../") || filepath.IsAbs(f.rel) || tree.State().Ignored(f.rel) {
+	if !filepath.IsLocal(f.rel) || tree.State().Ignored(f.rel) {
 		return gitFile{}, false
 	}
 	return f, true

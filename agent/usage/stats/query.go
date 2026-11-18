@@ -2,12 +2,12 @@ package stats
 
 import (
 	"cmp"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Session is a session as a query sees it: what it is, the repos it works in, and its logs' scans.
@@ -116,7 +116,7 @@ func (s Session) repoOf(path string) int {
 		return best
 	}
 	for i, r := range s.Repos {
-		if r.Dir != "" && within(path, r.Dir) && (best < 0 || len(r.Dir) > len(s.Repos[best].Dir)) {
+		if r.Dir != "" && pathx.Inside(path, r.Dir) && (best < 0 || len(r.Dir) > len(s.Repos[best].Dir)) {
 			best = i
 		}
 	}
@@ -137,11 +137,6 @@ func (s Session) charged(sl *Slot, shares []Share, split bool) []Share {
 		return []Share{{Repo: s.Repos[i].Name, Share: 1}}
 	}
 	return shares
-}
-
-func within(path, dir string) bool {
-	rel, err := filepath.Rel(filepath.Clean(dir), filepath.Clean(path))
-	return err == nil && (rel == "." || filepath.IsLocal(rel))
 }
 
 // Group keys.

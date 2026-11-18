@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/internal/atomicfile"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -353,7 +354,7 @@ func ManifestOf(root string, se core.SessionState) sandbox.Manifest {
 		if err != nil || p.Repo == "" {
 			continue
 		}
-		if rel == ".." || strings.HasPrefix(rel, "../") {
+		if !pathx.Inside(p.Dir, root) {
 			// A checkout read in place, with no worktree here yet: the agent reads it, read-only.
 			m.Reads = append(m.Reads, p.Dir)
 			continue

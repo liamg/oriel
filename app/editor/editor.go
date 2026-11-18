@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/pathx"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -425,7 +426,7 @@ func (x *Editor) window(name string) (vim.WindowID, error) {
 
 // relName is how the editor names path: relative to its directory when inside it.
 func (x *Editor) relName(path string) string {
-	if rel, err := filepath.Rel(x.dir, path); err == nil && filepath.IsAbs(path) && !strings.HasPrefix(rel, "..") {
+	if rel, ok := pathx.Rel(path, x.dir); ok && filepath.IsAbs(path) {
 		return rel
 	}
 	return path

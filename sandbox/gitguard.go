@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/pathx"
 )
 
 // Host git in a sandboxed workspace runs on files the agent can write. GitEnv
@@ -91,7 +92,7 @@ func (g *Guard) hostGitDirs(root, dir string) (gitDir, workTree string, err erro
 	m, _ := LoadManifest(root)
 	for _, p := range m.Projects {
 		proj := filepath.Join(root, p.Dir)
-		if !within(abs, proj) {
+		if !pathx.Inside(abs, proj) {
 			continue
 		}
 		admin, err := WorktreeAdmin(p.Repo, proj)
@@ -304,11 +305,6 @@ func safeKey(key string) bool {
 		}
 	}
 	return false
-}
-
-func within(p, dir string) bool {
-	rel, err := filepath.Rel(dir, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, "../")
 }
 
 // Repo is dir as gitx runs git in it, with GitEnv applied: host git in a sandboxed workspace goes through here, or

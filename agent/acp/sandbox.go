@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/liamg/oriel/agent"
 )
@@ -34,7 +33,7 @@ func (p *Provider) SandboxNeeds(_ context.Context, at agent.SandboxPlace) (agent
 	home, _ := os.UserHomeDir()
 	for _, e := range p.Config.Home {
 		e = filepath.Clean(e)
-		if filepath.IsAbs(e) || e == "." || strings.HasPrefix(e, "..") {
+		if e == "." || !filepath.IsLocal(e) {
 			continue
 		}
 		host := filepath.Join(home, e)

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/pathx"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -376,7 +377,7 @@ func diffSpan(d *core.FileDiff) string {
 // relPath is path as its session's projects name it: relative to the project it's in.
 func relPath(se core.SessionState, path string) string {
 	for _, p := range se.Projects {
-		if rel, err := filepath.Rel(p.Dir, path); err == nil && !strings.HasPrefix(rel, "..") && filepath.IsAbs(path) {
+		if rel, ok := pathx.Rel(path, p.Dir); ok && filepath.IsAbs(path) {
 			return rel
 		}
 	}
