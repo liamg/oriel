@@ -116,10 +116,14 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 	x.dialog = nil
 }
 
-// repoField is one of the Add repo dialog's fields: Tab moves on, Escape closes, ⌘↵ adds.
+// repoField is one of the Add repo dialog's fields: Tab moves on, Escape closes, ⌘↵ adds; focus moves to it this frame
+// (the mode's first field, as the dialog opens or its mode changes, or after a completion is picked).
 func (x *Repos) repoField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
 	o.Help, o.TabMoves, o.KeyMode = "agent/repos#add", true, RepoNewKeyMode
-	widget.DialogField(c, key, text, o, focus, x.closeDialog, x.submitDialog)
+	if focus {
+		c.RequestFocus(c.Next(key))
+	}
+	widget.DialogField(c, key, text, o, x.closeDialog, x.submitDialog)
 }
 
 // probeKey is what the fields name that needs checking.

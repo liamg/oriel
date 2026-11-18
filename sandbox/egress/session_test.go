@@ -121,7 +121,7 @@ func TestNetworkRuleHoldsForTheSession(t *testing.T) {
 	if !allow(s, "github.com", 443) {
 		t.Fatal("allowed by the built-in list to begin with")
 	}
-	if err := s.SetRule("github.com", 443, false, false); err != nil {
+	if err := s.SetRule(Rule{Host: "github.com", Port: 443}); err != nil {
 		t.Fatal(err)
 	}
 	if allow(s, "github.com", 443) {
@@ -131,7 +131,7 @@ func TestNetworkRuleHoldsForTheSession(t *testing.T) {
 	if c := s.Conns()[0]; c.Reason != "rule: this session" {
 		t.Errorf("reason: %+v", c)
 	}
-	_ = s.SetRule("github.com", 443, true, false)
+	_ = s.SetRule(Rule{Host: "github.com", Port: 443, Allow: true})
 	if !allow(s, "github.com", 443) || len(s.Grants()) != 1 {
 		t.Errorf("allowed again, one rule kept: %+v", s.Grants())
 	}
@@ -259,7 +259,7 @@ func TestEgressDialNeedsAnAllow(t *testing.T) {
 func TestEgressDialPrivateNeedsTheFlag(t *testing.T) {
 	s, _ := newSession(t)
 	s.Resolver = resolveTo{netip.MustParseAddr("10.1.78.104")}
-	_ = s.SetRule("*.example.com", 443, true, false)
+	_ = s.SetRule(Rule{Host: "*.example.com", Port: 443, Allow: true})
 	if !allow(s, "litellm.example.com", 443) {
 		t.Fatal("the wildcard allows it")
 	}
@@ -268,7 +268,7 @@ func TestEgressDialPrivateNeedsTheFlag(t *testing.T) {
 		t.Fatalf("a wildcard reached a private address: %v", err)
 	}
 
-	_ = s.SetRule("litellm.example.com", 443, true, false)
+	_ = s.SetRule(Rule{Host: "litellm.example.com", Port: 443, Allow: true})
 	allow(s, "litellm.example.com", 443)
 	if s.scope("litellm.example.com:443") != Public {
 		t.Fatal("an exact allow should not reach private addresses by itself")
@@ -277,7 +277,7 @@ func TestEgressDialPrivateNeedsTheFlag(t *testing.T) {
 		t.Fatalf("an exact allow reached a private address: %v", err)
 	}
 
-	_ = s.SetRule("litellm.example.com", 443, true, true)
+	_ = s.SetRule(Rule{Host: "litellm.example.com", Port: 443, Allow: true, Private: true})
 	allow(s, "litellm.example.com", 443)
 	if s.scope("litellm.example.com:443") != Private {
 		t.Fatal("an allow marked private should reach private addresses")
@@ -324,8 +324,8 @@ func TestEgressHostGateway(t *testing.T) {
 	s.Env = func() []Rule {
 		return EnvRules(map[string]string{"ANTHROPIC_BASE_URL": "http://" + HostGateway + ":4000"})
 	}
-	_ = s.SetRule("*", 0, true, false)
-	_ = s.SetRule(HostGateway, 22, true, false)
+	_ = s.SetRule(Rule{Host: "*", Allow: true})
+	_ = s.SetRule(Rule{Host: HostGateway, Port: 22, Allow: true})
 	for port, want := range map[int]bool{4000: true, 22: false, 80: false} {
 		if got := allow(s, HostGateway, port); got != want {
 			t.Errorf("port %d: allow %v", port, got)
@@ -365,7 +365,7 @@ func TestEgressWhyIsBounded(t *testing.T) {
 func TestEgressDialRefusesLoopback(t *testing.T) {
 	s, _ := newSession(t)
 	s.Resolver = resolveTo{netip.MustParseAddr("127.0.0.1")}
-	_ = s.SetRule("rebind.example.com", 443, true, false)
+	_ = s.SetRule(Rule{Host: "rebind.example.com", Port: 443, Allow: true})
 	allow(s, "rebind.example.com", 443)
 	if _, err := dialVia(t, s, "rebind.example.com", 443); err == nil || !strings.Contains(err.Error(), "not reachable") {
 		t.Fatalf("reached loopback: %v", err)
@@ -378,7 +378,7 @@ func TestEgressEndpointIsPrivate(t *testing.T) {
 	s.Env = func() []Rule {
 		return EnvRules(map[string]string{"ANTHROPIC_BASE_URL": "https://litellm.internal.example.com"})
 	}
-	_ = s.SetRule("*", 0, true, false)
+	_ = s.SetRule(Rule{Host: "*", Allow: true})
 	if !allow(s, "litellm.internal.example.com", 443) {
 		t.Fatal("not allowed")
 	}

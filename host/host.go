@@ -194,23 +194,19 @@ func (w *Host) parts() error {
 	w.workPart = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.Resolve, AddRepo: w.Add,
 		Repos: w.Repos, ReposDir: w.Dir, NotesFiles: w.notesFiles})
 	w.runPart = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
-		MCPServers:   w.mcpServers,
-		Exec:         w.opts.Exec,
-		Sandbox:      w.opts.Sandbox,
-		Packs:        w.opts.Packs,
-		KeyWait:      w.opts.KeyWait,
-		Repos:        w.Repos,
-		AddRepo:      w.AddRepo,
-		AccountOf:    w.AccountOf,
-		Record:       w.statsPart.Record,
-		UsageSampled: w.UsageSampled,
-		PROpen:       func(id core.SessionID, project, branch string) bool { return w.PROpen(id, project, branch) },
-		RenameBranch: func(ctx context.Context, id core.SessionID, project, name string) error {
-			return w.ShipRename(ctx, hostapi.RenameReq{Session: id, Project: project, Name: name})
-		},
-		NewBranch: func(ctx context.Context, id core.SessionID, project, name string, carry bool) (string, error) {
-			return w.NewBranch(ctx, hostapi.NewBranchReq{Session: id, Project: project, Name: name, Carry: carry})
-		},
+		MCPServers:     w.mcpServers,
+		Exec:           w.opts.Exec,
+		Sandbox:        w.opts.Sandbox,
+		Packs:          w.opts.Packs,
+		KeyWait:        w.opts.KeyWait,
+		Repos:          w.Repos,
+		AddRepo:        w.AddRepo,
+		AccountOf:      w.AccountOf,
+		Record:         w.statsPart.Record,
+		UsageSampled:   w.UsageSampled,
+		PROpen:         func(id core.SessionID, project, branch string) bool { return w.PROpen(id, project, branch) },
+		RenameBranch:   w.ShipRename,
+		NewBranch:      w.NewBranch,
 		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
 		Prices:         w.prices})
 	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {

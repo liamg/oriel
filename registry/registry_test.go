@@ -86,14 +86,14 @@ func TestDisposedKeymapStopsWaiting(t *testing.T) {
 func TestThemes(t *testing.T) {
 	r := registry.New()
 	builtin := theme.Builtins()[0]
-	_, gen0 := r.Themes()
+	gen0 := r.ThemesGen()
 	d := r.Theme(builtin)
-	ts, gen1 := r.Themes()
+	ts, gen1 := r.Themes(), r.ThemesGen()
 	if len(ts) != 1 || ts[0].Name() != builtin.Name() {
 		t.Errorf("themes %v", ts)
 	}
 	d.Dispose()
-	ts, gen2 := r.Themes()
+	ts, gen2 := r.Themes(), r.ThemesGen()
 	if len(ts) != 0 {
 		t.Errorf("a disposed theme is still listed: %v", ts)
 	}
@@ -107,14 +107,14 @@ func TestLanguages(t *testing.T) {
 	r := registry.New()
 	r.Language(registry.Language{Name: "go", Source: "builtin"})
 	r.Language(registry.Language{Name: "lua", Source: "builtin"})
-	_, gen0 := r.Languages()
+	gen0 := r.LanguagesGen()
 	d := r.Language(registry.Language{Name: "go", Source: "pack"})
-	ls, gen1 := r.Languages()
+	ls, gen1 := r.Languages(), r.LanguagesGen()
 	if len(ls) != 2 || ls[1].Name != "go" || ls[1].Source != "pack" || gen1 == gen0 {
 		t.Fatalf("with the pack: %+v (gen %d → %d)", ls, gen0, gen1)
 	}
 	d.Dispose()
-	ls, _ = r.Languages()
+	ls = r.Languages()
 	if len(ls) != 2 || ls[0].Name != "go" || ls[0].Source != "builtin" {
 		t.Errorf("after disposing the pack: %+v", ls)
 	}

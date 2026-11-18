@@ -95,7 +95,7 @@ func SidebarArgs(command string, a registry.Args) registry.Args {
 
 // ThemeNames are the registered themes' names, sorted.
 func ThemeNames(h registry.Registry) []string {
-	srcs, _ := h.Themes()
+	srcs := h.Themes()
 	var out []string
 	for _, src := range srcs {
 		if !slices.Contains(out, src.Name()) {

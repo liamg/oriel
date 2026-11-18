@@ -357,7 +357,7 @@ func (h *Headless) Retheme() error {
 	if got, _ := registry.Option[string](h.sh.cfg.Registry.Options(), "ui.variant", registry.At{}); got == "light" {
 		v = theme.Light
 	}
-	srcs, _ := h.sh.cfg.Registry.Themes()
+	srcs := h.sh.cfg.Registry.Themes()
 	r, err := theme.ResolveNamed(srcs, n, v)
 	if err != nil {
 		return err

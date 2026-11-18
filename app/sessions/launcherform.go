@@ -21,20 +21,18 @@ type fieldOpts struct {
 
 // field is a text field of the launcher's: Tab moves on, Escape closes, ⌘↵ starts.
 func (x *Launcher) field(c *ui.Ctx, key any, text *string, label string, o fieldOpts) {
-	focus := o.Focus && x.focusField
-	if focus {
+	if o.Focus && x.focusField { // the mode's first field, as the form opens or its mode changes
 		x.focusField = false
+		c.RequestFocus(c.Next(key))
 	}
 	if o.W == (ui.Size{}) {
 		o.W = ui.Flex(1)
 	}
 	if o.Lines <= 1 {
-		io := widget.InputOpts{Label: label, Placeholder: o.Placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: o.W}
-		widget.DialogField(c, key, text, io, focus, x.close, nil)
+		io := widget.InputOpts{Label: label, Placeholder: o.Placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: o.W,
+			DefaultFocus: o.Focus}
+		widget.DialogField(c, key, text, io, x.close, nil)
 		return
-	}
-	if focus {
-		c.RequestFocus(c.Next(key))
 	}
 	if widget.Prose(c, key, text, widget.ProseOpts{Label: label, Placeholder: o.Placeholder, Help: "agent/launcher", TabMoves: true,
 		KeyMode: LauncherKeyMode, Width: o.W, Lines: o.Lines, MinLines: 2}).Cancelled {

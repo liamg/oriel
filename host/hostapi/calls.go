@@ -36,10 +36,10 @@ type SessionCalls interface {
 	End(ctx context.Context, r EndReq) error
 	Configure(ctx context.Context, r ConfigureReq) error
 	Interrupt(id core.SessionID) error
-	StopProcess(ctx context.Context, id core.SessionID, process string) error
-	Rename(id core.SessionID, name string) error
-	Fork(ctx context.Context, id core.SessionID, prompt string) (string, error)
-	AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error
+	StopProcess(ctx context.Context, r StopProcessReq) error
+	Rename(r SessionRenameReq) error
+	Fork(ctx context.Context, r ForkReq) (string, error)
+	AddRepo(ctx context.Context, r AddRepoReq) error
 	Send(r SendReq) error
 	Answer(r AnswerReq) error
 	StartLogin(ctx context.Context, provider string) (string, error)
@@ -92,13 +92,23 @@ const (
 	NetBlock NetAction = "block"
 )
 
+// NetRuleReq allows or blocks Host[:Port] for the rest of a session (NetAllow, NetBlock), or drops the session's rule
+// for it ("").
+type NetRuleReq struct {
+	Session core.SessionID
+	Host    string
+	Port    int // 0 for every port
+	Action  NetAction
+	Private bool // an allow reaches private and tailnet addresses too
+}
+
 // SandboxCalls are the sessions' sandboxes and what they may do: the registry's "host.sandboxes" service.
 type SandboxCalls interface {
 	AddRule(kind core.AskKind, rule string) error
 	RemoveRule(kind core.AskKind, rule string) error
 	Permissions(ctx context.Context, id core.SessionID) (Permissions, error)
 	SetToolRule(id core.SessionID, tool string, action ToolAction) error
-	SetNetRule(id core.SessionID, host string, port int, action NetAction, private bool) error
+	SetNetRule(r NetRuleReq) error
 	RestartSandbox(id core.SessionID) error
 	RebuildSandbox(ctx context.Context, id core.SessionID) error
 	SandboxShell(ctx context.Context, id core.SessionID, cwd string) (sandbox.Command, error)
@@ -123,7 +133,7 @@ type ShipCalls interface {
 	NewBranch(ctx context.Context, r NewBranchReq) (string, error)
 	ShipMergeDefault(ctx context.Context, r ShipRef) (gitx.Merge, error)
 	NextPR(ctx context.Context, r NextPRReq) error
-	UpdatePR(ctx context.Context, id core.SessionID) (map[string]PRMove, error)
+	UpdatePR(ctx context.Context, r UpdatePRReq) (map[string]PRMove, error)
 	ShipBranch(ctx context.Context, r ShipRef) (string, error)
 	SawPR(r PRSeenReq) error
 }

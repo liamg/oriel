@@ -120,7 +120,7 @@ func (r *Jobs) Run(job string, fx FxRun) core.SessionID {
 	}
 	a := r.Claude.WaitStarted(t)
 	for _, name := range fx.Repos {
-		if err := r.W.AddRepo(ctx, id, core.RepoID(r.Repos[name])); err != nil {
+		if err := r.W.AddRepo(ctx, hostapi.AddRepoReq{Session: id, Repo: core.RepoID(r.Repos[name])}); err != nil {
 			t.Fatal(err)
 		}
 	}

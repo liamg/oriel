@@ -83,7 +83,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Placeholder(c.String(0), c.Table(1), c.Fn(2), c.Where())
+				return nil, x.Placeholder(c.Any(0), c.Table(1), c.Fn(2), c.Where())
 			},
 			"read": func(c *script.Args) ([]any, error) {
 				return x.Read(c.String(0))
@@ -292,7 +292,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Indicator(c.String(0), c.Any(1), c.Table(2), c.Where())
+				return nil, x.Indicator(c.Any(0), c.Any(1), c.Table(2), c.Where())
 			},
 			"refresh": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {

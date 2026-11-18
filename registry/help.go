@@ -25,13 +25,20 @@ func (r *reg) HelpPage(s HelpSource) Disposable {
 	})
 }
 
-// HelpSources are every contributor's pages, in registration order, and a number that changes when they do.
-func (r *reg) HelpSources() ([]HelpSource, int) {
+// HelpSources are every contributor's pages, in registration order.
+func (r *reg) HelpSources() []HelpSource {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]HelpSource, len(r.help))
 	for i, e := range r.help {
 		out[i] = e.value
 	}
-	return out, r.helpGen
+	return out
+}
+
+// HelpSourcesGen is a number that changes when the help sources do.
+func (r *reg) HelpSourcesGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.helpGen
 }

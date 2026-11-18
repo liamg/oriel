@@ -9,6 +9,30 @@ import (
 )
 
 // StartWorkReq is Start work on a plan, and how; its zero value is the Start work dialog's defaults.
+// StopProcessReq stops a process a session's agent left running (core.AgentState.Processes), by its ID.
+type StopProcessReq struct {
+	Session core.SessionID
+	Process string
+}
+
+// SessionRenameReq names a session.
+type SessionRenameReq struct {
+	Session core.SessionID
+	Name    string
+}
+
+// ForkReq asks a session's agent a side question, outside its conversation.
+type ForkReq struct {
+	Session core.SessionID
+	Prompt  string
+}
+
+// AddRepoReq brings a registered repo, by name or path, into a session as a project of its own.
+type AddRepoReq struct {
+	Session core.SessionID
+	Repo    core.RepoID
+}
+
 type StartWorkReq struct {
 	Session core.SessionID `json:"session"`
 	// KeepThreads leaves the plan's threads as they are; otherwise every one but the plan's own goes, the open and

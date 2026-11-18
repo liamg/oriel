@@ -97,7 +97,7 @@ type languageSet struct {
 }
 
 func (l *languageSet) Set() *syntax.Set {
-	_, gen := l.r.Languages()
+	gen := l.r.LanguagesGen()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.set == nil || l.gen != gen {

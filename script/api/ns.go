@@ -464,10 +464,14 @@ func (s Session) id(id string) core.SessionID {
 type HUD struct{ a *APIs }
 
 //oriel:api doc="An indicator in a slot: title-bar.right, status-line.left, status-line.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
-func (h HUD) Indicator(name string, build any, opts script.Table, where string) error {
+func (h HUD) Indicator(spec any, build any, opts script.Table, where string) error {
+	name, build, opts, err := indicatorSpec(spec, build, opts)
+	if err != nil {
+		return fmt.Errorf("oriel.hud.indicator: %w", err)
+	}
 	every, err := durationOf(opts["every"])
 	if err != nil {
-		return fmt.Errorf("hud indicator %s: every: %w", name, err)
+		return fmt.Errorf("oriel.hud.indicator %s: every: %w", name, err)
 	}
 	fn, _ := build.(*script.Fn)
 	if fn == nil {
@@ -499,6 +503,24 @@ func (h HUD) Indicator(name string, build any, opts script.Table, where string) 
 	}
 	h.a.own(h.a.Host.Contribute(ind))
 	return nil
+}
+
+// indicatorSpec is an indicator's (name, build, opts), given as those or as one spec table holding them all.
+func indicatorSpec(spec, build any, opts script.Table) (string, any, script.Table, error) {
+	switch v := spec.(type) {
+	case string:
+		if build == nil {
+			return "", nil, nil, fmt.Errorf("%s: no build function or nodes", v)
+		}
+		return v, build, opts, nil
+	case script.Table:
+		name := str(v, "name")
+		if name == "" || v["build"] == nil {
+			return "", nil, nil, errors.New("its spec needs a name and a build: { name, build = fn or nodes, slot, … }")
+		}
+		return name, v["build"], v, nil
+	}
+	return "", nil, nil, fmt.Errorf("a name or a spec table { name, build = fn, … }, not %T", spec)
 }
 
 //oriel:api doc="Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes."

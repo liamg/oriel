@@ -7,17 +7,17 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// A dialog's field takes the keys as the dialog opens, without a click; ⏎ submits it and Esc cancels it.
+// A dialog's first field (DefaultFocus) takes the keys as the dialog opens, without a click; ⏎ submits it and Esc
+// cancels it.
 func TestDialogField(t *testing.T) {
 	text := ""
-	open := true
 	submitted, cancelled := 0, 0
+	open := true
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
-		c.Column("col", ui.Style{Pad: ui.Pad(10), W: ui.Px(300)}, func(c *ui.Ctx) {
-			DialogField(c, "name", &text, InputOpts{Label: "Name", Help: "test/input"}, open,
+		Modal(c, "dialog", &open, ModalOpts{Title: "Name it", Width: 320, Help: "test/input"}, func(c *ui.Ctx) {
+			DialogField(c, "name", &text, InputOpts{Label: "Name", Help: "test/input", DefaultFocus: true},
 				func() { cancelled++ }, func() { submitted++ })
 		})
-		open = false
 	})
 	h.frame()
 	h.keys("a", "b")

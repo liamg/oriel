@@ -62,7 +62,7 @@ type Deps struct {
 	// Repos are the registered checkouts, which an agent never edits.
 	Repos func() []core.Repo
 	// AddRepo brings a registered repo, by name or path, into a session as a project of its own.
-	AddRepo func(ctx context.Context, id core.SessionID, ref core.RepoID) error
+	AddRepo func(ctx context.Context, r hostapi.AddRepoReq) error
 	// AccountOf is the account a provider is signed in to.
 	AccountOf func(provider string) (string, string)
 	// Record keeps an agent event in its session's record, for a provider with no log of its own.
@@ -70,10 +70,10 @@ type Deps struct {
 	// UsageSampled reports a plan reading, and keeps it.
 	UsageSampled func(u core.ProviderUsage)
 	// RenameBranch renames the session's branch for a project.
-	RenameBranch func(ctx context.Context, id core.SessionID, project, name string) error
+	RenameBranch func(ctx context.Context, r hostapi.RenameReq) error
 	// NewBranch moves a project onto a fresh branch off its default branch, which the session takes, and answers its
 	// name: name when it isn't "". Uncommitted work is refused unless carry.
-	NewBranch func(ctx context.Context, id core.SessionID, project, name string, carry bool) (string, error)
+	NewBranch func(ctx context.Context, r hostapi.NewBranchReq) (string, error)
 	// PROpen says the last reading of a project's branch found its pull request open.
 	PROpen func(id core.SessionID, project, branch string) bool
 	// MachineChanged reports the machine's state again: its lost logins have changed.

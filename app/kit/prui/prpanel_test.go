@@ -7,7 +7,9 @@ import (
 )
 
 func TestChecksSummary(t *testing.T) {
-	ck := func(state registry.CheckState) registry.Check { return registry.Check{Name: string(state), State: state} }
+	ck := func(state registry.CheckState) registry.Check {
+		return registry.Check{Name: string(state), State: state}
+	}
 	for _, tc := range []struct {
 		checks      []registry.Check
 		state, text string

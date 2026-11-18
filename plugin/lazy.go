@@ -53,7 +53,7 @@ func filetypeTriggers(r registry.Registry, fts []string) []registry.EventTrigger
 	if len(fts) == 0 {
 		return nil
 	}
-	langs, _ := r.Languages()
+	langs := r.Languages()
 	var out []registry.EventTrigger
 	for _, ft := range fts {
 		i := slices.IndexFunc(langs, func(l registry.Language) bool { return strings.EqualFold(l.Name, ft) })

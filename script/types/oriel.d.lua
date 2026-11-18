@@ -99,11 +99,11 @@ function oriel.now() end
 ---@param fn any
 function oriel.on(event, opts, fn) end
 
---- Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now.
----@param name string
----@param spec table
----@param fn function
-function oriel.placeholder(name, spec, fn) end
+--- Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now. Takes its spec too: { name, commands, keys, …, run = fn }.
+---@param first any
+---@param spec? table
+---@param fn? function
+function oriel.placeholder(first, spec, fn) end
 
 --- A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
 ---@param path string
@@ -255,10 +255,10 @@ function oriel.http.request(spec, fn) end
 oriel.hud = {}
 
 --- An indicator in a slot: title-bar.right, status-line.left, status-line.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s' or seconds, on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
----@param name string
+---@param spec any
 ---@param build any
 ---@param opts? table
-function oriel.hud.indicator(name, build, opts) end
+function oriel.hud.indicator(spec, build, opts) end
 
 --- Builds the indicator name again now.
 ---@param name string

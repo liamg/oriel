@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"github.com/liamg/oriel/host/hostapi"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,7 +123,7 @@ func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 	other := gittest.New(t)
 	other.Write(map[string]string{"a": "a\n"})
 	other.Commit("Ada", "a")
-	if err := r.w.AddRepo(context.Background(), id, core.RepoID(other.Dir)); err != nil {
+	if err := r.w.AddRepo(context.Background(), hostapi.AddRepoReq{Session: id, Repo: core.RepoID(other.Dir)}); err != nil {
 		t.Fatal(err)
 	}
 	se = r.session(id)

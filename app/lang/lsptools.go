@@ -187,7 +187,7 @@ func (x *LSP) toolDiagnostics(ctx registry.Ctx, p registry.Args) (any, error) {
 			time.Sleep(50 * time.Millisecond)
 		}
 	} else {
-		ds, _ = x.h.Diagnostics()
+		ds = x.h.Diagnostics()
 	}
 	if len(ds) == 0 {
 		return "no diagnostics", nil

@@ -446,7 +446,7 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 	}
 
 	// Allowed but unreachable: an error, for a destination not shown yet.
-	if err := b.Egress().SetRule("127.0.0.1", 1, true, false); err != nil {
+	if err := b.Egress().SetRule(egress.Rule{Host: "127.0.0.1", Port: 1, Allow: true}); err != nil {
 		t.Fatal(err)
 	}
 	if code, _ := get(t, paddr, "http://127.0.0.1:1"); code != http.StatusBadGateway {
@@ -803,7 +803,7 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	if err := s.w.SetToolRule(id, gateway.Prefix+"push", hostapi.ToolDeny); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.w.SetNetRule(id, "Example.COM", 443, hostapi.NetBlock, false); err != nil {
+	if err := s.w.SetNetRule(hostapi.NetRuleReq{Session: id, Host: "Example.COM", Port: 443, Action: hostapi.NetBlock}); err != nil {
 		t.Fatal(err)
 	}
 	p, _ = s.w.Permissions(ctx, id)
@@ -817,7 +817,7 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	if err := s.w.SetToolRule(id, gateway.Prefix+"push", ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.w.SetNetRule(id, "example.com", 443, "", false); err != nil {
+	if err := s.w.SetNetRule(hostapi.NetRuleReq{Session: id, Host: "example.com", Port: 443}); err != nil {
 		t.Fatal(err)
 	}
 	p, _ = s.w.Permissions(ctx, id)

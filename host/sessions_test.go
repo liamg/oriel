@@ -287,7 +287,7 @@ func TestReviewUpdatesToTheNewHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRRef: "pull/7/head", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
-	if moved, err := r.w.UpdatePR(ctx, id); err != nil || len(moved) != 0 {
+	if moved, err := r.w.UpdatePR(ctx, hostapi.UpdatePRReq{Session: id}); err != nil || len(moved) != 0 {
 		t.Fatalf("nothing new: %v, %v", moved, err)
 	}
 	for _, msg := range []string{"review fixes", "and a test"} {
@@ -296,7 +296,7 @@ func TestReviewUpdatesToTheNewHead(t *testing.T) {
 	}
 	head := strings.TrimSpace(origin.Git("rev-parse", "HEAD"))
 	origin.Git("update-ref", "refs/pull/7/head", head)
-	moved, err := r.w.UpdatePR(ctx, id)
+	moved, err := r.w.UpdatePR(ctx, hostapi.UpdatePRReq{Session: id})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +383,7 @@ func TestPlanAndWorkStartWithNoRepo(t *testing.T) {
 		if k != core.KindWork {
 			continue
 		}
-		if err := r.w.AddRepo(context.Background(), id, core.RepoID(r.repo.Dir)); err != nil {
+		if err := r.w.AddRepo(context.Background(), hostapi.AddRepoReq{Session: id, Repo: core.RepoID(r.repo.Dir)}); err != nil {
 			t.Fatal(err)
 		}
 		se = r.session(id)
@@ -534,14 +534,14 @@ func TestAddRepoMidSession(t *testing.T) {
 	other.Write(map[string]string{"a": "a\n"})
 	other.Commit("Ada", "a")
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "both", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
-	if err := r.w.AddRepo(context.Background(), id, core.RepoID(other.Dir)); err != nil {
+	if err := r.w.AddRepo(context.Background(), hostapi.AddRepoReq{Session: id, Repo: core.RepoID(other.Dir)}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
 	if len(se.Projects) != 2 || branchOf(t, se.Projects[1].Dir) != se.Branch {
 		t.Fatalf("projects = %+v, branch %q", se.Projects, se.Branch)
 	}
-	if err := r.w.AddRepo(context.Background(), id, core.RepoID(other.Dir)); err == nil {
+	if err := r.w.AddRepo(context.Background(), hostapi.AddRepoReq{Session: id, Repo: core.RepoID(other.Dir)}); err == nil {
 		t.Error("the same repo was added twice")
 	}
 }
@@ -736,7 +736,7 @@ func TestAutoNameKeepsARename(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", AutoName: true, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	namer := r.fake.WaitStarted(t)
 	namer.WaitSent(t)
-	if err := r.w.Rename(id, "mine"); err != nil {
+	if err := r.w.Rename(hostapi.SessionRenameReq{Session: id, Name: "mine"}); err != nil {
 		t.Fatal(err)
 	}
 	namer.Emit(agent.Message{Text: "Search freshness"})

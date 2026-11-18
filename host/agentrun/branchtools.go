@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/host/hostapi"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
@@ -60,7 +61,7 @@ func (h *session) toolRenameBranch(ctx context.Context, raw json.RawMessage) (st
 	if h.r.deps.PROpen != nil && h.r.deps.PROpen(h.id, p.Name, p.Branch) {
 		return "", fmt.Errorf("%s's pull request is open on %s: renaming would leave it behind. Keep the name", p.Name, p.Branch)
 	}
-	if err := h.r.deps.RenameBranch(ctx, h.id, p.Name, name); err != nil {
+	if err := h.r.deps.RenameBranch(ctx, hostapi.RenameReq{Session: h.id, Project: p.Name, Name: name}); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("Renamed %s's branch %s to %s. Oriel pushes and raises its PR from %s now.", p.Name, p.Branch, name, name), nil
@@ -73,7 +74,7 @@ func (h *session) toolNewBranch(ctx context.Context, raw json.RawMessage) (strin
 		return "", err
 	}
 	carry := a.Bool("carry")
-	name, err := h.r.deps.NewBranch(ctx, h.id, p.Name, strings.TrimSpace(a.Str("name")), carry)
+	name, err := h.r.deps.NewBranch(ctx, hostapi.NewBranchReq{Session: h.id, Project: p.Name, Name: strings.TrimSpace(a.Str("name")), Carry: carry})
 	if err != nil {
 		return "", err
 	}

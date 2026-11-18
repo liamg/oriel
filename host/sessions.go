@@ -203,8 +203,9 @@ func (w *Host) Configure(ctx context.Context, r hostapi.ConfigureReq) (err error
 }
 
 // AddRepo brings another repo into a session, on the session's branch.
-func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) (err error) {
+func (w *Host) AddRepo(ctx context.Context, r hostapi.AddRepoReq) (err error) {
 	defer w.env.Recover("AddRepo", &err)
+	id, ref := r.Session, r.Repo
 	se, err := w.session(id)
 	if err != nil {
 		return err
@@ -212,12 +213,12 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 	if !w.kinds.Spec(se).Can(core.AddProjects) {
 		return fmt.Errorf("a %s session can't have repos added", se.Kind)
 	}
-	r, p, err := w.workPart.AddRepo(ctx, se, ref)
+	repo, p, err := w.workPart.AddRepo(ctx, se, ref)
 	if err != nil {
 		return err
 	}
 	w.WriteNotes(id)
-	w.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", r.ID, p.Dir))
+	w.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", repo.ID, p.Dir))
 	return nil
 }
 
@@ -233,9 +234,9 @@ func (w *Host) NextPR(ctx context.Context, r hostapi.NextPRReq) (err error) {
 }
 
 // Rename names a session.
-func (w *Host) Rename(id core.SessionID, name string) (err error) {
+func (w *Host) Rename(r hostapi.SessionRenameReq) (err error) {
 	defer w.env.Recover("Rename", &err)
-	return w.emit(core.SessionRenamed{ID: id, Name: strings.TrimSpace(name)})
+	return w.emit(core.SessionRenamed{ID: r.Session, Name: strings.TrimSpace(r.Name)})
 }
 
 // resumeHandedOver is agentrun.Runner.ResumeHandedOver, resuming through Resume.

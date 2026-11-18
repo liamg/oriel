@@ -44,7 +44,7 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 
 //oriel:api doc="Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based." returns=table
 func (d Diagnostics) List() []any {
-	ds, _ := d.a.Host.Diagnostics()
+	ds := d.a.Host.Diagnostics()
 	out := make([]any, 0, len(ds))
 	for _, x := range ds {
 		out = append(out, script.Table{"file": x.File, "line": x.Line + 1, "col": x.From + 1, "end_col": x.To + 1,

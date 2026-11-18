@@ -120,7 +120,7 @@ func TestThemePickerSnapshot(t *testing.T) {
 	if got := currentTheme(t, s); got != "glacier" {
 		t.Fatalf("highlighting glacier shows %s", got)
 	}
-	srcs, _ := s.Registry().Themes()
+	srcs := s.Registry().Themes()
 	r, err := theme.ResolveNamed(srcs, currentTheme(t, s), theme.Dark) // as the window's loop does when ui.theme moves
 	if err != nil {
 		t.Fatal(err)

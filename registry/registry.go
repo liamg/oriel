@@ -85,13 +85,15 @@ type Settings interface {
 // Themes are the themes.
 type Themes interface {
 	Theme(s theme.Source) Disposable
-	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
+	Themes() []theme.Source // in registration order, a later theme with the same name winning
+	ThemesGen() int         // a generation that moves when they change
 }
 
 // Languages are the languages files are read as.
 type Languages interface {
 	Language(l Language) Disposable
-	Languages() ([]Language, int) // the language that wins each name, in the order they were registered, and a generation
+	Languages() []Language // the language that wins each name, in the order they were registered
+	LanguagesGen() int     // a generation that moves when they change
 }
 
 // Events are the hooks and the events they hear.
@@ -116,16 +118,18 @@ type Contributions interface {
 // Help are the help pages.
 type Help interface {
 	HelpPage(s HelpSource) Disposable
-	HelpSources() ([]HelpSource, int)
+	HelpSources() []HelpSource // every contributor's pages, in registration order
+	HelpSourcesGen() int       // a generation that moves when they change
 }
 
 // Diagnostics are the problems and line coverage found in files.
 type Diagnostics interface {
 	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
 	SetDiagnostics(owner, file string, ds []Diagnostic)
-	// Diagnostics are every diagnostic by file, then line, and a generation that moves when they change;
-	// DiagnosticsFor are one file's. Both are shared until they change: callers mustn't change them.
-	Diagnostics() ([]Diagnostic, int)
+	// Diagnostics are every diagnostic by file, then line; DiagnosticsFor are one file's. Both are shared until they
+	// change: callers mustn't change them. DiagnosticsGen is a generation that moves when they change.
+	Diagnostics() []Diagnostic
+	DiagnosticsGen() int
 	DiagnosticsFor(file string) []Diagnostic
 	// SetCoverage replaces owner's line coverage for file: hits by 0-based line, 0 for a line never run. nil clears it.
 	SetCoverage(owner, file string, hits map[int]int)
@@ -507,14 +511,20 @@ func (r *reg) Theme(s theme.Source) Disposable {
 	})
 }
 
-func (r *reg) Themes() ([]theme.Source, int) {
+func (r *reg) Themes() []theme.Source {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]theme.Source, len(r.themes))
 	for i, e := range r.themes {
 		out[i] = e.value
 	}
-	return out, r.themeGen
+	return out
+}
+
+func (r *reg) ThemesGen() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.themeGen
 }
 
 func (r *reg) Run(ctx Ctx, id string, args Args) error {

@@ -55,8 +55,9 @@ type themePreview struct {
 }
 
 func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, kit.HighlightedExcerpt, error) {
-	srcs, themes := h.Themes()
-	_, langs := h.Languages()
+	themes := h.ThemesGen() // before the list: a change between the two reads again next time
+	srcs := h.Themes()
+	langs := h.LanguagesGen()
 	if p.by == nil || p.themes != themes || p.langs != langs {
 		*p = themePreviews{themes: themes, langs: langs, by: map[string]themePreview{}}
 	}

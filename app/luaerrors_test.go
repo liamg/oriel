@@ -76,7 +76,7 @@ end)
 			if a, ok := apptest.Action(n, c.action); !ok || a.Command != "editor.open" || a.Args["path"] != path || a.Args["line"] != line {
 				t.Errorf("no %q action to %s:%d: %+v", c.action, path, line, n.Actions)
 			}
-			ds, _ := s.Registry().Diagnostics()
+			ds := s.Registry().Diagnostics()
 			if len(ds) != 1 || ds[0].File != path || ds[0].Line != line-1 || ds[0].Owner != "lua" || ds[0].Severity != registry.SevError {
 				t.Errorf("diagnostics %+v, want one at %s:%d", ds, path, line-1)
 			}
@@ -167,7 +167,7 @@ func TestBrokenConfigAtStartup(t *testing.T) {
 			t.Errorf("the toast is still up: %+v", row)
 		}
 	}
-	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
+	if ds := s.Registry().Diagnostics(); len(ds) != 0 {
 		t.Errorf("diagnostics after the fix: %+v", ds)
 	}
 }

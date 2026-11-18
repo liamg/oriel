@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/host/hostapi"
 	"strings"
 	"time"
 
@@ -71,7 +72,9 @@ func (x *Console) stopProcess(ctx registry.Ctx, a registry.Args) error {
 		}
 	}
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "agent.process.stop." + string(id) + "." + process, Doing: "Stopping " + what},
-		func(ctx context.Context) (struct{}, error) { return struct{}{}, c.StopProcess(ctx, id, process) }, nil)
+		func(ctx context.Context) (struct{}, error) {
+			return struct{}{}, c.StopProcess(ctx, hostapi.StopProcessReq{Session: id, Process: process})
+		}, nil)
 }
 
 // processUse is what's known of a process's pid and use: "pid 4242 · 1.5% cpu · 2.0 MB".

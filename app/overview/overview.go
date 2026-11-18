@@ -394,7 +394,7 @@ func (o *Overview) scanOf(ctx context.Context, dir string) *scan {
 
 // langIndex maps file extensions and names to the registered languages' names.
 func langIndex(h plugin.Host) func(name string) string {
-	langs, _ := h.Languages()
+	langs := h.Languages()
 	byExt, byName := map[string]string{}, map[string]string{}
 	for _, l := range langs {
 		for _, e := range l.Extensions {

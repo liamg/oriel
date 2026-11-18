@@ -92,16 +92,16 @@ func TestSlowHookWarns(t *testing.T) {
 // Diagnostics are published by owner and file, each set replacing that owner's last for the file.
 func TestDiagnostics(t *testing.T) {
 	r := registry.New()
-	_, gen0 := r.Diagnostics()
+	gen0 := r.DiagnosticsGen()
 	r.SetDiagnostics("lua", "/c/init.lua", []registry.Diagnostic{{Line: 14, Severity: registry.SevError, Message: "attempt to index a nil value"}})
 	r.SetDiagnostics("gopls", "/p/a.go", []registry.Diagnostic{{Line: 2, Severity: registry.SevWarning, Message: "unused"}})
 	r.SetDiagnostics("lua", "/c/lua/t.lua", []registry.Diagnostic{{Line: 7, Severity: registry.SevError, Message: "x"}})
-	ds, gen := r.Diagnostics()
+	ds, gen := r.Diagnostics(), r.DiagnosticsGen()
 	if gen == gen0 || len(ds) != 3 || ds[0].File != "/c/init.lua" || ds[0].Owner != "lua" || ds[2].File != "/p/a.go" {
 		t.Fatalf("diagnostics %+v", ds)
 	}
 	r.SetDiagnostics("lua", "/c/init.lua", nil)
-	if ds, _ := r.Diagnostics(); len(ds) != 2 {
+	if ds := r.Diagnostics(); len(ds) != 2 {
 		t.Errorf("after clearing init.lua: %+v", ds)
 	}
 	if got := r.DiagnosticsFor("/p/a.go"); len(got) != 1 || got[0].Message != "unused" {

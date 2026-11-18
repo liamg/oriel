@@ -200,13 +200,13 @@ func (x *Sessions) commands() []registry.Command {
 		{ID: "session.rename", Grant: string(plugin.CapSessionControl), Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("name")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error {
-					return w.Rename(id, a.String("name"))
+					return w.Rename(hostapi.SessionRenameReq{Session: id, Name: a.String("name")})
 				})(ctx, a)
 			}},
 		{ID: "session.repo.add", Grant: string(plugin.CapSessionControl), Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("repo")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.repo.add", "Adding "+a.String("repo")+" to", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
-					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
+					return w.AddRepo(ctx, hostapi.AddRepoReq{Session: id, Repo: core.RepoID(a.String("repo"))})
 				})(ctx, a)
 			}},
 		{ID: "project.add", Grant: string(plugin.CapSessionControl), Title: "Add a project to the session in front: pick a registered repo, or type a checkout's path",
@@ -720,7 +720,7 @@ func (x *Sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if r.Format != "" {
 		b.WriteString("\n\n" + r.Format)
 	}
-	return w.Fork(ctx, id, b.String())
+	return w.Fork(ctx, hostapi.ForkReq{Session: id, Prompt: b.String()})
 }
 
 // explainer is who answers explain: the session in front's agent, forked.
@@ -747,7 +747,7 @@ func (x *Sessions) fork(ctx context.Context, r registry.ForkRequest) (string, er
 	if err != nil {
 		return "", err
 	}
-	return w.Fork(ctx, core.SessionID(r.Session), r.Prompt)
+	return w.Fork(ctx, hostapi.ForkReq{Session: core.SessionID(r.Session), Prompt: r.Prompt})
 }
 
 // forker is who answers a session's side questions: "claude · fork, no tools"; "" for an agent whose provider

@@ -141,7 +141,8 @@ func dirExists(dir string) bool {
 
 // index is the pages, read again when a contributor adds or drops some.
 func (v *View) index() *Index {
-	srcs, gen := v.h.HelpSources()
+	gen := v.h.HelpSourcesGen() // before the list: a change between the two reads again next time
+	srcs := v.h.HelpSources()
 	if v.ix == nil || gen != v.gen {
 		var all []Source
 		for _, s := range srcs {
