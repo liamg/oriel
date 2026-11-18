@@ -15,6 +15,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/io/system"
 	"gioui.org/io/transfer"
+	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/unit"
@@ -337,15 +338,8 @@ func (w *Window) loop() {
 		postOpen(render.DropEvent{Pos: render.Point{X: float32(x) * size.X, Y: float32(y) * size.Y}, Paths: paths})
 	}}
 	defer drops.close()
-	var ops op.Ops
-	f := NewFrame()
-	tag := new(int)
-	var held pointer.Buttons
-	var stamps inputClock
-	var shown *render.List
-	var slowSent time.Time
-	var down render.Mods // the modifier keys held
-	viewed, placed := false, false
+	views := []func(event.Event){w.vis.config, occl.view, shut.view, side.view, hover.view, drops.view, w.ax.bridge.view}
+	st := &frameState{f: NewFrame(), tag: new(int)}
 	focused := true
 	defer w.pl.close()
 	defer w.ax.bridge.close()
@@ -359,79 +353,7 @@ func (w *Window) loop() {
 				w.post(render.CloseRequestEvent{})
 			}
 		case app.FrameEvent:
-			gtx := app.NewContext(&ops, e)
-			dpi := gtx.Metric.PxPerDp
-			if viewed && !placed {
-				w.pl.place(w.opts.Frame, render.Point{X: w.opts.Width, Y: w.opts.Height}, dpi)
-				placed = true
-			}
-			w.dpi.Store(dpi)
-			scale := dpi * w.zoom.Load().(float32)
-			size := render.Point{X: float32(e.Size.X) / scale, Y: float32(e.Size.Y) / scale}
-			if scale != w.Scale() || size != w.Size() {
-				w.scale.Store(scale)
-				w.size.Store(size)
-				w.post(render.ResizeEvent{Size: size})
-			}
-			inputArea(gtx.Ops, e.Size, tag, render.Cursor(w.cursor.Load()))
-			gtx.Execute(key.FocusCmd{Tag: tag})
-			if t := w.clip.Swap(nil); t != nil {
-				gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(*t))})
-			}
-			if w.ask.Swap(false) {
-				gtx.Execute(clipboard.ReadCmd{Tag: tag})
-			}
-			for {
-				ev, ok := gtx.Event(
-					transfer.TargetFilter{Target: tag, Type: "application/text"},
-					key.FocusFilter{Target: tag},
-					keyFilter(tag), tabFilter(tag),
-					pointerFilter(tag),
-				)
-				if !ok {
-					break
-				}
-				switch ev := ev.(type) {
-				case transfer.DataEvent:
-					if r := ev.Open(); r != nil {
-						if b, err := io.ReadAll(io.LimitReader(r, 16<<20)); err == nil {
-							s := string(b)
-							w.read.Store(&s)
-						}
-						_ = r.Close()
-					}
-					continue
-				case key.Event, key.FocusEvent:
-					w.ask.Store(true)
-				}
-				for _, k := range translate(ev, scale, &held, &down) {
-					if pe, ok := k.(render.PointerEvent); ok {
-						pe.At = stamps.at(ev.(pointer.Event).Time)
-						k = pe
-					}
-					w.post(k)
-				}
-			}
-			if w.redraw.Swap(false) {
-				w.post(render.RedrawEvent{})
-			}
-			start := time.Now()
-			var waited time.Duration
-			f.Begin(gtx.Ops, scale)
-			f.Window(size)
-			f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
-			if l := w.latest.Load(); l != nil {
-				if l != shown {
-					shown, waited = l, start.Sub(time.Unix(0, w.handed.Load()))
-				}
-				l.Replay(f)
-			}
-			f.End()
-			e.Frame(gtx.Ops)
-			if took := time.Since(start); (waited > slowWait || took > slowDraw) && time.Since(slowSent) > time.Second {
-				slowSent = time.Now()
-				w.post(render.SlowFrameEvent{Waited: waited, Took: took})
-			}
+			w.frame(e, st)
 		default:
 			if ev, ok := focusChange(e, &focused); ok {
 				w.post(ev)
@@ -441,16 +363,108 @@ func (w *Window) loop() {
 					recheck()
 				}
 			}
-			w.vis.config(e)
-			occl.view(e)
-			shut.view(e)
-			side.view(e)
-			hover.view(e)
-			drops.view(e)
-			w.ax.bridge.view(e)
-			if w.pl.view(e) {
-				viewed = true
+			for _, view := range views {
+				view(e)
 			}
+			if w.pl.view(e) {
+				st.viewed = true
+			}
+		}
+	}
+}
+
+// frameState is what the window's loop keeps from one frame to the next.
+type frameState struct {
+	ops      op.Ops
+	f        *Frame
+	tag      *int            // the window's input handler
+	held     pointer.Buttons // the mouse buttons down
+	down     render.Mods     // the modifier keys held
+	stamps   inputClock
+	shown    *render.List // the display list drawn last
+	slowSent time.Time    // when a slow frame was last reported
+	viewed   bool         // the native window exists, so it can be placed
+	placed   bool
+}
+
+// frame handles a frame: the window placed and sized, input taken, the latest display list drawn, a slow one reported.
+func (w *Window) frame(e app.FrameEvent, st *frameState) {
+	gtx := app.NewContext(&st.ops, e)
+	dpi := gtx.Metric.PxPerDp
+	if st.viewed && !st.placed {
+		w.pl.place(w.opts.Frame, render.Point{X: w.opts.Width, Y: w.opts.Height}, dpi)
+		st.placed = true
+	}
+	w.dpi.Store(dpi)
+	scale := dpi * w.zoom.Load().(float32)
+	size := render.Point{X: float32(e.Size.X) / scale, Y: float32(e.Size.Y) / scale}
+	if scale != w.Scale() || size != w.Size() {
+		w.scale.Store(scale)
+		w.size.Store(size)
+		w.post(render.ResizeEvent{Size: size})
+	}
+	inputArea(gtx.Ops, e.Size, st.tag, render.Cursor(w.cursor.Load()))
+	gtx.Execute(key.FocusCmd{Tag: st.tag})
+	if t := w.clip.Swap(nil); t != nil {
+		gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(*t))})
+	}
+	if w.ask.Swap(false) {
+		gtx.Execute(clipboard.ReadCmd{Tag: st.tag})
+	}
+	w.takeInput(gtx, scale, st)
+	if w.redraw.Swap(false) {
+		w.post(render.RedrawEvent{})
+	}
+	start := time.Now()
+	var waited time.Duration
+	st.f.Begin(gtx.Ops, scale)
+	st.f.Window(size)
+	st.f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
+	if l := w.latest.Load(); l != nil {
+		if l != st.shown {
+			st.shown, waited = l, start.Sub(time.Unix(0, w.handed.Load()))
+		}
+		l.Replay(st.f)
+	}
+	st.f.End()
+	e.Frame(gtx.Ops)
+	if took := time.Since(start); (waited > slowWait || took > slowDraw) && time.Since(st.slowSent) > time.Second {
+		st.slowSent = time.Now()
+		w.post(render.SlowFrameEvent{Waited: waited, Took: took})
+	}
+}
+
+// takeInput posts the frame's input as the app's events, and keeps text the clipboard read gave.
+func (w *Window) takeInput(gtx layout.Context, scale float32, st *frameState) {
+	for {
+		ev, ok := gtx.Event(
+			transfer.TargetFilter{Target: st.tag, Type: "application/text"},
+			key.FocusFilter{Target: st.tag},
+			keyFilter(st.tag), tabFilter(st.tag),
+			pointerFilter(st.tag),
+		)
+		if !ok {
+			return
+		}
+		switch ev := ev.(type) {
+		case transfer.DataEvent:
+			if r := ev.Open(); r != nil {
+				if b, err := io.ReadAll(io.LimitReader(r, 16<<20)); err == nil {
+					s := string(b)
+					w.read.Store(&s)
+				}
+				_ = r.Close()
+			}
+			continue
+		case key.Event, key.FocusEvent:
+			w.ask.Store(true)
+		}
+		for _, k := range translate(ev, scale, &st.held, &st.down) {
+			if pe, ok := k.(render.PointerEvent); ok {
+				pe.At = st.stamps.at(ev.(pointer.Event).Time)
+				k = pe
+			}
+			w.post(k)
 		}
 	}
 }
