@@ -50,7 +50,7 @@ type Reviews struct {
 	lists   map[string]*reviewList   // by source
 	details map[string]*reviewDetail // by URL, as the page asked
 	page    reviewsPage
-	clock   clock.Clock // when lists and details were read; the system's if nil
+	clock   clock.Clock // when lists and details were read: the window's
 }
 
 func (x *Reviews) now() time.Time { return clock.Or(x.clock).Now() }
@@ -81,6 +81,9 @@ func (x *Reviews) Manifest() plugin.Manifest { return plugin.Manifest{ID: "revie
 
 func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists, x.details = h, map[string]*reviewList{}, map[string]*reviewDetail{}
+	if x.clock == nil {
+		x.clock = h.Clock()
+	}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking}))
 	for _, o := range x.options() {
