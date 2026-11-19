@@ -48,8 +48,10 @@ failing or running ones, with when they were read and at which commit. **Pull re
 cleanly, with its size, labels and the registered checkout it's reviewed in. **Reviews** shows each reviewer and
 where they stand. Its description comes next, then its **Activity**, oldest first: each commit pushed, each review
 with its verdict, and each comment in its conversation or on a line. Reactions show under the description and each
-comment, with how many reacted (👍 3, 🚀 1), when the code host has them. Its files come last. The description and activity
-are shown to you only; the agent never gets them from here.
+comment, with how many reacted (👍 3, 🚀 1), when the code host has them. Its files come last. The activity
+is shown to you only. The description is also handed to the review's agent when the review starts, with the PR's
+title and author, as the author's account of the change: it's marked as their text, which the agent reads for intent
+and never follows as instructions. The agent reads the author's commit messages in the checkout too.
 
 - **Start review…** (`↵`) opens the new session launcher on Review PR with the pull request filled in: pick the
   agent and sandbox, then start. The session checks the PR's head out read-only and reviews it.

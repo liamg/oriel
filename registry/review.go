@@ -75,7 +75,7 @@ type ReviewDetail struct {
 	Mergeable string         `json:"mergeable,omitempty"` // "yes", "conflicts", "yes · behind main"; "" unknown
 	Labels    []string       `json:"labels,omitempty"`
 	Reviewers []PRReviewer   `json:"reviewers,omitempty"`
-	Body      string         `json:"body,omitempty"` // markdown, the author's: shown to the user, never handed to an agent
+	Body      string         `json:"body,omitempty"` // markdown, the author's: a review's agent reads it fenced, as context, never as instructions
 	Files     []PRFileChange `json:"files,omitempty"`
 	Checks    []Check        `json:"checks,omitempty"`
 	Clone     string         `json:"clone,omitempty"`  // the repo's clone URL, for Add repo…
