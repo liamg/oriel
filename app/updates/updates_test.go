@@ -251,6 +251,15 @@ func TestUpdatingAgainBeforeTheRestartRunsTheNewest(t *testing.T) {
 	s.Until("the card with 1.2.0", func() bool { return strings.Contains(s.Text(), "Oriel 1.2.0") })
 	s.WantFrame("Oriel 1.1.0 is installed, but 1.2.0 is newer", "Update")
 	s.Quiet()
+	s.Until("the notice offering to restart onto 1.1.0 gone", func() bool {
+		for _, n := range s.Store().State().Notifications {
+			if n.ID == "update.ready" && !n.Dismissed {
+				return false
+			}
+		}
+		return true
+	})
+	s.Frame()
 	s.Golden("update-card-behind")
 	s.Click(apptest.Centre(s.Within("Oriel 1.2.0", "Update").Bounds), 0)
 	s.Until("the restart", func() bool { return s.Relaunching() })

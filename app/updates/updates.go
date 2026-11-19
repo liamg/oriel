@@ -368,10 +368,11 @@ func (x *Update) runCheck(asked bool) {
 		return
 	}
 	x.setFailed("")
-	if asked {
-		return
+	v, ready := u.Ready()
+	if ready && update.Newer(m.Version, v) {
+		x.h.Dismiss("update.ready") // its Restart would run what's no longer the newest
 	}
-	if v, ok := u.Ready(); ok && !update.Newer(m.Version, v) {
+	if asked || ready && !update.Newer(m.Version, v) {
 		return
 	}
 	x.download(m)

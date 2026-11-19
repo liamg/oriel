@@ -140,15 +140,6 @@ text "0" @11.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @32.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @43.78125,990.95996 #b3ab99 JetBrains Mono 11
 text "oriel 1.2.0 available" @1445.5312,990.78 #ffd23f JetBrains Mono 10.5
-rect 1144,12 440x86.95361 fill #121210 radius 8 stroke 1 #4cc9f08c
-rect 1158,27.154785 7x7 fill #4cc9f0 radius 3.5
-text "UPDATE" @1173,34.074783 #4cc9f0 JetBrains Mono 9.5
-text "builtin:update" @1224.98,34.074783 #7c7566 JetBrains Mono 9.5
-text "0s" @1539.4062,34.074783 #7c7566 JetBrains Mono 9.5
-text "✕" @1561.4062,34.65625 #7c7566 Inter 11
-text "Oriel 1.1.0 is installed: it runs from the next restart." @1158,58.418945 #ece6d8 Inter 12.5
-text "Restart" @1158,82.05908 #ffd23f Inter 12
-rect 1158,85.95361 40.90625x1 fill #ffd23fb3
 rect 0,0 1600x1000 fill #030508b8
 rect 490,382.27548 620x235.449 fill #0c0c0b radius 10
 clip 490,382.27548 620x235.449 r 10
