@@ -317,7 +317,7 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 		}
 	}
 	harmless := map[string]bool{"plugins.open": true, "plugins.refresh": true, "plugins.review": true, "plugins.consent.cancel": true,
-		"settings.open": true, "settings.reload": true, "update.check": true, "update.notes.open": true, "update.progress.open": true,
+		"settings.open": true, "settings.reload": true, "update.check": true, "update.notes.open": true, "update.changelog.open": true, "update.progress.open": true,
 		"jobs.open": true, "jobs.new": true, "jobs.edit": true, "jobs.duplicate": true}
 	for _, c := range s.Registry().Commands() {
 		family, _, _ := strings.Cut(c.ID, ".")

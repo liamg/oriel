@@ -75,6 +75,16 @@ type Update struct {
 	run    *updateRun     // the update the Updating page shows, if any
 	start  sync.WaitGroup // an automatic start's check, while it runs
 	page   bool           // the Updating page is up
+	log    changelog      // the card shows the changelog in place of what an update brings
+}
+
+// changelog is the releases' notes the card shows when asked for them: read off the loop as it opens.
+type changelog struct {
+	open     bool
+	loading  bool
+	since    time.Time
+	releases []update.Manifest
+	failed   string
 }
 
 // updateRun is one update as the Updating page tells it: each step as a line, the download's bytes, and how it
@@ -126,7 +136,8 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 	})))
 	x.Add(h.Contribute(uireg.Indicator{Name: "update", Slot: uireg.SlotStatusRight, Order: 70, Global: true, Help: updateHelp + "#ready",
 		Build: func(registry.Ctx) (ui.Node, error) {
-			if _, ok := x.ready(); !ok && !x.working() {
+			_, ready := x.ready()
+			if _, newer := x.newer(); !ready && !newer && !x.working() {
 				return nil, nil
 			}
 			return &ui.Func{Key: "update", Fn: x.statusSegment}, nil
@@ -156,12 +167,14 @@ func (x *Update) commands() []registry.Command {
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.checkNow(true); return nil }},
 		{ID: "update.notes.open", Grant: registry.Open, Title: "Show the update card: the newer release and its notes", Available: can,
 			Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.setCard(true); return nil }},
+		{ID: "update.changelog.open", Grant: registry.Open, Title: "Show the changelog: every release's notes, newest first, the version you have marked",
+			Available: can, Ex: []string{"Changelog"}, Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.openChangelog(); return nil }},
 		{ID: "update.install", UserOnly: true, Title: "Update Oriel now: download, verify and install the newer release, then restart onto it once the agents have handed over",
 			Available: func(registry.Args) bool { _, ok := x.latest(); return ok },
 			Args:      registry.NoArgs,
 			Run:       func(registry.Ctx, registry.Args) error { return x.update(updateOpts{page: true, restart: true}) }},
 		{ID: "update.restart", UserOnly: true, Title: "Restart onto the installed update: running agents hand over first",
-			Available: func(registry.Args) bool { _, ok := x.ready(); return ok },
+			Available: func(registry.Args) bool { _, ok := x.ready(); _, newer := x.newer(); return ok && !newer },
 			Args:      registry.NoArgs,
 			Run:       func(registry.Ctx, registry.Args) error { return x.restart() }},
 		{ID: "update.progress.open", Grant: registry.Open, Title: "Show the Updating page: how the update is getting on",
@@ -195,6 +208,18 @@ func (x *Update) ready() (string, bool) {
 	return "", false
 }
 
+// newer is a release found that's newer than what runs from the next start: this copy, or the update installed.
+func (x *Update) newer() (update.Manifest, bool) {
+	m, ok := x.latest()
+	if !ok {
+		return m, false
+	}
+	if v, ready := x.ready(); ready {
+		return m, update.Newer(m.Version, v)
+	}
+	return m, true
+}
+
 // working is whether a download or an install is running.
 func (x *Update) working() bool {
 	x.mu.Lock()
@@ -211,8 +236,38 @@ func (x *Update) current() *updateRun {
 func (x *Update) setCard(open bool) {
 	x.mu.Lock()
 	x.card = open
+	x.log.open = false
 	x.mu.Unlock()
 	x.h.Redraw()
+}
+
+// openChangelog opens the card on the changelog, reading the releases' notes again off the loop.
+func (x *Update) openChangelog() {
+	x.mu.Lock()
+	x.card, x.log.open = true, true
+	reading := x.log.loading
+	if !reading {
+		x.log.loading, x.log.since, x.log.failed = true, time.Now(), ""
+	}
+	x.mu.Unlock()
+	x.h.Redraw()
+	if reading {
+		return
+	}
+	plugin.Go(x.h, "the changelog", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		list, err := x.updater().History(ctx, x.channel())
+		x.mu.Lock()
+		x.log.loading = false
+		if err != nil {
+			x.log.failed = err.Error()
+		} else {
+			x.log.releases = list
+		}
+		x.mu.Unlock()
+		x.h.Redraw()
+	})
 }
 
 func (x *Update) setPage(open bool) {

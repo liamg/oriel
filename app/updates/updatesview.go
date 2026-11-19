@@ -22,12 +22,22 @@ import (
 	"github.com/liamg/oriel/update"
 )
 
-// statusSegment is "update ready · restart" on the status line once an update is installed, and what the updater
-// is doing while it downloads or installs.
+// statusSegment is what the updater is doing while it downloads or installs, "update ready · restart" once the
+// newest release is installed, and "Oriel 1.2.0 available" when one is found that isn't.
 func (x *Update) statusSegment(c *ui.Ctx) {
 	x.mu.Lock()
 	busy, r := x.busy, x.run
 	x.mu.Unlock()
+	working := strings.HasPrefix(busy, "Updating") || strings.HasPrefix(busy, "Downloading")
+	if m, newer := x.newer(); newer && !working {
+		if widget.Clickable(c, "update", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: updateHelp + "#available", Role: ui.RoleButton,
+			Label: "Update available: Oriel " + m.Version, Tooltip: "See what's new in Oriel " + m.Version + " and update"}, func(c *ui.Ctx) {
+			c.Text("t", "oriel "+m.Version+" available", draw.StatusText(c, theme.Accent))
+		}).Clicked {
+			x.command("update.notes.open")
+		}
+		return
+	}
 	if v, ok := x.ready(); ok {
 		label := "Update ready · restart"
 		in := widget.Clickable(c, "update", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: updateHelp + "#ready", Role: ui.RoleButton,
@@ -41,7 +51,7 @@ func (x *Update) statusSegment(c *ui.Ctx) {
 		}
 		return
 	}
-	if !strings.HasPrefix(busy, "Updating") && !strings.HasPrefix(busy, "Downloading") {
+	if !working {
 		return
 	}
 	text := strings.ToLower(busy) + " …"
@@ -189,8 +199,9 @@ func updateStepRow(c *ui.Ctx, key any, l updateLine) {
 	})
 }
 
-// versionRule heads one release's notes on the card: its version in the accent, when it came out, and a rule across.
-func versionRule(c *ui.Ctx, m update.Manifest) {
+// versionRule heads one release's notes on the card: its version in the accent, when it came out, whether it's the
+// one you have, and a rule across.
+func versionRule(c *ui.Ctx, m update.Manifest, yours bool) {
 	th := c.Theme()
 	c.Row("v", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("n", m.Version, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12.5, Weight: typeset.Medium},
@@ -198,8 +209,28 @@ func versionRule(c *ui.Ctx, m update.Manifest) {
 		if !m.Published.IsZero() {
 			c.Text("at", m.Published.Format("2 Jan 2006"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}
+		if yours {
+			widget.Chip(c, "yours", "you have this", th.C(theme.Accent), updateHelp+"#changelog")
+		}
 		widget.Rule(c, "rule")
 	})
+}
+
+// releaseNotes lists releases' notes, newest first, each under its version when there's more than one; the one you
+// have is marked.
+func (x *Update) releaseNotes(c *ui.Ctx, releases []update.Manifest, have string, height float32) {
+	th := c.Theme()
+	c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, height), ScrollY: true, Pad: ui.Insets{R: 8}, Gap: 14},
+		func(c *ui.Ctx) {
+			for i, m := range releases {
+				c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+					if len(releases) > 1 {
+						versionRule(c, m, have != "" && m.Version == have)
+					}
+					markdown.Text(c, x.h, "md", notesOf(m), 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+				})
+			}
+		})
 }
 
 // notesOf is a release's notes as the card shows them: those with nothing say so, as a generated release's notes do.
@@ -214,7 +245,7 @@ func notesOf(m update.Manifest) string {
 // and Update, or Restart once it's installed.
 func (x *Update) cardView(c *ui.Ctx) {
 	x.mu.Lock()
-	open, busy, since, failed := x.card, x.busy, x.since, x.failed
+	open, busy, since, failed, log := x.card, x.busy, x.since, x.failed, x.log
 	x.mu.Unlock()
 	if !open {
 		return
@@ -222,7 +253,10 @@ func (x *Update) cardView(c *ui.Ctx) {
 	u := x.updater()
 	m, found := x.latest()
 	title := "Updates"
-	if found {
+	switch {
+	case log.open:
+		title = "Changelog"
+	case found:
 		title = "Oriel " + m.Version
 	}
 	th := c.Theme()
@@ -230,6 +264,19 @@ func (x *Update) cardView(c *ui.Ctx) {
 		ready, isReady := x.ready()
 		behind := isReady && found && update.Newer(m.Version, ready) // what's installed isn't the newest any more
 		switch {
+		case u != nil && log.open:
+			widget.Heading(c, "h", "WHAT'S NEW", fmt.Sprintf("you have %s · %s channel", u.Version, x.channel()))
+			switch {
+			case log.loading:
+				widget.Busy(c, "reading", widget.LoadState{Phase: widget.Pending, Since: log.since}, widget.BusyOpts{Label: "Reading the releases",
+					Help: updateHelp + "#changelog"})
+			case log.failed != "":
+				widget.Wrap(c, "logerr", "The releases couldn't be read: "+log.failed, 570, widget.MonoFont(11, th.C(theme.Error)))
+			case len(log.releases) == 0:
+				widget.Wrap(c, "nolog", "There are no releases to show.", 570, widget.UIFont(12.5, th.C(theme.Fg)))
+			default:
+				x.releaseNotes(c, log.releases, u.Version, 420)
+			}
 		case u == nil:
 			widget.Wrap(c, "none", "This build of Oriel doesn't update itself.", 570, widget.UIFont(12.5, th.C(theme.Fg)))
 		case found:
@@ -242,17 +289,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 			if len(changes) == 0 {
 				changes = []update.Manifest{m}
 			}
-			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}, Gap: 14},
-				func(c *ui.Ctx) {
-					for i, ch := range changes {
-						c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-							if len(changes) > 1 {
-								versionRule(c, ch)
-							}
-							markdown.Text(c, x.h, "md", notesOf(ch), 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
-						})
-					}
-				})
+			x.releaseNotes(c, changes, "", 320)
 		case busy != "":
 		default:
 			widget.Wrap(c, "current", fmt.Sprintf("Oriel %s is the newest on the %s channel.", u.Version, x.channel()), 570,

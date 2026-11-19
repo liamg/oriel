@@ -249,6 +249,9 @@ func TestUpdatingAgainBeforeTheRestartRunsTheNewest(t *testing.T) {
 	s.Run("update.check", nil)
 	s.Frame()
 	s.Until("the card with 1.2.0", func() bool { return strings.Contains(s.Text(), "Oriel 1.2.0") })
+	s.WantFrame("Oriel 1.1.0 is installed, but 1.2.0 is newer", "Update")
+	s.Quiet()
+	s.Golden("update-card-behind")
 	s.Click(apptest.Centre(s.Within("Oriel 1.2.0", "Update").Bounds), 0)
 	s.Until("the restart", func() bool { return s.Relaunching() })
 	if b, _ := os.ReadFile(r.Self.Target); string(b) != "oriel 1.2.0" {
@@ -282,4 +285,69 @@ func TestANewerReleaseReplacesTheOneWaitingAndTheRestartShowsItsPage(t *testing.
 	s.Until("the Updating page", func() bool {
 		return s.Has("UPDATING ORIEL", "1.0.0  →  1.2.0", "Oriel 1.2.0 is installed", "Restarting into Oriel 1.2.0")
 	})
+}
+
+// A newer release found shows on the status line, in ask mode as soon as the check finds it; a click there opens the
+// card on it, with Update.
+func TestANewerReleaseShowsOnTheStatusLine(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	if err := s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, updates.UpdateManual); err != nil {
+		t.Fatal(err)
+	}
+	s.Frame()
+	if strings.Contains(s.Text(), "available") {
+		t.Fatalf("the status line offers an update with none out:\n%s", s.Text())
+	}
+	r.Publish("1.1.0", "## Features\n\n- **Inbox:** Mark all read")
+	s.Run("update.check", nil)
+	s.Until("the card", func() bool { s.Frame(); return strings.Contains(s.Text(), "Oriel 1.1.0") })
+	s.Press("<Esc>")
+	s.Until("the status line", func() bool { s.Frame(); return strings.Contains(s.Text(), "oriel 1.1.0 available") })
+	s.Lint("the status line with an update available")
+	s.Golden("update-available")
+	s.ClickText("oriel 1.1.0 available")
+	s.Until("the card on it", func() bool { s.Frame(); return s.Has("Oriel 1.1.0", "WHAT'S NEW", "Mark all read", "Update") })
+}
+
+// :Changelog opens the card on every release's notes, newest first: the version you have marked, those before it
+// too, and a newer one at the top with Update.
+func TestTheChangelogShowsEveryRelease(t *testing.T) {
+	r := rig.NewReleases(t)
+	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
+	r.Publish("0.9.0", "## Fixes\n\n- **Editor:** Undo keeps the cursor where it was")
+	r.Publish("1.0.0", "## Features\n\n- **Reviews:** The agent reads the PR's description")
+	r.Publish("1.1.0", "## Features\n\n- **Diff:** Space h d switches between a file and its diff")
+	s.Run("update.check", nil)
+	s.Press("<Esc>")
+	s.Frame()
+
+	s.Run("update.changelog.open", nil)
+	s.Until("the changelog", func() bool {
+		s.Frame()
+		return s.Has("Changelog", "you have 1.0.0", "1.1.0", "Space h d switches", "YOU HAVE THIS", "The agent reads the PR's description", "0.9.0",
+			"Undo keeps the cursor")
+	})
+	text := strings.ReplaceAll(s.FullText(), "\n", " ")
+	at := -1
+	for _, want := range []string{"1.1.0", "Space h d switches", "1.0.0", "YOU HAVE THIS", "The agent reads", "0.9.0", "Undo keeps"} {
+		i := strings.Index(text[at+1:], want)
+		if i < 0 {
+			t.Fatalf("the changelog lacks %q after what came before it:\n%s", want, text)
+		}
+		at += 1 + i
+	}
+	if !shown(s, "Update") {
+		t.Error("the changelog doesn't offer the newer release")
+	}
+	s.Quiet()
+	s.Lint("the changelog")
+	s.Golden("changelog")
+	s.Press("<Esc>")
+	s.Frame()
+	if strings.Contains(s.Text(), "YOU HAVE THIS") {
+		t.Error("Escape left the changelog up")
+	}
 }

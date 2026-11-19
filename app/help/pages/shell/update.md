@@ -1,6 +1,6 @@
 ---
 id: shell/update
-covers: [UpdateCheck, update.check, update.notes.open, update.install, update.restart, update.progress.open, app.overlay.update, hud.indicator.update]
+covers: [UpdateCheck, Changelog, update.check, update.notes.open, update.changelog.open, update.install, update.restart, update.progress.open, app.overlay.update, hud.indicator.update]
 related: [shell/settings, shell/quit]
 ---
 
@@ -25,6 +25,12 @@ when an older update is already installed and waiting for a restart.
   **Update**; **manual** only checks when you run `:UpdateCheck`.
 - `updates.channel`: **stable**, or **nightly** for pre-releases too.
 
+## A newer version {#available}
+
+Once a check finds a release newer than what Oriel will run from its next start, the status line shows **oriel 1.2.0
+available** on its right. Click it for the update card. While the release downloads or installs, the status line says
+so instead, and once it's installed it reads **update ready · restart**.
+
 ## The update card {#card}
 
 The newer release, the version you have, and what's new: the notes of every release between the two, newest first,
@@ -33,6 +39,12 @@ breaking changes, features and fixes; one whose changes were all internal (refac
 notable changes**. **Later** (`esc`) closes it. **Update** updates now, on the Updating page. **Restart** shows once
 the newest release is installed; if an older update is installed and a newer one has come out since, the card says
 so and offers **Update** to the newer one.
+
+## The changelog {#changelog}
+
+`:Changelog` (`update.changelog.open`), or **Changelog** on the About card behind the logo, opens the card on every
+release's notes, newest first, read from the releases as it opens: the version you have is marked **you have this**,
+and the ones before it are there too. A newer release sits at the top, with **Update**.
 
 ## The Updating page {#page}
 
