@@ -18,8 +18,9 @@ type Clients struct {
 }
 
 // On is the client for the checkout at dir with env, on a GitHub Enterprise server's hostname when given (github.com
-// if ""), with token, else the one found for that server.
-func (c *Clients) On(dir string, env []string, hostname, token string) Client {
+// if ""), with token, else the one found for that server. ctx bounds finding it: gh or git's credential helper is
+// stopped when ctx ends.
+func (c *Clients) On(ctx context.Context, dir string, env []string, hostname, token string) Client {
 	if c.Client != nil {
 		if cl := c.Client(dir, env); cl != nil {
 			return cl
@@ -31,7 +32,7 @@ func (c *Clients) On(dir string, env []string, hostname, token string) Client {
 		base = "https://" + host + "/api/v3"
 	}
 	if token == "" {
-		token = c.tokens.For(context.Background(), host)
+		token = c.tokens.For(ctx, host)
 	}
 	if token == "" {
 		return API{T: noToken{host: host}}

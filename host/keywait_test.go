@@ -6,28 +6,41 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/agentrun"
 	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/internal/waitfor"
 )
 
 // signsSlowly makes the session's commits sign with a program that waits, as gpg does for a key's touch, until touch
-// is called; then it fails.
-func signsSlowly(t *testing.T, dir string) (touch func()) {
+// is called; then it fails. It waits on a pipe rather than polling, so it costs nothing while it waits, and writes its
+// pid to the file pidAt names before it does.
+func signsSlowly(t *testing.T, dir string) (touch func(), pidAt string) {
 	t.Helper()
 	tmp := t.TempDir()
-	prog, touched := filepath.Join(tmp, "gpg"), filepath.Join(tmp, "touched")
-	script := "#!/bin/sh\nwhile [ ! -e \"" + touched + "\" ]; do sleep 0.01; done\nexit 1\n"
+	prog, fifo := filepath.Join(tmp, "gpg"), filepath.Join(tmp, "touch")
+	pidAt = filepath.Join(tmp, "pid")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\necho $$ > \"" + pidAt + "\"\nread _ < \"" + fifo + "\"\nexit 1\n"
 	if err := os.WriteFile(prog, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	touch = func() {
-		if err := os.WriteFile(touched, nil, 0o644); err != nil {
-			t.Fatal(err)
+		// No reader (the program never ran, or it's gone) means nothing to tell: don't wait for one.
+		f, err := os.OpenFile(fifo, os.O_WRONLY|syscall.O_NONBLOCK, 0)
+		if err != nil {
+			return
 		}
+		defer func() { _ = f.Close() }()
+		_, _ = f.WriteString("\n")
 	}
 	t.Cleanup(touch)
 	for _, kv := range [][]string{{"commit.gpgsign", "true"}, {"gpg.program", prog}} {
@@ -35,7 +48,21 @@ func signsSlowly(t *testing.T, dir string) (touch func()) {
 			t.Fatalf("git config: %v: %s", err, out)
 		}
 	}
-	return touch
+	return touch, pidAt
+}
+
+// running says the process whose pid the file at path holds is still running.
+func running(t *testing.T, path string) bool {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the signing program never said its pid: %v", err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return syscall.Kill(pid, 0) == nil
 }
 
 func keyAsk(se core.SessionState) (core.Ask, bool) {
@@ -53,7 +80,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	r := newRigWith(t, func(o *Options) { o.KeyWait = 50 * time.Millisecond })
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
-	touch := signsSlowly(t, p.Dir)
+	touch, _ := signsSlowly(t, p.Dir)
 	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +105,7 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	r := newRigWith(t, func(o *Options) { o.KeyWait = 50 * time.Millisecond })
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
-	signsSlowly(t, p.Dir)
+	_, pidAt := signsSlowly(t, p.Dir)
 	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +116,12 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	}()
 	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok })
 	a, _ := keyAsk(se)
+	// The ask comes after a while whatever git is doing; cancel once the signing program is running, so its stopping is
+	// what's checked.
+	waitfor.Poll(t, "the signing program running", func() bool {
+		b, err := os.ReadFile(pidAt)
+		return err == nil && strings.HasSuffix(string(b), "\n") // its whole pid written
+	})
 	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: a.ID, Decision: "deny"}); err != nil {
 		t.Fatal(err)
 	}
@@ -101,4 +134,6 @@ func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 		t.Fatal("cancelling never stopped the commit")
 	}
 	r.eventually(id, "the key ask gone", func(se core.SessionState) bool { _, ok := keyAsk(se); return !ok })
+	// Cancelling stops what git started too: the signing program doesn't go on waiting for a key nobody will touch.
+	waitfor.PollFor(t, 10*time.Second, "the signing program to stop with the cancelled commit", func() bool { return !running(t, pidAt) })
 }

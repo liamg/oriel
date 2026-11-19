@@ -15,6 +15,16 @@ func Own(cmd *exec.Cmd) {
 	cmd.SysProcAttr.Setpgid = true
 }
 
+// Terminate asks cmd's process group to stop (SIGTERM), so a program that tidies up on it (git removing its lock
+// files) can, and what it started stops with it.
+func Terminate(cmd *exec.Cmd) error {
+	if cmd.Process == nil {
+		return nil
+	}
+	_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+	return cmd.Process.Signal(syscall.SIGTERM)
+}
+
 // Kill kills cmd's process group, then cmd itself in case it left the group.
 func Kill(cmd *exec.Cmd) error {
 	if cmd.Process == nil {

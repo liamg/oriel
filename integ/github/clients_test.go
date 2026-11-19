@@ -30,7 +30,7 @@ func TestClientsAskThroughTheirHTTP(t *testing.T) {
 	}}
 	repo := gh.Repo{Owner: "acme", Name: "api"}
 	for _, host := range []string{"", "git.acme.corp"} {
-		if _, err := c.On("", nil, host, "ghp_given").PRForBranch(context.Background(), repo, "main"); err != nil {
+		if _, err := c.On(context.Background(), "", nil, host, "ghp_given").PRForBranch(context.Background(), repo, "main"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -44,7 +44,7 @@ func TestClientsAskThroughTheirHTTP(t *testing.T) {
 func TestClientsWithNoToken(t *testing.T) {
 	noGh(t, "")
 	var c gh.Clients
-	_, err := c.On("", nil, "git.acme.corp", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "main")
+	_, err := c.On(context.Background(), "", nil, "git.acme.corp", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "main")
 	var ge *gh.Error
 	if !errors.As(err, &ge) || ge.Status != 401 || !strings.Contains(ge.Message, "git.acme.corp") {
 		t.Fatalf("no token: %v", err)
@@ -65,12 +65,12 @@ func TestClientsClient(t *testing.T) {
 		}
 		return hub.Client()
 	}}
-	pr, err := c.On("/w/api", []string{"GIT_DIR=x"}, "", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "retry")
+	pr, err := c.On(context.Background(), "/w/api", []string{"GIT_DIR=x"}, "", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "retry")
 	if err != nil || pr == nil || pr.Title != "retry" {
 		t.Fatalf("the fake's PR: %+v, %v", pr, err)
 	}
 	fake = false
-	if _, err := c.On("/w/api", nil, "", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "retry"); err == nil {
+	if _, err := c.On(context.Background(), "/w/api", nil, "", "").PRForBranch(context.Background(), gh.Repo{Owner: "acme", Name: "api"}, "retry"); err == nil {
 		t.Error("no fake and no token: GitHub's API answered")
 	}
 	if !slices.Equal(got, []string{"/w/api GIT_DIR=x", "/w/api "}) {
