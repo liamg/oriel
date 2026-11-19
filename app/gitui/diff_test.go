@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/theme"
@@ -364,4 +365,33 @@ func TestDiffSplitLongAddedLineKeepsItsSide(t *testing.T) {
 	if len(starts) != 1 {
 		t.Errorf("the new side's rows start at different places: %v", starts)
 	}
+}
+
+// Space h d switches between the file being edited and its diff: from the editor, the file's diff, open and
+// selected; from the diff, back to the file at the selected hunk's line.
+func TestDiffFileToggleSwitchesBetweenTheFileAndItsDiff(t *testing.T) {
+	r := rig.DiffRepo(t)
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
+	path := filepath.Join(r.Dir, "internal", "pricing", "round.go")
+	app.Run("editor.open", registry.Args{"path": path})
+	app.WaitFrame("round.go in the editor", func(s string) bool {
+		return strings.Contains(s, "roundHalfEven") && !strings.Contains(s, "MARK REVIEWED")
+	})
+	app.WaitGit()
+
+	app.TypeKeys("<Space>hd")
+	app.WaitFrame("round.go's diff", func(s string) bool { return apptest.HasAll(s, "func roundHalfEven", "MARK REVIEWED") })
+	app.WaitGit()
+
+	app.TypeKeys("]h")
+	app.TypeKeys("<Space>hd")
+	ed, _ := services.EditorsOf(app.Host)
+	app.WaitFor("round.go in the editor at the hunk's line", func() bool {
+		b, ok := ed.Current()
+		return ok && b.Path == path && b.Cursor.Line > 0
+	})
+	app.Latest("the editor in front, not the diff", func(f headless.Frame) bool {
+		s := f.Text()
+		return strings.Contains(s, "roundHalfEven") && !strings.Contains(s, "MARK REVIEWED")
+	})
 }

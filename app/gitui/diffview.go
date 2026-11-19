@@ -61,7 +61,8 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 	if st.seekLine() {
 		c.WakeAt(c.Now())
 	}
-	if c.FocusWithin(root) || x.focus == nil {
+	st.focused = c.FocusWithin(root)
+	if st.focused || x.focus == nil {
 		x.focus = st
 	}
 }

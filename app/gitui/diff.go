@@ -108,6 +108,7 @@ type diffState struct {
 	making  bool // reveal's file was waiting for its diff last frame
 	centre  bool // reveal puts its target in the middle of the view: a jump, not a step
 	focus   bool
+	focused bool                       // it had keyboard focus when last drawn
 	goLine  int                        // a line of the selected file to select once it's drawn
 	goOld   bool                       // goLine is the old side's
 	order   []diffSel                  // every hunk drawn, in order
@@ -167,10 +168,12 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "zL", Command: "diff.lines.scroll", Args: registry.Args{"halves": 1}, Desc: "Scroll right half a screen"},
 		{Keys: "zH", Command: "diff.lines.scroll", Args: registry.Args{"halves": -1}, Desc: "Scroll left half a screen"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
+		{Keys: "<Leader>hd", Command: "diff.file.toggle", Desc: "Back to the file in the editor"},
 	} {
 		k.Mode = DiffKeyMode
 		x.Add(h.Keymap(k))
 	}
+	x.Add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>hd", Command: "diff.file.toggle", Desc: "The file's diff"}))
 	x.Add(h.View(DiffView, diffView{x}))
 	for _, it := range x.lineMenu() {
 		it.When, it.Source = registry.MenuWhen{View: DiffView, Subject: diffLineSubject}, "builtin:diff"
@@ -198,6 +201,8 @@ func (x *Diff) commands() []registry.Command {
 			Args: []registry.Arg{registry.StringArg("against"), registry.IntArg("line"), registry.StringArg("path"), registry.StringArg("side")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.open(ctx, a.String("path"), a.Int("line"), a.String("side") == "old", a.String("against") == "head")
 			}},
+		{ID: "diff.file.toggle", Grant: registry.Open, Title: "Switch between the file you're editing and its diff: from the editor, the diff at the cursor's line; from the diff, the editor at its selected line",
+			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.toggleFile(ctx) }},
 		{ID: "diff.layout.toggle", Grant: registry.Open, Title: "Show the diff split or unified: {layout}, or the other one", Args: []registry.Arg{registry.StringArg("layout")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
 			if l == "" {

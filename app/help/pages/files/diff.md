@@ -66,6 +66,9 @@ line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎
 `zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. A click on a line opens a thread on it too
 (see [Between the lines](agent/requests#inline)).
 
+`Space h d` (`diff.file.toggle`) switches between a file and its diff. From the editor, it opens the diff with that
+file expanded at the cursor's line; from the diff, it goes back to the file in the editor at the selected line.
+
 {{keys "diff.*"}}
 
 ## Images {#images}
