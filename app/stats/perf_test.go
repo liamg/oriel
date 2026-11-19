@@ -13,9 +13,10 @@ import (
 	"github.com/liamg/oriel/sysload"
 )
 
-// The status line's CPU opens the Performance page: Oriel's own load and frames, the machine's, the processes
-// Oriel started, by the session each runs for, and what the freshness managers keep fresh. Escape closes it.
-func TestCPUOpensThePerformancePage(t *testing.T) {
+// The HUD machine panel's Performance link opens the Performance page, putting the HUD away: Oriel's own load and
+// frames, the machine's, the processes Oriel started, by the session each runs for, and what the freshness managers
+// keep fresh. Escape closes it.
+func TestTheHUDOpensThePerformancePage(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 0, 0)
 	apptest.PluginOf[*stats.Perf](s, "perf").Every = 50 * time.Millisecond
@@ -29,7 +30,9 @@ func TestCPUOpensThePerformancePage(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = agent.Process.Kill(); _ = agent.Wait() })
 
-	s.ClickNode("CPU 34%, Performance")
+	s.Run("hud.toggle", nil)
+	s.Frame()
+	s.ClickText("Performance ↗")
 	if s.Find("Performance") == nil {
 		t.Fatalf("no Performance page:\n%s", s.Text())
 	}

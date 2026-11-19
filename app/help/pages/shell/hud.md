@@ -31,7 +31,8 @@ when they reset. The burn is the slope over the last 30 minutes for the 5-hour w
 
 ## This machine {#machine}
 
-The machine Oriel runs on: its sessions, CPU and memory now, and its CPU over the last 15 minutes.
+The machine Oriel runs on: its sessions, CPU and memory now, and its CPU over the last 15 minutes. **Performance ↗**
+opens the [Performance](shell/performance) page: what Oriel and the processes it started cost.
 
 ## Sessions {#sessions}
 
@@ -45,9 +46,8 @@ Since midnight: tokens, cost, the share served from the cache, and requests open
 ## Indicators {#indicators}
 
 Indicators are small live readouts in fixed slots: the title bar's right (`title-bar.right`), the status line's sides
-(`status-line.left`, `status-line.right`), the HUD's panels (`hud`) and the Today panel (`hud.today`). The status line's
-**CPU** shows this machine's, all of it, in the warning colour from 80%. Click it for the
-[Performance](shell/performance) page: what Oriel and the processes it started cost.
+(`status-line.left`, `status-line.right`), the HUD's panels (`hud`) and the Today panel (`hud.today`). A plugin that
+wants the machine's CPU always in view can put it in one (`MachineChanged` carries it).
 
 ## From Lua {#lua}
 

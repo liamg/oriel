@@ -6,7 +6,7 @@ related: [shell/hud, agent/stats]
 
 # Performance
 
-Click the status line's **CPU** for the Performance page: what Oriel is costing, and what it has started. It
+**Performance ↗** on the HUD's machine panel, or `perf.open`, opens the Performance page: what Oriel is costing, and what it has started. It
 samples every 2 seconds while it's up, and nothing while it's closed. Escape or **Close** puts it away.
 
 ## Oriel {#oriel}
@@ -20,7 +20,7 @@ samples every 2 seconds while it's up, and nothing while it's closed. Escape or 
 
 ## This machine {#machine}
 
-The machine's CPU across all cores (the status line's figure: it counts everything running, not just Oriel), its
+The machine's CPU across all cores (the HUD's figure: it counts everything running, not just Oriel), its
 memory, and the space free on the disk the window's directory is on, read every 5 minutes.
 
 ## Sessions and processes {#processes}

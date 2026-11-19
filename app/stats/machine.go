@@ -61,8 +61,6 @@ func (x *Machine) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.Indicator{Name: "machine", Slot: uireg.SlotHUD, Order: 20, Title: "This machine", Help: kit.HUDHelp + "#machine",
 		Note:  func() string { return fmt.Sprintf("%dm", int(loadSpan.Minutes())) },
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.panel}, nil }}))
-	x.Add(h.Contribute(uireg.Indicator{Name: "machine.status", Slot: uireg.SlotStatusRight, Order: 70, Global: true, Help: kit.HUDHelp + "#indicators",
-		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.status}, nil }}))
 	return nil
 }
 
@@ -120,6 +118,13 @@ func (x *Machine) panel(c *ui.Ctx) {
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("s", words.Counted(len(st.Sessions), "session"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			if widget.Link(c, "perf", "Performance ↗", PerfHelp) {
+				for _, id := range []string{"hud.close", "perf.open"} {
+					if err := x.h.Run(context.Background(), id, nil); err != nil {
+						x.h.Log().Error("machine", "command", id, "err", err)
+					}
+				}
+			}
 		})
 		c.Row("load", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Column("kv", ui.Style{Gap: 4}, func(c *ui.Ctx) {
@@ -145,24 +150,4 @@ func (x *Machine) panel(c *ui.Ctx) {
 			}
 		})
 	})
-}
-
-// status is the status line's: the machine's CPU, which opens the Performance page.
-func (x *Machine) status(c *ui.Ctx) {
-	x.shown.Keep()
-	th := c.Theme()
-	m := x.h.State().Machine
-	if m.Sampled.IsZero() {
-		return
-	}
-	o := widget.IndicatorOpts{Label: "CPU", Value: fmt.Sprintf("%d%%", pct(m.CPU)), Help: kit.HUDHelp + "#indicators"}
-	if m.CPU >= .8 {
-		o.Dot, o.Tone = th.C(theme.Warn), th.C(theme.Warn)
-	}
-	if widget.Clickable(c, "cpu", ui.Style{Radius: 4, Label: fmt.Sprintf("CPU %d%%, Performance", pct(m.CPU)),
-		Help: PerfHelp}, func(c *ui.Ctx) { widget.Indicator(c, "i", o) }).Clicked {
-		if err := x.h.Run(context.Background(), "perf.open", nil); err != nil {
-			x.h.Log().Error("machine", "command", "perf.open", "err", err)
-		}
-	}
 }
