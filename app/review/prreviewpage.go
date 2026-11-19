@@ -500,7 +500,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 		reviewCard(c, "reworded", "THE AGENT'S REWORDING", ui.Flex(1), func(c *ui.Ctx) {
 			markdown.Text(c, x.h, "t", text, width-84, widget.UIFont(12.5, th.C(theme.Fg)), markdown.Comment())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
-				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
+				if widget.Button(c, "keep", "Keep original", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("review.pr.rework.discard", registry.Args{"id": string(se.ID), "item": it.id})
 				}
 				if widget.Button(c, "use", "Use it", widget.ButtonOpts{Primary: true, Help: prReviewHelp}) {
