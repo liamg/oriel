@@ -167,8 +167,6 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
-text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,50 1600x220.79999 fill #060606f7
 path 150 segments stroke 1 #0d0d0d
 rect 0,269.8 1600x1 fill #ffd23f59
@@ -233,18 +231,20 @@ rect 411,64 383x192.79999 fill #0d0d0b
 clip 411,64 383x192.79999 r 0
   text "THIS MACHINE" @423,84.020004 #ffd23f JetBrains Mono 9.5
   text "15m" @764,84.2 #4f4a40 JetBrains Mono 10
-  rect 423,99.95976 7x7 fill #4fe0a0 radius 3.5
-  text "mbp" @438,107.825 #ece6d8 Inter 12
-  text "12 cores" @471.78125,107.05976 #7c7566 JetBrains Mono 10
-  text "8 sessions" @716.0625,107.23976 #b3ab99 JetBrains Mono 10.5
-  text "CPU" @423,126.24953 #b3ab99 JetBrains Mono 10
-  rect 459,119.64953 80x6 fill #24221d radius 2
-  rect 459,119.64953 27.200012x6 fill #4cc9f0 radius 2
-  text "34%" @547,126.42953 #ece6d8 JetBrains Mono 10.5
-  text "MEM" @423,144.10953 #b3ab99 JetBrains Mono 10
-  rect 459,137.50952 80x6 fill #24221d radius 2
-  rect 459,137.50952 27.5x6 fill #4cc9f0 radius 2
-  text "11.0 GB" @547,144.28954 #ece6d8 JetBrains Mono 10.5
+  rect 423,100.95976 7x7 fill #4fe0a0 radius 3.5
+  text "mbp" @438,108.825 #ece6d8 Inter 12
+  text "12 cores" @471.78125,108.05976 #7c7566 JetBrains Mono 10
+  text "8 sessions" @621.0469,108.23976 #b3ab99 JetBrains Mono 10.5
+  text "Performance ↗" @694.9844,107.825 #ffd23f Inter 12
+  rect 694.9844,111.71953 87.015625x1 fill #ffd23fb3
+  text "CPU" @423,128.24953 #b3ab99 JetBrains Mono 10
+  rect 459,121.64953 80x6 fill #24221d radius 2
+  rect 459,121.64953 27.200012x6 fill #4cc9f0 radius 2
+  text "34%" @547,128.42953 #ece6d8 JetBrains Mono 10.5
+  text "MEM" @423,146.10953 #b3ab99 JetBrains Mono 10
+  rect 459,139.50952 80x6 fill #24221d radius 2
+  rect 459,139.50952 27.5x6 fill #4cc9f0 radius 2
+  text "11.0 GB" @547,146.28954 #ece6d8 JetBrains Mono 10.5
   path 10 segments stroke 1.5 #4cc9f0
 pop
 rect 411,64 383x192.79999 stroke 1 #24221d

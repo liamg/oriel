@@ -83,12 +83,18 @@ func TestMachineLoadIsReadWhileShown(t *testing.T) {
 		t.Helper()
 		apptest.Poll(t, fmt.Sprintf("%s: wanted %v", what, want), func() bool { return load.Wanted() == want })
 	}
-	r.WaitText("CPU")
-	wanted("the status line shows the CPU", true)
+	r.Drain()
+	wanted("nothing on screen shows the load", false)
+	r.Run("hud.toggle", nil)
+	r.WaitText("THIS MACHINE")
+	wanted("the HUD shows the machine", true)
 	r.Win.Send(render.FocusEvent{Focused: false})
 	wanted("the window is behind another app", false)
 	r.Win.Send(render.FocusEvent{Focused: true})
 	wanted("the window is in front again", true)
+	r.Run("hud.close", nil)
+	r.WaitGone("THIS MACHINE")
+	wanted("the HUD put away", false)
 	if reads.Load() == 0 {
 		t.Error("the load was never read")
 	}

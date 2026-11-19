@@ -139,8 +139,6 @@ text "✕" @0,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @11.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @32.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @43.78125,990.95996 #b3ab99 JetBrains Mono 11
-text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
-text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,0 1600x974 fill #060606
 clip 0,0 1600x974 r 0
   rect 0,0 1600x42 fill #0c0c0b

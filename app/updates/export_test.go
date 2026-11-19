@@ -5,6 +5,7 @@ import "github.com/liamg/oriel/update"
 const (
 	UpdateAsk       = updateAsk
 	UpdateAutomatic = updateAutomatic
+	UpdateManual    = updateManual
 )
 
 func (x *Update) Updater() *update.Updater { return x.updater() }

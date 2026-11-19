@@ -138,6 +138,10 @@ func (x *About) card(c *ui.Ctx) {
 		if x.h.Available("update.check", nil) && widget.Button(c, "check", "Check for updates", widget.ButtonOpts{Help: "shell/update#check"}) {
 			run("update.check")
 		}
+		if x.h.Available("update.changelog.open", nil) && widget.Button(c, "changelog", "Changelog", widget.ButtonOpts{Help: "shell/update#changelog"}) {
+			x.open = false
+			run("update.changelog.open")
+		}
 	})
 	widget.Rule(c, "rule")
 	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 6, Wrap: true}, func(c *ui.Ctx) {

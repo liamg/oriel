@@ -139,6 +139,7 @@ text "✕" @0,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @11.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @32.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @43.78125,990.95996 #b3ab99 JetBrains Mono 11
+text "oriel 2.0.0 available" @1445.5312,990.78 #ffd23f JetBrains Mono 10.5
 rect 0,0 1600x1000 fill #030508b8
 rect 490,333.3387 620x333.32254 fill #0c0c0b radius 10
 clip 490,333.3387 620x333.32254 r 10

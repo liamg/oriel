@@ -156,9 +156,9 @@ L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none
 		s.Frame()
 	}
 	machine(.34, s.Now)
-	s.WantFrame("CPU", "34%", "BUILDS", "2")
+	s.WantFrame("BUILDS", "2")
 	machine(.82, s.Now.Add(time.Minute))
-	s.WantFrame("82%", "3")
+	s.WantFrame("BUILDS", "3")
 	s.Now = s.Now.Add(31 * time.Second)
 	s.Frame()
 	s.WantFrame("DEPLOY", "203") // every 30s: built again (and the two MachineChanged builds before it)

@@ -73,7 +73,38 @@ func Changes(ctx context.Context, src Source, keys []ed25519.PublicKey, channel,
 		seen[m.Version] = true
 		out = append(out, m)
 	}
-	slices.SortStableFunc(out, func(a, b Manifest) int {
+	newestFirst(out)
+	return out
+}
+
+// History is every verified release on channel the source lists, newest first: this copy's own and those before it
+// as well as any newer, for reading their notes.
+func (u *Updater) History(ctx context.Context, channel string) ([]Manifest, error) {
+	h, ok := u.Source.(History)
+	if !ok {
+		return nil, errors.New("the release source can't list its releases")
+	}
+	rels, err := h.Releases(ctx, channel)
+	if err != nil {
+		return nil, err
+	}
+	var out []Manifest
+	seen := map[string]bool{}
+	for _, rel := range rels {
+		m, err := rel.Verify(u.Keys)
+		if err != nil || seen[m.Version] {
+			continue
+		}
+		seen[m.Version] = true
+		out = append(out, m)
+	}
+	newestFirst(out)
+	return out, nil
+}
+
+// newestFirst sorts ms by version, newest first.
+func newestFirst(ms []Manifest) {
+	slices.SortStableFunc(ms, func(a, b Manifest) int {
 		switch {
 		case Newer(a.Version, b.Version):
 			return -1
@@ -82,7 +113,6 @@ func Changes(ctx context.Context, src Source, keys []ed25519.PublicKey, channel,
 		}
 		return 0
 	})
-	return out
 }
 
 // Latest is the release Check last kept.
