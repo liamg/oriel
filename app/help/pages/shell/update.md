@@ -15,7 +15,8 @@ With updates **automatic** (the default), Oriel checks as it starts, before anyt
 shortly after it starts. Either way it checks every hour after that. `:UpdateCheck` asks now and opens the update card
 with what it finds. **Check again** on the card asks again.
 
-A release found while Oriel runs is downloaded and verified in the background before you hear about it.
+A release found while Oriel runs is downloaded and verified in the background before you hear about it, even
+when an older update is already installed and waiting for a restart.
 
 {{options "updates"}}
 
@@ -30,11 +31,13 @@ The newer release, the version you have, and what's new: the notes of every rele
 each under its version, so an update that skips versions shows what each of them changed. A release's notes list its
 breaking changes, features and fixes; one whose changes were all internal (refactoring, tests, build) says **No
 notable changes**. **Later** (`esc`) closes it. **Update** updates now, on the Updating page. **Restart** shows once
-an update is installed.
+the newest release is installed; if an older update is installed and a newer one has come out since, the card says
+so and offers **Update** to the newer one.
 
 ## The Updating page {#page}
 
-An update you start, or one an automatic start finds, runs on the Updating page. Each step is a line as it happens:
+An update you start, or one an automatic start finds, runs on the Updating page, and every restart onto an update
+shows it, however it was asked for. Each step is a line as it happens:
 the release found, the download (with a progress bar), verifying it against the signed manifest, extracting it,
 checking the new version starts, and swapping it in, with the old copy kept for a rollback. Then the agents hand
 over, as at any quit: the page shows the sessions whose turns it waits for, and **Restart now** stops waiting. **Not

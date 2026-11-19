@@ -316,7 +316,7 @@ func (x *Update) runCheck(asked bool) {
 	if asked {
 		return
 	}
-	if _, ok := u.Ready(); ok {
+	if v, ok := u.Ready(); ok && !update.Newer(m.Version, v) {
 		return
 	}
 	x.download(m)
@@ -512,25 +512,30 @@ func (x *Update) announce(version string, err error, restart bool) {
 	}
 }
 
-// restart quits, handing the agents over, and starts the installed Oriel once the window has closed. With the
-// Updating page up, the page tells the hand-over in place of the quit dialog.
+// restart quits, handing the agents over, and starts the installed Oriel once the window has closed. The Updating
+// page tells the hand-over in place of the quit dialog, however the restart was asked for.
 func (x *Update) restart() error {
 	v, ok := x.ready()
 	if !ok {
 		return errors.New("no update is waiting for a restart")
 	}
 	x.mu.Lock()
-	if r := x.run; r != nil && r.to == v {
-		r.say("drain", "Handing the sessions over: their agents resume in Oriel "+v)
+	if r := x.run; r == nil || r.to != v {
+		u := x.updater()
+		x.run = &updateRun{from: u.Version, to: v, restart: true, installed: true}
+		x.run.say("installed", "Oriel "+v+" is installed")
 	}
-	page := x.page && x.run != nil
+	x.run.restart = true
+	x.run.say("drain", "Handing the sessions over: their agents resume in Oriel "+v)
+	x.page = true
 	x.mu.Unlock()
+	x.h.Redraw()
 	q, ok := services.QuitOf(x.h)
 	if !ok {
 		return errors.New("this window can't restart")
 	}
 	q.Restart(x.Updates.Relaunch)
-	if d, ok := q.Draining(); ok && page {
+	if d, ok := q.Draining(); ok {
 		d.Hide(true)
 	}
 	return nil

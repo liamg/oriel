@@ -228,6 +228,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 	th := c.Theme()
 	widget.Modal(c, "updatecard", &open, widget.ModalOpts{Title: title, Width: 620, Help: updateHelp + "#card"}, func(c *ui.Ctx) {
 		ready, isReady := x.ready()
+		behind := isReady && found && update.Newer(m.Version, ready) // what's installed isn't the newest any more
 		switch {
 		case u == nil:
 			widget.Wrap(c, "none", "This build of Oriel doesn't update itself.", 570, widget.UIFont(12.5, th.C(theme.Fg)))
@@ -264,7 +265,10 @@ func (x *Update) cardView(c *ui.Ctx) {
 			widget.Wrap(c, "err", failed, 570, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
-			if isReady {
+			switch {
+			case behind:
+				widget.Note(c, "ready", "Oriel "+ready+" is installed, but "+m.Version+" is newer")
+			case isReady:
 				widget.Note(c, "ready", "Oriel "+ready+" is installed")
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -272,7 +276,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 				open = false
 			}
 			switch {
-			case isReady:
+			case isReady && !behind:
 				if widget.Button(c, "restart", "Restart", widget.ButtonOpts{Primary: true, Help: updateHelp + "#ready"}) {
 					open = false
 					x.command("update.restart")
