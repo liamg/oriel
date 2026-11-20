@@ -119,6 +119,9 @@ func (x *Host) requested(ctx context.Context, s registry.Site) ([]registry.Revie
 			Since: a.Since, Adds: a.Additions, Dels: a.Deletions, Files: a.Files, CI: ciWord(a.CI), Base: a.Base, Head: a.Head,
 			Opened: a.Created, Updated: a.Updated}
 		for _, who := range a.Reviewers {
+			if slices.ContainsFunc(a.Reviews, func(rv gh.Review) bool { return rv.User == who && rv.State == gh.ReviewStale }) {
+				continue // asked again after approving: one row, the stale approval
+			}
 			if strings.Contains(who, "/") {
 				who = "@" + who
 			}
@@ -144,14 +147,18 @@ func (x *Host) requested(ctx context.Context, s registry.Site) ([]registry.Revie
 		default:
 			r.State = registry.ReviewCommented
 		}
+		if r.State == registry.ReviewApproved && a.Since > 0 {
+			r.State = registry.ReviewStale
+		}
 		out = append(out, r)
 	}
 	return out, nil
 }
 
-// reviewWord is a GitHub review's state as a reviewer's is said: "approved", "changes" or "commented".
+// reviewWord is a GitHub review's state as a reviewer's is said: "approved", "stale", "changes" or "commented".
 func reviewWord(state string) registry.ReviewState {
-	return cmp.Or(map[string]registry.ReviewState{gh.ReviewApproved: registry.ReviewApproved, gh.ReviewChangesRequested: registry.ReviewChanges}[state], registry.ReviewCommented)
+	return cmp.Or(map[string]registry.ReviewState{gh.ReviewApproved: registry.ReviewApproved, gh.ReviewStale: registry.ReviewStale,
+		gh.ReviewChangesRequested: registry.ReviewChanges}[state], registry.ReviewCommented)
 }
 
 // ciWord is a check state as a review request says it.
@@ -193,9 +200,11 @@ func (x *Host) lookup(ctx context.Context, s registry.Site, url string) (registr
 			}
 		}
 	}
-	states := gh.ReviewStates(p.Reviews)
+	states := gh.ReviewStatesAt(p.Reviews, p.HeadSHA, p.Reviewers)
 	for _, who := range p.Reviewers {
-		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: "requested"})
+		if states[who] != gh.ReviewStale { // asked again after approving: one row, the stale approval
+			d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: "requested"})
+		}
 	}
 	var done []string
 	for who := range states {

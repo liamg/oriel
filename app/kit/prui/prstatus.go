@@ -20,7 +20,8 @@ type PRStatus struct {
 
 // PRStatusOf is a PR's status from its state ("open", "closed", "merged"), whether it's merged or a draft, and its
 // reviewers' latest verdicts (GitHub's "APPROVED" or a code host's registry.ReviewApproved…): merged or closed over
-// anything a reviewer said, changes requested over an approval, then approved, draft, open.
+// anything a reviewer said, changes requested over an approval, then approved, an approval that no longer stands
+// (needs re-review), draft, open.
 func PRStatusOf(state core.PRState, merged, draft bool, reviews []registry.ReviewState) PRStatus {
 	switch {
 	case merged || state == core.PRMerged:
@@ -28,18 +29,22 @@ func PRStatusOf(state core.PRState, merged, draft bool, reviews []registry.Revie
 	case state == core.PRClosed:
 		return PRStatus{"Closed", "prclosed", theme.Error}
 	}
-	approved := false
+	approved, stale := false, false
 	for _, r := range reviews {
 		switch r {
 		case registry.ReviewChanges:
 			return PRStatus{"Changes requested", "changes", theme.Warn}
 		case registry.ReviewApproved:
 			approved = true
+		case registry.ReviewStale:
+			stale = true
 		}
 	}
 	switch {
 	case approved:
 		return PRStatus{"Approved", "approved", theme.OK}
+	case stale:
+		return PRStatus{"Needs re-review", "review", TReviewStale}
 	case draft:
 		return PRStatus{"Draft", "pullrequest", theme.FgMuted}
 	}

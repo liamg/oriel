@@ -108,7 +108,7 @@ func (h *session) ask(ctx context.Context, id string, named core.ThreadID, qs []
 		if !opened {
 			t.Comments = append(t.Comments, h.questionComment(qs, asked))
 		}
-		if body := answerText(qs, a); body != "" {
+		if body := answerComment(qs, a); body != "" {
 			t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorYou, Name: hostcore.WhoAmI(ctx), Body: body,
 				Time: h.r.env.Now().UTC(), Delivered: true, Asked: true})
 		}
@@ -183,12 +183,32 @@ func questionsText(qs []core.Question) string {
 	return strings.Join(lines, "\n\n")
 }
 
-// answerText is the user's answers to questions, as a comment or the ask tool's result: each question and its answer.
+// answerText is the user's answers to questions as the ask tool's result: each question and its answer.
 func answerText(qs []core.Question, a hostapi.AnswerReq) string {
 	var lines []string
 	for _, q := range qs {
 		if ans, ok := a.Answers[q.Question]; ok {
 			lines = append(lines, q.Question+" → "+ans)
+		}
+	}
+	if n := strings.TrimSpace(a.Note); n != "" {
+		lines = append(lines, n)
+	}
+	return strings.Join(lines, "\n\n")
+}
+
+// answerComment is the user's answers as their comment in the thread, under the questions: one question's answer
+// alone; several each under the question's header (else the question).
+func answerComment(qs []core.Question, a hostapi.AnswerReq) string {
+	var lines []string
+	for _, q := range qs {
+		ans, ok := a.Answers[q.Question]
+		switch {
+		case !ok:
+		case len(qs) == 1:
+			lines = append(lines, ans)
+		default:
+			lines = append(lines, cmp.Or(q.Header, q.Question)+": "+ans)
 		}
 	}
 	if n := strings.TrimSpace(a.Note); n != "" {

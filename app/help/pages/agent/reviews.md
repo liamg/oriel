@@ -28,6 +28,8 @@ where you asked for changes or commented and it's their move. Drafts are last in
 - **reviewing**: a session of yours is on it. It doesn't count; `↵` continues it.
 - **changes requested** / **commented**: their move. It doesn't count, and comes back as re-requested. A review that
   only commented answers too, and so does a comment of yours in its conversation since you were asked.
+- **re-review**: you approved, and they've pushed since: your approval no longer stands. It doesn't count until they
+  ask again.
 - **draft**: never counts.
 
 Rest the pointer on a row for what it hasn't room for: the whole title, the repo and number, who opened it and when,

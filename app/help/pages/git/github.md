@@ -15,7 +15,7 @@ machine its own settings do.
 ## Threads {#threads}
 
 Each review comment on a PR's line, with its replies, is one thread with a **Review** header: the line, the
-reviewer, where their review stands (changes requested, approved, commented) and when it was last synced. The PR's
+reviewer, where their review stands (changes requested, approved, re-review, commented) and when it was last synced. The PR's
 conversation (its comments and reviews' summaries) is one more thread. Oriel syncs them every 30
 seconds while the session is in front, and at once with `review.threads.sync`. An edit on GitHub changes the thread here, and
 the agent is given it again; a thread resolved on GitHub is resolved here, and reopened with it.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -17,6 +19,9 @@ const (
 	ReviewCommented        = "COMMENTED"
 	ReviewDismissed        = "DISMISSED"
 	ReviewPending          = "PENDING"
+	// ReviewStale is Oriel's, not GitHub's: an approval that no longer stands, given before the PR's latest commit or
+	// before its reviewer was asked again (ReviewStatesAt).
+	ReviewStale = "STALE"
 )
 
 // ReviewComment is a comment on a line of a pull request's diff, or a reply in its thread.
@@ -78,6 +83,40 @@ func ReviewStates(rs []Review) map[string]string {
 		}
 	}
 	return out
+}
+
+// ReviewStatesAt is ReviewStates for a PR at head with requested asked for now: an approval of an older commit, or by
+// someone asked again since (GitHub takes a reviewer off the requests as they review), is ReviewStale.
+func ReviewStatesAt(rs []Review, head string, requested []string) map[string]string {
+	out := ReviewStates(rs)
+	last := map[string]Review{}
+	for _, r := range rs {
+		if r.State == ReviewApproved {
+			last[r.User] = r
+		}
+	}
+	for who, st := range out {
+		if st == ReviewApproved && Stale(last[who], head, requested) {
+			out[who] = ReviewStale
+		}
+	}
+	return out
+}
+
+// Stale says approval r no longer stands on a PR at head with requested asked for now: it approved an older commit,
+// or its reviewer has been asked again since.
+func Stale(r Review, head string, requested []string) bool {
+	return !SameCommit(r.Commit, head) || slices.ContainsFunc(requested, func(q string) bool { return strings.EqualFold(q, r.User) })
+}
+
+// SameCommit says two commit ids name the same commit, either perhaps abbreviated; one unknown ("") is taken as the
+// same, so a host that doesn't say marks nothing stale.
+func SameCommit(a, b string) bool {
+	if a == "" || b == "" {
+		return true
+	}
+	n := min(len(a), len(b))
+	return strings.EqualFold(a[:n], b[:n])
 }
 
 type restUser struct {

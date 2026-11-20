@@ -52,7 +52,7 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 	if err != nil {
 		resolved = nil // unknown: each thread's resolution is left as it is
 	}
-	states := gh.ReviewStates(reviews)
+	states := gh.ReviewStatesAt(reviews, pr.Head, pr.Reviewers)
 	state := func(user string) registry.ReviewState {
 		if s := states[user]; s != "" {
 			return reviewWord(s)

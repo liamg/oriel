@@ -474,7 +474,7 @@ func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
 		return t.Status == core.ThreadResolved
 	})
 	t2, _ := se.Thread(th.ID)
-	if last, _ := t2.Last(); last.Author != core.AuthorYou || last.Body != "What should it do? → round" || !last.Delivered {
+	if last, _ := t2.Last(); last.Author != core.AuthorYou || last.Body != "round" || !last.Delivered {
 		t.Errorf("the thread ends %+v, want your answer, given to the agent", last)
 	}
 }
