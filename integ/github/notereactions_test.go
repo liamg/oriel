@@ -63,3 +63,36 @@ func TestCommentReactions(t *testing.T) {
 		})
 	}
 }
+
+// A busy PR has more comments and reviews than GitHub gives in one page; the last of each still has its reactions.
+func TestCommentReactionsPastTheFirstPage(t *testing.T) {
+	for _, transport := range []string{"http", "cli"} {
+		t.Run(transport, func(t *testing.T) {
+			s := ghtest.New(t)
+			c := client(t, transport, s)
+			pr := s.AddPR("acme/api", gh.PR{Title: "feat: round", Head: "pricing-rounding", Base: "main"})
+			var rv gh.Review
+			var ic gh.IssueComment
+			for range 150 {
+				rv = s.AddReview("acme/api", pr.Number, gh.Review{User: "priya-k", State: gh.ReviewCommented, Body: "Another reply."})
+				ic = s.AddIssueComment("acme/api", pr.Number, gh.IssueComment{User: "bo", Body: "Any news?"})
+			}
+			s.ReactAs("bo", ghtest.ReviewBody, rv.ID, "rocket")
+			s.ReactAs("priya-k", ghtest.IssueNote, ic.ID, "eyes")
+
+			got, err := c.CommentReactions(context.Background(), acme, pr.Number)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Review) != 150 || len(got.Issue) != 150 {
+				t.Fatalf("read %d reviews and %d conversation comments, want 150 of each", len(got.Review), len(got.Issue))
+			}
+			if r := got.Review[rv.ID].Reactions; !reflect.DeepEqual(r, []gh.Reaction{{Name: "rocket", Count: 1, Who: []string{"bo"}}}) {
+				t.Errorf("the 150th review: %+v", r)
+			}
+			if r := got.Issue[ic.ID].Reactions; !reflect.DeepEqual(r, []gh.Reaction{{Name: "eyes", Count: 1, Who: []string{"priya-k"}}}) {
+				t.Errorf("the 150th conversation comment: %+v", r)
+			}
+		})
+	}
+}

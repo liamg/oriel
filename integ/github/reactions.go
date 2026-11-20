@@ -112,10 +112,20 @@ var reactionEnums = map[string]string{"+1": "THUMBS_UP", "-1": "THUMBS_DOWN", "l
 
 const reactedFields = `databaseId id reactionGroups { content viewerHasReacted reactors(first: 10) { totalCount nodes { ... on Actor { login } } } }`
 
-// The first 100 of each, as resolvedQuery reads its threads.
-const commentReactionsQuery = `query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { ` +
-	`comments(first: 100) { nodes { ` + reactedFields + ` } } ` +
-	`reviews(first: 100) { nodes { ` + reactedFields + ` comments(first: 100) { nodes { ` + reactedFields + ` } } } } } } }`
+// A page of comments and reviews, each after its own cursor; one that's done is left out. A review's line comments
+// are its first 100: each reply in a line thread is a review of its own.
+const commentReactionsQuery = `query($owner: String!, $name: String!, $number: Int!, $commentsAfter: String, $reviewsAfter: String, ` +
+	`$withComments: Boolean!, $withReviews: Boolean!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { ` +
+	`comments(first: 100, after: $commentsAfter) @include(if: $withComments) { nodes { ` + reactedFields + ` } ` + pageInfo + ` } ` +
+	`reviews(first: 100, after: $reviewsAfter) @include(if: $withReviews) { nodes { ` + reactedFields +
+	` comments(first: 100) { nodes { ` + reactedFields + ` } } } ` + pageInfo + ` } } } }`
+
+const pageInfo = `pageInfo { hasNextPage endCursor }`
+
+type pageJSON struct {
+	Next   bool   `json:"hasNextPage"`
+	Cursor string `json:"endCursor"`
+}
 
 type reactedJSON struct {
 	DatabaseID int64  `json:"databaseId"`
@@ -150,41 +160,51 @@ func (r reactedJSON) node() ReactedNode {
 }
 
 func (a API) CommentReactions(ctx context.Context, repo Repo, number int) (CommentReactions, error) {
-	type nodes[T any] struct {
-		Nodes []T `json:"nodes"`
-	}
-	var out struct {
-		Data struct {
-			Repository struct {
-				PullRequest struct {
-					Comments nodes[reactedJSON] `json:"comments"`
-					Reviews  nodes[struct {
-						reactedJSON
-						Comments nodes[reactedJSON] `json:"comments"`
-					}] `json:"reviews"`
-				} `json:"pullRequest"`
-			} `json:"repository"`
-		} `json:"data"`
-		Errors []struct {
-			Message string `json:"message"`
-		} `json:"errors"`
-	}
-	in := map[string]any{"query": commentReactionsQuery, "variables": map[string]any{"owner": repo.Owner, "name": repo.Name, "number": number}}
-	if err := a.T.Do(ctx, "POST", "graphql", in, &out); err != nil {
-		return CommentReactions{}, err
-	}
-	if len(out.Errors) > 0 {
-		return CommentReactions{}, &Error{Status: 422, Message: out.Errors[0].Message}
+	type conn[T any] struct {
+		Nodes []T      `json:"nodes"`
+		Page  pageJSON `json:"pageInfo"`
 	}
 	res := CommentReactions{Line: map[int64]ReactedNode{}, Issue: map[int64]ReactedNode{}, Review: map[int64]ReactedNode{}}
-	pr := out.Data.Repository.PullRequest
-	for _, c := range pr.Comments.Nodes {
-		res.Issue[c.DatabaseID] = c.node()
-	}
-	for _, rv := range pr.Reviews.Nodes {
-		res.Review[rv.DatabaseID] = rv.node()
-		for _, c := range rv.Comments.Nodes {
-			res.Line[c.DatabaseID] = c.node()
+	vars := map[string]any{"owner": repo.Owner, "name": repo.Name, "number": number, "withComments": true, "withReviews": true}
+	for vars["withComments"] == true || vars["withReviews"] == true {
+		var out struct {
+			Data struct {
+				Repository struct {
+					PullRequest struct {
+						Comments *conn[reactedJSON] `json:"comments"`
+						Reviews  *conn[struct {
+							reactedJSON
+							Comments conn[reactedJSON] `json:"comments"`
+						}] `json:"reviews"`
+					} `json:"pullRequest"`
+				} `json:"repository"`
+			} `json:"data"`
+			Errors []struct {
+				Message string `json:"message"`
+			} `json:"errors"`
+		}
+		if err := a.T.Do(ctx, "POST", "graphql", map[string]any{"query": commentReactionsQuery, "variables": vars}, &out); err != nil {
+			return CommentReactions{}, err
+		}
+		if len(out.Errors) > 0 {
+			return CommentReactions{}, &Error{Status: 422, Message: out.Errors[0].Message}
+		}
+		pr := out.Data.Repository.PullRequest
+		vars["withComments"], vars["withReviews"] = false, false
+		if c := pr.Comments; c != nil {
+			for _, n := range c.Nodes {
+				res.Issue[n.DatabaseID] = n.node()
+			}
+			vars["withComments"], vars["commentsAfter"] = c.Page.Next, c.Page.Cursor
+		}
+		if rs := pr.Reviews; rs != nil {
+			for _, rv := range rs.Nodes {
+				res.Review[rv.DatabaseID] = rv.node()
+				for _, n := range rv.Comments.Nodes {
+					res.Line[n.DatabaseID] = n.node()
+				}
+			}
+			vars["withReviews"], vars["reviewsAfter"] = rs.Page.Next, rs.Page.Cursor
 		}
 	}
 	return res, nil

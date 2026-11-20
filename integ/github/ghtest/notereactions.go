@@ -55,7 +55,8 @@ func (s *Server) reactedNode(n string) map[string]any {
 	return map[string]any{"databaseId": id, "id": n, "reactionGroups": groups}
 }
 
-// commentReactions answers the query for a PR's comments' reactions. Its line comments all come under one review.
+// commentReactions answers the query for a PR's comments' reactions, a page of 100 comments and reviews at a time
+// after each one's cursor. Its line comments all come under its first review.
 func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -75,8 +76,27 @@ func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 		reviews = append(reviews, s.reactedNode(node(ReviewBody, 0)))
 	}
 	reviews[0]["comments"] = map[string]any{"nodes": lines}
-	reply(w, 200, map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": map[string]any{
-		"comments": map[string]any{"nodes": issue}, "reviews": map[string]any{"nodes": reviews}}}}})
+	pr := map[string]any{}
+	if vars["withComments"] != false {
+		pr["comments"] = page(issue, vars["commentsAfter"])
+	}
+	if vars["withReviews"] != false {
+		pr["reviews"] = page(reviews, vars["reviewsAfter"])
+	}
+	reply(w, 200, map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": pr}}})
+}
+
+// page is GitHub's connection of the 100 nodes after the cursor, which is the index of the last one given.
+func page(nodes []map[string]any, after any) map[string]any {
+	start := 0
+	if a, ok := after.(string); ok {
+		_, _ = fmt.Sscanf(a, "%d", &start)
+		start++
+	}
+	start = min(start, len(nodes))
+	end := min(start+100, len(nodes))
+	return map[string]any{"nodes": nodes[start:end],
+		"pageInfo": map[string]any{"hasNextPage": end < len(nodes), "endCursor": fmt.Sprint(end - 1)}}
 }
 
 // reactNode is GitHub's addReaction and removeReaction mutations, as the signed-in user.
