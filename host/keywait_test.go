@@ -33,16 +33,18 @@ func signsSlowly(t *testing.T, dir string) (touch func(), pidAt string) {
 	if err := os.WriteFile(prog, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	touch = func() {
-		// No reader (the program never ran, or it's gone) means nothing to tell: don't wait for one.
-		f, err := os.OpenFile(fifo, os.O_WRONLY|syscall.O_NONBLOCK, 0)
+	tell := func(flag int) {
+		f, err := os.OpenFile(fifo, os.O_WRONLY|flag, 0)
 		if err != nil {
 			return
 		}
 		defer func() { _ = f.Close() }()
 		_, _ = f.WriteString("\n")
 	}
-	t.Cleanup(touch)
+	// The touch waits for the program to be reading: the ask can come before git has started it.
+	touch = func() { tell(0) }
+	// No reader once the test is done (the program never ran, or it's gone) means nothing to tell: don't wait for one.
+	t.Cleanup(func() { tell(syscall.O_NONBLOCK) })
 	for _, kv := range [][]string{{"commit.gpgsign", "true"}, {"gpg.program", prog}} {
 		if out, err := exec.Command("git", "-C", dir, "config", kv[0], kv[1]).CombinedOutput(); err != nil {
 			t.Fatalf("git config: %v: %s", err, out)
