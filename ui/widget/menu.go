@@ -227,7 +227,8 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 		}
 		all = append(all, MenuItem{Label: "? Help", Shortcut: "K", Help: help})
 	}
-	if catcher(c, struct{ k any }{key}, ui.LayerPopup, ContextMenuHelp) {
+	z := max(ui.LayerPopup, c.LayerOf(target)+1) // over what was right-clicked: a dialog's text too
+	if catcher(c, struct{ k any }{key}, z, ContextMenuHelp) {
 		st.open = false
 		return res
 	}
@@ -238,7 +239,7 @@ func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResu
 	}
 	var chosen int
 	var closed bool
-	c.Box(key, ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+	c.Box(key, ui.Style{Z: z, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
 		chosen, closed = Menu(c, "menu", all, MenuOpts{Width: w, Help: ContextMenuHelp})
 	})
 	switch {

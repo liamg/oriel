@@ -93,9 +93,47 @@ type inputState struct {
 	presses        int  // the press the drag began with: 2 holds a word, 3 a line
 	focused        bool // last frame
 	undo, redo     []inputEdit
-	join           string // what the last edit was ("type", a dictation's), which the next of the same joins for undo
-	last           string // the text as the field last left it: when it's changed from outside, undo starts again
-	drawn          bool   // it has been drawn before
+	join           string    // what the last edit was ("type", a dictation's), which the next of the same joins for undo
+	last           string    // the text as the field last left it: when it's changed from outside, undo starts again
+	drawn          bool      // it has been drawn before
+	pending        []fieldOp // what a right-click menu's items asked of it (TextField), done as it's next built
+}
+
+// TextFieldSubject is what a text field stands for to a right-click menu (ui.Style.Subject); it offers a TextField.
+const TextFieldSubject = "textfield"
+
+// TextField is a text field as it offers itself to a right-click menu (ui.Style.Offer): its text and selection as it
+// was last drawn, and the edits a menu item asks of it, which it makes as it's next built, as its keys would.
+type TextField interface {
+	Text() string
+	Selection() (from, to int) // in runes; equal when nothing's selected
+	Secret() bool              // it won't copy or cut what it holds
+	Edit(op string)            // "cut", "copy", "paste" or "select-all"
+	Replace(from, to int, text string)
+}
+
+// fieldOp is an edit a menu item asked of a field: an editKey name, or "replace" with its runes and text.
+type fieldOp struct {
+	op       string
+	from, to int
+	text     string
+}
+
+// fieldHandle is a field's TextField, as one frame drew it.
+type fieldHandle struct {
+	st     *inputState
+	text   string
+	secret bool
+}
+
+func (h *fieldHandle) Text() string { return h.text }
+func (h *fieldHandle) Selection() (int, int) {
+	return min(h.st.cursor, h.st.anchor), max(h.st.cursor, h.st.anchor)
+}
+func (h *fieldHandle) Secret() bool   { return h.secret }
+func (h *fieldHandle) Edit(op string) { h.st.pending = append(h.st.pending, fieldOp{op: op}) }
+func (h *fieldHandle) Replace(from, to int, text string) {
+	h.st.pending = append(h.st.pending, fieldOp{op: "replace", from: from, to: to, text: text})
 }
 
 // fieldExtra is what a Prose adds to the field Input edits.
@@ -206,7 +244,28 @@ type fieldFrame struct {
 	multi bool
 	runes []rune
 	res   InputResult
-	moved bool // the caret may have moved: keep it in view
+	moved bool         // the caret may have moved: keep it in view
+	offer *fieldHandle // what it offers a right-click menu, as this frame leaves it
+}
+
+// menuEdits makes the edits a right-click menu's items asked of the field, and takes focus for them.
+func (ff *fieldFrame) menuEdits() {
+	ops := ff.st.pending
+	ff.st.pending = nil
+	if len(ops) == 0 || ff.o.Disabled {
+		return
+	}
+	for _, op := range ops {
+		if op.op != "replace" {
+			ff.edit(op.op, render.KeyEvent{}, false, 0)
+			continue
+		}
+		before, n := ff.now(), len(ff.runes)
+		ff.replace(clampInt(op.from, 0, n), clampInt(max(op.from, op.to), 0, n), ff.typable(op.text))
+		ff.record(before, "")
+		ff.moved = true
+	}
+	ff.c.RequestFocus(ff.id)
 }
 
 func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputResult {
@@ -221,6 +280,7 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 		font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, multi: o.Lines > 1 && !o.Secret, runes: []rune(*text)}
 	ff.sync(*text)
 	ff.pointer()
+	ff.menuEdits()
 	keys := ff.in.Keys
 	if x.keys != nil {
 		keys = x.keys
@@ -237,6 +297,7 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 	if ff.res.Changed || len(keys) > 0 {
 		*text = string(ff.runes)
 	}
+	ff.offer = &fieldHandle{st: ff.st, text: *text, secret: o.Secret}
 	ff.st.last = *text
 	style := ff.style()
 	if ff.multi {
@@ -407,8 +468,22 @@ func (ff *fieldFrame) outside() {
 
 // key edits with one key, as editKey names what it does.
 func (ff *fieldFrame) key(k render.KeyEvent) {
-	c, o, st := ff.c, ff.o, ff.st
 	shift, mods := k.Mods&render.ModShift != 0, k.Mods&^render.ModShift
+	key := editKey(k.Key, mods)
+	if ff.multi {
+		switch {
+		case key == "submit" && (shift || !ff.o.EnterSubmits):
+			key = "newline"
+		case k.Key == "CR" && mods == platform.primary:
+			key = "submit"
+		}
+	}
+	ff.edit(key, k, shift, mods)
+}
+
+// edit does the edit key names (editKey's: "cut", "select-all"…), from k pressed with shift and mods.
+func (ff *fieldFrame) edit(key string, k render.KeyEvent, shift bool, mods render.Mods) {
+	c, o, st := ff.c, ff.o, ff.st
 	move := func(to int) {
 		st.cursor = clampInt(to, 0, len(ff.runes))
 		if !shift {
@@ -423,15 +498,6 @@ func (ff *fieldFrame) key(k render.KeyEvent) {
 		}
 	}
 	before, join := ff.now(), ""
-	key := editKey(k.Key, mods)
-	if ff.multi {
-		switch {
-		case key == "submit" && (shift || !o.EnterSubmits):
-			key = "newline"
-		case k.Key == "CR" && mods == platform.primary:
-			key = "submit"
-		}
-	}
 	if key != "up" && key != "down" {
 		st.hasGoal = false
 	}
@@ -597,6 +663,9 @@ func (ff *fieldFrame) style() ui.Style {
 	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, DefaultFocus: o.DefaultFocus, Disabled: o.Disabled,
 		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: ff.shown(0, len(ff.runes)),
 		Selection: ui.TextRange{Start: min(st.cursor, st.anchor), End: max(st.cursor, st.anchor)}, Actions: actions}
+	if !o.Disabled && ff.offer != nil {
+		style.Subject, style.Offer = TextFieldSubject, ff.offer
+	}
 	if o.Files != nil && !o.Disabled {
 		style.Drop = []string{"file"}
 	}

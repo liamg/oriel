@@ -11,6 +11,9 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
+// ImageSubject is what an image stands for to a right-click menu (ui.Style.Subject); it offers its image.Image.
+const ImageSubject = "image"
+
 // ImageOpts is how an image is shown.
 type ImageOpts struct {
 	Label string // its accessible name: what it shows, and its caption in the lightbox
@@ -79,12 +82,19 @@ func picture(c *ui.Ctx, key any, w, h float32, paint func(f render.Frame, r rend
 	if r, ok := c.Rect(id); ok && in.Hovered {
 		tip = item.Vector.tipAt(r, in.Pointer())
 	}
+	// A picture offers itself to the right-click menu (Copy image); a vector has no pixels of its own to copy.
+	subject, offer := "", any(nil)
+	if item.Image != nil {
+		subject, offer = ImageSubject, item.Image
+	}
 	if !o.Zoom {
 		tips := item.Vector != nil && len(item.Vector.Tips) > 0
-		return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip, Interactive: tips}, pixels)
+		return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip, Interactive: tips,
+			Subject: subject, Offer: offer}, pixels)
 	}
 	lightbox := groupImageBuilt(c, id, item, o)
-	Clickable(c, key, ui.Style{W: ui.Px(w), H: ui.Px(h), NoHover: true, Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip}, func(c *ui.Ctx) {
+	Clickable(c, key, ui.Style{W: ui.Px(w), H: ui.Px(h), NoHover: true, Role: ui.RoleImage, Label: o.Label, Help: o.Help, Tooltip: tip,
+		Subject: subject, Offer: offer}, func(c *ui.Ctx) {
 		pixels(c)
 		if in.Hovered {
 			edge := col(c, tImageHover)

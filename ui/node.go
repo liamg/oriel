@@ -163,6 +163,7 @@ type Style struct {
 	TooltipView func(c *Ctx) // draws the tooltip in place of Tooltip's text, which stays its words for the accessibility tree
 	Help        string       // its help page and anchor, "hud/usage#weekly-window"
 	Subject     string       // what it stands for to a right-click menu: "session:fix-login"
+	Offer       any          // what it gives a right-click menu's items to act on: an image.Image, a widget.TextField
 	KeyMode     string       // when focused, keymaps in this mode come first and unmapped keys come to it
 	Text        bool         // typed characters insert text here, so dictation may type into it (UI.TakesText)
 	Trap        bool         // keeps keyboard focus inside while it's up, as a modal does

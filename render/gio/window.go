@@ -166,6 +166,18 @@ func (w *Window) ReadClipboardFiles() []string { return osclip.Files() }
 
 func (w *Window) ReadClipboardImage() ([]byte, bool) { return osclip.Image() }
 
+var _ render.ClipboardImage = (*Window)(nil)
+
+// SetClipboardImage puts png on the system clipboard.
+func (w *Window) SetClipboardImage(png []byte) error {
+	err := osclip.SetImage(png)
+	if err == nil {
+		empty := ""
+		w.read.Store(&empty) // the text it held is gone
+	}
+	return err
+}
+
 // SetClipboard puts text on the system clipboard on the next frame.
 func (w *Window) SetClipboard(text string) {
 	w.clip.Store(&text)

@@ -28,6 +28,27 @@ static char *orielClipFiles(void) {
 	}
 }
 
+// orielClipSetImage puts n bytes of PNG on the clipboard, as PNG and as the TIFF other apps may look for; 0 when it
+// can't.
+static int orielClipSetImage(const void *png, size_t n) {
+	@autoreleasepool {
+		NSData *data = [NSData dataWithBytes:png length:n];
+		NSBitmapImageRep *rep = [NSBitmapImageRep imageRepWithData:data];
+		if (rep == nil) {
+			return 0;
+		}
+		NSPasteboard *pb = [NSPasteboard generalPasteboard];
+		[pb clearContents];
+		[pb declareTypes:@[NSPasteboardTypePNG, NSPasteboardTypeTIFF] owner:nil];
+		BOOL ok = [pb setData:data forType:NSPasteboardTypePNG];
+		NSData *tiff = [rep TIFFRepresentation];
+		if (tiff != nil) {
+			[pb setData:tiff forType:NSPasteboardTypeTIFF];
+		}
+		return ok ? 1 : 0;
+	}
+}
+
 // orielClipImage is the clipboard's picture as PNG, or NULL; the caller frees it.
 static void *orielClipImage(size_t *n) {
 	@autoreleasepool {
@@ -54,6 +75,7 @@ static void *orielClipImage(size_t *n) {
 import "C"
 
 import (
+	"errors"
 	"strings"
 	"unsafe"
 )
@@ -65,6 +87,13 @@ func files() []string {
 	}
 	defer C.free(unsafe.Pointer(p))
 	return strings.Split(C.GoString(p), "\n")
+}
+
+func setImage(png []byte) error {
+	if C.orielClipSetImage(unsafe.Pointer(&png[0]), C.size_t(len(png))) == 0 {
+		return errors.New("the clipboard didn't take the picture")
+	}
+	return nil
 }
 
 func image() []byte {

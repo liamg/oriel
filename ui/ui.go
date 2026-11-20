@@ -186,6 +186,7 @@ type flags struct {
 	cursor                           render.Cursor
 	tooltip, help, keyMode, subject  string
 	tipView                          func(c *Ctx)
+	offer                            any
 	trap, text                       bool
 	z                                int
 	parent                           ID
@@ -326,7 +327,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable, focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, tipView: s.TooltipView, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, tipView: s.TooltipView, help: s.Help, subject: s.Subject, offer: s.Offer, keyMode: s.KeyMode,
 				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
 	}

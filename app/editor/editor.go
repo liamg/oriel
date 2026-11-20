@@ -140,6 +140,9 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		return out
 	})
 	x.Add(h.Contribute(registry.Service{Name: services.EditorsService, Impl: editors{x}}))
+	for _, it := range x.menuItems() {
+		x.Add(h.Contribute(it))
+	}
 	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {
 		at := h.Here()
 		at.Buffer, at.Window = buf, win

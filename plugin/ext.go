@@ -102,6 +102,10 @@ type UIView interface {
 	Subject(id ui.ID) string // what the node stands for (ui.Style.Subject), from it up
 	// SubjectAt is what was right-clicked at p stands for when target took the click: the node at p in it, else target.
 	SubjectAt(target ui.ID, p render.Point) string
+	// OfferAt is what the node right-clicked at p offers a menu's items to act on (ui.Style.Offer): nil for none.
+	OfferAt(target ui.ID, p render.Point) any
+	SelectedText() string // the text selected in the window's pages
+	LayerOf(id ui.ID) int // the highest layer of the floats the node is in (ui.LayerDialog in a dialog), 0 in the flow
 	HelpNodes() []ui.HelpNode
 	ContextClick() (ui.ID, render.Point, bool)
 	TakeHelpRequest() (string, bool)

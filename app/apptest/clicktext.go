@@ -42,6 +42,31 @@ func (s *Scene) textPoint(text string) (render.Point, bool) {
 	return render.Point{}, false
 }
 
+// TextRect is where the first run of text that reads text was drawn, if one is.
+func (s *Scene) TextRect(text string) (render.Rect, bool) {
+	if s.List() == nil {
+		return render.Rect{}, false
+	}
+	for _, op := range s.List().Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == text {
+			return render.Rect{Min: render.Point{X: op.At.X, Y: op.At.Y - op.Run.Ascent}, Max: render.Point{X: op.At.X + op.Run.Advance, Y: op.At.Y}}, true
+		}
+	}
+	return render.Rect{}, false
+}
+
+// RightClickText right-clicks the middle of the first run of text that reads text, and answers the frame's text
+// after: the menu it opened.
+func (s *Scene) RightClickText(text string) string {
+	s.T.Helper()
+	s.Frame()
+	p, ok := s.textPoint(text)
+	if !ok {
+		s.T.Fatalf("no %q drawn:\n%s", text, s.Text())
+	}
+	return s.RightClick(p)
+}
+
 // ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.
 func (s *Scene) ClickTop(text string) {
 	s.T.Helper()
