@@ -162,3 +162,21 @@ func TestLuaSessionKeep(t *testing.T) {
 		t.Errorf("forgotten = %v", out)
 	}
 }
+
+// oriel.session.current is the session in front, with its projects; nil with none in front.
+func TestLuaSessionCurrent(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	if out := s.Lua(`L.session.current()`); len(out) != 1 || out[0] != nil {
+		t.Errorf("with none in front = %v", out)
+	}
+	se := core.SessionState{ID: "w", Name: "tilt", Kind: core.KindWork, Dir: "/ws", Projects: []core.Project{
+		{Name: "api", Dir: "/ws/repos/api", Branch: "b", Primary: true}, {Name: "web", Dir: "/ws/repos/web", Branch: "b"}}}
+	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
+	out := s.Lua(`(function() local se = L.session.current()
+		local ps = {}
+		for _, p in ipairs(se.projects) do ps[#ps+1] = p.name .. "=" .. p.dir .. (p.primary and "*" or "") end
+		return se.id .. " " .. se.dir .. " " .. table.concat(ps, ",") end)()`)
+	if want := "w /ws api=/ws/repos/api*,web=/ws/repos/web"; len(out) != 1 || out[0] != want {
+		t.Errorf("current = %v, want %q", out, want)
+	}
+}

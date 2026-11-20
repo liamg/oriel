@@ -459,6 +459,16 @@ func (s Session) Kept(id, key string) (any, error) {
 	return out, json.Unmarshal(b, &out)
 }
 
+//oriel:api doc="The session in front, as oriel.session's other functions pass it: { id, name, kind, status, dir (its workspace), branch, projects = { { name, dir, repo, branch, primary } }, data, ... }, or nil when none is." returns=any
+func (s Session) Current() (any, error) {
+	st := s.a.Host.State()
+	se, ok := st.Session(st.Focus)
+	if !ok {
+		return nil, nil
+	}
+	return sessionTable(se.Snapshot()), nil
+}
+
 func (s Session) id(id string) core.SessionID {
 	return core.SessionID(cmp.Or(id, string(s.a.Host.State().Focus)))
 }

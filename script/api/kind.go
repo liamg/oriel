@@ -95,6 +95,11 @@ func chipsOf(v any) []registry.Chip {
 func sessionTable(se core.SessionState) map[string]any {
 	t := map[string]any{"id": string(se.ID), "name": se.Name, "kind": string(se.Kind), "status": string(se.Status), "prompt": se.Prompt,
 		"ticket": se.Ticket, "branch": se.Branch, "dir": se.Dir, "archived": se.Archived, "started": se.Started}
+	projects := make([]any, len(se.Projects))
+	for i, p := range se.Projects {
+		projects[i] = map[string]any{"name": p.Name, "dir": p.Dir, "repo": p.Repo, "branch": p.Branch, "primary": p.Primary}
+	}
+	t["projects"] = projects
 	if d := se.Data(se.Kind); d != nil {
 		var v any
 		if b, err := json.Marshal(d); err == nil && json.Unmarshal(b, &v) == nil {

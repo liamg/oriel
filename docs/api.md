@@ -140,6 +140,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 ## oriel.session
 
 - `oriel.session.chips(spec, fn?)` (`session.control`): Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }. Takes its spec too: { name, run = fn }.
+- `oriel.session.current()` (`session.control`): The session in front, as oriel.session's other functions pass it: { id, name, kind, status, dir (its workspace), branch, projects = { { name, dir, repo, branch, primary } }, data, ... }, or nil when none is.
 - `oriel.session.done(spec, fn?)` (`session.control`): Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.
 - `oriel.session.keep(id, key, value)` (`session.control`): Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.
 - `oriel.session.kept(id, key)` (`session.control`): What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.

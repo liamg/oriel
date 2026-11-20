@@ -396,6 +396,10 @@ oriel.session = {}
 ---@param fn? function
 function oriel.session.chips(spec, fn) end
 
+--- The session in front, as oriel.session's other functions pass it: { id, name, kind, status, dir (its workspace), branch, projects = { { name, dir, repo, branch, primary } }, data, ... }, or nil when none is.
+---@return any
+function oriel.session.current() end
+
 --- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.
 ---@param spec any
 ---@param fn? function
