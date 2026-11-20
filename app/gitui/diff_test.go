@@ -321,14 +321,20 @@ func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 // GitHub's line numbers do, keeping what's been written.
 func TestAShiftClickWidensADiffThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
-	dir := r.ProjectDir("w")
+	dir := r.ProjectDir(r.Session)
 	path := filepath.Join(dir, "round.go")
-	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	rig.Git(t, dir, "add", "-A")
 	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
-	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
-	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
 	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
 	r.WaitGit()
 	r.ClickText("Truncate")

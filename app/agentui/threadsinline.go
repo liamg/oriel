@@ -555,7 +555,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 func (x *Requests) composerButtons(c *ui.Ctx, n *inlineNew) (send, cancel bool) {
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 8, B: 10}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if n.toAuthor && widget.Button(c, "suggest", "Suggest a change", widget.ButtonOpts{Ghost: true, Key: "⌘G", Help: "agent/reviews#suggest"}) {
-			kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggest", nil), true)
+			kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggestion.add", nil), true)
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		cancel = widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Ghost: true, Key: "esc"})
