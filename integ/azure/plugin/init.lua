@@ -83,4 +83,9 @@ L.code.host{ name = "azure", title = "Azure DevOps", icon = "azure", order = 30,
   threads = function(repo, pr, done) call("threads", { repo = repo, pr = pr }, done) end,
   reply = function(repo, pr, thread, body, done)
     call("reply", { repo = repo, pr = pr, thread_id = thread.id or "", body = body }, done)
+  end,
+  -- A comment takes only a like, shown as 👍.
+  reactions = { "👍" },
+  react_note = function(repo, pr, thread, note, emoji, on, done)
+    call("react_note", { repo = repo, pr = pr, note = note, emoji = emoji, on = on }, none(done))
   end }

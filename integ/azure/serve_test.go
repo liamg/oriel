@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -387,5 +388,64 @@ func TestThreadsAndReply(t *testing.T) {
 	}
 	if err := conn.Call(ctx, "reply", azure.Params{Repo: repo, PR: &got, Thread: a.ID}, &id); err == nil {
 		t.Error("an empty reply went")
+	}
+}
+
+// Azure DevOps' comments take one reaction, a like: each comment's likes come with it in threads as 👍, whether
+// you're one of them and who. react_note likes a comment as you, or takes your like back.
+func TestReactions(t *testing.T) {
+	az, conn, secrets := fixture(t)
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
+	ctx := t.Context()
+	priya := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000002", DisplayName: "Priya K", UniqueName: "priya@acme.com"}
+	pr := az.AddPR("acme", "web", "dashboard", azure.PullRequest{Title: "Usage chart", CreatedBy: azuretest.Me, Source: "refs/heads/usage",
+		Target: "refs/heads/main"})
+	onLine := az.AddFileThread(pr.ID, "src/chart.ts", 12, priya, "Can this return an error instead?")
+	talk := az.AddConversation(pr.ID, priya, "Looks neat")
+	az.Like(pr.ID, onLine, 1, priya)
+	az.Like(pr.ID, onLine, 1, azuretest.Me)
+	repo := azure.CodeRepo{Remote: "https://dev.azure.com/acme/web/_git/dashboard", Site: azuretest.Cloud}
+	var got registry.PR
+	if err := conn.Call(ctx, "for_branch", azure.Params{Repo: repo, Branch: "usage"}, &got); err != nil {
+		t.Fatal(err)
+	}
+	threads := func() (line, conversation registry.ReviewNote) {
+		t.Helper()
+		var ts []registry.ReviewThread
+		if err := conn.Call(ctx, "threads", azure.Params{Repo: repo, PR: &got}, &ts); err != nil {
+			t.Fatal(err)
+		}
+		if len(ts) != 2 {
+			t.Fatalf("threads %+v", ts)
+		}
+		return ts[0].Comments[0], ts[1].Comments[0]
+	}
+	line, conversation := threads()
+	want := []registry.PRReaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"priya@acme.com", azuretest.Me.UniqueName}}}
+	if !reflect.DeepEqual(line.Reactions, want) || conversation.Reactions != nil {
+		t.Errorf("reactions: the line's %+v, the conversation's %+v", line.Reactions, conversation.Reactions)
+	}
+
+	react := func(note, emoji string, on bool) error {
+		return conn.Call(ctx, "react_note", azure.Params{Repo: repo, PR: &got, Note: note, Emoji: emoji, On: on}, nil)
+	}
+	for _, r := range []struct {
+		note string
+		on   bool
+	}{{conversation.ID, true}, {conversation.ID, true}, {line.ID, false}, {line.ID, false}} {
+		if err := react(r.note, "👍", r.on); err != nil {
+			t.Fatalf("react_note %+v: %v", r, err)
+		}
+	}
+	if got := az.Likes(pr.ID, talk, 1); !slices.Equal(got, []string{azuretest.Me.UniqueName}) {
+		t.Errorf("the conversation comment's likes after liking it twice: %v", got)
+	}
+	if got := az.Likes(pr.ID, onLine, 1); !slices.Equal(got, []string{"priya@acme.com"}) {
+		t.Errorf("the line comment's likes after taking yours back twice: %v", got)
+	}
+	if err := react(line.ID, "🎉", true); err == nil {
+		t.Error("a reaction other than a like was taken")
 	}
 }

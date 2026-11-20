@@ -38,8 +38,8 @@ more). The reaction is posted as you, at once, and the thread syncs to show it.
 `review.reaction.toggle {thread, comment, emoji}` does the same from keys or Lua (👍 when no emoji is given).
 
 GitLab's mirrored notes work the same way, with its award emoji: **☺** offers the same eight, and an award already on
-a note (🔥, or a custom one shown as `:name:`) can be added and taken back too. Another code host shows its reactions
-when its plugin gives them.
+a note (🔥, or a custom one shown as `:name:`) can be added and taken back too. An Azure DevOps comment takes only a
+**like**, shown as 👍. Another code host shows its reactions when its plugin gives them.
 
 ## Trusted authors {#trusted}
 
