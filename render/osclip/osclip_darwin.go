@@ -28,10 +28,22 @@ static char *orielClipFiles(void) {
 	}
 }
 
-// orielClipImage is the clipboard's picture as PNG, or NULL; the caller frees it.
-static void *orielClipImage(size_t *n) {
+// orielClipDensity is the clipboard picture's pixels per point, as AppKit reads it (a TIFF's or a PNG's DPI): 2 for a
+// Retina screenshot; 0 when it can't tell.
+static double orielClipDensity(NSPasteboard *pb) {
+	NSImage *img = [[NSImage alloc] initWithPasteboard:pb];
+	NSImageRep *rep = img.representations.firstObject;
+	if (img == nil || rep == nil || img.size.width <= 0 || rep.pixelsWide <= 0) {
+		return 0;
+	}
+	return (double)rep.pixelsWide / img.size.width;
+}
+
+// orielClipImage is the clipboard's picture as PNG, or NULL, and its pixels per point; the caller frees it.
+static void *orielClipImage(size_t *n, double *density) {
 	@autoreleasepool {
 		NSPasteboard *pb = [NSPasteboard generalPasteboard];
+		*density = orielClipDensity(pb);
 		NSData *png = [pb dataForType:NSPasteboardTypePNG];
 		if (png == nil) {
 			NSData *tiff = [pb dataForType:NSPasteboardTypeTIFF];
@@ -54,8 +66,11 @@ static void *orielClipImage(size_t *n) {
 import "C"
 
 import (
+	"math"
 	"strings"
 	"unsafe"
+
+	"github.com/liamg/oriel/internal/imagex"
 )
 
 func files() []string {
@@ -67,9 +82,12 @@ func files() []string {
 	return strings.Split(C.GoString(p), "\n")
 }
 
+// image is the clipboard's PNG, saying its density, which AppKit may keep off the PNG itself (on the TIFF beside it,
+// say): drawn without it, a Retina screenshot shows twice its size, enlarged.
 func image() []byte {
 	var n C.size_t
-	p := C.orielClipImage(&n)
+	var d C.double
+	p := C.orielClipImage(&n, &d)
 	if p == nil {
 		return nil
 	}
@@ -77,5 +95,9 @@ func image() []byte {
 	if n > maxImage {
 		return nil
 	}
-	return C.GoBytes(p, C.int(n))
+	b := C.GoBytes(p, C.int(n))
+	if k := math.Round(float64(d)); k >= 2 {
+		b = imagex.WithPNGDensity(b, float32(k))
+	}
+	return b
 }
