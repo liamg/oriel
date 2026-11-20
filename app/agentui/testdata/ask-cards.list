@@ -136,7 +136,7 @@ text "Not yet: lands with rethink/rounding" @1182.5938,866.5471 #ece6d8 Inter 12
 text "2" @1554,865.60004 #4f4a40 JetBrains Mono 10
 rect 1158,887 412x30 fill #060606 radius 6
 clip 1158,887 412x30 r 6
-  text "or type an answer: ⏎ sends it" @1168,906.5471 #7c7566 Inter 12.5
+  text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @1168,906.5471 #7c7566 Inter 12.5
 pop
 rect 1158,887 412x30 radius 6 stroke 1 #332f27
 rect 1158,926 59.125x26 fill #191815 radius 6 stroke 1 #332f27
@@ -145,6 +145,10 @@ rect 1225.125,926 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
 text "Console" @1235.125,943.36523 #ece6d8 Inter 12
 rect 1288.1875,931.5 14x15 radius 3 stroke 1 #ece6d866
 text "g" @1292.1875,942.42 #ece6d8cc JetBrains Mono 9.5
+clip 1158,887 412x30 r 6
+  rect 1554.3334,898 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+pop
 rect 0,0 1600x1000 fill #030508b8
 rect 420,299.4906 760x401.0188 fill #0c0c0b radius 12
 clip 420,299.4906 760x401.0188 r 12

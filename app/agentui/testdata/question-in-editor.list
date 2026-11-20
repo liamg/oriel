@@ -282,7 +282,7 @@ clip 44,50 1556x924 r 0
           text "2" @850,711.7111 #4f4a40 JetBrains Mono 10
           rect 138,733.1111 728x30 fill #060606 radius 6
           clip 138,733.1111 728x30 r 6
-            text "or type an answer: ⏎ sends it" @148,752.6582 #7c7566 Inter 12.5
+            text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @148,752.6582 #7c7566 Inter 12.5
           pop
           rect 138,733.1111 728x30 radius 6 stroke 1 #332f27
           rect 138,772.1111 59.125x26 fill #191815 radius 6 stroke 1 #332f27
@@ -428,6 +428,20 @@ clip 44,50 1556x924 r 0
     clip 44,81 1556x893 r 0
       clip 44,107 1556x867 r 0
         text "▪" @93.296875,252.77 #4cc9f0 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+clip 44,50 1556x924 r 0
+  clip 44,81 1556x893 r 0
+    clip 44,81 1556x893 r 0
+      clip 44,107 1556x867 r 0
+        clip 112,264 780x598.1111 r 6
+          clip 138,733.1111 728x30 r 6
+            rect 850.3333,744.1111 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
+            path 5 segments stroke 1.25 #7c7566
+          pop
+        pop
       pop
     pop
   pop
