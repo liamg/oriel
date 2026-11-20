@@ -3,6 +3,7 @@ package osclip
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -22,6 +23,32 @@ func files() []string {
 }
 
 func image() []byte { return read("image/png") }
+
+// setImage puts png on the clipboard with wl-copy or xclip, which each stay behind in the background to serve it.
+func setImage(png []byte) error {
+	var cmd []string
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		if _, err := exec.LookPath("wl-copy"); err == nil {
+			cmd = []string{"wl-copy", "--type", "image/png"}
+		}
+	}
+	if cmd == nil {
+		if _, err := exec.LookPath("xclip"); err == nil {
+			cmd = []string{"xclip", "-selection", "clipboard", "-t", "image/png", "-i"}
+		}
+	}
+	if cmd == nil {
+		return errNoImages
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c := exec.CommandContext(ctx, cmd[0], cmd[1:]...)
+	c.Stdin = bytes.NewReader(png)
+	if out, err := c.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %w: %s", cmd[0], err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
 
 // read is the clipboard's content of type mime, if it offers it.
 func read(mime string) []byte {

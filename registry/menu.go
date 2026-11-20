@@ -33,12 +33,13 @@ type MenuWhen struct {
 	View      string // the view right-clicked: "editor", "problems"; "*" any view, not the window around them
 	File      string // a glob over the file there (its base name or path): "*.go"
 	Selection bool   // only with a selection
+	Text      bool   // only with text selected in the window's pages (MenuCtx.SelectedText), not an editor's
 	Help      string // a prefix of the clicked node's help id: "shell/settings"
 	Subject   string // a prefix of what the clicked node stands for: "session:"
 }
 
-// MenuCtx is what was right-clicked: its view and instance, the file and selection there, its help id and what it
-// stands for (ui.Style.Subject).
+// MenuCtx is what was right-clicked: its view and instance, the file and selection there, its help id, what it
+// stands for (ui.Style.Subject) and what it offers to act on (ui.Style.Offer).
 type MenuCtx struct {
 	View, Instance string
 	Project        string // the project the view was opened for, if any
@@ -46,6 +47,8 @@ type MenuCtx struct {
 	Selection      bool
 	Help           string
 	Subject        string // "session:fix-login"
+	Offer          any    // an image.Image, a widget.TextField; nil for none
+	SelectedText   string // the text selected in the window's pages, if any
 }
 
 func (MenuItem) ContributionKind() string   { return "menu.item" }
@@ -66,7 +69,7 @@ func (m MenuItem) Matches(at MenuCtx) bool {
 			return false
 		}
 	}
-	if w.Selection && !at.Selection {
+	if w.Selection && !at.Selection || w.Text && at.SelectedText == "" {
 		return false
 	}
 	if w.Subject != "" && !strings.HasPrefix(at.Subject, w.Subject) {

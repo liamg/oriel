@@ -1,8 +1,12 @@
 package keys
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
@@ -49,6 +53,33 @@ func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 				return m.h.Run(ctx, "view.close", registry.Args{"id": at.View, "instance": at.Instance, "project": at.Project})
 			}},
+		{Name: "page.text.copy", Label: "Copy", Group: "edit", Order: 1, When: registry.MenuWhen{Text: true}, Source: "builtin:menus",
+			Run: func(_ registry.Ctx, at registry.MenuCtx) error {
+				kit.CopyText(m.h, at.SelectedText)
+				return nil
+			}},
+		{Name: "image.copy", Label: "Copy image", Group: "edit", Order: 5, When: registry.MenuWhen{Subject: widget.ImageSubject}, Source: "builtin:menus",
+			Disabled: func(at registry.MenuCtx) string {
+				if _, ok := at.Offer.(image.Image); !ok {
+					return "no picture here"
+				}
+				return ""
+			},
+			Run: func(_ registry.Ctx, at registry.MenuCtx) error {
+				img, ok := at.Offer.(image.Image)
+				if !ok {
+					return errors.New("no picture here to copy")
+				}
+				var b bytes.Buffer
+				if err := png.Encode(&b, img); err != nil {
+					return err
+				}
+				return kit.CopyImage(m.h, b.Bytes())
+			}},
+		fieldItem("field.cut", "Cut", 1, "cut", true),
+		fieldItem("field.copy", "Copy", 2, "copy", true),
+		fieldItem("field.paste", "Paste", 3, "paste", false),
+		fieldItem("field.all.select", "Select all", 4, "select-all", false),
 		m.closeTabs("tab.others.close", "Close Others", 92, func(i, at int) bool { return i != at }),
 		m.closeTabs("tab.left.close", "Close to the Left", 93, func(i, at int) bool { return i < at }),
 		m.closeTabs("tab.right.close", "Close to the Right", 94, func(i, at int) bool { return i > at }),
@@ -57,6 +88,35 @@ func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 		m.Add(h.Contribute(it))
 	}
 	return nil
+}
+
+// fieldItem is a text field's menu item making edit op in it (widget.TextField); selected says it needs a selection,
+// which a field of hidden text won't give.
+func fieldItem(name, label string, order int, op string, selected bool) registry.MenuItem {
+	field := func(at registry.MenuCtx) (widget.TextField, bool) { f, ok := at.Offer.(widget.TextField); return f, ok }
+	return registry.MenuItem{Name: name, Label: label, Group: "edit", Order: order, When: registry.MenuWhen{Subject: widget.TextFieldSubject},
+		Source: "builtin:menus",
+		Disabled: func(at registry.MenuCtx) string {
+			f, ok := field(at)
+			switch {
+			case !ok:
+				return "no text field here"
+			case selected && f.Secret():
+				return "hidden"
+			}
+			if from, to := f.Selection(); selected && from == to {
+				return "nothing selected"
+			}
+			return ""
+		},
+		Run: func(_ registry.Ctx, at registry.MenuCtx) error {
+			f, ok := field(at)
+			if !ok {
+				return errors.New("no text field here")
+			}
+			f.Edit(op)
+			return nil
+		}}
 }
 
 // closeTabs is a tab's menu item closing the tabs beside it in its pane that close says to, by place.
@@ -86,12 +146,12 @@ func (m *Menus) closeTabs(name, label string, order int, close func(i, at int) b
 }
 
 // where is what node t at p is in: the view whose tab it is, or else the pane's view (the smallest pane holding
-// p), and what that view says is there.
+// p), and what that view says is there. A page or dialog over the panes is in none of them.
 func (m *Menus) where(t ui.ID, p render.Point, help, subject string) registry.MenuCtx {
 	at := registry.MenuCtx{Help: help, Subject: subject}
 	if v, ok := m.h.PaneTab(t); ok {
 		at.View, at.Instance, at.Project = v.ID, v.Instance, v.Project
-	} else {
+	} else if m.h.UI().LayerOf(t) < ui.LayerPage {
 		best := float32(-1)
 		for _, v := range m.h.Layout().Visible() {
 			r, ok := m.h.PaneRect(v)
@@ -118,6 +178,7 @@ func (m *Menus) build(c *ui.Ctx) {
 	}
 	if t, p, ok := u.ContextClick(); ok {
 		at := m.where(t, p, u.Help(t), u.SubjectAt(t, p))
+		at.Offer, at.SelectedText = u.OfferAt(t, p), u.SelectedText()
 		if items := registry.MenuItems(m.h, at); len(items) > 0 || at.Help != "" {
 			m.target, m.at, m.items = t, at, items
 		}

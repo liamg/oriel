@@ -3,7 +3,9 @@ package shell
 import (
 	"cmp"
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +21,7 @@ import (
 // Desktop is what Oriel asks of the OS: the clipboard, the browser and the file manager.
 type Desktop interface {
 	SetClipboard(text string)
+	SetClipboardImage(png []byte) error // a picture, in place of what the clipboard held
 	ReadClipboard() (string, bool)
 	OpenURL(url string) error
 	Reveal(path string) error // shows path in the file manager: selected in Finder, its folder elsewhere
@@ -62,10 +65,17 @@ func (x *desktopPlugin) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return (*x.desktop).Reveal(p)
 		}}))
-	x.Add(h.Command(registry.Command{ID: "system.copy", Grant: registry.Open, Title: "Copy {text} to the system clipboard",
-		Args: []registry.Arg{registry.StringArg("text")}, Run: func(_ registry.Ctx, a registry.Args) error {
+	x.Add(h.Command(registry.Command{ID: "system.copy", Grant: registry.Open, Title: "Copy {text}, or {image} (a PNG, base64), to the system clipboard",
+		Args: []registry.Arg{registry.StringArg("text"), registry.StringArg("image")}, Run: func(_ registry.Ctx, a registry.Args) error {
 			if *x.desktop == nil {
 				return errors.New("there's no clipboard to copy to")
+			}
+			if img := a.String("image"); img != "" {
+				png, err := base64.StdEncoding.DecodeString(img)
+				if err != nil {
+					return fmt.Errorf("the image isn't base64: %w", err)
+				}
+				return (*x.desktop).SetClipboardImage(png)
 			}
 			(*x.desktop).SetClipboard(a.String("text"))
 			return nil
@@ -84,6 +94,13 @@ func (d osDesktop) SetClipboard(text string) {
 	if d.clip != nil {
 		d.clip.SetClipboard(text)
 	}
+}
+
+func (d osDesktop) SetClipboardImage(png []byte) error {
+	if c, ok := d.clip.(render.ClipboardImage); ok {
+		return c.SetClipboardImage(png)
+	}
+	return errors.New("this window's clipboard takes only text")
 }
 
 func (d osDesktop) ReadClipboard() (string, bool) {

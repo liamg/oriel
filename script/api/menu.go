@@ -11,7 +11,7 @@ import (
 //oriel:api name=menu cap=ui
 type Menu struct{ a *APIs }
 
-//oriel:api doc="Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args. A plugin's entry may run only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone."
+//oriel:api doc="Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection (an editor's), text (text selected in a page), help, subject = 'session:', 'image', 'textfield' }, group, order (50 by default), key }. at has view, instance, file, selection, selected_text (the text selected in a page), help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args. A plugin's entry may run only a command it could run itself with oriel.run: one already registered, whose capability it holds, never one that's yours alone."
 func (m Menu) Add(spec script.Table, where string) error {
 	label := str(spec, "label")
 	if label == "" {
@@ -23,7 +23,8 @@ func (m Menu) Add(spec script.Table, where string) error {
 	}
 	if w, ok := spec["when"].(script.Table); ok {
 		sel, _ := w["selection"].(bool)
-		it.When = registry.MenuWhen{View: str(w, "view"), File: str(w, "file"), Selection: sel, Help: str(w, "help"), Subject: str(w, "subject")}
+		text, _ := w["text"].(bool)
+		it.When = registry.MenuWhen{View: str(w, "view"), File: str(w, "file"), Selection: sel, Text: text, Help: str(w, "help"), Subject: str(w, "subject")}
 	}
 	switch run := spec["run"].(type) {
 	case string:
@@ -37,7 +38,7 @@ func (m Menu) Add(spec script.Table, where string) error {
 	case *script.Fn:
 		it.Run = func(_ registry.Ctx, at registry.MenuCtx) error {
 			_, err := m.a.VM.Call(run, script.Table{"view": at.View, "instance": at.Instance, "project": at.Project, "file": at.File,
-				"selection": at.Selection, "help": at.Help, "subject": at.Subject})
+				"selection": at.Selection, "selected_text": at.SelectedText, "help": at.Help, "subject": at.Subject})
 			return err
 		}
 	default:

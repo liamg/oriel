@@ -2,6 +2,7 @@ package kit
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -86,6 +87,11 @@ func (w *WhileShown) Drop() {
 // OpenURL opens url in the OS's default app for it (system.open).
 func OpenURL(h plugin.Host, url string) error {
 	return h.Run(context.Background(), "system.open", registry.Args{"url": url})
+}
+
+// CopyImage puts a picture, as PNG, on the system clipboard (system.copy).
+func CopyImage(h plugin.Host, png []byte) error {
+	return h.Run(context.Background(), "system.copy", registry.Args{"image": base64.StdEncoding.EncodeToString(png)})
 }
 
 // CopyText puts s on the system clipboard (system.copy).

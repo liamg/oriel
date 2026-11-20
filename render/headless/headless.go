@@ -147,6 +147,12 @@ func (w *Window) CopyImage(png []byte) {
 	w.clip, w.files, w.image = "", nil, png
 }
 
+// SetClipboardImage is CopyImage, as render.ClipboardImage.
+func (w *Window) SetClipboardImage(png []byte) error {
+	w.CopyImage(png)
+	return nil
+}
+
 func (w *Window) ReadClipboardFiles() []string {
 	w.mu.Lock()
 	defer w.mu.Unlock()

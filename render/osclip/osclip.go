@@ -2,6 +2,7 @@
 package osclip
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 )
@@ -11,6 +12,17 @@ const maxImage = 32 << 20
 
 // Files are the paths of the files copied in the OS's file manager, if that's what the clipboard holds.
 func Files() []string { return files() }
+
+// SetImage puts png on the clipboard, in place of what it held.
+func SetImage(png []byte) error {
+	if len(png) == 0 {
+		return errors.New("no picture to copy")
+	}
+	return setImage(png)
+}
+
+// errNoImages is a platform, or a display without a clipboard tool, that can't put a picture on the clipboard.
+var errNoImages = errors.New("the clipboard here takes only text")
 
 // Image is the picture the clipboard holds, as PNG.
 func Image() ([]byte, bool) {

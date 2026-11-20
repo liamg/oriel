@@ -102,6 +102,11 @@ type ClipboardFiles interface {
 	ReadClipboardImage() ([]byte, bool)
 }
 
+// ClipboardImage is a clipboard that also takes a picture: png, put on it in place of what it held.
+type ClipboardImage interface {
+	SetClipboardImage(png []byte) error
+}
+
 // Frame is one frame's drawing. Rects and fills snap to device pixels; paths and lines don't,
 // so a 0.5 px hairline stays 0.5 px.
 type Frame interface {

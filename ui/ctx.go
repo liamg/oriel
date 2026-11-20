@@ -551,6 +551,9 @@ func (c *Ctx) ClaimContext(id ID) {
 // RequestHelp asks for help page id.
 func (c *Ctx) RequestHelp(id string) { c.u.RequestHelp(id) }
 
+// LayerOf is the highest layer of the floats id is in, as last frame drew it (UI.LayerOf).
+func (c *Ctx) LayerOf(id ID) int { return c.u.LayerOf(id) }
+
 // Help is the help id of id or its nearest ancestor with one.
 func (c *Ctx) Help(id ID) string { return c.u.Help(id) }
 

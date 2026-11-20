@@ -11,6 +11,11 @@ type Desktop struct {
 
 func (d *Desktop) SetClipboard(s string) { d.Text, d.Files, d.Image = s, nil, nil }
 
+func (d *Desktop) SetClipboardImage(png []byte) error {
+	d.Text, d.Files, d.Image = "", nil, png
+	return nil
+}
+
 func (d *Desktop) ReadClipboard() (string, bool) { return d.Text, d.Text != "" }
 
 func (d *Desktop) ReadClipboardFiles() []string { return d.Files }

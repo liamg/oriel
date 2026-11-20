@@ -28,6 +28,27 @@ static char *orielClipFiles(void) {
 	}
 }
 
+// orielClipSetImage puts n bytes of PNG on the clipboard, as PNG and as the TIFF other apps may look for; 0 when it
+// can't.
+static int orielClipSetImage(const void *png, size_t n) {
+	@autoreleasepool {
+		NSData *data = [NSData dataWithBytes:png length:n];
+		NSBitmapImageRep *rep = [NSBitmapImageRep imageRepWithData:data];
+		if (rep == nil) {
+			return 0;
+		}
+		NSPasteboard *pb = [NSPasteboard generalPasteboard];
+		[pb clearContents];
+		[pb declareTypes:@[NSPasteboardTypePNG, NSPasteboardTypeTIFF] owner:nil];
+		BOOL ok = [pb setData:data forType:NSPasteboardTypePNG];
+		NSData *tiff = [rep TIFFRepresentation];
+		if (tiff != nil) {
+			[pb setData:tiff forType:NSPasteboardTypeTIFF];
+		}
+		return ok ? 1 : 0;
+	}
+}
+
 // orielClipDensity is the clipboard picture's pixels per point, as AppKit reads it (a TIFF's or a PNG's DPI): 2 for a
 // Retina screenshot; 0 when it can't tell.
 static double orielClipDensity(NSPasteboard *pb) {
@@ -66,6 +87,7 @@ static void *orielClipImage(size_t *n, double *density) {
 import "C"
 
 import (
+	"errors"
 	"math"
 	"strings"
 	"unsafe"
@@ -80,6 +102,13 @@ func files() []string {
 	}
 	defer C.free(unsafe.Pointer(p))
 	return strings.Split(C.GoString(p), "\n")
+}
+
+func setImage(png []byte) error {
+	if C.orielClipSetImage(unsafe.Pointer(&png[0]), C.size_t(len(png))) == 0 {
+		return errors.New("the clipboard didn't take the picture")
+	}
+	return nil
 }
 
 // image is the clipboard's PNG, saying its density, which AppKit may keep off the PNG itself (on the TIFF beside it,

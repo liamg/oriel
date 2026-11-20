@@ -51,13 +51,15 @@ type HeadlessOpts struct {
 // memDesktop is a clipboard in memory, and a browser that opens nothing but notes what it was asked to.
 type memDesktop struct {
 	text   string
+	image  []byte
 	opened []string
 }
 
-func (c *memDesktop) SetClipboard(s string)              { c.text = s }
+func (c *memDesktop) SetClipboard(s string)              { c.text, c.image = s, nil }
+func (c *memDesktop) SetClipboardImage(png []byte) error { c.text, c.image = "", png; return nil }
 func (c *memDesktop) ReadClipboard() (string, bool)      { return c.text, c.text != "" }
 func (c *memDesktop) ReadClipboardFiles() []string       { return nil }
-func (c *memDesktop) ReadClipboardImage() ([]byte, bool) { return nil, false }
+func (c *memDesktop) ReadClipboardImage() ([]byte, bool) { return c.image, len(c.image) > 0 }
 func (c *memDesktop) Reveal(p string) error {
 	c.opened = append(c.opened, "reveal:"+p)
 	return nil

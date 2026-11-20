@@ -1,8 +1,10 @@
 package editor_test
 
 import (
+	"bytes"
 	"image"
 	"image/color"
+	"image/png"
 	"os"
 	"path/filepath"
 	"slices"
@@ -161,5 +163,31 @@ func TestSVGFileTab(t *testing.T) {
 	s.Frames(2)
 	if !drew(s, "SVG image") || !drew(s, "It can't be read as an image") {
 		t.Errorf("a broken SVG's card:\n%s", s.Text())
+	}
+}
+
+// help ui/context-menu: "On a picture (an image file's tab, one in a comment or a doc): Copy image, as PNG." It
+// copies the picture itself, at its own size, not the tab's view of it.
+func TestAnImagesMenuCopiesIt(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "hero.png"), editor.PNGBytes(t, photo(640, 400)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
+	s.Run("editor.open", registry.Args{"path": "hero.png"})
+	s.Frames(3)
+	img := s.NodeRole("image", "hero.png")
+	if text := s.RightClick(apptest.Centre(img.Bounds)); !strings.Contains(text, "Copy image") {
+		t.Fatalf("the image's menu lacks Copy image:\n%s", text)
+	}
+	item := s.FindRole(render.RoleMenuItem, "Copy image")
+	s.Click(apptest.Centre(item.Bounds), 0)
+	s.Frames(2)
+	got, err := png.Decode(bytes.NewReader(s.Desktop.Image))
+	if err != nil {
+		t.Fatalf("the clipboard has no PNG: %v", err)
+	}
+	if b := got.Bounds(); b.Dx() != 640 || b.Dy() != 400 {
+		t.Errorf("copied a %v picture, want the 640×400 file's", b.Size())
 	}
 }
