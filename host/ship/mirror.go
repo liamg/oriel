@@ -30,13 +30,14 @@ type mirrorState struct {
 
 // mirrorMsg is one comment of a mirrored thread; key is its id on the host.
 type mirrorMsg struct {
-	key     string
-	user    string
-	body    string
-	at      time.Time
-	trusted bool // the agent may read its text
-	own     bool // the user's own: not given to the agent as theirs to answer
-	aside   bool // another's, for the agent to read but not to answer: in a review, see asides
+	key       string
+	user      string
+	body      string
+	at        time.Time
+	trusted   bool // the agent may read its text
+	own       bool // the user's own: not given to the agent as theirs to answer
+	aside     bool // another's, for the agent to read but not to answer: in a review, see asides
+	reactions []core.Reaction
 }
 
 // mirrored is a thread as its code host has it.
@@ -163,11 +164,12 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return is(c, m) })
 		if i < 0 {
 			t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorHost, Name: m.user, Body: m.body, Time: m.at.UTC(),
-				HostID: m.key, Redacted: !m.trusted, Delivered: m.own || m.aside, Mine: m.own})
+				HostID: m.key, Redacted: !m.trusted, Delivered: m.own || m.aside, Mine: m.own, Reactions: m.reactions})
 			continue
 		}
 		c := &t.Comments[i]
 		c.Mine = c.Mine || m.own
+		c.Reactions = m.reactions
 		if c.Author == core.AuthorHost && c.Body != m.body {
 			c.Body, c.Edited, c.Delivered = m.body, true, m.own || m.aside
 			c.Redacted = !m.trusted
@@ -205,7 +207,7 @@ func (x *Ships) MirrorReview(ctx context.Context, r hostapi.MirrorReviewReq) (er
 		}
 		review := reviewedPR(se) != ""
 		for _, c := range rt.Comments {
-			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted, own: review && c.Mine})
+			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted, own: review && c.Mine, reactions: c.Reactions})
 		}
 		if review {
 			asides(m.msgs, r.Author, rt.Key == "")

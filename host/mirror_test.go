@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -133,6 +134,58 @@ func TestMirrorReviewFromACodeHost(t *testing.T) {
 	}
 	if th, _ := r.session(id).Thread(review.ID); th.Status != core.ThreadDismissed {
 		t.Errorf("a thread gone from the host is %s", th.Status)
+	}
+}
+
+// A mirrored comment carries its reactions there, kept up to date by each mirror. A reaction is no new text, so the
+// agent isn't handed the comment again.
+func TestMirroredCommentsKeepTheirReactions(t *testing.T) {
+	r := newRig(t)
+	co, _ := githubRepo(t, "web", map[string]string{"chart.ts": "export const chart = 1\n"})
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "weekly chart", Provider: "fake", Repos: []core.RepoID{core.RepoID(co.Dir)}})
+	a := r.agent()
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	answered(r, id, a)
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
+	a.Handled(t)
+	p, _ := r.session(id).Primary()
+	ctx := context.Background()
+	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	req := hostapi.MirrorReviewReq{Session: id, Project: p.Name, Host: "gitlab", Repo: "acme/web", PR: 57, URL: "https://gitlab.com/acme/web/-/merge_requests/57",
+		Threads: []hostapi.ReviewThread{{Key: "d1", Path: "chart.ts", Line: 1, Reviewer: "priya",
+			Comments: []hostapi.ReviewComment{{Key: "n1", User: "priya", Body: "Name the export for what it charts.", At: at, Trusted: true,
+				Reactions: []core.Reaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"bo", "you"}}}}}}}}
+	if err := r.w.code.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	var review core.Thread
+	for _, th := range r.session(id).Threads {
+		if th.Hosted != nil && th.Hosted.Key == "d1" {
+			review = th
+		}
+	}
+	if len(review.Comments) != 1 || !reflect.DeepEqual(review.Comments[0].Reactions, []core.Reaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"bo", "you"}}}) {
+		t.Fatalf("the mirrored comment: %+v", review.Comments)
+	}
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the comment handed to the agent", func(se core.SessionState) bool {
+		th, _ := se.Thread(review.ID)
+		return len(th.Undelivered()) == 0
+	})
+
+	req.Threads[0].Comments[0].Reactions = []core.Reaction{{Emoji: "👍", Count: 1, Who: []string{"bo"}}, {Emoji: "🎉", Count: 1, Who: []string{"priya"}}}
+	if err := r.w.code.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	th, _ := r.session(id).Thread(review.ID)
+	c := th.Comments[0]
+	if !reflect.DeepEqual(c.Reactions, []core.Reaction{{Emoji: "👍", Count: 1, Who: []string{"bo"}}, {Emoji: "🎉", Count: 1, Who: []string{"priya"}}}) {
+		t.Errorf("the reactions after they changed there: %+v", c.Reactions)
+	}
+	if c.Edited || !c.Delivered {
+		t.Errorf("a new reaction handed the comment to the agent again: %+v", c)
 	}
 }
 

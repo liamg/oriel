@@ -50,6 +50,15 @@ type Evidence struct {
 	OK    bool   `json:"ok"`
 }
 
+// Reaction is how many people reacted to a comment with an emoji, Mine when the user is one of them. Who are some
+// or all of them, by login, where the host names them.
+type Reaction struct {
+	Emoji string   `json:"emoji"`
+	Count int      `json:"count"`
+	Mine  bool     `json:"mine,omitempty"`
+	Who   []string `json:"who,omitempty"`
+}
+
 // Comment is one message in a thread.
 type Comment struct {
 	ID        string     `json:"id"`
@@ -69,11 +78,12 @@ type Comment struct {
 	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a code host's thread's).
 	Draft bool `json:"draft,omitempty"`
 	// HostID is the comment's id on its code host: one mirrored from there, or a draft once forwarded.
-	HostID   string    `json:"hostId,omitempty"`
-	Sent     time.Time `json:"sent,omitzero"`      // when the user forwarded it
-	Redacted bool      `json:"redacted,omitempty"` // its author isn't trusted, so the agent isn't given its text
-	Edited   bool      `json:"edited,omitempty"`   // changed where it came from since it was first mirrored
-	Mine     bool      `json:"mine,omitempty"`     // mirrored, and written there by the user: not the agent's to answer
+	HostID    string     `json:"hostId,omitempty"`
+	Sent      time.Time  `json:"sent,omitzero"`       // when the user forwarded it
+	Redacted  bool       `json:"redacted,omitempty"`  // its author isn't trusted, so the agent isn't given its text
+	Edited    bool       `json:"edited,omitempty"`    // changed where it came from since it was first mirrored
+	Mine      bool       `json:"mine,omitempty"`      // mirrored, and written there by the user: not the agent's to answer
+	Reactions []Reaction `json:"reactions,omitempty"` // mirrored: the emoji people reacted with where it came from
 }
 
 // OriginCodeHost is a thread mirrored from a code host's pull request (HostThread.Host names it).

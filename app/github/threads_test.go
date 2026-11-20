@@ -2,12 +2,15 @@ package github_test
 
 import (
 	"context"
+	"reflect"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -71,5 +74,70 @@ func TestGitHubHostThreads(t *testing.T) {
 	}
 	if err := h.Resolve(ctx, repo, rpr, review, true); err != nil || !hub.Resolved(root.ID) {
 		t.Fatalf("resolve: %v, resolved there %v", err, hub.Resolved(root.ID))
+	}
+}
+
+// GitHub's code host offers its 8 reactions. A mirrored comment carries its reactions, the user's own marked, and
+// ReactNote adds the user's reaction to a line comment, a conversation comment or a review's body, or takes it back.
+func TestGitHubHostCommentReactions(t *testing.T) {
+	s, _, hub, _, _ := apptest.ShipScene(t)
+	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
+	root := hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: "priya", Path: "round.go", Line: 3, Body: "Name the mode."})
+	ic := hub.AddIssueComment("acme/pricing", pr.Number, gh.IssueComment{User: "bo", Body: "When does this ship?"})
+	rv := hub.AddReview("acme/pricing", pr.Number, gh.Review{User: "priya", State: gh.ReviewCommented, Body: "A few things."})
+	hub.ReactAs("bo", ghtest.LineComment, root.ID, "+1")
+	hub.ReactAs("you", ghtest.LineComment, root.ID, "heart")
+
+	h, _ := registry.HostByName(s.Registry(), "github")
+	if h.ReactNote == nil || !slices.Equal(h.Reactions, []string{"👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀"}) {
+		t.Fatalf("GitHub's reactions: %v, react %v", h.Reactions, h.ReactNote != nil)
+	}
+	repo := registry.CodeRepo{Repo: "acme/pricing", Site: registry.Site{Host: "github.com"}}
+	rpr := registry.PR{Number: pr.Number, URL: pr.URL, Author: "bob"}
+	ctx := context.Background()
+	threads := func() (review, convo registry.ReviewThread) {
+		t.Helper()
+		ts, err := h.Threads(ctx, repo, rpr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, th := range ts {
+			if th.ID == "" {
+				convo = th
+			} else {
+				review = th
+			}
+		}
+		return review, convo
+	}
+	review, convo := threads()
+	want := []registry.PRReaction{{Emoji: "👍", Count: 1, Who: []string{"bo"}}, {Emoji: "❤️", Count: 1, Mine: true, Who: []string{"you"}}}
+	if got := review.Comments[0].Reactions; !reflect.DeepEqual(got, want) {
+		t.Errorf("the line comment's reactions: %+v", got)
+	}
+
+	id := func(n int64) string { return strconv.FormatInt(n, 10) }
+	for _, r := range []struct {
+		th   registry.ReviewThread
+		note string
+	}{{review, id(root.ID)}, {convo, id(ic.ID)}, {convo, id(rv.ID)}} {
+		if err := h.ReactNote(ctx, repo, rpr, r.th, r.note, "👍", true); err != nil {
+			t.Fatalf("reacting to %s: %v", r.note, err)
+		}
+	}
+	if err := h.ReactNote(ctx, repo, rpr, review, id(root.ID), "❤️", false); err != nil {
+		t.Fatal(err)
+	}
+	review, convo = threads()
+	if got := review.Comments[0].Reactions; !reflect.DeepEqual(got, []registry.PRReaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"bo", "you"}}}) {
+		t.Errorf("the line comment after 👍 and taking ❤️ back: %+v", got)
+	}
+	for _, c := range convo.Comments {
+		if !reflect.DeepEqual(c.Reactions, []registry.PRReaction{{Emoji: "👍", Count: 1, Mine: true, Who: []string{"you"}}}) {
+			t.Errorf("%s's comment in the conversation after 👍: %+v", c.Author, c.Reactions)
+		}
+	}
+	if err := h.ReactNote(ctx, repo, rpr, review, id(root.ID), "🦄", true); err == nil {
+		t.Error("a reaction GitHub doesn't have was taken")
 	}
 }

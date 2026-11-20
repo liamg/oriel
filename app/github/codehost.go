@@ -61,6 +61,7 @@ func (x *Host) Activate(_ context.Context, h plugin.Host) error {
 		Requested: x.requested, Authored: x.authored, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve,
+		Reactions: githubReactions, ReactNote: x.reactNote,
 		Template: githubTemplate, Owners: githubOwners}))
 	for _, t := range gatewayTools() {
 		x.Add(h.Contribute(t))

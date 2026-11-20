@@ -3,9 +3,11 @@ package mirror_test
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
@@ -13,7 +15,9 @@ import (
 	"github.com/liamg/oriel/app/mirror"
 	"github.com/liamg/oriel/core"
 	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 func mirrorOf(s *apptest.Scene) *mirror.Mirror { return apptest.PluginOf[*mirror.Mirror](s, "mirror") }
@@ -135,4 +139,125 @@ func ghPosts(hub interface{ Calls() []string }) []string {
 		}
 	}
 	return out
+}
+
+// A mirrored comment shows its reactions there, the user's own lit. A click on one adds the user's or takes it back;
+// 👍 is offered on a comment with none yet, and the picker offers the host's every reaction.
+func TestReactToAMirroredComment(t *testing.T) {
+	s, lw, hub, se, _ := apptest.ShipScene(t)
+	x := mirrorOf(s)
+	ag := lw.Fake.WaitStarted(t)
+	ag.WaitSent(t)
+	ag.Emit(agent.TurnStart{})
+	rig.Answered(t, s.Store(), ag)
+	ag.Emit(agent.TurnEnd{})
+	apiDir := apptest.ProjectDir(se, "search-api")
+	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
+	rig.WriteFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
+	var branch string
+	for _, p := range se.Projects {
+		if p.Name == "search-api" {
+			branch = p.Branch
+		}
+	}
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+		Path: "internal/api/usage/handler.go", Line: 3, Body: "Can this return an error instead?"})
+	reply := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "jkowalski", Association: "MEMBER", InReplyTo: root.ID, Body: "Seconded."})
+	hub.ReactAs("bo", ghtest.LineComment, root.ID, "hooray")
+
+	s.Run("review.threads.sync", nil)
+	x.Wait()
+	s.Run("diff.open", registry.Args{"path": file})
+	s.Until("the reactions under the comments", func() bool {
+		return s.Count("🎉 1 on priya-k's comment") > 0 && s.Count("React 👍 to jkowalski's comment") > 0
+	})
+	s.Lint("a mirrored comment's reactions")
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(s.Node("🎉 1 on priya-k's comment").Bounds)})
+	s.Frame()
+	s.SetNow(s.Now().Add(time.Second))
+	s.Frames(2)
+	if !strings.Contains(s.Text(), "bo · React with 🎉") {
+		t.Errorf("hovering 🎉 doesn't name who reacted:\n%s", s.Text())
+	}
+	s.PointerLeaves()
+
+	mine := func(id int64) map[string]bool {
+		out := map[string]bool{}
+		for name, who := range hub.ReactionsOn(ghtest.LineComment, id) {
+			out[name] = slices.Contains(who, "you")
+		}
+		return out
+	}
+	s.ClickOn("🎉 1 on priya-k's comment")
+	s.Until("the user's 🎉 shown", func() bool { x.Wait(); return s.Count("🎉 2 on priya-k's comment") > 0 })
+	if !mine(root.ID)["hooray"] {
+		t.Errorf("GitHub's reactions after a click on 🎉 1: %v", hub.ReactionsOn(ghtest.LineComment, root.ID))
+	}
+	s.ClickOn("🎉 2 on priya-k's comment")
+	s.Until("the user's 🎉 taken back", func() bool { x.Wait(); return s.Count("🎉 1 on priya-k's comment") > 0 })
+	if mine(root.ID)["hooray"] {
+		t.Error("the user's 🎉 is still on GitHub")
+	}
+
+	s.ClickOn("React 👍 to jkowalski's comment")
+	s.Until("the reply's 👍", func() bool { x.Wait(); return s.Count("👍 1 on jkowalski's comment") > 0 })
+	if !mine(reply.ID)["+1"] || mine(root.ID)["+1"] {
+		t.Errorf("👍 went on the wrong comment: first %v, reply %v", mine(root.ID), mine(reply.ID))
+	}
+
+	s.ClickOn("Add a reaction to priya-k's comment")
+	s.Until("the picker", func() bool { return s.Count("🚀") > 0 })
+	s.ClickOn("🚀")
+	s.Until("the user's 🚀", func() bool { x.Wait(); return s.Count("🚀 1 on priya-k's comment") > 0 })
+	if !mine(root.ID)["rocket"] {
+		t.Errorf("GitHub's reactions after picking 🚀: %v", hub.ReactionsOn(ghtest.LineComment, root.ID))
+	}
+}
+
+// A click on a reaction while the last click's is still being sent changes the user's mind rather than being turned
+// away: what's shown follows the clicks, and GitHub ends with the last.
+func TestReactAgainWhileSending(t *testing.T) {
+	s, lw, hub, se, _ := apptest.ShipScene(t)
+	x := mirrorOf(s)
+	ag := lw.Fake.WaitStarted(t)
+	ag.WaitSent(t)
+	ag.Emit(agent.TurnStart{})
+	rig.Answered(t, s.Store(), ag)
+	ag.Emit(agent.TurnEnd{})
+	apiDir := apptest.ProjectDir(se, "search-api")
+	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
+	rig.WriteFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
+	var branch string
+	for _, p := range se.Projects {
+		if p.Name == "search-api" {
+			branch = p.Branch
+		}
+	}
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+		Path: "internal/api/usage/handler.go", Line: 3, Body: "Can this return an error instead?"})
+	hub.ReactAs("you", ghtest.LineComment, root.ID, "hooray")
+
+	s.Run("review.threads.sync", nil)
+	x.Wait()
+	s.Run("diff.open", registry.Args{"path": file})
+	s.Until("the user's 🎉", func() bool { return s.Count("🎉 1 on priya-k's comment") > 0 })
+
+	release := hub.HoldReactions(t)
+	s.ClickOn("🎉 1 on priya-k's comment")
+	s.Until("the 🎉 shown taken back, still there to click", func() bool { return s.Count("🎉 0 on priya-k's comment") > 0 })
+	s.Midway(func() { // the first click's reaction is still being sent
+		s.ClickOn("🎉 0 on priya-k's comment")
+		s.Until("the 🎉 shown again", func() bool { return s.Count("🎉 1 on priya-k's comment") > 0 })
+		if strings.Contains(s.Text(), "being sent") {
+			t.Errorf("the second click was turned away:\n%s", s.Text())
+		}
+	})
+	release()
+	x.Wait()
+	if who := hub.ReactionsOn(ghtest.LineComment, root.ID)["hooray"]; !slices.Equal(who, []string{"you"}) {
+		t.Errorf("GitHub's 🎉 after taking it back and reacting again: %v", who)
+	}
+	s.Until("the 🎉 as GitHub has it", func() bool { return s.Count("🎉 1 on priya-k's comment") > 0 })
 }

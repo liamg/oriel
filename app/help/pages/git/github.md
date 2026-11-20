@@ -1,6 +1,6 @@
 ---
 id: git/github
-covers: [review.threads.sync, review.draft.forward, review.draft.edit, review.draft.save, status-line.left.70-reviews, code.trusted_users]
+covers: [review.threads.sync, review.reaction.toggle, review.draft.forward, review.draft.edit, review.draft.save, status-line.left.70-reviews, code.trusted_users]
 related: [git/ship, agent/requests, files/diff]
 ---
 
@@ -28,6 +28,15 @@ once; it then shows as sent and doesn't come back from GitHub as a new comment. 
 
 On another code host the thread's header is **Review**, with the host's name on **↗ Forward to GitLab**; the reply
 goes through that host's plugin, as you.
+
+## Reactions {#reactions}
+
+Under each mirrored comment are its reactions on GitHub, with how many people reacted, yours lit. Click one to add
+yours, and again to take it back. A comment with none offers **👍**, to acknowledge it, and **☺** picks from all of
+GitHub's (👍 👎 😄 🎉 😕 ❤️ 🚀 👀). Rest the pointer on a reaction to see who left it (the first 10, then how many
+more). The reaction is posted as you, at once, and the thread syncs to show it.
+`review.reaction.toggle {thread, comment, emoji}` does the same from keys or Lua (👍 when no emoji is given). Another
+code host shows its reactions when its plugin gives them.
 
 ## Trusted authors {#trusted}
 

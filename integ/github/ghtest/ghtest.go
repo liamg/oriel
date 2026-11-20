@@ -22,33 +22,35 @@ import (
 // Server is the fake. Its methods seed it and read back what was done to it.
 type Server struct {
 	*httptest.Server
-	mu     sync.Mutex
-	now    time.Time
-	nextID int
-	prs    map[string][]*gh.PR   // by owner/name
-	checks map[string][]gh.Check // by owner/name@ref
-	logs   map[int64]string      // Actions jobs' logs
-	flows  map[int64]int64       // check suite → Actions workflow
-	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
-	calls  []string              // "POST /repos/acme/api/pulls"
-	lag    bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
-	hold   chan struct{}         // while set, creating a PR waits for it to close
-	unseen map[string]bool       // owner/name#number: made while lagging
+	mu            sync.Mutex
+	now           time.Time
+	nextID        int
+	prs           map[string][]*gh.PR   // by owner/name
+	checks        map[string][]gh.Check // by owner/name@ref
+	logs          map[int64]string      // Actions jobs' logs
+	flows         map[int64]int64       // check suite → Actions workflow
+	fail          map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
+	calls         []string              // "POST /repos/acme/api/pulls"
+	lag           bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
+	hold          chan struct{}         // while set, creating a PR waits for it to close
+	holdReactions chan struct{}         // while set, adding or taking back a reaction waits for it to close
+	unseen        map[string]bool       // owner/name#number: made while lagging
 
-	login        string                         // who the fake's client is: what it posts is by them
-	review       map[string][]*gh.ReviewComment // by owner/name#number
-	reviews      map[string][]gh.Review
-	issue        map[string][]*gh.IssueComment
-	resolved     map[int64]bool          // review threads resolved, by their first comment
-	members      map[string][]string     // org → logins
-	sizes        map[string]PRSize       // by owner/name#number
-	diffLines    map[string][]string     // by owner/name#number: where a review may comment
-	teams        map[string][]string     // org/team → logins
-	commits      map[string][]string     // by owner/name#number, oldest first
-	prReactions  map[string]gh.Reactions // by owner/name#number: the PR's own
-	reacted      map[string]int64        // "owner/name#number content": the signed-in user's own reactions, by id
-	nextReaction int64
-	asked        map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
+	login         string                         // who the fake's client is: what it posts is by them
+	review        map[string][]*gh.ReviewComment // by owner/name#number
+	reviews       map[string][]gh.Review
+	issue         map[string][]*gh.IssueComment
+	resolved      map[int64]bool          // review threads resolved, by their first comment
+	members       map[string][]string     // org → logins
+	sizes         map[string]PRSize       // by owner/name#number
+	diffLines     map[string][]string     // by owner/name#number: where a review may comment
+	teams         map[string][]string     // org/team → logins
+	commits       map[string][]string     // by owner/name#number, oldest first
+	prReactions   map[string]gh.Reactions // by owner/name#number: the PR's own
+	reacted       map[string]int64        // "owner/name#number content": the signed-in user's own reactions, by id
+	nextReaction  int64
+	noteReactions map[string]map[string][]string  // by a comment's node: each reaction's logins
+	asked         map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
 
 	mergeRepo  map[string]MergeRepo // by owner/name
 	mergeable  map[string][2]string // by owner/name#number: mergeable, mergeStateStatus
@@ -62,7 +64,7 @@ func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{}, flows: map[int64]int64{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
 		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}, diffLines: map[string][]string{},
-		teams: map[string][]string{}, commits: map[string][]string{}, prReactions: map[string]gh.Reactions{}, reacted: map[string]int64{}, asked: map[string]map[string]time.Time{},
+		teams: map[string][]string{}, commits: map[string][]string{}, prReactions: map[string]gh.Reactions{}, reacted: map[string]int64{}, noteReactions: map[string]map[string][]string{}, asked: map[string]map[string]time.Time{},
 		mergeRepo: map[string]MergeRepo{}, mergeable: map[string][2]string{}, mergedWith: map[string]string{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls", s.listPRs)
@@ -260,6 +262,17 @@ func (s *Server) HoldCreates(t interface{ Cleanup(func()) }) (release func()) {
 	defer s.mu.Unlock()
 	hold := make(chan struct{})
 	s.hold = hold
+	release = sync.OnceFunc(func() { close(hold) })
+	t.Cleanup(release)
+	return release
+}
+
+// HoldReactions makes adding or taking back a reaction wait until release is called, which a test's cleanup calls too.
+func (s *Server) HoldReactions(t interface{ Cleanup(func()) }) (release func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hold := make(chan struct{})
+	s.holdReactions = hold
 	release = sync.OnceFunc(func() { close(hold) })
 	t.Cleanup(release)
 	return release
@@ -465,6 +478,14 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&in)
 	if strings.Contains(in.Query, "mergeStateStatus") {
 		s.mergeState(w, in.Variables)
+		return
+	}
+	if strings.Contains(in.Query, "reactionGroups") {
+		s.commentReactions(w, in.Variables)
+		return
+	}
+	if strings.Contains(in.Query, "addReaction(") || strings.Contains(in.Query, "removeReaction(") {
+		s.reactNode(w, in.Query, in.Variables)
 		return
 	}
 	if strings.Contains(in.Query, "resolveReviewThread") {

@@ -52,6 +52,10 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 	if err != nil {
 		resolved = nil // unknown: each thread's resolution is left as it is
 	}
+	reacted, err := c.CommentReactions(ctx, repo, n)
+	if err != nil {
+		reacted = gh.CommentReactions{} // unknown: the comments show none
+	}
 	states := gh.ReviewStatesAt(reviews, pr.Head, pr.Reviewers)
 	state := func(user string) registry.ReviewState {
 		if s := states[user]; s != "" {
@@ -60,8 +64,9 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 		return ""
 	}
 	trusted, me := x.truster(ctx, c, repo), x.me(ctx, c, r.Site)
-	note := func(id int64, user, assoc, body string, at time.Time) registry.ReviewNote {
-		rn := registry.ReviewNote{ID: strconv.FormatInt(id, 10), Author: user, Body: body, At: at, Member: trusted(user, assoc), Mine: me != "" && user == me}
+	note := func(id int64, user, assoc, body string, at time.Time, r gh.ReactedNode) registry.ReviewNote {
+		rn := registry.ReviewNote{ID: strconv.FormatInt(id, 10), Author: user, Body: body, At: at, Member: trusted(user, assoc), Mine: me != "" && user == me,
+			Reactions: reactions(r)}
 		if w := gh.PostedAs(body); w != strings.TrimSpace(body) {
 			rn.Written = w
 		}
@@ -91,17 +96,17 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 			t.Resolved = &v
 		}
 		for _, rc := range cs {
-			t.Comments = append(t.Comments, note(rc.ID, rc.User, rc.Association, rc.Body, rc.Created))
+			t.Comments = append(t.Comments, note(rc.ID, rc.User, rc.Association, rc.Body, rc.Created, reacted.Line[rc.ID]))
 		}
 		out = append(out, t)
 	}
 	convo := registry.ReviewThread{URL: pr.URL, Comments: []registry.ReviewNote{}}
 	for _, ic := range issue {
-		convo.Comments = append(convo.Comments, note(ic.ID, ic.User, ic.Association, ic.Body, ic.Created))
+		convo.Comments = append(convo.Comments, note(ic.ID, ic.User, ic.Association, ic.Body, ic.Created, reacted.Issue[ic.ID]))
 	}
 	for _, rv := range reviews {
 		if strings.TrimSpace(rv.Body) != "" {
-			convo.Comments = append(convo.Comments, note(rv.ID, rv.User, rv.Association, rv.Body, rv.Submitted))
+			convo.Comments = append(convo.Comments, note(rv.ID, rv.User, rv.Association, rv.Body, rv.Submitted, reacted.Review[rv.ID]))
 		}
 	}
 	slices.SortStableFunc(convo.Comments, func(a, b registry.ReviewNote) int { return a.At.Compare(b.At) })
@@ -158,6 +163,55 @@ func (x *Host) resolve(ctx context.Context, r registry.CodeRepo, pr registry.PR,
 		return err
 	}
 	return c.ResolveThread(ctx, repo, n, root, resolved)
+}
+
+// reactions are a comment's reactions as GitHub shows them.
+func reactions(n gh.ReactedNode) []registry.PRReaction {
+	var out []registry.PRReaction
+	for _, r := range n.Reactions {
+		out = append(out, registry.PRReaction{Emoji: gh.ReactionEmoji[r.Name], Count: r.Count, Mine: r.Mine, Who: r.Who})
+	}
+	return out
+}
+
+// reactNote adds the user's emoji reaction to a comment of a thread, or takes it back. GitHub reacts by a comment's
+// node, which the comments' reactions give. In the conversation, a note is a comment or a review's body: GitHub
+// numbers those apart, so one id found as both can't be told apart.
+func (x *Host) reactNote(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, note, emoji string, on bool) error {
+	name := gh.ReactionName(emoji)
+	if name == "" {
+		return fmt.Errorf("GitHub has no %s reaction", emoji)
+	}
+	c, repo, err := x.repo(ctx, r)
+	if err != nil {
+		return err
+	}
+	n, err := number(pr)
+	if err != nil {
+		return err
+	}
+	id, err := strconv.ParseInt(note, 10, 64)
+	if err != nil {
+		return fmt.Errorf("%q isn't a GitHub comment", note)
+	}
+	reacted, err := c.CommentReactions(ctx, repo, n)
+	if err != nil {
+		return err
+	}
+	var nodes []string
+	if t.ID != "" {
+		nodes = append(nodes, reacted.Line[id].Node)
+	} else {
+		nodes = append(nodes, reacted.Issue[id].Node, reacted.Review[id].Node)
+	}
+	nodes = slices.DeleteFunc(nodes, func(s string) bool { return s == "" })
+	switch len(nodes) {
+	case 0:
+		return fmt.Errorf("no comment %s on the pull request", note)
+	case 1:
+		return c.ReactNode(ctx, nodes[0], name, on)
+	}
+	return fmt.Errorf("comment %s is both a comment and a review there; react on GitHub", note)
 }
 
 // rootOf is a review thread's first comment's id.
@@ -234,3 +288,12 @@ func (x *Host) member(ctx context.Context, c gh.Client, org, user string) bool {
 	x.trust.mu.Unlock()
 	return in
 }
+
+// githubReactions are the emoji GitHub takes on a comment, in its order.
+var githubReactions = func() []string {
+	var out []string
+	for _, name := range gh.ReactionNames {
+		out = append(out, gh.ReactionEmoji[name])
+	}
+	return out
+}()

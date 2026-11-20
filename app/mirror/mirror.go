@@ -59,6 +59,7 @@ type Mirror struct {
 	synced     map[core.SessionID]chan struct{} // closed when the sync running ends
 	again      map[core.SessionID]bool          // a sync asked for while one ran: fresh or not
 	forwarding map[string]bool                  // comment IDs being posted
+	reacting   map[string]bool                  // reactions being sent, by reactKey: added, or taken back
 	resolving  map[core.ThreadID]bool           // where each thread's resolve was last sent to its host
 	lastSync   map[core.SessionID]time.Time
 
@@ -98,6 +99,7 @@ func (x *Mirror) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "mirror", Busy: x.busy.Busy}))
 	x.h = h
 	x.reads, x.prs, x.syncing, x.forwarding, x.editing = map[core.SessionID]read{}, map[string]prCached{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
+	x.reacting = map[string]bool{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.Contribute(registry.Service{Name: services.PRReviewsService, Impl: reviews{x}}))
@@ -141,6 +143,7 @@ func (x *Mirror) commands() []registry.Command {
 			Args: []registry.Arg{registry.StringArg("comment"), registry.StringArg("id"), registry.StringArg("thread")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.forward(a) }},
 		{ID: "review.draft.edit", Grant: registry.Open, Title: "Edit the agent's draft reply on a review thread before forwarding it: {thread, comment}", Available: inFront,
 			Args: []registry.Arg{registry.StringArg("comment"), registry.StringArg("id"), registry.StringArg("thread")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.edit(a) }},
+		x.reactCommand(inFront),
 		{ID: "review.draft.save", Grant: registry.Open, Title: "Save an edited draft reply: {thread, comment, body}", Available: inFront,
 			Args: []registry.Arg{registry.StringArg("body"), registry.StringArg("comment"), registry.StringArg("id"), registry.StringArg("thread")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.save(a) }},
 	}
@@ -427,7 +430,7 @@ func (x *Mirror) mirrorSession(ctx context.Context, se core.SessionState, review
 				Reviewer: t.Reviewer, State: string(t.State), URL: t.URL}
 			for _, n := range t.Comments {
 				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
-					Trusted: n.Member || sites.TrustedUser(n.Author), Mine: n.Mine, Written: n.Written})
+					Trusted: n.Member || sites.TrustedUser(n.Author), Mine: n.Mine, Written: n.Written, Reactions: coreReactions(n.Reactions)})
 			}
 			req.Threads = append(req.Threads, rt)
 		}
@@ -714,10 +717,13 @@ func (x *Mirror) comment(c *ui.Ctx, session, thread, comment string, width float
 			cm = x
 		}
 	}
+	args := registry.Args{"id": session, "thread": thread, "comment": comment}
 	if !cm.Draft {
+		if t.Hosted != nil {
+			x.reactions(c, args, t, cm)
+		}
 		return
 	}
-	args := registry.Args{"id": session, "thread": thread, "comment": comment}
 	if e := x.editing[comment]; e != nil {
 		c.Column("edit", ui.Style{W: ui.Px(width), Gap: 6, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			r := widget.Prose(c, "draft", e, widget.ProseOpts{Label: "Edit the draft reply", Lines: 8, MinLines: 3, Help: "git/github#forward"})
