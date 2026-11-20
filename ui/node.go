@@ -132,6 +132,10 @@ type Style struct {
 	Keep    bool // keeps its width while its row is too narrow, as a control does; the text beside it is cut first
 	ScrollX bool // scroll offsets persist by id; scrolling clips
 	ScrollY bool
+	// KeepScroll keeps its scroll offset under this key through the frames it isn't built in, however what's around
+	// it changes: a view in a tab behind another comes back where it was, not at the top. Items keeps its rows'
+	// heights with it. Nil keeps nothing.
+	KeepScroll any
 	// ScrollWith makes a scrolling box share its offset with every box naming the same id, as a diff's lines do: the
 	// wheel over any moves them all, as far as the widest content of those laid out goes, and ScrollBy or ScrollTo on
 	// the id (or any of them) moves them too. Its scrollbar is its own; hide it (BarsHidden) for many in a column.

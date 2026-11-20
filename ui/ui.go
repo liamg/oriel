@@ -90,6 +90,7 @@ type UI struct {
 	layered map[int]bool // the float layers (Style.Z) last frame drew
 	asked   map[int]bool // the layers Layered was asked about this frame
 	states  map[ID]*state
+	kept    map[any]*keptScroll // KeepScroll boxes' offsets, by their keys, for when they're built again
 	hits    []hit
 	flags   map[ID]flags // from the latest frame, which input resolves against
 	parents map[ID]ID
@@ -188,6 +189,7 @@ type flags struct {
 	tipView                          func(c *Ctx)
 	offer                            any
 	trap, text                       bool
+	keepScroll                       any
 	z                                int
 	parent                           ID
 	drag                             *DragData
@@ -297,8 +299,11 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.selScroll()
 	u.animate(prev)
 	for id, st := range u.states {
-		if st.seen != u.frame {
+		switch {
+		case st.seen != u.frame:
 			delete(u.states, id)
+		case u.flags[id].keepScroll != nil:
+			u.keptOf(u.flags[id].keepScroll).scroll = st.scroll
 		}
 	}
 	for id, sp := range u.springs {
@@ -328,7 +333,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable, focusable: s.Focusable, disabled: s.Disabled,
 				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, tipView: s.TooltipView, help: s.Help, subject: s.Subject, offer: s.Offer, keyMode: s.KeyMode,
-				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
+				trap: s.Trap, keepScroll: s.KeepScroll, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
 	}
 	u.parents, u.spare.parents = fresh(u.spare.parents), u.parents
@@ -383,6 +388,36 @@ func (u *UI) tooltip() {
 }
 
 type tooltipKey struct{}
+
+// keptScroll is what a KeepScroll box keeps while it isn't built: its offset, and an Items list's rows' heights.
+type keptScroll struct {
+	scroll  [2]float32
+	heights map[any]float32
+}
+
+func (u *UI) keptOf(key any) *keptScroll {
+	if u.kept == nil {
+		u.kept = map[any]*keptScroll{}
+	}
+	k := u.kept[key]
+	if k == nil {
+		k = &keptScroll{}
+		u.kept[key] = k
+	}
+	return k
+}
+
+// keepScroll gives a KeepScroll box built again, after frames it wasn't, the offset it kept: one not laid out since,
+// though something may have asked after it already this frame.
+func (u *UI) keepScroll(id ID, key any) {
+	k, ok := u.kept[key]
+	if !ok {
+		return
+	}
+	if st := u.state(id); !st.laid && !st.placed {
+		st.scroll, st.shown = k.scroll, k.scroll
+	}
+}
 
 func (u *UI) state(id ID) *state {
 	st, ok := u.states[id]
