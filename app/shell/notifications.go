@@ -90,7 +90,10 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		_ = cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 	}))
 	n.Add(h.OnFailure(func(f registry.Failure) {
-		if f.InARow < registry.FailLimit { // the fault that turns it off says so, on the same row
+		switch {
+		case f.Warn: // a hook over its time budget: nothing to do about it at the moment, so it's logged, not a notice
+			h.Log().Warn("slow "+f.Kind, "id", f.ID, "source", f.Source, "err", f.Err)
+		case f.InARow < registry.FailLimit: // the fault that turns it off says so, on the same row
 			_ = cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 		}
 	}))
