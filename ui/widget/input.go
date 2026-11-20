@@ -97,6 +97,7 @@ type inputState struct {
 	last           string    // the text as the field last left it: when it's changed from outside, undo starts again
 	drawn          bool      // it has been drawn before
 	pending        []fieldOp // what a right-click menu's items asked of it (TextField), done as it's next built
+	busy           bool      // a menu item's work on its text is under way (TextField.Busy): a spinner shows
 }
 
 // TextFieldSubject is what a text field stands for to a right-click menu (ui.Style.Subject); it offers a TextField.
@@ -105,11 +106,12 @@ const TextFieldSubject = "textfield"
 // TextField is a text field as it offers itself to a right-click menu (ui.Style.Offer): its text and selection as it
 // was last drawn, and the edits a menu item asks of it, which it makes as it's next built, as its keys would.
 type TextField interface {
-	Text() string
+	Text() string              // what it holds, as it last drew it
 	Selection() (from, to int) // in runes; equal when nothing's selected
 	Secret() bool              // it won't copy or cut what it holds
 	Edit(op string)            // "cut", "copy", "paste" or "select-all"
 	Replace(from, to int, text string)
+	Busy(on bool) // shows a spinner in it while a menu item's work on its text is under way
 }
 
 // fieldOp is an edit a menu item asked of a field: an editKey name, or "replace" with its runes and text.
@@ -119,18 +121,18 @@ type fieldOp struct {
 	text     string
 }
 
-// fieldHandle is a field's TextField, as one frame drew it.
+// fieldHandle is a field's TextField.
 type fieldHandle struct {
 	st     *inputState
-	text   string
 	secret bool
 }
 
-func (h *fieldHandle) Text() string { return h.text }
+func (h *fieldHandle) Text() string { return h.st.last }
 func (h *fieldHandle) Selection() (int, int) {
 	return min(h.st.cursor, h.st.anchor), max(h.st.cursor, h.st.anchor)
 }
 func (h *fieldHandle) Secret() bool   { return h.secret }
+func (h *fieldHandle) Busy(on bool)   { h.st.busy = on }
 func (h *fieldHandle) Edit(op string) { h.st.pending = append(h.st.pending, fieldOp{op: op}) }
 func (h *fieldHandle) Replace(from, to int, text string) {
 	h.st.pending = append(h.st.pending, fieldOp{op: "replace", from: from, to: to, text: text})
@@ -248,6 +250,18 @@ type fieldFrame struct {
 	offer *fieldHandle // what it offers a right-click menu, as this frame leaves it
 }
 
+// busyInlay puts a spinner in the field's corner, in place of what it has there (Prose's mic), while a menu item's
+// work on its text is under way.
+func (ff *fieldFrame) busyInlay() {
+	ff.x.padR = max(ff.x.padR, micSide)
+	ff.x.inlay = func(c *ui.Ctx) {
+		corner := &ui.Float{At: render.Point{X: 1, Y: 0.5}, Self: render.Point{X: 1, Y: 0.5}, Offset: render.Point{X: -6}}
+		c.Box("busy", ui.Style{Float: corner, Z: ui.LayerContent}, func(c *ui.Ctx) {
+			Spinner(c, "spin", SpinnerOpts{Name: "working on the text", Help: ff.o.Help})
+		})
+	}
+}
+
 // menuEdits makes the edits a right-click menu's items asked of the field, and takes focus for them.
 func (ff *fieldFrame) menuEdits() {
 	ops := ff.st.pending
@@ -297,7 +311,10 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 	if ff.res.Changed || len(keys) > 0 {
 		*text = string(ff.runes)
 	}
-	ff.offer = &fieldHandle{st: ff.st, text: *text, secret: o.Secret}
+	ff.offer = &fieldHandle{st: ff.st, secret: o.Secret}
+	if ff.st.busy {
+		ff.busyInlay()
+	}
 	ff.st.last = *text
 	style := ff.style()
 	if ff.multi {
@@ -763,7 +780,13 @@ func (ff *fieldFrame) drawLine(key any, style ui.Style) {
 	scroll, focused, fg, font := st.scroll, ff.in.Focused, ff.fg(), ff.font
 	shown := ff.shown(0, len(ff.runes))
 	style.H, style.Pad, style.Cross = ui.Px(30), ui.PadXY(10, 0), ui.Center
+	style.Pad.R += ff.x.padR
 	c.Row(key, style, func(rc *ui.Ctx) {
+		defer func() {
+			if ff.x.inlay != nil {
+				ff.x.inlay(rc)
+			}
+		}()
 		rc.Paint("text", ui.Flex(1), ui.Px(30), func(f render.Frame, r render.Rect) {
 			if focused && hi > lo {
 				sel := col(c, tInputSelection)
