@@ -203,10 +203,14 @@ func (x *Diff) commands() []registry.Command {
 			}},
 		{ID: "diff.file.toggle", Grant: registry.Open, Title: "Switch between the file you're editing and its diff: from the editor, the diff at the cursor's line; from the diff, the editor at its selected line",
 			Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error { return x.toggleFile(ctx) }},
-		{ID: "diff.layout.toggle", Grant: registry.Open, Title: "Show the diff split or unified: {layout}, or the other one", Args: []registry.Arg{registry.StringArg("layout")}, Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "diff.layout.toggle", Grant: registry.Open, Title: "Show the diff split or unified: {layout}, or the other one", Args: []registry.Arg{registry.StringArg("layout")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
 			if l == "" {
 				l = map[string]string{"split": "unified", "unified": "split"}[x.layout()]
+			}
+			// Kept in the user's settings.toml, as the settings page keeps it, so it's still the choice after a restart.
+			if h.Available("settings.set", nil) {
+				return h.Run(ctx, "settings.set", registry.Args{"name": "diff.layout", "value": l, "scope": "user"})
 			}
 			return h.Options().Set("diff.layout", registry.LayerUser, registry.At{}, l)
 		}},
