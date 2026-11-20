@@ -152,19 +152,26 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	h, repo := *s.CodeHost, s.codeRepo(id)
 	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
+	last := x.cache.read[key]
 	if r, ok := x.cache.raised[key]; ok {
 		switch {
 		case pr != nil || x.now().Sub(r.at) >= raisedHold:
 			delete(x.cache.raised, key)
-		case err == nil:
+		default:
 			raised := r.pr
-			pr = &raised // raised a moment ago: the lookup hasn't caught up
+			pr = &raised // raised a moment ago: the lookup hasn't caught up, or failed
 		}
+	}
+	if err != nil && pr == nil {
+		pr = last.pr // a failed lookup doesn't forget the PR the last one found
 	}
 	x.cache.mu.Unlock()
 	switch {
 	case err != nil:
-		g.err = err
+		g.err, g.pr = err, pr
+		if pr != nil && last.pr != nil && last.pr.Number == pr.Number {
+			g.checks, g.failLine = last.checks, last.failLine
+		}
 	case pr != nil:
 		g.pr = pr
 		if h.Checks != nil {
