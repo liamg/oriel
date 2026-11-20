@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -110,4 +111,33 @@ func PNGDensity(b []byte) float32 {
 		i += 12 + n
 	}
 	return 0
+}
+
+// WithPNGDensity is the PNG b saying it has d pixels per point (2 for a Retina screenshot), in a pHYs chunk in place
+// of any it had; b as it is when it isn't a PNG or d is under 1.
+func WithPNGDensity(b []byte, d float32) []byte {
+	const sig, ihdr = 8, 8 + 25 // the signature, then IHDR: its length, type, 13 bytes and CRC
+	if d < 1 || len(b) < ihdr || !bytes.HasPrefix(b, []byte("\x89PNG\r\n\x1a\n")) || string(b[sig+4:sig+8]) != "IHDR" {
+		return b
+	}
+	out := append([]byte{}, b[:ihdr]...)
+	ppm := uint32(math.Round(float64(d) * 72 / 0.0254))
+	chunk := binary.BigEndian.AppendUint32(nil, 9)
+	chunk = append(chunk, "pHYs"...)
+	chunk = binary.BigEndian.AppendUint32(chunk, ppm)
+	chunk = binary.BigEndian.AppendUint32(chunk, ppm)
+	chunk = append(chunk, 1) // the unit: the metre
+	chunk = binary.BigEndian.AppendUint32(chunk, crc32.ChecksumIEEE(chunk[4:]))
+	out = append(out, chunk...)
+	for i := ihdr; i+12 <= len(b); {
+		n := int(binary.BigEndian.Uint32(b[i:]))
+		if n < 0 || i+12+n > len(b) {
+			return b
+		}
+		if string(b[i+4:i+8]) != "pHYs" {
+			out = append(out, b[i:i+12+n]...)
+		}
+		i += 12 + n
+	}
+	return out
 }

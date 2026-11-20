@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/editor"
+	"github.com/liamg/oriel/internal/imagex"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -148,7 +149,7 @@ func TestMarkdownPreviewImages(t *testing.T) {
 }
 
 // A PNG that says 144 DPI or more, as a Retina screenshot does, is drawn at the size it was on screen: 2 pixels a point
-// at 144 DPI. One at 72 or 96 DPI, or that says none, is a pixel a point.
+// at 144 DPI. One at 72 or 96 DPI, or that says none, is a pixel a point. A PNG stamped with a density says it.
 func TestMarkdownImageDensity(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "retina.png"), rig.PNGAtDPI(t, photo(400, 200), 144), 0o644); err != nil {
@@ -160,7 +161,15 @@ func TestMarkdownImageDensity(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "plain.png"), editor.PNGBytes(t, photo(400, 200)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("![retina](retina.png)\n\n![windows](windows.png)\n\n![plain](plain.png)\n"), 0o644); err != nil {
+	// A paste stamped with the density its clipboard said (render/osclip on macOS), over none or over 96 DPI.
+	if err := os.WriteFile(filepath.Join(dir, "pasted.png"), imagex.WithPNGDensity(editor.PNGBytes(t, photo(400, 200)), 2), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "restamped.png"), imagex.WithPNGDensity(rig.PNGAtDPI(t, photo(400, 200), 96), 2), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	md := "![retina](retina.png)\n\n![windows](windows.png)\n\n![plain](plain.png)\n\n![pasted](pasted.png)\n\n![restamped](restamped.png)\n"
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(md), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	s := threadsSceneWith(t, apptest.Options{WorkDir: dir})
@@ -168,7 +177,7 @@ func TestMarkdownImageDensity(t *testing.T) {
 	s.Frames(3)
 	s.Run("markdown.preview", nil)
 	s.Frames(4)
-	for name, want := range map[string]float32{"retina": 200, "windows": 400, "plain": 400} {
+	for name, want := range map[string]float32{"retina": 200, "windows": 400, "plain": 400, "pasted": 200, "restamped": 200} {
 		if b := s.NodeRole("image", name).Bounds; b.Dx() != want || b.Dy() != want/2 {
 			t.Errorf("%s is %v×%v, want %v×%v", name, b.Dx(), b.Dy(), want, want/2)
 		}
