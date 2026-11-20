@@ -21,14 +21,14 @@ func hudDown(s *apptest.Scene) bool {
 // Hold ⌥ to pull the full HUD down over anything; release to hide, click to pin.
 func TestHUDHoldReleasePin(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	s.Frame()
 	s.UI().Mods(render.ModAlt)
 	s.Frame()
 	if hudDown(s) {
 		t.Fatal("the HUD came down before ⌥ was held for hud.hold_delay")
 	}
-	s.Now = s.Now.Add(300 * time.Millisecond)
+	s.SetNow(s.Now().Add(300 * time.Millisecond))
 	s.Frame()
 	s.Frame()
 	if !hudDown(s) {
@@ -44,7 +44,7 @@ func TestHUDHoldReleasePin(t *testing.T) {
 	// ⌥O is a chord: the HUD stays away.
 	s.UI().Mods(render.ModAlt)
 	s.UI().Chord()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Frame()
 	if hudDown(s) {
@@ -92,7 +92,7 @@ func TestHUDHoldReleasePin(t *testing.T) {
 // A key or click with no modifier held isn't a chord: the next ⌥ held brings the HUD down.
 func TestHUDAfterTyping(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	s.Frame()
 	s.UI().Chord() // a key typed, as the window's loop does
 	s.Click(render.Point{X: 800, Y: 100}, 0)
@@ -105,7 +105,7 @@ func TestHUDAfterTyping(t *testing.T) {
 // "Pull the full HUD down over anything": over the settings page, and under an omnibox opened over it.
 func TestHUDOverOtherOverlays(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	s.Run("settings.open", registry.Args{"section": "ui"})
 	s.Frame()
 	s.Hold(render.ModAlt, 300*time.Millisecond)
@@ -142,7 +142,7 @@ L.hud.indicator("deploys", function()
 end, { slot = "title-bar.right", every = "30s" })
 L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none" }, { slot = "hud.today" })
 `)
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	for range 5 {
 		s.Frame()
 	}
@@ -155,11 +155,11 @@ L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none
 		}
 		s.Frame()
 	}
-	machine(.34, s.Now)
+	machine(.34, s.Now())
 	s.WantFrame("BUILDS", "2")
-	machine(.82, s.Now.Add(time.Minute))
+	machine(.82, s.Now().Add(time.Minute))
 	s.WantFrame("BUILDS", "3")
-	s.Now = s.Now.Add(31 * time.Second)
+	s.SetNow(s.Now().Add(31 * time.Second))
 	s.Frame()
 	s.WantFrame("DEPLOY", "203") // every 30s: built again (and the two MachineChanged builds before it)
 	s.Lua(`oriel.hud.set("meeting", oriel.ui.indicator{ label = "NEXT MEETING", value = "Pricing sync 14:30" })`)
@@ -187,14 +187,14 @@ L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none
 // and one in use whose plan couldn't be read says so rather than going missing.
 func TestHUDUsageIsOfTheProvidersInUse(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	apptest.PluginOf[*stats.Stats](s, "stats").Clock = s.Clock()
-	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now.Add(-time.Hour),
+	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now().Add(-time.Hour),
 		Agent: core.AgentState{Provider: "claude"}}}); err != nil {
 		t.Fatal(err)
 	}
-	codex := core.ProviderUsage{Provider: "codex", Account: "me@x", Sampled: s.Now,
-		Windows: []core.UsageWindow{{Name: "5h", Used: .4, Resets: s.Now.Add(time.Hour)}}}
+	codex := core.ProviderUsage{Provider: "codex", Account: "me@x", Sampled: s.Now(),
+		Windows: []core.UsageWindow{{Name: "5h", Used: .4, Resets: s.Now().Add(time.Hour)}}}
 	if err := s.Store().Apply(core.UsageSampled{Usage: codex}); err != nil {
 		t.Fatal(err)
 	}
@@ -207,8 +207,8 @@ func TestHUDUsageIsOfTheProvidersInUse(t *testing.T) {
 	if s.Has("me@x") || s.Has("40%") {
 		t.Errorf("the HUD shows codex's plan, unused:\n%s", s.Text())
 	}
-	if err := s.Store().Apply(core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "liam", AccountName: "liam@x", Sampled: s.Now,
-		Windows: []core.UsageWindow{{Name: "5h", Used: .2, Resets: s.Now.Add(time.Hour)}}}}); err != nil {
+	if err := s.Store().Apply(core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "liam", AccountName: "liam@x", Sampled: s.Now(),
+		Windows: []core.UsageWindow{{Name: "5h", Used: .2, Resets: s.Now().Add(time.Hour)}}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Store().Apply(core.UsageRead{Provider: "claude"}); err != nil {

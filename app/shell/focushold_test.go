@@ -88,7 +88,7 @@ func focusScene(t *testing.T) *apptest.Scene {
 			t.Fatal(err)
 		}
 	}
-	s.Now = apptest.At(14, 7, 21)
+	s.SetNow(apptest.At(14, 7, 21))
 	s.Frame()
 	return s
 }
@@ -133,7 +133,7 @@ func keepsFocus(s *apptest.Scene, t *testing.T, what string, id ui.ID) {
 	t.Helper()
 	statuses := []core.Status{core.StatusWorking, core.StatusQuiet}
 	for i := range 30 {
-		s.Now = s.Now.Add(100 * time.Millisecond)
+		s.SetNow(s.Now().Add(100 * time.Millisecond))
 		if i%5 == 0 {
 			if err := s.Store().Apply(core.SessionStatusChanged{ID: "pricing-rounding", Status: statuses[i/5%2]}); err != nil {
 				t.Fatal(err)

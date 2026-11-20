@@ -201,7 +201,7 @@ func pressKeys(s *apptest.Scene, t *testing.T, keys string) {
 	r := registry.NewResolver(s.Registry())
 	var acts []registry.Action
 	for _, k := range strings.Split(keys, "") {
-		acts = append(acts, r.Feed(s.KeyModesFor(k), k, s.Now)...)
+		acts = append(acts, r.Feed(s.KeyModesFor(k), k, s.Now())...)
 	}
 	for _, a := range acts {
 		if a.Keymap == nil {

@@ -50,7 +50,7 @@ func assistantScene(t *testing.T, hub *ghtest.Server, mic *voicetest.Mic, tr *vo
 		}
 		cfg.Voice = apptest.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	}})
-	s.Now = asstNow
+	s.SetNow(asstNow)
 	assistantOf(s).SetClock(s.NowClock())
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Frame()
@@ -204,7 +204,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 	// Its permission comes up as the session comes to the front; Escape puts it off.
 	s.Frame()
 	s.NodeRole(render.RoleDialog, "Permission: Bash(make e2e)")
-	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.SetNow(s.Now().Add(widget.CardKeyGuard))
 	s.Frame()
 	s.Type("Esc")
 	s.Frame()

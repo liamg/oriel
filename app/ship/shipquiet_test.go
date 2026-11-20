@@ -18,7 +18,7 @@ func TestShipPageFoldsQuietProjects(t *testing.T) {
 	s, se := shipSession(t)
 	shipOf(s).Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
 		ships[1] = ship.Read{Ship: hostapi.Ship{Project: ships[1].Project, Branch: ships[1].Branch, Base: ships[1].Base, Pushed: true},
-			CodeHost: ships[1].CodeHost, Repo: ships[1].Repo, GitRead: s.Now.Add(-time.Minute)}
+			CodeHost: ships[1].CodeHost, Repo: ships[1].Repo, GitRead: s.Now().Add(-time.Minute)}
 		return ships
 	})
 	s.Run("ship.open", nil)

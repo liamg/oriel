@@ -58,8 +58,8 @@ func planScene(t *testing.T, config ...func(*apptest.Config)) *apptest.Scene {
 			c(cfg)
 		}
 	}})
-	s.Now = time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC)
-	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }
+	s.SetNow(time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC))
+	ago := func(d time.Duration) time.Time { return s.Now().Add(-d) }
 	liam := "Liam Galvin"
 	doc := func(file string, line int, text string) *core.Anchor {
 		return &core.Anchor{Project: core.DocsProject, File: file, Line: line, Text: text}

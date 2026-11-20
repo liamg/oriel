@@ -12,6 +12,6 @@ func TestShowcaseLoadingStats(t *testing.T) {
 	s.Light()
 	s.Run("stats.open", nil)
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Shot("stats-loading")
 }

@@ -15,12 +15,12 @@ func TestCursorGlide(t *testing.T) {
 	o := s.UI().Options()
 	o.ReducedMotion = false
 	s.UI().SetOptions(o)
-	s.Now = time.Unix(1000, 0)
+	s.SetNow(time.Unix(1000, 0))
 	s.Run("editor.open", registry.Args{"path": root + "/internal/pricing/round.go"})
 	waitHighlights(s)
 	settle := func() {
 		for range 40 {
-			s.Now = s.Now.Add(time.Second / 120)
+			s.SetNow(s.Now().Add(time.Second / 120))
 			s.Frame()
 		}
 	}
@@ -40,7 +40,7 @@ func TestCursorGlide(t *testing.T) {
 	if c := engine(s).Cursor(); c.Col != 5 {
 		t.Errorf("w: the engine's cursor is at column %d, want 5 at once", c.Col)
 	}
-	s.Now = s.Now.Add(40 * time.Millisecond)
+	s.SetNow(s.Now().Add(40 * time.Millisecond))
 	s.Frame()
 	mid := at()
 	settle()
@@ -56,7 +56,7 @@ func TestCursorGlide(t *testing.T) {
 	settle()
 
 	key("w")
-	s.Now = s.Now.Add(30 * time.Millisecond)
+	s.SetNow(s.Now().Add(30 * time.Millisecond))
 	s.Frame()
 	key("w")
 	snapped := at()

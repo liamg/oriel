@@ -17,8 +17,8 @@ import (
 // An agent's turn full of emoji and symbols, in its console: $ORIEL_SHOTS/emoji-console.png.
 func TestShowcaseEmoji(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
-	ago := func(sec int) time.Time { return s.Now.Add(-time.Duration(sec) * time.Second) }
+	s.SetNow(apptest.At(14, 30, 0))
+	ago := func(sec int) time.Time { return s.Now().Add(-time.Duration(sec) * time.Second) }
 	se := core.SessionState{ID: "release", Name: "release v0.0.12 🚀", Kind: core.KindWork, Status: core.StatusQuiet,
 		Projects: []core.Project{{Name: "oriel", Dir: "/src/oriel", Branch: "release", Primary: true}},
 		Agent:    core.AgentState{Provider: "claude", Model: "claude-opus-5-5", Running: true},

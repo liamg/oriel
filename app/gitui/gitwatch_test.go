@@ -50,7 +50,7 @@ func TestGitStatusFollowsTheTree(t *testing.T) {
 	runs := gittest.CountGit(t)
 	s, repo := scriptedGitScene(t)
 	read := runs("status")
-	s.Now = s.Now.Add(time.Minute)
+	s.SetNow(s.Now().Add(time.Minute))
 	s.Idle()
 	if n := runs("status") - read; n > 0 {
 		t.Fatalf("git status ran %d times with nothing changed", n)

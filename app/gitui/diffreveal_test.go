@@ -41,13 +41,13 @@ func TestDiffRevealOfAGoneFileSettles(t *testing.T) {
 			for range 30 {
 				s.Frame()
 				s.Quiet()
-				s.Now = s.Now.Add(10 * time.Millisecond)
+				s.SetNow(s.Now().Add(10 * time.Millisecond))
 			}
 			if !strings.Contains(s.Text(), "currency.go") {
 				t.Fatalf("the diff isn't showing:\n%s", s.Text())
 			}
-			if next := s.UI().NextFrame(); !next.IsZero() && !next.After(s.Now) {
-				t.Errorf("settled, the diff still asks for a frame at %v (now %v)", next, s.Now)
+			if next := s.UI().NextFrame(); !next.IsZero() && !next.After(s.Now()) {
+				t.Errorf("settled, the diff still asks for a frame at %v (now %v)", next, s.Now())
 			}
 		})
 	}

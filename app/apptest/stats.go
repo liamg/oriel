@@ -50,7 +50,7 @@ func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Stats) {
 		work = kit.SessionDir(se.Snapshot()) // the window a session in front opens on
 	}
 	s := New(t, Options{Config: func(cfg *Config) { Connect(r.W, r.Claude, r.Codex)(cfg); cfg.WorkDir = work }})
-	s.Now = rig.StatsNow
+	s.SetNow(rig.StatsNow)
 	x := PluginOf[*stats.Stats](s, "stats")
 	x.Clock, x.Loc = s.Clock(), time.UTC
 	rig.WaitState(t, s.Store(), "the sessions and readings", func(st core.State) bool {

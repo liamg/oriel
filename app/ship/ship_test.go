@@ -276,7 +276,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	if d := onHost(); d.Body == "feat(api): two routes (3)" {
 		t.Errorf("kept before the typing rested: %+v", d)
 	}
-	s.Now = s.Now.Add(ship.DraftSaveAfter)
+	s.SetNow(s.Now().Add(ship.DraftSaveAfter))
 	s.Frame()
 	shipSettle(s, t, "the whole message kept", func() bool { return onHost().Body == "feat(api): two routes (3)" })
 	if out := agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): three routes"}); !strings.Contains(out, "the user wrote") {

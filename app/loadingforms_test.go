@@ -20,7 +20,7 @@ oriel.ticket.tracker{ name = "slow", title = "Slow", keys = "^SLO-[0-9]+$",
 // and a refresh keeps the list up with Refresh busy.
 func TestTicketsPageLoading(t *testing.T) {
 	s := apptest.LuaScene(t, slowTracker)
-	s.Now = apptest.At(9, 0, 0)
+	s.SetNow(apptest.At(9, 0, 0))
 	vm := lua(s).VM()
 	s.Run("tickets.open", registry.Args{"tracker": "slow"})
 	s.Frame()
@@ -28,7 +28,7 @@ func TestTicketsPageLoading(t *testing.T) {
 	if strings.Contains(s.Text(), "Nothing assigned") {
 		t.Error("the empty message showed before the tracker answered")
 	}
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if n := s.Node("Tickets"); n.Role != "status" {
 		t.Errorf("the skeleton reads as %+v", n)
@@ -40,7 +40,7 @@ func TestTicketsPageLoading(t *testing.T) {
 		}
 	}
 	answer()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Until("the answer", func() bool { return strings.Contains(s.Text(), "Nothing assigned to you in Slow") })
 
 	s.Press("r")

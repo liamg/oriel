@@ -100,15 +100,15 @@ func TestWhichKeyWaitsItsDelay(t *testing.T) {
 	}
 	res := registry.NewResolver(s.Registry())
 	s.SetKeys(res)
-	start := s.Now
+	start := s.Now()
 	res.Feed([]string{"n", "global"}, " ", start)
-	s.Now = start.Add(keys.WhichKeyDelay - time.Millisecond)
+	s.SetNow(start.Add(keys.WhichKeyDelay - time.Millisecond))
 	s.Quiet()
 	s.Frame()
 	if strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key showed before its delay:\n%s", s.Text())
 	}
-	s.Now = start.Add(keys.WhichKeyDelay)
+	s.SetNow(start.Add(keys.WhichKeyDelay))
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Errorf("which-key not shown after its delay:\n%s", s.Text())
@@ -124,10 +124,10 @@ func TestWhichKeySnapshot(t *testing.T) {
 	}
 	res := registry.NewResolver(s.Registry())
 	s.SetKeys(res)
-	start := s.Now
+	start := s.Now()
 	res.Feed([]string{"n", "global"}, " ", start)
 	res.Feed([]string{"n", "global"}, "a", start)
-	s.Now = start.Add(keys.WhichKeyDelay)
+	s.SetNow(start.Add(keys.WhichKeyDelay))
 	s.Golden("whichkey")
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Errorf("no +agent:\n%s", s.Text())
@@ -146,20 +146,20 @@ func TestWhichKeyHoldsThePrefix(t *testing.T) {
 	}
 	res := registry.NewResolver(s.Registry())
 	s.SetKeys(res)
-	start := s.Now
+	start := s.Now()
 	res.Feed([]string{"n", "global"}, " ", start)
-	s.Now = start.Add(keys.WhichKeyDelay)
+	s.SetNow(start.Add(keys.WhichKeyDelay))
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key not shown after its delay:\n%s", s.Text())
 	}
-	s.Now = start.Add(time.Second) // past keymap.timeout_length: the loop's key timer fires
-	res.Timeout(s.Now)
+	s.SetNow(start.Add(time.Second)) // past keymap.timeout_length: the loop's key timer fires
+	res.Timeout(s.Now())
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key went after keymap.timeout_length:\n%s", s.Text())
 	}
-	res.Feed([]string{"n", "global"}, "a", s.Now)
+	res.Feed([]string{"n", "global"}, "a", s.Now())
 	s.Frame()
 	if !strings.Contains(s.Text(), "Interrupt agent") {
 		t.Errorf("the prefix wasn't held for a:\n%s", s.Text())

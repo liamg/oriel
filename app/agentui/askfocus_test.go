@@ -39,7 +39,7 @@ func TestAPermissionOverTheWindowTakesItsKeys(t *testing.T) {
 		t.Fatalf("a key typed as the card appeared answered it: %+v", d)
 	default:
 	}
-	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.SetNow(s.Now().Add(widget.CardKeyGuard))
 	s.Frame()
 	s.Type("y")
 	var d agent.Decision

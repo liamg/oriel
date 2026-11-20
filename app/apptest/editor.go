@@ -56,7 +56,7 @@ func (s *Scene) Decorations(top, bottom int) map[int][]uireg.Decoration {
 	s.T.Helper()
 	w := s.EditorWindow()
 	ctx := uireg.DecorationCtx{Window: w.ID, Presenter: w.Presenter, Path: w.Path, Buffer: w.Text, Snap: w.Text.Snapshot(), Top: top,
-		Bottom: bottom, Now: s.Now}
+		Bottom: bottom, Now: s.Now()}
 	if b, ok := s.Editor().Buffer(w.Path); ok {
 		ctx.FileBytes = b.Bytes
 	}

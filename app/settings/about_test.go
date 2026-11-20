@@ -32,7 +32,7 @@ func TestLogoBlinksUnderThePointer(t *testing.T) {
 	o := s.UI().Options()
 	o.ReducedMotion = false
 	s.UI().SetOptions(o)
-	s.Now = time.Unix(1000, 0)
+	s.SetNow(time.Unix(1000, 0))
 	s.Frame()
 	if !cursorShown(s) {
 		t.Fatal("the logo has no cursor")
@@ -43,14 +43,14 @@ func TestLogoBlinksUnderThePointer(t *testing.T) {
 	for range 4 {
 		s.Frame()
 		seen = append(seen, cursorShown(s))
-		s.Now = s.Now.Add(settings.LogoBlink)
+		s.SetNow(s.Now().Add(settings.LogoBlink))
 	}
 	if !seen[0] || seen[1] || !seen[2] || seen[3] {
 		t.Errorf("under the pointer the cursor went %v, want on, off, on, off", seen)
 	}
 	s.UI().SetWindow(false, true)
 	for range 3 {
-		s.Now = s.Now.Add(settings.LogoBlink)
+		s.SetNow(s.Now().Add(settings.LogoBlink))
 		s.Frame()
 		if !cursorShown(s) {
 			t.Fatal("with the window behind another app the cursor blinked")
@@ -60,7 +60,7 @@ func TestLogoBlinksUnderThePointer(t *testing.T) {
 	o.ReducedMotion = true
 	s.UI().SetOptions(o)
 	for range 3 {
-		s.Now = s.Now.Add(settings.LogoBlink)
+		s.SetNow(s.Now().Add(settings.LogoBlink))
 		s.Frame()
 		if !cursorShown(s) {
 			t.Fatal("with reduced motion the cursor blinked")

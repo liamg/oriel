@@ -52,7 +52,7 @@ func goCmd(a *agenttest.FakeSession, id, cmd string) chan agent.Decision {
 func (r *rulesRig) prompted(key string) {
 	r.t.Helper()
 	r.s.Until("the prompt", func() bool { return r.s.FindRole(render.RoleList, "Answers") != nil })
-	r.s.Now = r.s.Now.Add(widget.CardKeyGuard)
+	r.s.SetNow(r.s.Now().Add(widget.CardKeyGuard))
 	r.s.Frame()
 	r.s.Press(key)
 }

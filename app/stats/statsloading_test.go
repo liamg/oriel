@@ -22,7 +22,7 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 	t.Cleanup(release)
 	s.Run("stats.open", nil)
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Midway(func() { s.WantFrame("Scanning…") })
 	if n := s.Node("Chart"); n.Role != "status" {
@@ -33,7 +33,7 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 	}
 	release()
 	settle(s, x)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if text := s.Text(); strings.Contains(text, "Scanning…") || !strings.Contains(text, "COST") {
 		t.Errorf("once loaded:\n%s", text)
@@ -67,7 +67,7 @@ func TestSessionStatsFailureRetries(t *testing.T) {
 	s.Registry().Contribute(registry.Service{Name: hostapi.HostStatsService, Impl: hostapi.StatsCalls(f), Source: "test"})
 	s.Run("stats.session.open", registry.Args{"id": string(id)})
 	settle(s, x)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("the transcript is gone", "Retry")
 	before := f.asked.Load()

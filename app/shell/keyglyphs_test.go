@@ -71,10 +71,10 @@ func TestWhichKeyShowsGlyphs(t *testing.T) {
 	s.Registry().Keymap(registry.Keymap{Mode: "n", Keys: "<Space>q<CR>", Command: "test.noop", Desc: "enter the thing"})
 	keys := registry.NewResolver(s.Registry())
 	s.SetKeys(keys)
-	start := s.Now
+	start := s.Now()
 	keys.Feed([]string{"n", "global"}, " ", start)
 	keys.Feed([]string{"n", "global"}, "q", start)
-	s.Now = start.Add(time.Second) // past which-key's delay
+	s.SetNow(start.Add(time.Second)) // past which-key's delay
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "⌃R") || !strings.Contains(text, "↵") || rawKeys.MatchString(text) {
 		t.Errorf("which-key's next keys:\n%s", text)

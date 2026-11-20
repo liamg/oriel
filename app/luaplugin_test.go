@@ -512,9 +512,9 @@ oriel.option{ name = "plugin.jira.mode", type = "enum", values = { "mine", "team
 // oriel.now is the window's clock, so a plugin's countdown follows a test's fixed time; oriel.platform says the OS.
 func TestLuaNowAndPlatform(t *testing.T) {
 	s := apptest.LuaScene(t, "")
-	s.Now = time.Date(2026, 10, 15, 13, 12, 0, 500_000_000, time.UTC)
-	if got := s.Lua("L.now()"); len(got) != 1 || got[0] != float64(s.Now.UnixMilli())/1000 {
-		t.Errorf("L.now() = %v, want %v", got, float64(s.Now.UnixMilli())/1000)
+	s.SetNow(time.Date(2026, 10, 15, 13, 12, 0, 500_000_000, time.UTC))
+	if got := s.Lua("L.now()"); len(got) != 1 || got[0] != float64(s.Now().UnixMilli())/1000 {
+		t.Errorf("L.now() = %v, want %v", got, float64(s.Now().UnixMilli())/1000)
 	}
 	if got := s.Lua("L.platform"); len(got) != 1 || got[0] != runtime.GOOS {
 		t.Errorf("L.platform = %v", got)
@@ -621,14 +621,14 @@ oriel.statusline(function(w)
 end)`)
 	s.Frame()
 	s.Until("the load to start", func() bool { return apptest.LuaGlobal(lua(s).VM(), "runs") == float64(1) })
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Midway(func() { s.WantFrame("Reading the wiki…") })
 	if n := s.Node("Reading the wiki…"); n == nil || n.Role != "status" {
 		t.Errorf("the busy line reads as %+v", n)
 	}
 	s.Lua(`finish(nil, "the wiki is down")`)
-	s.Now = s.Now.Add(time.Second) // past the loading line's minimum show
+	s.SetNow(s.Now().Add(time.Second)) // past the loading line's minimum show
 	s.Until("the failure", func() bool { return strings.Contains(s.Text(), "the wiki is down") })
 	s.ClickNode("Retry")
 	s.Until("the retry", func() bool { return apptest.LuaGlobal(lua(s).VM(), "runs") == float64(2) })

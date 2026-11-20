@@ -70,7 +70,7 @@ func TestUsageSaysWhyTheProbeFailed(t *testing.T) {
 			// Resting on it shows what the probe said.
 			s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint(tc.want)})
 			s.Frame()
-			s.Now = s.Now.Add(time.Second)
+			s.SetNow(s.Now().Add(time.Second))
 			s.WantFrame(probeErr.Error())
 		})
 	}

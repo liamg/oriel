@@ -265,7 +265,7 @@ func TestSettingsNumberField(t *testing.T) {
 	if v := get(); v != 0 {
 		t.Errorf("set to %v while still typing", v)
 	}
-	s.Now = s.Now.Add(settings.TypingPause)
+	s.SetNow(s.Now().Add(settings.TypingPause))
 	s.Frame()
 	if v := get(); v != 12 {
 		t.Errorf("after a pause, editor.max_line_length = %v", v)
@@ -279,7 +279,7 @@ func TestSettingsNumberField(t *testing.T) {
 	if !strings.Contains(s.Text(), "is between") {
 		t.Error("an out-of-range value doesn't say why under the field")
 	}
-	s.Now = s.Now.Add(settings.TypingPause)
+	s.SetNow(s.Now().Add(settings.TypingPause))
 	s.Frame()
 	s.Type("CR")
 	if v := get(); v != 12 {

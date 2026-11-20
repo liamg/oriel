@@ -71,21 +71,35 @@ func (c *sceneClock) due(end time.Time) (*sceneTimer, bool) {
 	return t, true
 }
 
+// Now is the window's clock.
+func (s *Scene) Now() time.Time {
+	s.nowMu.Lock()
+	defer s.nowMu.Unlock()
+	return s.now
+}
+
+// SetNow sets the window's clock, running nothing timed on it (Advance does).
+func (s *Scene) SetNow(t time.Time) {
+	s.nowMu.Lock()
+	defer s.nowMu.Unlock()
+	s.now = t
+}
+
 // Advance moves the scene's clock on by d, running what's timed on it on the way, each at its own time, in order.
 func (s *Scene) Advance(d time.Duration) {
 	s.T.Helper()
-	end := s.Now.Add(d)
+	end := s.Now().Add(d)
 	for {
 		t, ok := s.clock.due(end)
 		if !ok {
 			break
 		}
-		if t.at.After(s.Now) {
-			s.Now = t.at
+		if t.at.After(s.Now()) {
+			s.SetNow(t.at)
 		}
 		t.f()
 	}
-	s.Now = end
+	s.SetNow(end)
 }
 
 // stepClock moves the scene's clock to the first timer waiting on it, if there is one, and runs it.
@@ -94,7 +108,7 @@ func (s *Scene) stepClock() bool {
 	if !ok {
 		return false
 	}
-	s.Advance(max(at.Sub(s.Now), 0))
+	s.Advance(max(at.Sub(s.Now()), 0))
 	return true
 }
 
@@ -108,7 +122,7 @@ func (s *Scene) Clock() clock.Clock { return s.clock }
 
 // NowClock reads the scene's Now, but what's timed on it runs by the system's clock, which neither Advance nor Quiet
 // moves: for timers a test shouldn't step to, such as a conversation's idle end.
-func (s *Scene) NowClock() clock.Clock { return nowClock(func() time.Time { return s.Now }) }
+func (s *Scene) NowClock() clock.Clock { return nowClock(s.Now) }
 
 // nowClock is a clock.Clock that reads now; its timers are the real clock's.
 type nowClock func() time.Time

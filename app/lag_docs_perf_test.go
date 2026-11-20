@@ -56,18 +56,18 @@ func planScene(t *testing.T, n int) *apptest.Scene {
 	plan := filepath.Join(ws, "PLAN.md")
 	os.WriteFile(plan, []byte(longMD(n)), 0o644)
 	s := apptest.New(t, apptest.Options{WorkDir: proj})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	var transcript []core.Item
 	for i := range n {
-		transcript = append(transcript, core.Item{ID: fmt.Sprint("e", i), Kind: core.ItemTool, Tool: "Edit", Time: s.Now.Add(-time.Minute),
+		transcript = append(transcript, core.Item{ID: fmt.Sprint("e", i), Kind: core.ItemTool, Tool: "Edit", Time: s.Now().Add(-time.Minute),
 			Diff: &core.FileDiff{Path: plan, Added: 1, Lines: []core.DiffLine{{Op: "+", New: 3, Text: "Intro paragraph."}}}})
 	}
 	se := core.SessionState{ID: "plan", Name: "plan", Kind: core.KindPlan, StartWork: true, Status: core.StatusNeedsYou, Dir: ws,
 		Projects:   []core.Project{{Name: "proj", Dir: proj, Branch: "main", Primary: true}},
 		Transcript: transcript,
-		Threads: []core.Thread{{ID: "a1b2c3d4", Status: core.ThreadOpen, Created: s.Now, Updated: s.Now,
+		Threads: []core.Thread{{ID: "a1b2c3d4", Status: core.ThreadOpen, Created: s.Now(), Updated: s.Now(),
 			Anchor:   &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 3, Text: "Intro paragraph."},
-			Comments: []core.Comment{{ID: "c1", Author: core.AuthorYou, Name: "Liam", Body: "Is this intro enough?", Time: s.Now, Delivered: true}}}},
+			Comments: []core.Comment{{ID: "c1", Author: core.AuthorYou, Name: "Liam", Body: "Is this intro enough?", Time: s.Now(), Delivered: true}}}},
 	}
 	for _, ev := range []core.Event{core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID}} {
 		if err := s.Store().Apply(ev); err != nil {
@@ -103,14 +103,14 @@ func agentEditScene(t *testing.T, n int) *apptest.Scene {
 	path := filepath.Join(dir, "notes.txt")
 	os.WriteFile(path, []byte(b.String()), 0o644)
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	var diff []core.DiffLine
 	for i := range n {
 		diff = append(diff, core.DiffLine{Op: "+", New: i + 1, Text: fmt.Sprintf("line %d", i)})
 	}
 	se := core.SessionState{ID: "notes", Name: "notes", Kind: core.KindWork, Status: core.StatusWorking,
 		Projects:   []core.Project{{Name: "notes", Dir: dir, Branch: "main", Primary: true}},
-		Transcript: []core.Item{{ID: "e", Kind: core.ItemTool, Tool: "Write", Time: s.Now.Add(-4 * time.Second), Diff: &core.FileDiff{Path: path, Added: n, Lines: diff}}}}
+		Transcript: []core.Item{{ID: "e", Kind: core.ItemTool, Tool: "Write", Time: s.Now().Add(-4 * time.Second), Diff: &core.FileDiff{Path: path, Added: n, Lines: diff}}}}
 	for _, ev := range []core.Event{core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID}} {
 		if err := s.Store().Apply(ev); err != nil {
 			t.Fatal(err)

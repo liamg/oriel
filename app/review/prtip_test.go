@@ -24,7 +24,7 @@ func hoverTip(s *apptest.Scene, title string) string {
 	}
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: at.X + 8, Y: at.Y - 4}})
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	return strings.ReplaceAll(s.Text(), "\n", " ")
 }

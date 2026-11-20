@@ -33,17 +33,17 @@ func hostileScene(t *testing.T, o apptest.Options) *apptest.Scene {
 // may cost more but mustn't stall, and the ones after are cheap.
 func TestLongTokenInTheConsoleBudget(t *testing.T) {
 	s := hostileScene(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	round := 0
 	setup := func() {
 		round++
 		token := strings.Repeat(fmt.Sprintf("%c", 'A'+round), 10_000)
 		se := core.SessionState{ID: "blob", Name: "blob", Kind: core.KindWork, Status: core.StatusWorking,
-			Agent: core.AgentState{Provider: "claude", Running: true, Working: true, TurnStarted: s.Now},
+			Agent: core.AgentState{Provider: "claude", Running: true, Working: true, TurnStarted: s.Now()},
 			Transcript: []core.Item{
-				{ID: "u", Kind: core.ItemUser, Time: s.Now, Text: "Decode this."},
-				{ID: "a", Kind: core.ItemAssistant, Time: s.Now, Text: "Here it is: " + token},
-				{ID: "b", Kind: core.ItemTool, Tool: "Bash", Title: "Bash base64", Done: true, Output: token, Time: s.Now},
+				{ID: "u", Kind: core.ItemUser, Time: s.Now(), Text: "Decode this."},
+				{ID: "a", Kind: core.ItemAssistant, Time: s.Now(), Text: "Here it is: " + token},
+				{ID: "b", Kind: core.ItemTool, Tool: "Bash", Title: "Bash base64", Done: true, Output: token, Time: s.Now()},
 			}}
 		s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
 	}
@@ -51,7 +51,7 @@ func TestLongTokenInTheConsoleBudget(t *testing.T) {
 	s.Run("view.open", registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"})
 	s.Frames(3)
 	round = 1
-	s.HoldsFrameBudget("a 10k-char token in the console", apptest.HostileP99, 200, setup, func(int) { s.Now = s.Now.Add(16 * time.Millisecond) })
+	s.HoldsFrameBudget("a 10k-char token in the console", apptest.HostileP99, 200, setup, func(int) { s.SetNow(s.Now().Add(16 * time.Millisecond)) })
 }
 
 // Holding ↓ through grep's previews over many files.

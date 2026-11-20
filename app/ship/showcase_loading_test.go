@@ -15,6 +15,6 @@ func TestShowcaseLoadingShip(t *testing.T) {
 	shipOf(s).Fixture(se.ID, true, func([]ship.Read) []ship.Read { return nil })
 	s.Run("ship.open", nil)
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Shot("ship-loading")
 }

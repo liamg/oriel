@@ -19,7 +19,7 @@ import (
 func TestJobFormWaitsForAgents(t *testing.T) {
 	jr := rig.NewJobs(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(jr.W)})
-	s.Now = time.Date(2026, 10, 13, 9, 0, 0, 0, time.UTC)
+	s.SetNow(time.Date(2026, 10, 13, 9, 0, 0, 0, time.UTC))
 	hold := make(chan struct{})
 	jr.Claude.Hold = hold
 	s.Run("jobs.new", registry.Args{"prompt": "Sweep stale deps"})
@@ -27,7 +27,7 @@ func TestJobFormWaitsForAgents(t *testing.T) {
 	if n := strings.Count(s.Text(), "Looking for agents…"); n != 2 {
 		t.Errorf("before the delay, %d lines say Looking for agents…: want only Save's and Save and run's", n)
 	}
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if n := strings.Count(s.Text(), "Looking for agents…"); n != 3 {
 		t.Errorf("after the delay, %d lines say Looking for agents…: want the agent section's too", n)
@@ -42,7 +42,7 @@ func TestJobFormWaitsForAgents(t *testing.T) {
 
 	close(hold)
 	s.Until("the agents", func() bool { return x.FormAgents().Phase == widget.Ready })
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if _, agent, _ := x.Form(); agent != "claude" {
 		t.Errorf("the agent picked once they arrived: %q", agent)

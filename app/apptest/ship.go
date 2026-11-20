@@ -97,8 +97,8 @@ func ProjectDir(se core.SessionState, name string) string {
 func ShipSession(t *testing.T) (*Scene, core.SessionState) {
 	t.Helper()
 	s := New(t, Options{})
-	s.Now = At(9, 0, 0)
-	se, reads := rig.ShipSession(t, s.Now)
+	s.SetNow(At(9, 0, 0))
+	se, reads := rig.ShipSession(t, s.Now())
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
 	x := PluginOf[*ship.Ship](s, "ship")
 	x.Clock = s.Clock()

@@ -19,7 +19,7 @@ func TestAddRepoWaitsForItsCheck(t *testing.T) {
 	lw := rig.NewHost(t)
 	other := rig.NewRepo(t, filepath.Join(t.TempDir(), "billing"))
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	s.Now = time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC)
+	s.SetNow(time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC))
 	s.Run("repos.new", registry.Args{"path": other})
 	s.Frame()
 	s.Run("repos.new.submit", nil)
@@ -28,7 +28,7 @@ func TestAddRepoWaitsForItsCheck(t *testing.T) {
 	if _, ok := s.Store().State().Repo("billing"); ok {
 		t.Fatal("added before the path was checked")
 	}
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Until("the check", func() bool { return strings.Contains(s.Text(), "✓ git repo") })
 	s.Run("repos.new.submit", nil)
 	s.UntilState("billing registered", func(st core.State) bool { _, ok := st.Repo("billing"); return ok })

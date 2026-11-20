@@ -48,14 +48,14 @@ func TestDiffWhileTheStatusLoads(t *testing.T) {
 	gitOf(s).Unread(r.Dir)
 	s.Run("diff.open", registry.Args{"path": r.Dir})
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("Reading " + filepath.Base(r.Dir) + "'s changes…")
 
 	gitOf(s).Unread(filepath.Join(r.Dir, "gone"))
 	gitOf(s).Reload()
 	s.Quiet()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("Retry")
 	if strings.Contains(s.Text(), "'s changes…") {
@@ -69,7 +69,7 @@ func TestDiffOutsideARepo(t *testing.T) {
 	dir := t.TempDir()
 	s.Run("view.open", registry.Args{"id": gitui.DiffView, "instance": dir, "place": "tab"})
 	s.Until("the root looked for", func() bool { s.Frame(); return gitOf(s).Settled() })
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame(filepath.Base(dir) + " isn't in a git repository")
 }
