@@ -49,7 +49,7 @@ func inThread(r *apptest.Window, within, label string) bool {
 	var find func(n *render.AccessNode, in bool) bool
 	find = func(n *render.AccessNode, in bool) bool {
 		in = in || n.Name == within
-		if in && n.Name == label {
+		if in && n.Name == label && len(n.Actions) > 0 { // a control, not the comment an answer leaves
 			return true
 		}
 		for _, k := range n.Children {
@@ -102,6 +102,14 @@ func TestAQuestionIsAnsweredInItsThread(t *testing.T) {
 		t.Errorf("the agent was answered %q", out)
 	}
 	cardGone(r, "Conversation", "banker's")
+	// Your answer reads under the question as your own words, without the question again.
+	if last, _ := threadWith(t, r, "Round half to even?").Last(); last.Author != core.AuthorYou || last.Body != "away from zero" {
+		t.Errorf("the thread ends %+v, want your answer alone", last)
+	}
+	f := r.Latest("your answer in the thread", func(f headless.Frame) bool { return strings.Contains(f.Text(), "away from zero") })
+	if text := f.Text(); strings.Contains(text, "Which rounding? → ") {
+		t.Errorf("the answer repeats the question:\n%s", text)
+	}
 }
 
 // cardGone waits for the question card offering option to leave within: the question, answered, reads on as comments.
