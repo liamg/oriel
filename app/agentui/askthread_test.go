@@ -170,8 +170,16 @@ func TestAQuestionStaysInItsResolvedThread(t *testing.T) {
 	r.WaitFocused("Your own answer")
 	r.TypeText("half to even")
 	r.WaitText("half to even")
+	r.TypeKeys("<S-CR>") // a new line, not the answer sent
+	r.TypeText("for negatives too")
+	r.WaitText("for negatives too")
+	select {
+	case out := <-got:
+		t.Fatalf("⇧⏎ sent the answer: %q", out)
+	default:
+	}
 	r.TypeKeys("<CR>")
-	if out := apptest.Recv(t, "the ask tool's answer", got); !strings.Contains(out, "Which way should it go? → half to even") {
+	if out := apptest.Recv(t, "the ask tool's answer", got); !strings.Contains(out, "Which way should it go? → half to even\nfor negatives too") {
 		t.Errorf("the agent was answered %q", out)
 	}
 	r.WaitGone("Which way should it go?")
