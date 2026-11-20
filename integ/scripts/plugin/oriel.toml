@@ -1,0 +1,9 @@
+id          = "oriel/scripts"
+version     = "0.1.0"
+oriel       = ">=0.4"
+description = "Shell scripts of your own, run on the session in front from the omnibox: its workspace, its name and a project's checkout filled in"
+license     = "MIT"
+
+[permissions]
+exec              = { commands = ["sh"], why = "Run your scripts. A script starting with #! runs under the interpreter it names" }
+"session.control" = { why = "Read the session in front: its workspace, name and projects" }

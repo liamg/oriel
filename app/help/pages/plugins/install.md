@@ -164,7 +164,7 @@ secrets, are yours alone. **High risk.**
 
 ## Bundled plugins {#bundled}
 
-Some plugins ship inside Oriel (Linear): they load at start with what their manifest declares, without
+Some plugins ship inside Oriel (Linear, [Scripts](plugins/scripts)): they load at start with what their manifest declares, without
 asking, because they come with Oriel. The page marks them **bundled**. **Disable** turns one off (it's listed in
 `bundled.disabled`) and **Enable** turns it back on; they can't be uninstalled. Installing the same id from a
 registry replaces the bundled copy while it's installed.
