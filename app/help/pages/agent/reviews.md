@@ -118,6 +118,13 @@ In a review session, `gc` on a line of the diff opens a **comment for the author
 *you*, and the agent isn't asked to answer it. The composer's **To the author | Ask the agent** switch, or `ga`
 (in the diff and the editor, in any session), asks the agent about the line instead.
 
+### Suggesting a change {#suggest}
+
+**Suggest a change** (`⌘G`) under the field of a comment for the author adds a suggestion block holding the commented lines as they
+read: edit them into what they should be (`⇧⏎` for a new line), and the author can apply it on GitHub in one click. `⌘Z` takes the block back out.
+To suggest a change to several lines, select them in the editor and comment with **Ask about this…** in its
+right-click menu.
+
 ### Sending it {#send}
 
 **Draft summary** has the agent write two or three sentences on what blocks merging, into the summary box, which you

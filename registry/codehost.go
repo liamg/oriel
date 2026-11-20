@@ -62,6 +62,10 @@ type CodeHost struct {
 	Reply   func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, body string) (string, error)
 	// Resolve resolves a review thread there, or reopens it, as the user did in Oriel.
 	Resolve func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, resolved bool) error
+	// Reactions are the emoji a comment there takes, in the order the host shows them. ReactNote adds the user's
+	// reaction to a comment of a thread, by its ReviewNote ID, or with on false takes it back.
+	Reactions []string
+	ReactNote func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, note, emoji string, on bool) error
 
 	// Template is the pull request template in the project's checkout at dir, and Owners the code owners of files
 	// there, as the host reads its files. They read the checkout, not the host's servers.
@@ -301,13 +305,14 @@ type ReviewThread struct {
 // Mine that the user wrote it. Written is its text as written where the host changed it as it was posted (a heading
 // it put before it), "" when Body is.
 type ReviewNote struct {
-	ID      string    `json:"id"`
-	Author  string    `json:"author"`
-	Body    string    `json:"body"`
-	At      time.Time `json:"at,omitzero"`
-	Member  bool      `json:"member,omitempty"`
-	Mine    bool      `json:"mine,omitempty"`
-	Written string    `json:"written,omitempty"`
+	ID        string       `json:"id"`
+	Author    string       `json:"author"`
+	Body      string       `json:"body"`
+	At        time.Time    `json:"at,omitzero"`
+	Member    bool         `json:"member,omitempty"`
+	Mine      bool         `json:"mine,omitempty"`
+	Written   string       `json:"written,omitempty"`
+	Reactions []PRReaction `json:"reactions,omitempty"`
 }
 
 // NewPR is a pull request to raise.

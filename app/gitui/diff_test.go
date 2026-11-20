@@ -317,6 +317,44 @@ func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 	}
 }
 
+// A Shift-click on another line of the hunk widens the thread being opened to the lines from the first to it, as
+// GitHub's line numbers do, keeping what's been written.
+func TestAShiftClickWidensADiffThread(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	dir := r.ProjectDir(r.Session)
+	path := filepath.Join(dir, "round.go")
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rig.Git(t, dir, "add", "-A")
+	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
+	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
+	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
+	r.WaitGit()
+	r.ClickText("Truncate")
+	r.WaitFrame("a thread on line 8", func(s string) bool { return apptest.HasAll(s, "New thread", "· L8") })
+	r.TypeText("Both of these")
+	r.WaitText("Both of these")
+	r.ShiftClickText("IntPart")
+	r.WaitFrame("the thread on lines 8 to 10, its text kept", func(s string) bool {
+		return apptest.HasAll(s, "New thread", "· L8–10", "Both of these")
+	})
+	r.WaitAccess("the lines selected", func(r *apptest.Window) bool {
+		n := r.Access("\tdiff := scaled.Sub(t).Abs()")
+		return n != nil && n.Selected
+	})
+	r.TypeKeys("<CR>")
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "round.go:8-10") || !strings.Contains(in.Text, "Both of these") {
+		t.Errorf("the agent got %q", in.Text)
+	}
+}
+
 // sessionProject is the name of session w's project.
 func sessionProject(t *testing.T, r *apptest.Window) string {
 	t.Helper()

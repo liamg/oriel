@@ -320,6 +320,42 @@ func TestLuaCodeHostCallbackError(t *testing.T) {
 	}
 }
 
+// A Lua code host names the reactions its comments take, and react_note gets the thread, the comment's id, the emoji
+// and whether to add it or take it back.
+func TestLuaCodeHostReactNote(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	vm := s.PluginVM(plugin.Caller{ID: "acme/forge", Dir: t.TempDir(), Guard: plugin.NewGrants()})
+	src := `oriel.code.host{ name = "forge", sites = { { host = "forge.dev" } }, reactions = { "👍", "🎉" },
+  react_note = function(repo, pr, thread, note, emoji, on, done)
+    done(nil, table.concat({ repo.repo, tostring(pr.number), thread.id, note, emoji, tostring(on) }, " "))
+  end }`
+	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
+		t.Fatal(err)
+	}
+	h, ok := registry.HostByName(s.Registry(), "forge")
+	if !ok || h.ReactNote == nil || !slices.Equal(h.Reactions, []string{"👍", "🎉"}) {
+		t.Fatalf("the host's reactions: %v, react_note %v", h.Reactions, h.ReactNote != nil)
+	}
+	got := make(chan error, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	go func() {
+		got <- h.ReactNote(ctx, registry.CodeRepo{Repo: "acme/api"}, registry.PR{Number: 7}, registry.ReviewThread{ID: "d1"}, "n1", "🎉", false)
+	}()
+	var err error
+	s.Until("the answer", func() bool {
+		select {
+		case err = <-got:
+			return true
+		default:
+			return false
+		}
+	})
+	if err == nil || !strings.Contains(err.Error(), "acme/api 7 d1 n1 🎉 false") {
+		t.Errorf("react_note = %v", err)
+	}
+}
+
 func sitesOf(s *apptest.Scene) *ship.Sites {
 	return apptest.PluginOf[*ship.CodeSites](s, "code-sites").Sites()
 }

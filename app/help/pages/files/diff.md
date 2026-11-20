@@ -64,7 +64,8 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
 line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, `zo` and
 `zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. A click on a line opens a thread on it too
-(see [Between the lines](agent/requests#inline)).
+(see [Between the lines](agent/requests#inline)), and a Shift-click on another line of its hunk widens that thread to
+the lines between, keeping what you've written.
 
 `Space h d` (`diff.file.toggle`) switches between a file and its diff. From the editor, it opens the diff with that
 file expanded at the cursor's line; from the diff, it goes back to the file in the editor at the selected line.

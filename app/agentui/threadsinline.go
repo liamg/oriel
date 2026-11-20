@@ -34,6 +34,7 @@ type inlineNew struct {
 	buf         *text.Buffer
 	anchor      text.AnchorID
 	draft       string
+	append      string // goes on the end of draft as one edit, on the next frame
 	focus       bool
 	toAuthor    bool   // a comment for the pull request's author, not a question for the agent
 	review      bool   // the session is a review: it can be either
@@ -134,6 +135,10 @@ func (x *Requests) newInline(a registry.Args) error {
 		o.focus, o.toAuthor = true, n.toAuthor
 		return nil
 	} else if o != nil {
+		if filepath.Clean(o.path) == filepath.Clean(n.path) && n.line <= o.line && o.line <= max(n.end, n.line) {
+			// The same thread, widened to more lines: what's written in it stays.
+			n.draft, n.append = o.draft, o.append
+		}
 		o.release()
 	}
 	st.inline = n
@@ -503,7 +508,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(theme.Accent)}, nil)
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("l", fmt.Sprintf("· L%d", line+1), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("l", n.lines(line), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			if n.review {
 				to := 1
 				if n.toAuthor {
@@ -513,10 +518,9 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 					n.toAuthor = to == 0
 				}
 			}
-			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
-		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) {
+		var r widget.InputResult
+		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12}}, func(c *ui.Ctx) {
 			id := c.Next("input")
 			if n.focus {
 				c.RequestFocus(id)
@@ -526,33 +530,104 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			if se, ok := x.front(); ok && !n.toAuthor {
 				files = pastedFiles(x.h, se.ID)
 			}
-			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
-				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files})
-			switch {
-			case r.Submitted && strings.TrimSpace(n.draft) != "":
-				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
-				if n.end > n.line {
-					a["end_line"] = line + 1 + n.end - n.line
-				}
-				if n.col > 0 {
-					a["col"] = n.col
-				}
-				if n.endCol > 0 {
-					a["end_col"] = n.endCol
-				}
-				if n.toAuthor {
-					a["outgoing"] = true
-				}
-				if err := x.h.Run(context.Background(), "request.comment", a); err != nil {
-					kit.NotifyError(x.h, "requests", err, true)
-					return
-				}
-				n.release()
-				st.inline = nil
-			case r.Cancelled:
-				n.release()
-				st.inline = nil
-			}
+			r = widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
+				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files, KeyMode: ThreadComposerKeyMode, Append: n.append})
+			n.append = ""
 		})
+		send, cancel := x.composerButtons(c, n)
+		switch {
+		case (r.Submitted || send) && strings.TrimSpace(n.draft) != "":
+			if err := x.h.Run(context.Background(), "request.comment", n.commentArgs(line)); err != nil {
+				kit.NotifyError(x.h, "requests", err, true)
+				return
+			}
+			n.release()
+			st.inline = nil
+		case r.Cancelled || cancel:
+			n.release()
+			st.inline = nil
+		}
 	})
+}
+
+// composerButtons is the row under a new thread's field, laid out as GitHub's: a suggestion for the author at the
+// left, Cancel and the send button at the right. It says which of the two was pressed.
+func (x *Requests) composerButtons(c *ui.Ctx, n *inlineNew) (send, cancel bool) {
+	c.Row("buttons", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 8, B: 10}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		if n.toAuthor && widget.Button(c, "suggest", "Suggest a change", widget.ButtonOpts{Ghost: true, Key: "⌘G", Help: "agent/reviews#suggest"}) {
+			kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggestion.add", nil), true)
+		}
+		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		cancel = widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Ghost: true, Key: "esc"})
+		verb := "Ask"
+		if n.toAuthor {
+			verb = "Comment"
+		}
+		send = widget.Button(c, "send", verb, widget.ButtonOpts{Primary: true, Key: "⏎",
+			Disabled: strings.TrimSpace(n.draft) == "", Why: "Write something first"})
+	})
+	return send, cancel
+}
+
+// lines is the header's line label for the thread being opened on line (0-based): "· L8", or "· L8–10" for a range.
+func (n *inlineNew) lines(line int) string {
+	if n.end > n.line {
+		return fmt.Sprintf("· L%d–%d", line+1, line+1+n.end-n.line)
+	}
+	return fmt.Sprintf("· L%d", line+1)
+}
+
+// commentArgs is request.comment's arguments for the thread being opened on line (0-based).
+func (n *inlineNew) commentArgs(line int) registry.Args {
+	a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
+	if n.end > n.line {
+		a["end_line"] = line + 1 + n.end - n.line
+	}
+	if n.col > 0 {
+		a["col"] = n.col
+	}
+	if n.endCol > 0 {
+		a["end_col"] = n.endCol
+	}
+	if n.toAuthor {
+		a["outgoing"] = true
+	}
+	return a
+}
+
+// suggest adds a suggestion block holding the commented lines, as they read now, to the comment being written, and
+// puts the cursor back in its field.
+func (x *Requests) suggest() error {
+	n := x.state("").inline
+	if n == nil || !n.toAuthor {
+		return errors.New("no comment for the author is being written")
+	}
+	if n.buf == nil {
+		return errors.New("the commented lines aren't read yet")
+	}
+	snap := n.buf.Snapshot()
+	first := n.line
+	if off, ok := n.buf.Resolve(n.anchor); ok {
+		first = snap.PosAt(min(off, snap.Len())).Line
+	}
+	var lines []string
+	for i := first; i <= first+max(n.end-n.line, 0) && i < snap.Lines(); i++ {
+		lines = append(lines, strings.TrimRight(string(snap.Line(i)), "\r\n"))
+	}
+	if was := n.draft + n.append; was != "" && !strings.HasSuffix(was, "\n") {
+		n.append += "\n"
+	}
+	n.append += suggestion(strings.Join(lines, "\n"))
+	n.focus = true
+	return nil
+}
+
+// suggestion is a GitHub suggestion block of lines; its fence is longer than any run of backticks in them, so they
+// can't close it early.
+func suggestion(lines string) string {
+	fence := "```"
+	for strings.Contains(lines, fence) {
+		fence += "`"
+	}
+	return fence + "suggestion\n" + lines + "\n" + fence
 }

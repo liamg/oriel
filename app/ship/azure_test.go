@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -201,4 +203,49 @@ func TestAzureShipAndReviews(t *testing.T) {
 		Target: "refs/heads/main", Reviewers: []azure.Reviewer{{Identity: azuretest.Me}}})
 	s.Run("reviews.refresh", nil)
 	s.Until("contoso's request", func() bool { return strings.Contains(s.Text(), "Offline mode for the field app") })
+}
+
+// The plugin's comments take a like, as 👍: each comment's likes come with it, and react_note likes one as you or takes
+// your like back, through the plugin's Lua.
+func TestAzureCommentReactions(t *testing.T) {
+	az := azuretest.New(t)
+	priya := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000002", DisplayName: "Priya K", UniqueName: "priya@acme.com"}
+	pr := az.AddPR("acme", "web", "dashboard", azure.PullRequest{Title: "Usage chart", CreatedBy: azuretest.Me, Source: "refs/heads/usage",
+		Target: "refs/heads/main"})
+	tid := az.AddFileThread(pr.ID, "src/chart.ts", 12, priya, "Can this return an error instead?")
+	az.Like(pr.ID, tid, 1, priya)
+	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
+	if err := secrets.SetSecret(azure.Secret, azuretest.Token); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.Net, cfg.Secrets = az.Client(), secrets }})
+	loadAzure(t, s)
+	h, ok := registry.HostByName(s.Registry(), "azure")
+	if !ok || h.ReactNote == nil || !slices.Equal(h.Reactions, []string{"👍"}) {
+		t.Fatalf("Azure DevOps' reactions: %v, react_note %v", h.Reactions, ok && h.ReactNote != nil)
+	}
+	repo := registry.CodeRepo{Remote: "https://dev.azure.com/acme/web/_git/dashboard", Repo: "web/dashboard",
+		Site: registry.Site{Host: "dev.azure.com", API: "https://dev.azure.com", Secret: azure.Secret}}
+	ref := registry.PR{Number: pr.ID}
+	ctx := t.Context()
+	var ts []registry.ReviewThread
+	threads := func() error {
+		var err error
+		ts, err = h.Threads(ctx, repo, ref)
+		return err
+	}
+	if err := offLoop(t, s, threads); err != nil || len(ts) != 1 {
+		t.Fatalf("threads %+v, %v", ts, err)
+	}
+	note := ts[0].Comments[0].ID
+	if err := offLoop(t, s, func() error { return h.ReactNote(ctx, repo, ref, ts[0], note, "👍", true) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := offLoop(t, s, threads); err != nil {
+		t.Fatal(err)
+	}
+	want := []registry.PRReaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"priya@acme.com", azuretest.Me.UniqueName}}}
+	if got := ts[0].Comments[0].Reactions; !reflect.DeepEqual(got, want) {
+		t.Errorf("the comment's reactions after 👍: %+v", got)
+	}
 }

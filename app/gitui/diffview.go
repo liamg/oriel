@@ -558,7 +558,7 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	th := c.Theme()
 	l := h.Lines[k]
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
-	sel := st.sel == me
+	sel := st.picked(me)
 	fill, edge, word := lineTones(th, l.Op)
 	key := lineKey(l)
 	row := c.Next(key)
@@ -579,14 +579,19 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	x.lineClicked(st, me, in)
 }
 
-// lineClicked selects the line a click is on and starts a comment on it (diff.comment); a right-click selects it
-// for its menu's items (lineMenu) to act on.
+// lineClicked selects the line a click is on and starts a comment on it (diff.comment); a Shift-click in the selected
+// line's hunk comments on the lines from it to the one clicked; a right-click selects it for its menu's items
+// (lineMenu) to act on.
 func (x *Diff) lineClicked(st *diffState, me diffSel, in ui.Interaction) {
 	if in.Context != nil {
-		st.sel = me
+		st.sel, st.span = me, diffSpan{}
 	}
 	if in.Clicked {
-		st.sel = me
+		if in.Mods&render.ModShift != 0 && st.sel.line >= 0 && st.sel.file == me.file && st.sel.hunk == me.hunk {
+			st.span = diffSpan{at: st.sel, to: me.line}
+		} else {
+			st.sel, st.span = me, diffSpan{}
+		}
 		if err := x.comment(st, registry.Args{}); err != nil {
 			x.h.Log().Warn("diff", "err", err)
 		}
@@ -621,7 +626,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		k = p[0]
 	}
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
-	sel := st.sel == me || st.sel.file == at.file && st.sel.hunk == at.hunk && st.sel.line == p[0] && p[0] >= 0
+	sel := st.picked(me) || st.sel.file == at.file && st.sel.hunk == at.hunk && st.sel.line == p[0] && p[0] >= 0
 	key := lineKey(h.Lines[k])
 	row := c.Next(key)
 	st.ids[me] = row

@@ -1,5 +1,6 @@
 // Package gitlab is the GitLab plugin's process: GitLab as a code host, gitlab.com or a self-hosted site,
-// its merge requests asking for your review, and a project's merge request raised, read and merged, over its REST API.
+// its merge requests asking for your review, and a project's merge request raised, read and merged, over its REST API
+// (its notes' award emoji over GraphQL, 100 notes a query).
 // It never holds a token: each request goes through the host's http.request, which adds the site's only for its host.
 package gitlab
 
@@ -32,6 +33,7 @@ type Do func(ctx context.Context, method, path string, body []byte) (status int,
 // Client talks to one GitLab site as the token's owner.
 type Client struct {
 	Do      Do
+	GraphQL Do       // the site's GraphQL endpoint, by POST with path ""
 	Host    string   // the site's: for its web URLs
 	Members *Members // who's a member of which project, as read; nil reads each time
 }

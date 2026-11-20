@@ -37,6 +37,7 @@ const SummaryView = "requests-summary"
 const (
 	RequestsKeyMode        = "requests"
 	RequestComposerKeyMode = "request.composer"
+	ThreadComposerKeyMode  = "thread.composer" // a new thread's field, between a file's lines
 )
 
 var (
@@ -259,6 +260,9 @@ func (x *Requests) commands() []registry.Command {
 			Args: []registry.Arg{registry.AnyArg("items"), registry.StringArg("text"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
 		{ID: "thread.new", Grant: string(plugin.CapAgentPrompt), Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
 			Available: inFront, Args: []registry.Arg{registry.IntArg("col"), registry.IntArg("end_col"), registry.IntArg("end_line"), registry.StringArg("file"), registry.IntArg("line"), registry.StringArg("to"), registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
+		{ID: "thread.suggestion.add", Grant: registry.Open, Title: "Add a suggestion block to the comment for the author being written: the commented lines, to edit into the change",
+			Available: func(registry.Args) bool { n := x.state("").inline; return n != nil && n.toAuthor },
+			Args:      registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.suggest() }},
 		{ID: "threads.toggle", Grant: registry.Open, Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Args: []registry.Arg{registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
 		{ID: "threads.open", Grant: registry.Open, Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
@@ -289,6 +293,7 @@ func (x *Requests) keymaps() []registry.Keymap {
 			Desc: "Send now, interrupting the turn"},
 		{Mode: "n", Keys: "<Leader>r", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"},
 		{Mode: "n", Keys: "ga", Command: "thread.new", Args: registry.Args{"to": "agent"}, Desc: "Ask the agent about this line"},
+		{Mode: ThreadComposerKeyMode, Keys: "<D-g>", Command: "thread.suggestion.add", Desc: "Suggest a change"},
 		{Mode: "n", Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
 		{Mode: kit.PresentKeyMode, Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
 		{Mode: ThreadsHiddenKeyMode, Keys: "<CR>", Command: "threads.open", Desc: "Show the line's threads"},

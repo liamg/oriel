@@ -103,8 +103,17 @@ type GitLab struct {
 	merged   []Merged
 	auths    []string
 	hosts    []string
-	members  map[string]int // by project path and user: access level
-	notes    []string       // notes posted through the API: "path!iid discussion: body"
+	members  map[string]int  // by project path and user: access level
+	notes    []string        // notes posted through the API: "path!iid discussion: body"
+	awards   map[int][]award // by note id
+	calls    []string        // each request: "GET /api/v4/user"
+	noGraph  bool            // GraphQL refused
+}
+
+// award is an emoji a user awarded a note.
+type award struct {
+	id         int
+	name, user string
 }
 
 // New serves an empty gitlab.com until the test ends; its users are you, mkhan and priya-k.
@@ -113,7 +122,7 @@ func New(t testing.TB) *GitLab {
 	isolate.Test(t)
 	g := &GitLab{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 100, users: []string{Me, "mkhan", "priya-k"},
 		projects: map[string]*project{}, hosts: []string{"gitlab.com"},
-		members: map[string]int{}}
+		members: map[string]int{}, awards: map[int][]award{}}
 	g.Server = httptest.NewTLSServer(http.HandlerFunc(g.serve))
 	t.Cleanup(g.Close)
 	return g
@@ -230,6 +239,25 @@ func (g *GitLab) AddNote(path string, iid int, author, body string) {
 	g.nextID++
 	m.discussions = append(m.discussions, &discussion{id: fmt.Sprintf("n%040d", g.nextID),
 		notes: []note{{id: g.nextID, author: author, body: body, created: g.tick()}}})
+}
+
+// Award has user award a merge request's note the emoji GitLab names name ("thumbsup", "fire"…).
+func (g *GitLab) Award(path string, iid, note int, user, name string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.nextID++
+	g.awards[note] = append(g.awards[note], award{id: g.nextID, name: name, user: user})
+}
+
+// Awards are who awarded a merge request's note each emoji, by its name.
+func (g *GitLab) Awards(path string, iid, note int) map[string][]string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	out := map[string][]string{}
+	for _, a := range g.awards[note] {
+		out[a.name] = append(out[a.name], a.user)
+	}
+	return out
 }
 
 // SetMember gives a user an access level to a project: 30 is Developer.
@@ -368,6 +396,11 @@ func (g *GitLab) serve(w http.ResponseWriter, r *http.Request) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.auths = append(g.auths, r.Host+" "+r.Header.Get("Authorization"))
+	g.calls = append(g.calls, r.Method+" "+r.URL.Path)
+	if r.URL.Path == "/api/graphql" && slices.Contains(g.hosts, r.Host) && r.Header.Get("Authorization") == "Bearer "+Key {
+		g.graphql(w, r)
+		return
+	}
 	rest, ok := strings.CutPrefix(r.URL.EscapedPath(), "/api/v4/")
 	if !slices.Contains(g.hosts, r.Host) || !ok {
 		reply(w, 404, map[string]string{"message": "404 Not Found"})
@@ -568,6 +601,8 @@ func (g *GitLab) mrRoute(w http.ResponseWriter, method string, p *project, m *mr
 		d.notes = append(d.notes, n)
 		g.notes = append(g.notes, fmt.Sprintf("%s!%d %s: %s", p.path, m.iid, d.id, n.body))
 		reply(w, 201, map[string]any{"id": n.id, "body": n.body, "author": g.user(Me)})
+	case len(seg) >= 3 && seg[0] == "notes" && seg[2] == "award_emoji":
+		g.awardRoute(w, method, seg[1], seg[3:], in)
 	case len(seg) == 1 && seg[0] == "merge" && method == "PUT":
 		switch {
 		case m.state != "opened" || draft.MatchString(m.title):
@@ -589,3 +624,38 @@ func (g *GitLab) mrRoute(w http.ResponseWriter, method string, p *project, m *mr
 }
 
 func str(v any) string { s, _ := v.(string); return s }
+
+// awardRoute is a note's award emoji: listed, awarded as you (once per name), and taken back by the award's id.
+func (g *GitLab) awardRoute(w http.ResponseWriter, method, noteID string, seg []string, in map[string]any) {
+	note, _ := strconv.Atoi(noteID)
+	as := g.awards[note]
+	switch {
+	case len(seg) == 0 && method == "GET":
+		out := []map[string]any{}
+		for _, a := range as {
+			out = append(out, map[string]any{"id": a.id, "name": a.name, "user": g.user(a.user)})
+		}
+		reply(w, 200, out)
+	case len(seg) == 0 && method == "POST":
+		name := str(in["name"])
+		if slices.ContainsFunc(as, func(a award) bool { return a.name == name && a.user == Me }) {
+			reply(w, 404, map[string]string{"message": "404 Award Emoji Name has already been taken"})
+			return
+		}
+		g.nextID++
+		a := award{id: g.nextID, name: name, user: Me}
+		g.awards[note] = append(as, a)
+		reply(w, 201, map[string]any{"id": a.id, "name": a.name, "user": g.user(Me)})
+	case len(seg) == 1 && method == "DELETE":
+		id, _ := strconv.Atoi(seg[0])
+		i := slices.IndexFunc(as, func(a award) bool { return a.id == id && a.user == Me })
+		if i < 0 {
+			reply(w, 404, map[string]string{"message": "404 Award Emoji Not Found"})
+			return
+		}
+		g.awards[note] = slices.Delete(as, i, i+1)
+		w.WriteHeader(204)
+	default:
+		reply(w, 404, map[string]string{"message": "404 Not Found"})
+	}
+}

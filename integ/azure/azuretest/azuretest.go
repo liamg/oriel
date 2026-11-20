@@ -202,6 +202,40 @@ func (s *Server) Resolve(id, thread int, status string) {
 	s.find(id).threads[thread-1].Status = status
 }
 
+// Like likes a thread's comment as who.
+func (s *Server) Like(id, thread, comment int, who azure.Identity) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.like(s.find(id), thread, comment, who, true)
+}
+
+// Likes are the unique names of those who liked a thread's comment, in the order they did.
+func (s *Server) Likes(id, thread, comment int) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for _, l := range s.find(id).threads[thread-1].Comments[comment-1].UsersLiked {
+		out = append(out, l.UniqueName)
+	}
+	return out
+}
+
+// like likes a comment as who, or with on false takes their like back; false when there's no such comment.
+func (s *Server) like(p *pr, thread, comment int, who azure.Identity, on bool) bool {
+	if thread < 1 || thread > len(p.threads) || comment < 1 || comment > len(p.threads[thread-1].Comments) {
+		return false
+	}
+	c := &p.threads[thread-1].Comments[comment-1]
+	i := slices.IndexFunc(c.UsersLiked, func(l azure.Identity) bool { return l.ID == who.ID })
+	switch {
+	case on && i < 0:
+		c.UsersLiked = append(c.UsersLiked, who)
+	case !on && i >= 0:
+		c.UsersLiked = slices.Delete(c.UsersLiked, i, i+1)
+	}
+	return true
+}
+
 // Threads are a pull request's threads, with what's been posted in them.
 func (s *Server) Threads(id int) []azure.Thread {
 	s.mu.Lock()
@@ -427,6 +461,15 @@ func (s *Server) pullRequests(w http.ResponseWriter, r *http.Request, parts []st
 		in.ID, in.Author, in.Published, in.CommentType = len(t.Comments)+1, Me, s.tick(), "text"
 		t.Comments = append(t.Comments, in)
 		reply(w, 200, in)
+	case len(parts) == 13 && parts[8] == "threads" && parts[10] == "comments" && parts[12] == "likes" &&
+		(r.Method == "POST" || r.Method == "DELETE"):
+		tid, _ := strconv.Atoi(parts[9])
+		cid, _ := strconv.Atoi(parts[11])
+		if !s.like(p, tid, cid, Me, r.Method == "POST") {
+			fail(w, 404, "TF401180: The requested pull request comment was not found.")
+			return
+		}
+		w.WriteHeader(200)
 	case len(parts) == 9 && parts[8] == "iterations":
 		reply(w, 200, list([]map[string]int{{"id": 1}}))
 	case len(parts) == 11 && parts[8] == "iterations" && parts[10] == "changes":

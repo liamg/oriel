@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -21,6 +22,7 @@ import (
 	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/render"
 )
 
 // prReviewScene is the Reviews page's scene with the ratelimit PR's head pushed to a repo whose origin has it, and a
@@ -434,4 +436,91 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 	}
 	s.Press("<M-1>")
 	s.Until("Changed, flat", func() bool { return s.Has("⏎ opens the diff, not the file") && !s.Has("rate") })
+}
+
+// ⌘G (or Suggest a change) in a comment for the author adds a suggestion block holding the commented line, to edit into
+// the change; it's sent in the comment as GitHub reads it.
+func TestCommentForTheAuthorSuggestsAChange(t *testing.T) {
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer, for the author, offering a suggestion", func() bool { return s.Has("Comment for the author", "Suggest a change") })
+	s.Press("<D-g>")
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion", "func Take() int { return 1 }") })
+	s.Press("<CR>")
+	want := "```suggestion\nfunc Take() int { return 1 }\n```"
+	s.UntilState("the comment, with its suggestion", func(st core.State) bool {
+		sess, _ := st.Session(id)
+		for _, th := range sess.Snapshot().Threads {
+			for _, c := range th.Comments {
+				if strings.Contains(c.Body, want) {
+					return true
+				}
+			}
+		}
+		return false
+	})
+}
+
+// Undo (⌘Z on macOS, Ctrl+Z elsewhere) takes a suggestion back out of the comment, keeping what was typed before it.
+func TestCommentForTheAuthorUndoesASuggestion(t *testing.T) {
+	undo := "<C-z>"
+	if runtime.GOOS == "darwin" {
+		undo = "<D-z>"
+	}
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer, for the author", func() bool { return s.Has("Comment for the author", "Suggest a change") })
+	s.TypeText("Return two")
+	s.Until("the typing", func() bool { return s.Has("Return two") })
+	s.Press("<D-g>")
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion") })
+	s.Press(undo)
+	s.Until("the suggestion gone, the typing kept", func() bool { return s.Has("Return two") && !s.Has("```suggestion") })
+}
+
+// The composer's buttons sit under its field, as GitHub's do: Suggest a change at the left, Cancel and Comment at
+// the right, each doing what its key does.
+func TestCommentForTheAuthorButtons(t *testing.T) {
+	const suggest, cancel, send = "Suggest a change ⌘G", "Cancel esc", "Comment ⏎" // a button is named by its label and key
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer's buttons", func() bool { return s.FindRole(render.RoleButton, send) != nil })
+	field := s.NodeRole(render.RoleTextBox, "Comment for the author").Bounds
+	for _, b := range []string{suggest, cancel, send} {
+		if r := s.NodeRole(render.RoleButton, b).Bounds; r.Min.Y < field.Max.Y {
+			t.Errorf("%s at %v, not under the field at %v", b, r, field)
+		}
+	}
+	if s.NodeRole(render.RoleButton, suggest).Bounds.Min.X > s.NodeRole(render.RoleButton, cancel).Bounds.Min.X {
+		t.Error("Suggest a change is right of Cancel")
+	}
+	s.ClickNode(suggest)
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion", "func Take() int { return 1 }") })
+	s.ClickNode(send)
+	s.UntilState("the comment sent", func(st core.State) bool {
+		sess, _ := st.Session(id)
+		for _, th := range sess.Snapshot().Threads {
+			for _, c := range th.Comments {
+				if strings.Contains(c.Body, "```suggestion") {
+					return true
+				}
+			}
+		}
+		return false
+	})
+	s.Until("the composer gone", func() bool { return s.FindRole(render.RoleButton, send) == nil })
+
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("a new composer", func() bool { return s.FindRole(render.RoleButton, cancel) != nil })
+	s.ClickNode(cancel)
+	s.Until("the composer dropped", func() bool { return s.FindRole(render.RoleButton, cancel) == nil })
 }

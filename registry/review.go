@@ -84,10 +84,13 @@ type ReviewDetail struct {
 	Reactions []PRReaction   `json:"reactions,omitempty"`
 }
 
-// PRReaction is how many people reacted to a pull request, or a comment on it, with an emoji.
+// PRReaction is how many people reacted to a pull request, or a comment on it, with an emoji; Mine when the user is
+// one of them, where the host says. Who are some or all of them, by login, where the host names them.
 type PRReaction struct {
-	Emoji string `json:"emoji"`
-	Count int    `json:"count"`
+	Emoji string   `json:"emoji"`
+	Count int      `json:"count"`
+	Mine  bool     `json:"mine,omitempty"`
+	Who   []string `json:"who,omitempty"`
 }
 
 // What a PREvent is.

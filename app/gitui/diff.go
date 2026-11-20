@@ -103,6 +103,7 @@ type diffState struct {
 	head    bool // against HEAD (Uncommitted's), not the base (Changed's)
 	open    map[string]bool
 	sel     diffSel
+	span    diffSpan
 	reveal  bool
 	tries   int  // frames reveal has waited for its target to be built and laid out
 	making  bool // reveal's file was waiting for its diff last frame
@@ -538,42 +539,6 @@ func (x *Diff) moveLine(st *diffState, d int) {
 		st.sel.line = min(max(line, 0), n-1)
 	}
 	st.reveal = true
-}
-
-// selLine is the new side's line (1-based) of the selection and the last line of its range: the line selected, or
-// the hunk's changed lines.
-func (st *diffState) selLine() (path string, line, end int, ok bool) {
-	h, found := st.hunkAt(st.sel)
-	if !found {
-		return "", 0, 0, false
-	}
-	path = filepath.Join(st.root, filepath.FromSlash(st.sel.file))
-	near := func(i int) int {
-		for k := i; k >= 0; k-- {
-			if n := h.Lines[k].New; n > 0 {
-				return n
-			}
-		}
-		return max(h.NewStart, 1)
-	}
-	if l := st.sel.line; l >= 0 && l < len(h.Lines) {
-		return path, near(l), 0, true
-	}
-	first, last := 0, 0
-	for i, l := range h.Lines {
-		if l.Op == ' ' {
-			continue
-		}
-		n := near(i)
-		if first == 0 {
-			first = n
-		}
-		last = n
-	}
-	if last == first {
-		last = 0
-	}
-	return path, max(first, 1), last, true
 }
 
 // comment opens a thread on the selection's lines, between them in the diff.

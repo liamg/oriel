@@ -45,6 +45,9 @@ type Params struct {
 	Thread string             `json:"thread_id"` // reply's: a thread's key, "" for a new one in the conversation
 	Merge  registry.MergeOpts `json:"merge"`
 	Orgs   []string           `json:"orgs"` // the site's organizations the Lua has learned, for requested
+	Note   string             `json:"note"` // react_note's: a comment's key, "thread/comment"
+	Emoji  string             `json:"emoji"`
+	On     bool               `json:"on"`
 }
 
 // Server answers the plugin's Lua. It learns the organizations on dev.azure.com to ask for reviews in from every
@@ -124,7 +127,7 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 		out, err = s.lookup(ctx, p.Site, p.URL)
 	case "checkout":
 		out, err = s.checkout(ctx, p.Site, p.URL)
-	case "for_branch", "create", "edit", "ready", "request_reviewers", "checks", "merge_methods", "blockers", "merge", "threads", "reply":
+	case "for_branch", "create", "edit", "ready", "request_reviewers", "checks", "merge_methods", "blockers", "merge", "threads", "reply", "react_note":
 		var r Repo
 		if r, err = s.repo(p); err == nil {
 			out, err = s.ship(ctx, method, r, p)
@@ -191,6 +194,8 @@ func (s *Server) ship(ctx context.Context, method string, r Repo, p Params) (any
 		return s.threads(ctx, r, n)
 	case "reply":
 		return s.reply(ctx, r, n, p.Thread, p.Body)
+	case "react_note":
+		return map[string]any{}, s.react(ctx, r, n, p.Note, p.Emoji, p.On)
 	}
 	return nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no method " + method}
 }
@@ -319,6 +324,8 @@ func (s *Server) threads(ctx context.Context, r Repo, n int) ([]registry.ReviewT
 	for _, rv := range pr.Reviewers {
 		votes[rv.ID], members[rv.ID] = rv.Vote, true
 	}
+	// Without knowing who you are, a like of yours shows as anyone's.
+	me, _ := c.Me(ctx, Account{Site: r.Site, Org: r.Org})
 	web := r.Web() + "/pullrequest/" + strconv.Itoa(n)
 	out := []registry.ReviewThread{}
 	general := registry.ReviewThread{URL: web, Comments: []registry.ReviewNote{}}
@@ -333,7 +340,8 @@ func (s *Server) threads(ctx context.Context, r Repo, n int) ([]registry.ReviewT
 			}
 			at, _ := time.Parse(time.RFC3339, cm.Published)
 			notes = append(notes, registry.ReviewNote{ID: strconv.Itoa(t.ID) + "/" + strconv.Itoa(cm.ID),
-				Author: cmp.Or(cm.Author.UniqueName, cm.Author.DisplayName), Body: cm.Content, At: at, Member: members[cm.Author.ID]})
+				Author: cmp.Or(cm.Author.UniqueName, cm.Author.DisplayName), Body: cm.Content, At: at, Member: members[cm.Author.ID],
+				Reactions: likes(cm.UsersLiked, me)})
 		}
 		if len(notes) == 0 {
 			continue
@@ -396,6 +404,36 @@ func (s *Server) reply(ctx context.Context, r Repo, n int, thread, body string) 
 		return "", err
 	}
 	return thread + "/" + strconv.Itoa(cm.ID), nil
+}
+
+// Like is the one reaction Azure DevOps takes on a comment.
+const Like = "👍"
+
+// likes are a comment's likes as a 👍 reaction; none for no likes.
+func likes(who []Identity, me Identity) []registry.PRReaction {
+	if len(who) == 0 {
+		return nil
+	}
+	r := registry.PRReaction{Emoji: Like, Count: len(who)}
+	for _, w := range who {
+		r.Mine = r.Mine || me.ID != "" && w.ID == me.ID
+		r.Who = append(r.Who, cmp.Or(w.UniqueName, w.DisplayName))
+	}
+	return []registry.PRReaction{r}
+}
+
+// react likes a comment as you, or with on false takes your like back.
+func (s *Server) react(ctx context.Context, r Repo, n int, note, emoji string, on bool) error {
+	if emoji != Like {
+		return fmt.Errorf("Azure DevOps takes only a like (%s) on a comment, not %s", Like, emoji)
+	}
+	t, c, ok := strings.Cut(note, "/")
+	tid, err1 := strconv.Atoi(t)
+	cid, err2 := strconv.Atoi(c)
+	if !ok || err1 != nil || err2 != nil {
+		return fmt.Errorf("not an Azure DevOps comment: %q", note)
+	}
+	return s.Client.Like(ctx, r, n, tid, cid, on)
 }
 
 // requested are the active pull requests asking you on a site, and those you've voted on: in each organization known

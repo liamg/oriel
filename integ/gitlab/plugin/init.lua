@@ -48,4 +48,9 @@ L.code.host{ name = "gitlab", title = "GitLab", icon = "gitlab", order = 20, sec
   threads = function(repo, pr, done) call("threads", { repo = repo, pr = pr }, done, "threads") end,
   reply = function(repo, pr, thread, body, done)
     call("reply", { repo = repo, pr = pr, thread = thread.id or "", body = body }, done, "id")
+  end,
+  -- The award emoji offered on a note, as the process names them (gitlab.Reactions).
+  reactions = { "👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀" },
+  react_note = function(repo, pr, thread, note, emoji, on, done)
+    call("react_note", { repo = repo, pr = pr, note = note, emoji = emoji, on = on }, done, "ok")
   end }

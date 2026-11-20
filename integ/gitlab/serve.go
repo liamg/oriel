@@ -39,6 +39,9 @@ type Params struct {
 	Who    []string           `json:"who"`
 	Opts   registry.MergeOpts `json:"opts"`
 	Thread string             `json:"thread"`
+	Note   string             `json:"note"`
+	Emoji  string             `json:"emoji"`
+	On     bool               `json:"on"`
 }
 
 // Request is the host's http.request: an authenticated one names the secret in auth.
@@ -55,8 +58,14 @@ func (s *Server) client(site Site) (Client, error) {
 	if site.API == "" || site.Secret == "" {
 		return Client{}, errors.New("no GitLab site given")
 	}
-	return Client{Host: site.Host, Members: &s.members, Do: func(ctx context.Context, method, path string, body []byte) (int, []byte, error) {
-		req := map[string]any{"method": method, "url": strings.TrimRight(site.API, "/") + path, "auth": site.Secret,
+	api := strings.TrimRight(site.API, "/")
+	return Client{Host: site.Host, Members: &s.members, Do: s.do(site, api), GraphQL: s.do(site, strings.TrimSuffix(api, "/v4")+"/graphql")}, nil
+}
+
+// do sends requests to root+path with the site's token.
+func (s *Server) do(site Site, root string) Do {
+	return func(ctx context.Context, method, path string, body []byte) (int, []byte, error) {
+		req := map[string]any{"method": method, "url": root + path, "auth": site.Secret,
 			"headers": map[string]string{"Content-Type": "application/json"}}
 		if body != nil {
 			req["body"] = string(body)
@@ -66,7 +75,7 @@ func (s *Server) client(site Site) (Client, error) {
 			return 0, nil, &jsonrpc.Error{Code: CodeNoKey, Message: "no GitLab token for " + cmp.Or(site.Host, "the site") + " yet"}
 		}
 		return status, []byte(resp), err
-	}}, nil
+	}
 }
 
 // Probe says whether host is a GitLab, from one request without a token: its version endpoint answers, or refuses
@@ -151,6 +160,9 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 		var id string
 		id, err = c.Reply(ctx, path, p.PR, p.Thread, p.Body)
 		out = map[string]any{"id": id}
+	case "react_note":
+		err = c.ReactNote(ctx, path, p.PR, p.Note, p.Emoji, p.On)
+		out = map[string]any{"ok": err == nil}
 	default:
 		return nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no method " + method}
 	}

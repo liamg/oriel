@@ -386,13 +386,14 @@ type Position struct {
 
 // Comment is one comment of a thread.
 type Comment struct {
-	ID          int      `json:"id"`
-	Parent      int      `json:"parentCommentId,omitempty"`
-	Author      Identity `json:"author"`
-	Content     string   `json:"content"`
-	Published   string   `json:"publishedDate,omitempty"`
-	CommentType string   `json:"commentType"` // text, system, codeChange
-	IsDeleted   bool     `json:"isDeleted,omitempty"`
+	ID          int        `json:"id"`
+	Parent      int        `json:"parentCommentId,omitempty"`
+	Author      Identity   `json:"author"`
+	Content     string     `json:"content"`
+	Published   string     `json:"publishedDate,omitempty"`
+	CommentType string     `json:"commentType"` // text, system, codeChange
+	IsDeleted   bool       `json:"isDeleted,omitempty"`
+	UsersLiked  []Identity `json:"usersLiked,omitempty"`
 }
 
 // Resolved says the thread is settled: fixed, closed, won't fix or by design.
@@ -428,6 +429,16 @@ func (c Client) Reply(ctx context.Context, r Repo, id, thread int, body string) 
 	var out Comment
 	in := map[string]any{"content": body, "parentCommentId": 1, "commentType": "text"}
 	return out, c.do(ctx, r.Site, "POST", r.api()+"/pullRequests/"+strconv.Itoa(id)+"/threads/"+strconv.Itoa(thread)+"/comments", in, &out)
+}
+
+// Like likes a thread's comment as you, or with on false takes your like back.
+func (c Client) Like(ctx context.Context, r Repo, id, thread, comment int, on bool) error {
+	method := "POST"
+	if !on {
+		method = "DELETE"
+	}
+	u := fmt.Sprintf("%s/pullRequests/%d/threads/%d/comments/%d/likes", r.api(), id, thread, comment)
+	return c.do(ctx, r.Site, method, u, nil, nil)
 }
 
 // NewThread starts a thread in the pull request's conversation, and answers it.

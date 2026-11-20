@@ -162,21 +162,28 @@ clip 44,50 1556x924 r 0
         pop
         rect 114,246.81244 760x150.54886 radius 4 stroke 1 #332f27
         text "After the table." @114,421.40817 #ece6d8 Inter 14.5
-        rect 880,107 1x367.90573 fill #24221d
-        rect 901,331 480x74 fill #0c0c0b radius 6
-        clip 901,331 480x74 r 6
+        rect 880,107 1x390 fill #24221d
+        rect 901,331 480x108 fill #0c0c0b radius 6
+        clip 901,331 480x108 r 6
           rect 913,344.5 7x7 fill #ffd23f radius 3.5
           text "New thread" @928,352.54712 #ece6d8 Inter 12.5
           text "· L8" @1008.71875,351.78 #7c7566 JetBrains Mono 10.5
-          text "⏎ sends · ⇧⏎ new line · esc drops it" @1153,351.6 #4f4a40 JetBrains Mono 10
           rect 913,365 456x30 fill #060606 radius 6
           clip 913,365 456x30 r 6
             text "Ask the agent about this line" @923,384.54712 #7c7566 Inter 12.5
             rect 923,372 1x16 fill #ffd23f
           pop
           rect 913,365 456x30 radius 6 stroke 1 #ffd23f
+          rect 1207.0938,403 91.828125x26 radius 6 stroke 1 #332f27
+          text "Cancel" @1217.0938,420.36523 #ece6d8 Inter 12
+          rect 1262.9219,408.5 26x15 radius 3 stroke 1 #ece6d866
+          text "esc" @1266.9219,419.42 #ece6d8cc JetBrains Mono 9.5
+          rect 1306.9219,403 62.078125x26 fill #191815 radius 6 stroke 1 #332f27
+          text "Ask" @1316.9219,420.36523 #4f4a40 Inter 12
+          rect 1345,408.5 14x15 radius 3 stroke 1 #4f4a4066
+          text "⏎" @1349,419.42 #4f4a40cc JetBrains Mono 9.5
         pop
-        rect 901,331 480x74 radius 6 stroke 1 #332f27
+        rect 901,331 480x108 radius 6 stroke 1 #332f27
       pop
     pop
   pop
@@ -225,7 +232,7 @@ clip 44,50 1556x924 r 0
   clip 44,81 1556x893 r 0
     clip 44,81 1556x893 r 0
       clip 44,107 1556x867 r 0
-        clip 901,331 480x74 r 6
+        clip 901,331 480x108 r 6
           clip 913,365 456x30 r 6
             rect 1353.3334,376 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
             path 5 segments stroke 1.25 #7c7566

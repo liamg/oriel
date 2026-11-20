@@ -178,3 +178,50 @@ func TestInputMultiClickSelects(t *testing.T) {
 		t.Errorf("two slow clicks selected %q", got)
 	}
 }
+
+// Text a field is handed (InputOpts.Append) goes in as one edit of its own: undo takes it back and keeps the typing
+// before it, and redo puts it back.
+func TestInputAppendUndoes(t *testing.T) {
+	for _, goos := range []string{"darwin", "linux"} {
+		t.Run(goos, func(t *testing.T) {
+			testhook.Set(t, &platform, platformMods(goos))
+			text, add := "", ""
+			var id ui.ID
+			h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+				c.Column("col", ui.Style{Pad: ui.Pad(10), W: ui.Px(300)}, func(c *ui.Ctx) {
+					id = c.Next("q")
+					Input(c, "q", &text, InputOpts{Label: "Q", Lines: 6, Help: "test/input", Append: add})
+					add = ""
+				})
+			})
+			h.click(mid(h.rect(id)))
+			h.keys("a", "b")
+			add = "\nadded"
+			h.frame()
+			if text != "ab\nadded" {
+				t.Fatalf("after the append: %q", text)
+			}
+			h.keys("c")
+			if text != "ab\naddedc" {
+				t.Fatalf("typing after the append: %q", text)
+			}
+			undo := func() {
+				t.Helper()
+				if !h.u.Key(render.KeyEvent{Key: "z", Mods: platform.primary}) {
+					t.Fatal("nothing takes undo")
+				}
+				h.frame()
+			}
+			undo()
+			undo()
+			if text != "ab" {
+				t.Errorf("undoing the typing and the append: %q, want the typing before it", text)
+			}
+			h.u.Key(render.KeyEvent{Key: "Z", Mods: platform.primary | render.ModShift})
+			h.frame()
+			if text != "ab\nadded" {
+				t.Errorf("redo: %q", text)
+			}
+		})
+	}
+}
