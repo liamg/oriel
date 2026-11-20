@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // What a comment is, for its reactions: each kind numbers its own on GitHub.
@@ -59,7 +60,42 @@ func (s *Server) reactedNode(n string) map[string]any {
 // after each one's cursor. Its line comments all come under its first review.
 func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	body := s.reactionsPage(vars)
+	held, stop := s.heldReads, s.stopReads
+	s.mu.Unlock()
+	if held != nil {
+		r := make(chan struct{})
+		select {
+		case held <- r:
+			select {
+			case <-r:
+			case <-stop:
+			}
+		case <-stop:
+		}
+	}
+	reply(w, 200, body)
+}
+
+// HoldReactionReads holds each read of reactions after it has read them. held takes the next one waiting, if any,
+// with the release that lets it go. The test's cleanup lets every read go.
+func (s *Server) HoldReactionReads(t interface{ Cleanup(func()) }) (held func() (release func(), ok bool)) {
+	reads, stop := make(chan chan struct{}), make(chan struct{})
+	s.mu.Lock()
+	s.heldReads, s.stopReads = reads, stop
+	s.mu.Unlock()
+	t.Cleanup(func() { close(stop) })
+	return func() (func(), bool) {
+		select {
+		case r := <-reads:
+			return sync.OnceFunc(func() { close(r) }), true
+		default:
+			return nil, false
+		}
+	}
+}
+
+func (s *Server) reactionsPage(vars map[string]any) map[string]any {
 	n, _ := vars["number"].(float64)
 	key := prKey(fmt.Sprint(vars["owner"])+"/"+fmt.Sprint(vars["name"]), int(n))
 	issue, lines, reviews := []map[string]any{}, []map[string]any{}, []map[string]any{}
@@ -83,7 +119,7 @@ func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 	if vars["withReviews"] != false {
 		pr["reviews"] = page(reviews, vars["reviewsAfter"])
 	}
-	reply(w, 200, map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": pr}}})
+	return map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": pr}}}
 }
 
 // page is GitHub's connection of the 100 nodes after the cursor, which is the index of the last one given.

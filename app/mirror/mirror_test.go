@@ -261,3 +261,62 @@ func TestReactAgainWhileSending(t *testing.T) {
 	}
 	s.Until("the 🎉 as GitHub has it", func() bool { return s.Count("🎉 1 on priya-k's comment") > 0 })
 }
+
+// A sync that read GitHub before the user's reaction went out, and ends after, doesn't undo the reaction on screen:
+// it stays as sent until a sync that started after it.
+func TestReactWhileASyncRuns(t *testing.T) {
+	s, lw, hub, se, _ := apptest.ShipScene(t)
+	x := mirrorOf(s)
+	ag := lw.Fake.WaitStarted(t)
+	ag.WaitSent(t)
+	ag.Emit(agent.TurnStart{})
+	rig.Answered(t, s.Store(), ag)
+	ag.Emit(agent.TurnEnd{})
+	apiDir := apptest.ProjectDir(se, "search-api")
+	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
+	rig.WriteFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
+	var branch string
+	for _, p := range se.Projects {
+		if p.Name == "search-api" {
+			branch = p.Branch
+		}
+	}
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+		Path: "internal/api/usage/handler.go", Line: 3, Body: "Can this return an error instead?"})
+	hub.ReactAs("bo", ghtest.LineComment, root.ID, "hooray")
+
+	s.Run("review.threads.sync", nil)
+	x.Wait()
+	s.Run("diff.open", registry.Args{"path": file})
+	s.Until("bo's 🎉", func() bool { return s.Count("🎉 1 on priya-k's comment") > 0 })
+
+	held := hub.HoldReactionReads(t)
+	take := func(what string) func() {
+		var release func()
+		s.Until(what, func() bool {
+			r, ok := held()
+			release = r
+			return ok
+		})
+		return release
+	}
+	stale := false
+	sawStale := func(int) { stale = stale || s.Count("🎉 1 on priya-k's comment") > 0 }
+	s.Midway(func() {
+		s.Run("review.threads.sync", nil)
+		old := take("a sync's read of the reactions, before the user's")
+		s.ClickOn("🎉 1 on priya-k's comment")
+		take("the reaction's lookup of the comment")()
+		s.Until("GitHub has the user's 🎉", func() bool { return slices.Contains(hub.ReactionsOn(ghtest.LineComment, root.ID)["hooray"], "you") })
+		old()
+		next := take("the read of the sync after the reaction")
+		s.UntilEach("the user's 🎉 shown", sawStale, func() bool { return stale || s.Count("🎉 2 on priya-k's comment") > 0 })
+		next()
+	})
+	x.Wait()
+	s.UntilEach("the 🎉 as GitHub has it", sawStale, func() bool { return s.Count("🎉 2 on priya-k's comment") > 0 })
+	if stale {
+		t.Error("the sync that read GitHub before the reaction showed the 🎉 taken back")
+	}
+}

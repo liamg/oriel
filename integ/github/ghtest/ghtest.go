@@ -34,6 +34,8 @@ type Server struct {
 	lag           bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
 	hold          chan struct{}         // while set, creating a PR waits for it to close
 	holdReactions chan struct{}         // while set, adding or taking back a reaction waits for it to close
+	heldReads     chan chan struct{}    // while set, a read of reactions, once answered, is handed here and waits
+	stopReads     chan struct{}         // closed: held reads go
 	unseen        map[string]bool       // owner/name#number: made while lagging
 
 	login         string                         // who the fake's client is: what it posts is by them

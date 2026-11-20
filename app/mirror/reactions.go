@@ -109,15 +109,7 @@ func (x *Mirror) sendReaction(key string, had bool, send func(on bool) error, sy
 }
 
 // syncNow syncs the session fresh and waits for that sync.
-func (x *Mirror) syncNow(id core.SessionID) {
-	x.sync(id, true)
-	x.mu.Lock()
-	done := x.synced[id]
-	x.mu.Unlock()
-	if done != nil {
-		<-done
-	}
-}
+func (x *Mirror) syncNow(id core.SessionID) { <-x.sync(id, true) }
 
 // shown are a comment's reactions as the host last had them, with those being sent applied.
 func (x *Mirror) shown(cm core.Comment) []core.Reaction {

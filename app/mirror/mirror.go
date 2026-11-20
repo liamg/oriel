@@ -58,6 +58,7 @@ type Mirror struct {
 	syncing    map[core.SessionID]bool
 	synced     map[core.SessionID]chan struct{} // closed when the sync running ends
 	again      map[core.SessionID]bool          // a sync asked for while one ran: fresh or not
+	next       map[core.SessionID]chan struct{} // closed when the sync asked for while one ran ends
 	forwarding map[string]bool                  // comment IDs being posted
 	reacting   map[string]bool                  // reactions being sent, by reactKey: added, or taken back
 	resolving  map[core.ThreadID]bool           // where each thread's resolve was last sent to its host
@@ -316,19 +317,31 @@ func (x *Mirror) session(a registry.Args) (core.SessionState, bool) {
 	return se, err == nil
 }
 
-// sync mirrors the session's PRs' review threads, off the loop.
-func (x *Mirror) sync(id core.SessionID, fresh bool) {
+// sync mirrors the session's PRs' review threads, off the loop. The channel it answers closes when a sync that
+// started after the call ends: one running may have read the host before whatever the caller just sent.
+func (x *Mirror) sync(id core.SessionID, fresh bool) <-chan struct{} {
 	x.mu.Lock()
+	if x.next == nil {
+		x.next = map[core.SessionID]chan struct{}{}
+	}
 	if x.syncing[id] {
 		x.again[id] = x.again[id] || fresh
+		if x.next[id] == nil {
+			x.next[id] = make(chan struct{})
+		}
+		next := x.next[id]
 		x.mu.Unlock()
-		return
+		return next
 	}
 	x.syncing[id] = true
 	if x.synced == nil {
 		x.synced = map[core.SessionID]chan struct{}{}
 	}
-	done := make(chan struct{})
+	done := x.next[id]
+	delete(x.next, id)
+	if done == nil {
+		done = make(chan struct{})
+	}
 	x.synced[id] = done
 	x.mu.Unlock()
 	se, ok := x.h.Session(id)
@@ -374,6 +387,7 @@ func (x *Mirror) sync(id core.SessionID, fresh bool) {
 			x.follow() // its PRs are all closed: stop syncing it
 		}
 	})
+	return done
 }
 
 // mirrorSession brings each of the session's projects' PR review threads, from its code host, into the session: the
