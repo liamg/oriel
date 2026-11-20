@@ -35,8 +35,11 @@ Under each mirrored comment are its reactions on GitHub, with how many people re
 yours, and again to take it back. A comment with none offers **👍**, to acknowledge it, and **☺** picks from all of
 GitHub's (👍 👎 😄 🎉 😕 ❤️ 🚀 👀). Rest the pointer on a reaction to see who left it (the first 10, then how many
 more). The reaction is posted as you, at once, and the thread syncs to show it.
-`review.reaction.toggle {thread, comment, emoji}` does the same from keys or Lua (👍 when no emoji is given). Another
-code host shows its reactions when its plugin gives them.
+`review.reaction.toggle {thread, comment, emoji}` does the same from keys or Lua (👍 when no emoji is given).
+
+GitLab's mirrored notes work the same way, with its award emoji: **☺** offers the same eight, and an award already on
+a note (🔥, or a custom one shown as `:name:`) can be added and taken back too. Another code host shows its reactions
+when its plugin gives them.
 
 ## Trusted authors {#trusted}
 

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -149,6 +152,23 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	if batch := ag.WaitSent(t).Text; !strings.Contains(batch, "Should the PDF be cached?") {
 		t.Fatalf("the agent was given %q", batch)
 	}
+
+	// An award GitLab's picker in Oriel doesn't offer, already on the note, takes yours too.
+	th, _ := s.Store().State().Session(se.ID)
+	mirrored, _ := th.Snapshot().Thread(tid)
+	first := mirrored.Comments[0]
+	note, _ := strconv.Atoi(first.HostID)
+	g.Award("acme/billing", 1, note, "mkhan", "fire")
+	s.Run("review.threads.sync", nil)
+	s.Until("mkhan's 🔥 mirrored", func() bool {
+		sess, _ := s.Store().State().Session(se.ID)
+		th, _ := sess.Snapshot().Thread(tid)
+		return len(th.Comments) > 0 && slices.ContainsFunc(th.Comments[0].Reactions, func(r core.Reaction) bool { return r.Emoji == "🔥" })
+	})
+	s.Run("review.reaction.toggle", registry.Args{"thread": string(tid), "comment": first.ID, "emoji": "🔥"})
+	s.Until("your 🔥 on GitLab", func() bool {
+		return slices.Equal(g.Awards("acme/billing", 1, note)["fire"], []string{"mkhan", gitlabtest.Me})
+	})
 	if out := ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Yes: it's cached per invoice now."}); !strings.Contains(out, "drafted") {
 		t.Fatalf("reply: %q", out)
 	}
@@ -195,5 +215,62 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	shipSettle(s, t, "merged, and the next PR started", func() bool { p := pastPRs(s, se.ID); return len(p) == 1 && p[0].State == "merged" })
 	if m := g.Merged(); len(m) != 1 || m[0].SHA != mrs[0]["sha"] {
 		t.Errorf("merged %+v, want at %v", m, mrs[0]["sha"])
+	}
+}
+
+// offLoop runs f, a call into a plugin's Lua, off the app's loop, which runs frames until it answers.
+func offLoop(t *testing.T, s *apptest.Scene, f func() error) error {
+	t.Helper()
+	got := make(chan error, 1)
+	go func() { got <- f() }()
+	var err error
+	s.Until("the plugin's answer", func() bool {
+		select {
+		case err = <-got:
+			return true
+		default:
+			return false
+		}
+	})
+	return err
+}
+
+// The plugin's comments take reactions: GitLab's award emoji come with each note, and react_note awards one as you
+// or takes it back, through the plugin's Lua.
+func TestGitlabCommentReactions(t *testing.T) {
+	g := gitlabtest.New(t)
+	iid := g.AddMR("acme/api", gitlabtest.MR{Title: "feat: x", Author: gitlabtest.Me, Source: "eng-1", Target: "main"})
+	g.AddThread("acme/api", iid, gitlabtest.Thread{Author: "priya-k", Body: "Can this return an error?", Path: "handler.go", Line: 3})
+	s := apptest.New(t, apptest.Options{Config: gitlabConfig(t, g)})
+	loadGitlab(t, s)
+	h, ok := registry.HostByName(s.Registry(), "gitlab")
+	if !ok || h.ReactNote == nil || !slices.Equal(h.Reactions, []string{"👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀"}) {
+		t.Fatalf("GitLab's reactions: %v, react_note %v", h.Reactions, ok && h.ReactNote != nil)
+	}
+	repo := registry.CodeRepo{Remote: "https://gitlab.com/acme/api.git", Repo: "acme/api",
+		Site: registry.Site{Host: "gitlab.com", API: "https://gitlab.com/api/v4", Secret: gitlab.Secret}}
+	pr := registry.PR{Number: iid}
+	ctx := t.Context()
+	var ts []registry.ReviewThread
+	threads := func() error {
+		var err error
+		ts, err = h.Threads(ctx, repo, pr)
+		return err
+	}
+	if err := offLoop(t, s, threads); err != nil || len(ts) != 1 {
+		t.Fatalf("threads %+v, %v", ts, err)
+	}
+	note := ts[0].Comments[0].ID
+	id, _ := strconv.Atoi(note)
+	g.Award("acme/api", iid, id, "mkhan", "thumbsup")
+	if err := offLoop(t, s, func() error { return h.ReactNote(ctx, repo, pr, ts[0], note, "👍", true) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := offLoop(t, s, threads); err != nil {
+		t.Fatal(err)
+	}
+	want := []registry.PRReaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"mkhan", gitlabtest.Me}}}
+	if got := ts[0].Comments[0].Reactions; !reflect.DeepEqual(got, want) {
+		t.Errorf("the note's reactions after 👍: %+v", got)
 	}
 }

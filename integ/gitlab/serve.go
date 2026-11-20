@@ -39,6 +39,9 @@ type Params struct {
 	Who    []string           `json:"who"`
 	Opts   registry.MergeOpts `json:"opts"`
 	Thread string             `json:"thread"`
+	Note   string             `json:"note"`
+	Emoji  string             `json:"emoji"`
+	On     bool               `json:"on"`
 }
 
 // Request is the host's http.request: an authenticated one names the secret in auth.
@@ -151,6 +154,9 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 		var id string
 		id, err = c.Reply(ctx, path, p.PR, p.Thread, p.Body)
 		out = map[string]any{"id": id}
+	case "react_note":
+		err = c.ReactNote(ctx, path, p.PR, p.Note, p.Emoji, p.On)
+		out = map[string]any{"ok": err == nil}
 	default:
 		return nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no method " + method}
 	}

@@ -416,9 +416,17 @@ func (c Client) Threads(ctx context.Context, path string, pr registry.PR) ([]reg
 	for _, rv := range rs {
 		approved[rv.User.Username] = rv.State == "approved"
 	}
+	me, err := c.Me(ctx)
+	if err != nil {
+		return nil, err
+	}
 	note := func(n Note) (registry.ReviewNote, error) {
 		member, err := c.Member(ctx, path, n.Author.ID)
-		return registry.ReviewNote{ID: fmt.Sprint(n.ID), Author: n.Author.Username, Body: n.Body, At: when(n.CreatedAt), Member: member}, err
+		rn := registry.ReviewNote{ID: fmt.Sprint(n.ID), Author: n.Author.Username, Body: n.Body, At: when(n.CreatedAt), Member: member}
+		if as, err := c.Awards(ctx, path, pr.Number, n.ID); err == nil {
+			rn.Reactions = reactions(as, me.Username)
+		} // unknown: the note shows none
+		return rn, err
 	}
 	general := registry.ReviewThread{URL: m.WebURL}
 	out := []registry.ReviewThread{}

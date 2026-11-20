@@ -51,7 +51,9 @@ func (x *Mirror) react(a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	if p.host.ReactNote == nil || !slices.Contains(p.host.Reactions, emoji) {
+	// One already on the comment is one the host takes, though its picker may not offer it.
+	present := slices.ContainsFunc(cm.Reactions, func(r core.Reaction) bool { return r.Emoji == emoji })
+	if p.host.ReactNote == nil || !slices.Contains(p.host.Reactions, emoji) && !present {
 		return fmt.Errorf("%s can't take a %s reaction from Oriel", p.host.Label(), emoji)
 	}
 	had := slices.ContainsFunc(cm.Reactions, func(r core.Reaction) bool { return r.Emoji == emoji && r.Mine })

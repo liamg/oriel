@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -307,5 +309,70 @@ func TestServeThreadsAndReply(t *testing.T) {
 	}
 	if n := g.Notes(); len(n) != 2 || n[1] != "acme/api!1 : Thanks!" {
 		t.Errorf("notes %q", n)
+	}
+}
+
+// Each note's award emoji come with it in threads: GitLab's names as emoji (one with no emoji, a custom one, as
+// :name:), how many, whether you're one of them and who. react_note awards one to a note as you, or takes yours
+// back.
+func TestServeReactions(t *testing.T) {
+	g := gitlabtest.New(t)
+	conn := keyed(t, g)
+	ctx := t.Context()
+	iid := g.AddMR("acme/api", gitlabtest.MR{Title: "feat: x", Author: gitlabtest.Me, Source: "eng-1", Target: "main"})
+	g.AddThread("acme/api", iid, gitlabtest.Thread{Author: "priya-k", Body: "Can this return an error?", Path: "handler.go", Line: 3})
+	g.AddNote("acme/api", iid, "mkhan", "Looks good overall.")
+	repo := Repo{Remote: "https://gitlab.com/acme/api.git", Repo: "acme/api", Site: Public}
+	pr := registry.PR{Number: iid}
+	threads := func() (diff, general registry.ReviewNote) {
+		t.Helper()
+		var got struct{ Threads []registry.ReviewThread }
+		if err := conn.Call(ctx, "threads", Params{Repo: repo, PR: pr}, &got); err != nil {
+			t.Fatal(err)
+		}
+		if len(got.Threads) != 2 {
+			t.Fatalf("threads %+v", got.Threads)
+		}
+		return got.Threads[0].Comments[0], got.Threads[1].Comments[0]
+	}
+	diff, general := threads()
+	if diff.Reactions != nil || general.Reactions != nil {
+		t.Errorf("reactions on notes with none: %+v, %+v", diff.Reactions, general.Reactions)
+	}
+	line, _ := strconv.Atoi(diff.ID)
+	g.Award("acme/api", iid, line, "priya-k", "party_parrot")
+	g.Award("acme/api", iid, line, "mkhan", "fire")
+	g.Award("acme/api", iid, line, "mkhan", "thumbsup")
+	g.Award("acme/api", iid, line, gitlabtest.Me, "thumbsup")
+
+	diff, _ = threads()
+	want := []registry.PRReaction{{Emoji: "👍", Count: 2, Mine: true, Who: []string{"mkhan", gitlabtest.Me}},
+		{Emoji: ":party_parrot:", Count: 1, Who: []string{"priya-k"}}, {Emoji: "🔥", Count: 1, Who: []string{"mkhan"}}}
+	if !reflect.DeepEqual(diff.Reactions, want) {
+		t.Errorf("the diff note's reactions %+v", diff.Reactions)
+	}
+
+	react := func(note, emoji string, on bool) error {
+		var ok struct{ OK bool }
+		return conn.Call(ctx, "react_note", Params{Repo: repo, PR: pr, Note: note, Emoji: emoji, On: on}, &ok)
+	}
+	for _, r := range []struct {
+		note, emoji string
+		on          bool
+	}{{general.ID, "🎉", true}, {general.ID, "🎉", true}, {diff.ID, "👍", false}, {diff.ID, "🔥", true}, {diff.ID, ":party_parrot:", true}} {
+		if err := react(r.note, r.emoji, r.on); err != nil {
+			t.Fatalf("react_note %+v: %v", r, err)
+		}
+	}
+	conv, _ := strconv.Atoi(general.ID)
+	if got := g.Awards("acme/api", iid, conv); !reflect.DeepEqual(got, map[string][]string{"tada": {gitlabtest.Me}}) {
+		t.Errorf("the conversation note's awards after 🎉 twice: %v", got)
+	}
+	if got := g.Awards("acme/api", iid, line); !reflect.DeepEqual(got, map[string][]string{"thumbsup": {"mkhan"},
+		"fire": {"mkhan", gitlabtest.Me}, "party_parrot": {"priya-k", gitlabtest.Me}}) {
+		t.Errorf("the diff note's awards: %v", got)
+	}
+	if err := react(diff.ID, "🦄", true); err == nil {
+		t.Error("an emoji Oriel has no GitLab name for was taken")
 	}
 }
