@@ -49,14 +49,10 @@ func faultNotice(f registry.Fault, l *diag.Logs, dir string, now time.Time) core
 	return redactNotice(script.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
-// failureNotice is a contribution's error, or a warning about it, as a notice: one row for each contribution,
-// counting its errors.
+// failureNotice is a contribution's error as a notice: one row for each contribution, counting its errors.
 func failureNotice(f registry.Failure, l *diag.Logs, dir string, now time.Time) core.Notice {
 	n := core.Notice{ID: "failed." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
 		Title: contribTitle(f.Kind), Text: f.Err.Error()}
-	if f.Warn {
-		n.ID, n.Severity = "slow."+f.Kind+"."+f.ID, core.SevWarning
-	}
 	return redactNotice(script.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
