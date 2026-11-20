@@ -43,7 +43,7 @@ func TestInboxMarkAllRead(t *testing.T) {
 	}
 
 	b.cards = append(b.cards, uireg.InboxCard{ID: "r2", Group: uireg.GroupBus, Session: "search-service", Title: "sam → you: #4420 Drop v1",
-		Created: s.Now.Add(-time.Second)})
+		Created: s.Now().Add(-time.Second)})
 	s.Frame()
 	s.Node("Inbox: 1 waiting")
 	if n := s.Find("Mark all read"); n == nil || n.Disabled {

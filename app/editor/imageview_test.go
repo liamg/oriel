@@ -48,7 +48,7 @@ func TestImageFileTab(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
-	s.Now = apptest.At(9, 0, 0)
+	s.SetNow(apptest.At(9, 0, 0))
 	s.Run("editor.open", registry.Args{"path": "assets/hero.png", "line": 3})
 	s.Frames(3)
 	if !s.Showing(editor.ImageView) {

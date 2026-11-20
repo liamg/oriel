@@ -137,7 +137,7 @@ func TestMarkdownDiagramTruncatedTooltip(t *testing.T) {
 	}
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: at.X + 20, Y: at.Y - 4}})
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frames(2)
 	if !drew(s, long) {
 		t.Errorf("hovering the cut label shows no tooltip with it whole:\n%s", s.Text())

@@ -139,7 +139,7 @@ func TestPROverviewSnapshot(t *testing.T) {
 			"## Why\n\nENG-2231: the retries were hammering the API.\n\n- unit tests for the backoff\n- e2e on chromium\n"
 		return ships
 	})
-	said := s.Now.Add(-2 * time.Hour)
+	said := s.Now().Add(-2 * time.Hour)
 	se.Threads = append(se.Threads,
 		core.Thread{ID: "gh1", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
 			Anchor: &core.Anchor{Project: "web-dashboard", File: "src/search/backoff.ts", Line: 42},

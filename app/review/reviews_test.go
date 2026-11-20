@@ -172,7 +172,7 @@ func TestReviewsAddRepo(t *testing.T) {
 	})
 	s.ClickText("Add repo…")
 	s.Until("the clone target", func() bool {
-		s.Now = s.Now.Add(100 * time.Millisecond)
+		s.SetNow(s.Now().Add(100 * time.Millisecond))
 		return strings.Contains(s.Text(), "Clones into")
 	})
 	s.WantFrame("Clone from URL", "https://github.com/acme/api.git", "api")
@@ -192,7 +192,7 @@ func TestReviewsStartOffersToClone(t *testing.T) {
 				t.Fatal(err)
 			}
 			s.Until("the Add repo dialog", func() bool {
-				s.Now = s.Now.Add(100 * time.Millisecond)
+				s.SetNow(s.Now().Add(100 * time.Millisecond))
 				return strings.Contains(s.Text(), "Clones into")
 			})
 			s.WantFrame("You don't have acme/api cloned", "Clone from URL", "https://github.com/acme/api.git")
@@ -220,7 +220,7 @@ func TestReviewsStartOffersToClone(t *testing.T) {
 			s.Frame()
 			s.TypeInto("Directory", lw.Repo)
 			s.Until("the directory checked", func() bool {
-				s.Now = s.Now.Add(100 * time.Millisecond)
+				s.SetNow(s.Now().Add(100 * time.Millisecond))
 				return strings.Contains(s.Text(), "git repo")
 			})
 			s.Press("<D-CR>")
@@ -475,7 +475,7 @@ oriel.code.host{ name = "gitlab", title = "GitLab", order = 20, takes = [[/-/mer
 // request with no time asked is always shown.
 func TestOldReviewRequestsLeftOut(t *testing.T) {
 	s, _, _, _ := reviewScene(t)
-	s.Now = time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC)
+	s.SetNow(time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC))
 	m, err := plugin.ParseManifest([]byte("id = \"acme/gitlab\"\nversion = \"0.1.0\"\ndescription = \"A GitLab-like source\"\n"))
 	if err != nil {
 		t.Fatal(err)

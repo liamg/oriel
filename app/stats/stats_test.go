@@ -106,7 +106,7 @@ func TestCostTileSaysWhereThePricesCameFrom(t *testing.T) {
 	settle(s, x)
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("COST · EST.")})
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Frame()
 	s.WantFrame("Prices from cost.dev, updated 22 Oct 2026")
@@ -263,7 +263,7 @@ func TestUsageIsPerAccount(t *testing.T) {
 			Windows: []core.UsageWindow{{Name: "Current week (all models)", Used: a.used, Resets: rig.StatsNow.Add(40 * time.Hour), Length: 7 * 24 * time.Hour}}}})
 	}
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	s.Now = rig.StatsNow
+	s.SetNow(rig.StatsNow)
 	st := s.UntilState("two accounts, each its sessions'", func(st core.State) bool {
 		if len(st.Usage) != 2 {
 			return false

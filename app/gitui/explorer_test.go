@@ -337,7 +337,7 @@ func TestExplorerBeforeTheStatusLoads(t *testing.T) {
 	if off := s.Registry().TurnedOff(); len(off) > 0 {
 		t.Fatalf("turned off: %+v", off)
 	}
-	s.Now = s.Now.Add(time.Second) // past the loading line's delay
+	s.SetNow(s.Now().Add(time.Second)) // past the loading line's delay
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "Reading the work tree…") {
 		t.Errorf("no loading note:\n%s", text)
@@ -356,7 +356,7 @@ func TestExplorerScrolls(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
 	s.Press("<M-3>")
-	s.Frame()
+	s.Until("the tree", func() bool { return s.Has("f000.go") })
 	at := render.Point{X: 150, Y: 500}
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})
 	s.Frame()

@@ -33,7 +33,7 @@ func TestUpdateCardIsBusyBeforeItOpens(t *testing.T) {
 		cfg.Updates = &app.Updates{Updater: r.Updater(), Relaunch: r.Relaunch}
 		cfg.Updates.Updater.Source = held
 	}})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	s.Run("update.check", nil)
 	s.Frame()
 	if strings.Contains(s.Text(), "is the newest") {

@@ -33,7 +33,7 @@ func SandboxedScene(t *testing.T, backend sandbox.Backend) (*Scene, *rig.Host, c
 		cfg.StateDir = state
 	}})
 	t.Setenv("HOME", home)
-	s.Now = time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC)
+	s.SetNow(time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC))
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": h.Repo, "sandbox": true, "network": "ask"})
 	h.Fake.WaitStarted(t)

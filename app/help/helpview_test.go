@@ -28,7 +28,7 @@ func TestHelpLint(t *testing.T) {
 	s.Lint("picker")
 	s.Press("<Esc>")
 	for i, sev := range []core.Severity{core.SevError, core.SevWarning, core.SevInfo} {
-		s.Host().Notify(core.Notice{ID: fmt.Sprint("n", i), Severity: sev, Text: "a notice", Time: s.Now,
+		s.Host().Notify(core.Notice{ID: fmt.Sprint("n", i), Severity: sev, Text: "a notice", Time: s.Now(),
 			Actions: []core.Action{{Title: "Do it", Command: "Log"}}})
 	}
 	s.Run("log.open", nil)

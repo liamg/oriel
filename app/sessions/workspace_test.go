@@ -61,10 +61,10 @@ func TestWorkspacePage(t *testing.T) {
 	s.ClickText("IMAGE")
 	s.Until("the Dockerfile", func() bool { return s.Has("RUN apt-get install -y ripgrep") })
 	s.ClickText("Rebuild image")
-	s.Until("the build log", func() bool { s.Now = s.Now.Add(time.Second); return s.Has("#5 DONE 2.1s") })
+	s.Until("the build log", func() bool { s.SetNow(s.Now().Add(time.Second)); return s.Has("#5 DONE 2.1s") })
 
 	s.ClickText("PERMISSIONS")
-	s.Until("the permissions", func() bool { s.Now = s.Now.Add(time.Second); return s.Has("TOOLS", "NETWORK") })
+	s.Until("the permissions", func() bool { s.SetNow(s.Now().Add(time.Second)); return s.Has("TOOLS", "NETWORK") })
 
 	if err := s.Registry().Run(context.Background(), "workspace.open", registry.Args{"tab": "nothing"}); err == nil {
 		t.Error("opened a tab that isn't there")

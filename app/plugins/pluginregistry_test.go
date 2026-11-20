@@ -184,7 +184,7 @@ func TestInstallATrustedAuthorsTag(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		cfg.DataDir, cfg.GitHub = data, &catalog.GitHub{Base: reg.srv.URL}
 	}})
-	s.Now = now
+	s.SetNow(now)
 	settings := filepath.Join(s.ConfigDir, "settings.toml")
 	rig.WriteFile(t, settings, "[registry]\nkeys = { \""+catalog.DefaultRepo+"\" = \""+catalog.FormatKey(reg.key.Public().(ed25519.PublicKey))+
 		"\" }\n\n[plugins]\n\"acme/hi\" = \"*\"\n")

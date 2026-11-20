@@ -146,7 +146,7 @@ func TestReposPageLayout(t *testing.T) {
 	s.Lint("the new tag form")
 	s.Run("repos.new", registry.Args{"mode": "clone", "url": "https://github.com/example/my-project"})
 	s.Until("the clone target", func() bool {
-		s.Now = s.Now.Add(100 * time.Millisecond) // past the fields' rest
+		s.SetNow(s.Now().Add(100 * time.Millisecond)) // past the fields' rest
 		return strings.Contains(s.Text(), "new folder")
 	})
 	s.Lint("the add repo dialog")

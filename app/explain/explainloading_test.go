@@ -13,10 +13,10 @@ import (
 // Cancel, which drops the answer when it comes.
 func TestExplainChangeAskingShowsTimeAndCancels(t *testing.T) {
 	s, _, _, _ := walkScene(t)
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	s.Run("explain.change.open", nil)
 	s.Frame()
-	s.Now = s.Now.Add(5 * time.Second)
+	s.SetNow(s.Now().Add(5 * time.Second))
 	s.Frame()
 	wantText(t, s, "asking", "Asking for a walkthrough of the change…", "· 5s", "Cancel")
 	s.ClickTop("Cancel")
@@ -30,14 +30,14 @@ func TestExplainChangeAskingShowsTimeAndCancels(t *testing.T) {
 // The explain card says it's asking, and for how long, until the answer comes.
 func TestExplainCardAsking(t *testing.T) {
 	s, _, _ := explainScene(t)
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	cursorTo(s, 13)
 	s.Press("<Space>e")
-	s.Now = s.Now.Add(4 * time.Second)
+	s.SetNow(s.Now().Add(4 * time.Second))
 	s.Frame()
 	wantText(t, s, "asking", "Asking…", "· 4s")
 	settle(s)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	wantText(t, s, "answered", "Answer 1 (brief)")
 	if strings.Contains(s.Text(), "Asking…") {

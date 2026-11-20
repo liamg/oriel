@@ -18,15 +18,15 @@ import (
 func consoleScene(t *testing.T) *apptest.Scene {
 	t.Helper()
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
-	ago := func(sec int) time.Time { return s.Now.Add(-time.Duration(sec) * time.Second) }
+	s.SetNow(apptest.At(14, 30, 0))
+	ago := func(sec int) time.Time { return s.Now().Add(-time.Duration(sec) * time.Second) }
 	var read []string
 	for i := range 142 {
 		read = append(read, fmt.Sprintf("line %d", i))
 	}
 	se := core.SessionState{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusPermission, Ticket: "ENG-2231",
 		Projects: []core.Project{{Name: "search-api", Dir: "/src/search-api", Branch: "rethink/search-endpoint", Primary: true}},
-		Agent: core.AgentState{Provider: "codex", Model: "gpt-5.5-codex", Effort: "high", Running: true, Working: true, TurnStarted: s.Now,
+		Agent: core.AgentState{Provider: "codex", Model: "gpt-5.5-codex", Effort: "high", Running: true, Working: true, TurnStarted: s.Now(),
 			Policy: "light", Sandboxed: true, Network: "ask",
 			Queue: []string{"Also check @internal/api/usage/routes.go: the batch endpoint has its own limiter."},
 			Stats: core.Stats{Context: 118_000, ContextMax: 400_000, Input: 184_600, CacheRead: 1_235_400, Output: 38_000, Turns: 14, ToolCalls: 63,
@@ -71,7 +71,7 @@ func consoleScene(t *testing.T) *apptest.Scene {
 		core.SessionSynced{Session: se},
 		core.SessionFocused{ID: se.ID},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro", Windows: []core.UsageWindow{
-			{Name: "5h window", Used: .22, Resets: s.Now.Add(3*time.Hour + 10*time.Minute)}, {Name: "weekly", Used: .48, Resets: s.Now.Add(50 * time.Hour)}}}},
+			{Name: "5h window", Used: .22, Resets: s.Now().Add(3*time.Hour + 10*time.Minute)}, {Name: "weekly", Used: .48, Resets: s.Now().Add(50 * time.Hour)}}}},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Plan: "Claude Max", Windows: []core.UsageWindow{
 			{Name: "5h window", Used: .38}, {Name: "weekly", Used: .71}}}},
 	} {

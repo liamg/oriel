@@ -24,11 +24,11 @@ func TestPickerSourceLoading(t *testing.T) {
 	if strings.Contains(s.Text(), "No matches") {
 		t.Error("no matches while the source is still loading")
 	}
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("Slow still loading…")
 	loading = false
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Frame()
 	s.WantFrame("No matches")
@@ -40,11 +40,11 @@ func TestLuaPickerSourceLoading(t *testing.T) {
 oriel.picker.source{ name = "wiki", title = "Wiki", picker_only = true, items = function(q) return {} end, loading = function() return busy end }`)
 	s.Run("picker.open", registry.Args{"source": "wiki", "query": "x"})
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("Wiki still loading…")
 	s.Lua(`(function() busy = false end)()`)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Frame()
 	s.WantFrame("No matches")

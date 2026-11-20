@@ -281,7 +281,7 @@ func TestAQuestionsOptionsAnswerByKeyboard(t *testing.T) {
 // it, and choosing it there brings its session to the front on the thread.
 func TestAQuestionInASessionBehind(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	behind := core.SessionState{ID: "flaky-e2e", Name: "flaky-e2e", Kind: core.KindWork, Status: core.StatusNeedsYou,
 		Agent: core.AgentState{Provider: "claude", Running: true},
 		Threads: []core.Thread{{ID: "t1", Title: "Retry the flaky test", Status: core.ThreadOpen,

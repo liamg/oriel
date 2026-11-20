@@ -11,7 +11,7 @@ import (
 // 37-errors: a hook turned off after 3 errors, its line marked in the open file, the toast, and the log open on it.
 func TestLuaErrorsSnapshot(t *testing.T) {
 	s := apptest.LuaScene(t, apptest.InitLua)
-	s.Now = apptest.At(14, 7, 3)
+	s.SetNow(apptest.At(14, 7, 3))
 	for range 3 {
 		s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
 	}

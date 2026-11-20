@@ -18,8 +18,8 @@ func RequestsScene(t *testing.T) *Scene {
 	dir := t.TempDir()
 	rig.WriteFiles(t, dir, map[string]string{"internal/pricing/round.go": rig.RoundGo()})
 	s := New(t, Options{WorkDir: dir})
-	s.Now = At(14, 30, 0)
-	se := rig.RequestsSession(s.Now, dir)
+	s.SetNow(At(14, 30, 0))
+	se := rig.RequestsSession(s.Now(), dir)
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID}, rig.ClaudeMaxUsage)
 	return s
 }

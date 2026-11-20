@@ -41,7 +41,7 @@ func TestChangedUnitsFollowTheDisk(t *testing.T) {
 func TestChangedUnitsOutsideARepo(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
 	s.Run("explain.units.toggle", nil)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Frame()
 	s.WantFrame("Not in a git repository")

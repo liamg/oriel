@@ -65,7 +65,7 @@ func populate(s *apptest.Scene) {
 	s.Host().Notify(core.Notice{ID: "lsp.restarted", Severity: core.SevWarning, Source: "lsp", Session: "pricing-rounding", Title: "gopls restarted",
 		Text: "exited (signal: killed) · restarted in 0.4s", Time: apptest.At(14, 7, 20)})
 	rec(apptest.At(14, 7, 58), "pricing-rounding", "claude", "turn 12 done · 3 files changed · go test ./internal/pricing/ passed")
-	s.Now = apptest.At(14, 7, 21)
+	s.SetNow(apptest.At(14, 7, 21))
 }
 
 // The error toast with its actions, a background warning toast, the ✕/⚠ counts, and the log panel
@@ -231,7 +231,7 @@ func TestCrashOfferedOnceALaunch(t *testing.T) {
 // A toast that goes by itself can still be closed before its time, by its ✕.
 func TestTimedToastCloses(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	if err := s.Store().Apply(core.Notified{Notice: core.Notice{ID: "saved", Severity: core.SevInfo, Source: "core", Text: "Saved the thing", Time: s.Now}}); err != nil {
+	if err := s.Store().Apply(core.Notified{Notice: core.Notice{ID: "saved", Severity: core.SevInfo, Source: "core", Text: "Saved the thing", Time: s.Now()}}); err != nil {
 		t.Fatal(err)
 	}
 	s.Until("the toast", func() bool { return s.Has("Saved the thing") })

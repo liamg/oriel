@@ -20,7 +20,7 @@ import (
 func cardScene(t *testing.T, size render.Point, transcript ...core.Item) (*apptest.Scene, *[]string) {
 	t.Helper()
 	s := apptest.New(t, apptest.Options{Size: size})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	se := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusPermission, Branch: "rethink/rounding",
 		Projects: []core.Project{{Name: "pricing", Dir: "/src/pricing", Branch: "rethink/rounding", Primary: true}},
 		Agent:    core.AgentState{Provider: "claude", Running: true}, Transcript: transcript}
@@ -43,12 +43,12 @@ func cardScene(t *testing.T, size render.Point, transcript ...core.Item) (*appte
 // ask opens a in pricing-rounding and brings its prompt up, past the moment its keys are ignored.
 func ask(s *apptest.Scene, a core.Ask) {
 	if a.Created.IsZero() {
-		a.Created = s.Now
+		a.Created = s.Now()
 	}
 	s.Apply(core.AskOpened{Session: "pricing-rounding", Ask: a})
 	s.Frame()
 	s.Frame()
-	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.SetNow(s.Now().Add(widget.CardKeyGuard))
 	s.Frame()
 }
 
@@ -58,7 +58,7 @@ func input(v any) string {
 }
 
 func said(s *apptest.Scene, ago time.Duration, text string) core.Item {
-	return core.Item{ID: fmt.Sprint("a", ago), Kind: core.ItemAssistant, Time: s.Now.Add(-ago), Text: text}
+	return core.Item{ID: fmt.Sprint("a", ago), Kind: core.ItemAssistant, Time: s.Now().Add(-ago), Text: text}
 }
 
 // wantAnswers fails unless the prompt's answers are list items named with their key and the rule each makes.
@@ -290,7 +290,7 @@ func TestPromptCountsTheQueue(t *testing.T) {
 	s.Frame()
 	s.Frame()
 	s.WantFrame("1 OF 3", "make p1")
-	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.SetNow(s.Now().Add(widget.CardKeyGuard))
 	s.Frame()
 	s.Press("y")
 	s.Frame()
@@ -298,13 +298,13 @@ func TestPromptCountsTheQueue(t *testing.T) {
 	s.Apply(core.AskOpened{Session: "pricing-rounding", Ask: permission("p4", "make p4")})
 	s.Frame()
 	s.WantFrame("2 OF 4")
-	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.SetNow(s.Now().Add(widget.CardKeyGuard))
 	s.Frame()
 	s.Press("y")
 	s.Frame()
 	s.WantFrame("3 OF 4", "make p3")
 	for range 2 {
-		s.Now = s.Now.Add(widget.CardKeyGuard)
+		s.SetNow(s.Now().Add(widget.CardKeyGuard))
 		s.Frame()
 		s.Press("y")
 		s.Frame()

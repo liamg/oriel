@@ -50,7 +50,7 @@ func (b *fakeBus) source() uireg.InboxSource {
 func busScene(t *testing.T) (*apptest.Scene, *fakeBus) {
 	t.Helper()
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	for _, ev := range []core.Event{
 		core.SessionSynced{Session: core.SessionState{ID: "search-service", Name: "search-service", Kind: core.KindWork, Status: core.StatusQuiet}},
 		core.SessionFocused{ID: "search-service"},
@@ -66,13 +66,13 @@ func busScene(t *testing.T) (*apptest.Scene, *fakeBus) {
 	b.cards = []uireg.InboxCard{
 		{ID: "q1", Type: "question", Group: uireg.GroupBus, Session: "search-service", Icon: "question", Tone: "status.needs_you",
 			Kicker: "agentbus · question", Title: "tom's agent asks about RoundMinor", Sub: "agentbus · search-service",
-			Detail: "Is pricing.RoundMinor safe to call for JPY amounts?", Interrupt: true, Created: s.Now.Add(-18 * time.Second),
-			Expires: s.Now.Add(102 * time.Second),
+			Detail: "Is pricing.RoundMinor safe to call for JPY amounts?", Interrupt: true, Created: s.Now().Add(-18 * time.Second),
+			Expires: s.Now().Add(102 * time.Second),
 			Actions: []uireg.InboxAction{{Label: "Safe: precision comes from the currency table", Key: "1", Run: answer("q1", "safe")},
 				{Label: "Not yet", Key: "2", Run: answer("q1", "not yet")}}},
 		{ID: "r1", Type: "review-request", Group: uireg.GroupBus, Mine: true, Session: "search-service", Icon: "review", Tone: "violet",
 			Kicker: "agentbus · review request", Title: "priya → you: #4418 Add saved searches", Sub: "agentbus · acme/api · +212 -40",
-			Interrupt: true, Created: s.Now.Add(-2 * time.Minute),
+			Interrupt: true, Created: s.Now().Add(-2 * time.Minute),
 			Actions: []uireg.InboxAction{{Label: "Ignore", Command: "bus.review", Args: registry.Args{"id": "r1", "do": "ignore"}},
 				{Label: "Claim", Command: "bus.review", Args: registry.Args{"id": "r1", "do": "claim"}},
 				{Label: "Claim + Open", Primary: true, Command: "bus.review", Args: registry.Args{"id": "r1", "do": "open"}}}},
@@ -174,7 +174,7 @@ func TestInboxEscapeDismissesAndFilters(t *testing.T) {
 // stack; a card's ✕ dismisses it while the tab still counts it.
 func TestAskCardsActAndDismiss(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	se := core.SessionState{ID: "flaky-e2e", Name: "flaky-e2e", Kind: core.KindWork, Status: core.StatusPermission,
 		Agent: core.AgentState{Provider: "claude", Running: true},
 		Asks: []core.Ask{
@@ -209,10 +209,10 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 	if strings.Contains(s.FullText(), "git push origin rethink/rounding") {
 		t.Errorf("the gateway's prompt is up beside the network's:\n%s", s.FullText())
 	}
-	s.Now = s.Now.Add(time.Second) // past the moment a prompt ignores input as it comes up
+	s.SetNow(s.Now().Add(time.Second)) // past the moment a prompt ignores input as it comes up
 	s.ClickTop("Once")
 	s.Until("the gateway's prompt, next", func() bool { return strings.Contains(s.FullText(), "git push origin rethink/rounding") })
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.ClickTop("Allow once")
 	s.Until("the prompts done", func() bool { return !strings.Contains(s.FullText(), "git push origin rethink/rounding") })
 	s.ClickTop("Cancel") // the key's, at the top
@@ -280,7 +280,7 @@ func TestLuaInboxCards(t *testing.T) {
 		deployed = append(deployed, a.String("env"))
 		return nil
 	}})
-	s.Now = time.Now() // oriel.inbox's expires counts from the real clock
+	s.SetNow(time.Now()) // oriel.inbox's expires counts from the real clock
 	s.Lua(`L.inbox.add({ id = "d1", type = "deploy", group = "github", title = "Deploy api to prod?", kicker = "deploys · approval",
 		interrupt = true, expires = 90, actions = { { label = "Approve", key = "y", primary = true, command = "deploy.approve", args = { env = "prod" } },
 		{ label = "Hold" } } })`)
@@ -401,7 +401,7 @@ func TestNoticesThatAskAreInboxCards(t *testing.T) {
 // and the Inbox panel at the right with what waits and what's been answered.
 func TestInboxSnapshot(t *testing.T) {
 	s, b := busScene(t)
-	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }
+	ago := func(d time.Duration) time.Time { return s.Now().Add(-d) }
 	for _, se := range []core.SessionState{
 		{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindPlan, Status: core.StatusNeedsYou, Agent: core.AgentState{Provider: "claude", Running: true},
 			Asks: []core.Ask{

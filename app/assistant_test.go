@@ -55,7 +55,7 @@ func toolNames(a *agenttest.FakeSession) []string {
 func TestAssistantSearchesTheHelp(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	s.Now = time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
+	s.SetNow(time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC))
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Frame()
 	s.Run("assistant.open", registry.Args{"text": "how do I go back to the help page I was reading?"})

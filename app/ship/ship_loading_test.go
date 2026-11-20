@@ -14,7 +14,7 @@ func TestShipColumnsLoad(t *testing.T) {
 	fail, restore := x.Pending(se.ID)
 	s.Run("ship.open", nil)
 	s.Frame()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if n := s.Node("Reading search-api"); n.Role != "status" {
 		t.Errorf("the column's placeholder reads as %+v", n)
@@ -30,19 +30,19 @@ func TestShipColumnsLoad(t *testing.T) {
 
 	s.Quiet() // the reads opening the page started end while the report is held, so none lands over the failure
 	fail("gh: not logged in")
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.Midway(func() {
 		s.WantFrame("gh: not logged in", "Retry")
 		s.ClickNode("Retry") // this scene has no session host: the read runs again and says so
 	})
 	shipIdle(s)
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("there are no sessions in this window", "Retry")
 
 	restore()
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	s.WantFrame("Uncommitted", "Behind main")
 	if n := s.Node("Sync all"); n.Disabled {
@@ -51,7 +51,7 @@ func TestShipColumnsLoad(t *testing.T) {
 
 	x.SetLoading(se.ID, true)
 	s.Frame()
-	s.Now = s.Now.Add(200 * time.Millisecond)
+	s.SetNow(s.Now().Add(200 * time.Millisecond))
 	s.Frame()
 	s.WantFrame("Uncommitted", "Behind main")
 	s.Node("Reading search-api") // the refresh bar

@@ -256,9 +256,9 @@ func TestLauncherSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	ago := func(h int) time.Time { return s.Now.Add(-time.Duration(h) * time.Hour) }
+	ago := func(h int) time.Time { return s.Now().Add(-time.Duration(h) * time.Hour) }
 	for _, ev := range []core.Event{
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Plan: "max plan", Windows: []core.UsageWindow{{Name: "5h window", Used: .38}, {Name: "wk", Used: .71}}}},
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "codex", Plan: "pro plan", Windows: []core.UsageWindow{{Name: "5h window", Used: .12}}}},
@@ -356,12 +356,12 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 	fake.Hold = make(chan struct{})
 	lw := rig.NewHost(t, fake)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	s.Run("session.new", registry.Args{"prompt": "Fix stale search results"})
 	s.Midway(func() {
 		s.Frame()
 		s.WantFrame("NEW SESSION", "Plan") // the kinds are there at once
-		s.Now = s.Now.Add(4 * time.Second)
+		s.SetNow(s.Now().Add(4 * time.Second))
 		s.Frame()
 		s.WantFrame("Checking which agents are installed…", "· 4s", "Checking agents…")
 		if n := s.Node("No agent"); n.Selected {
@@ -376,7 +376,7 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 
 	close(fake.Hold)
 	s.Until("the probe", func() bool { return strings.Contains(s.Text(), "Fake") })
-	s.Now = s.Now.Add(time.Second)
+	s.SetNow(s.Now().Add(time.Second))
 	s.Frame()
 	if n := s.Node("Fake"); !n.Selected {
 		t.Error("the logged-in provider isn't picked once the probe answers")

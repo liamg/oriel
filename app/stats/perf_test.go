@@ -18,11 +18,11 @@ import (
 // keep fresh. Escape closes it.
 func TestTheHUDOpensThePerformancePage(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = apptest.At(14, 0, 0)
+	s.SetNow(apptest.At(14, 0, 0))
 	apptest.PluginOf[*stats.Perf](s, "perf").Every = 50 * time.Millisecond
 	se := core.SessionState{ID: "s-perf", Name: "perf-session", Kind: core.KindWork, Status: core.StatusWorking}
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID},
-		core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 12, CPU: .34, Mem: 11 << 30, MemTotal: 32 << 30, Sampled: s.Now}})
+		core.MachineChanged{Machine: core.MachineState{Host: "mbp", Cores: 12, CPU: .34, Mem: 11 << 30, MemTotal: 32 << 30, Sampled: s.Now()}})
 	agent := exec.Command("sleep", "30")
 	agent.Env = append(os.Environ(), sysload.SessionEnv+"="+string(se.ID))
 	if err := agent.Start(); err != nil {

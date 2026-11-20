@@ -136,7 +136,7 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	if _, err := lw.W.AddRepoPath(context.Background(), rig.HomeClone(t, lw.Repo, "pricing")); err != nil {
 		t.Fatal(err)
 	}
-	s.Now = apptest.At(14, 30, 0)
+	s.SetNow(apptest.At(14, 30, 0))
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	// The test host has no sandbox factory.

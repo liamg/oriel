@@ -248,7 +248,7 @@ func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *jobs.Jobs) {
 	r := rig.NewJobs(t)
 	r.Build()
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W)})
-	s.Now = rig.StatsNow
+	s.SetNow(rig.StatsNow)
 	x := jobsOf(s)
 	x.SetClock(s.Clock(), time.UTC)
 	s.StatsClock(s.Clock(), time.UTC)
@@ -398,7 +398,7 @@ func TestASkippedRunShowsInTheList(t *testing.T) {
 	r.W.RunDue(context.Background())
 	r.Clock.Set(rig.StatsNow)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W)})
-	s.Now = rig.StatsNow
+	s.SetNow(rig.StatsNow)
 	x := jobsOf(s)
 	x.SetClock(s.Clock(), time.UTC)
 	s.UntilState("the run", func(st core.State) bool { _, ok := jobRun(st, j.Name); return ok })

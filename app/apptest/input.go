@@ -57,7 +57,7 @@ func (s *Scene) Type(keys ...string) {
 func (s *Scene) Hold(m render.Mods, d time.Duration) {
 	s.UI().Mods(m)
 	s.Frame()
-	s.Now = s.Now.Add(d)
+	s.SetNow(s.Now().Add(d))
 	s.Frame()
 	s.Frame()
 }

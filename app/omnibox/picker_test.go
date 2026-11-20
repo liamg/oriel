@@ -164,7 +164,7 @@ func TestPickingASymbolOpensIt(t *testing.T) {
 
 func TestSearchClosesOnTheNextFrame(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
-	s.Now = time.Unix(1000, 0)
+	s.SetNow(time.Unix(1000, 0))
 	s.Run("picker.open", registry.Args{"source": "grep"})
 	s.Frame()
 	s.Frame()
@@ -172,11 +172,11 @@ func TestSearchClosesOnTheNextFrame(t *testing.T) {
 	if picker(s).Open() {
 		t.Fatal("Escape didn't close the search")
 	}
-	if next := s.UI().NextFrame(); next.IsZero() || next.After(s.Now) {
+	if next := s.UI().NextFrame(); next.IsZero() || next.After(s.Now()) {
 		t.Errorf("the frame that closed the search, still showing it, asks for the next at %v, not now", next)
 	}
 	s.Frame()
-	if picker(s).Open() || s.UI().NextFrame().After(s.Now) {
+	if picker(s).Open() || s.UI().NextFrame().After(s.Now()) {
 		t.Error("the search is still up a frame later")
 	}
 }
