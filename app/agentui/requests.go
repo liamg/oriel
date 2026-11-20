@@ -73,6 +73,7 @@ type Requests struct {
 	reveal     core.ThreadID                    // a thread to bring into view
 	focusReply core.ThreadID                    // a thread whose reply field takes focus
 	unfolded   map[core.ThreadID]bool           // closed threads opened to read in a presentation's margin
+	expanded   map[core.ThreadID]bool           // long threads showing all their comments
 
 	edits map[string]*agentEdit // the agent's latest edit to each file decorated, by path
 	files kit.FileTexts         // the anchored files' text, by path
@@ -131,6 +132,7 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.anchors = map[threadAnchor]text.AnchorID{}
 	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
 	x.unfolded = map[core.ThreadID]bool{}
+	x.expanded = map[core.ThreadID]bool{}
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -153,6 +155,7 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Option(o))
 	}
 	x.Add(h.Contribute(x.threadsAction()))
+	x.Add(h.Contribute(x.resolvedAction()))
 	x.Add(h.Contribute(x.commentBadge()))
 	x.Add(h.Contribute(x.hiddenLayer()))
 	for _, k := range x.keymaps() {
@@ -265,6 +268,8 @@ func (x *Requests) commands() []registry.Command {
 			Args:      registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.suggest() }},
 		{ID: "threads.toggle", Grant: registry.Open, Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Args: []registry.Arg{registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
+		{ID: "threads.resolved.toggle", Grant: registry.Open, Title: "Show or hide resolved threads in the diff and other presentations: {resolved} shown or hidden, or the other way (editor.resolved_threads)",
+			Args: []registry.Arg{registry.StringArg("resolved")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.toggleResolved(ctx, a) }},
 		{ID: "threads.open", Grant: registry.Open, Title: "Show the threads of the file in a {window}, at {thread} (the cursor line's by default) with its reply field ready",
 			Args: []registry.Arg{registry.StringArg("thread"), registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.showThreads(a) }},
 		{ID: "requests.summary.toggle", Grant: registry.Open, Title: "Show the session's summary at the right: its requests, tasks and stats, or hide it", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
@@ -296,6 +301,9 @@ func (x *Requests) keymaps() []registry.Keymap {
 		{Mode: ThreadComposerKeyMode, Keys: "<D-g>", Command: "thread.suggestion.add", Desc: "Suggest a change"},
 		{Mode: "n", Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
 		{Mode: kit.PresentKeyMode, Keys: "<Leader>R", Command: "threads.toggle", Desc: "Show or hide the file's threads"},
+		{Mode: "n", Keys: "<Leader>H", Command: "threads.resolved.toggle", Desc: "Show or hide resolved threads"},
+		{Mode: kit.PresentKeyMode, Keys: "<Leader>H", Command: "threads.resolved.toggle", Desc: "Show or hide resolved threads"},
+		{Mode: kit.DiffKeyMode, Keys: "<Leader>H", Command: "threads.resolved.toggle", Desc: "Show or hide resolved threads"},
 		{Mode: ThreadsHiddenKeyMode, Keys: "<CR>", Command: "threads.open", Desc: "Show the line's threads"},
 	}...)
 }

@@ -359,6 +359,7 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 					Tooltip: "Wrap long lines, or scroll across them (editor.wrap)"}) != x.wrap {
 					kit.RunOrNotify(x.h, "gitui", "diff.wrap.toggle", registry.Args{"wrap": !x.wrap})
 				}
+				x.resolvedChip(c)
 				active := 0
 				if layout == "unified" {
 					active = 1

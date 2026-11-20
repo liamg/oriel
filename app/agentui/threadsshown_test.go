@@ -1,12 +1,14 @@
 package agentui_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -107,6 +109,105 @@ func TestThreadsHideBehindBubbles(t *testing.T) {
 	s.Frames(2)
 	if !strings.Contains(s.Text(), "Return the rounded value") {
 		t.Errorf("⏎ on line 7 didn't show its thread:\n%s", s.Text())
+	}
+}
+
+// A long thread shows its first comment and its latest few; the ones between expand and collapse again.
+func TestLongThreadCollapses(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "round.go"), []byte("package pricing\n\nfunc Round() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.SetNow(apptest.At(14, 30, 0))
+	th := core.Thread{ID: "t1000000", Status: core.ThreadOpen, Created: s.Now(), Updated: s.Now(),
+		Anchor: &core.Anchor{Project: "notes", File: "round.go", Line: 3, Text: "func Round() {}"}}
+	for i := range 6 {
+		th.Comments = append(th.Comments, core.Comment{ID: fmt.Sprint("c", i), Author: core.AuthorYou, Name: "Liam",
+			Body: fmt.Sprintf("Comment number %d", i), Time: s.Now(), Delivered: true})
+	}
+	se := core.SessionState{ID: "notes", Name: "notes", Kind: core.KindWork, Status: core.StatusWorking,
+		Projects: []core.Project{{Name: "notes", Dir: dir, Branch: "main", Primary: true}}, Threads: []core.Thread{th}}
+	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
+	s.Run("editor.open", registry.Args{"path": "round.go"})
+	s.Frames(3)
+
+	collapsed := func(want bool) {
+		t.Helper()
+		text := s.Text()
+		if !apptest.HasAll(text, "Comment number 0", "Comment number 4", "Comment number 5") {
+			t.Fatalf("the first and latest comments don't show:\n%s", text)
+		}
+		for _, mid := range []string{"Comment number 1", "Comment number 2", "Comment number 3"} {
+			if strings.Contains(text, mid) == want {
+				t.Fatalf("collapsed is %v, yet %q showing is %v:\n%s", want, mid, !want, text)
+			}
+		}
+	}
+	collapsed(true)
+	s.ClickNode("Show 3 earlier comments")
+	collapsed(false)
+	s.ClickNode("Show fewer")
+	collapsed(true)
+
+	if err := s.Registry().Options().Set("editor.recent_comments", registry.LayerUser, registry.At{}, 4); err != nil {
+		t.Fatal(err)
+	}
+	s.Frames(2)
+	s.Node("Show 1 earlier comment")
+}
+
+// ␣H flips editor.resolved_threads, kept in the user's settings.
+func TestResolvedThreadsToggle(t *testing.T) {
+	s := threadsFile(t)
+	s.Run("editor.open", registry.Args{"path": "round.go"})
+	s.Frames(2)
+	s.Click(s.TextPoint("round.go"), 0)
+	resolved := func() string {
+		v, _ := registry.Option[string](s.Registry().Options(), "editor.resolved_threads", registry.At{})
+		return v
+	}
+	for _, want := range []string{"hidden", "shown"} {
+		s.Press("<Space>H")
+		s.Frames(2)
+		if got := resolved(); got != want {
+			t.Fatalf("␣H left editor.resolved_threads %q, not %q", got, want)
+		}
+	}
+}
+
+// A presentation has a resolved button, with the count of the file's resolved threads, that hides and shows them; the
+// text, which never shows resolved threads, has none.
+func TestResolvedThreadsButton(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "notes.md"), []byte("# Notes\n\nFirst point.\n\nSecond point.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.SetNow(apptest.At(14, 30, 0))
+	th := core.Thread{ID: "t1000000", Status: core.ThreadResolved, Created: s.Now(), Updated: s.Now(),
+		Anchor:   &core.Anchor{Project: "notes", File: "notes.md", Line: 3, Text: "First point."},
+		Comments: []core.Comment{{ID: "c0", Author: core.AuthorYou, Name: "Liam", Body: "Settled", Time: s.Now(), Delivered: true}}}
+	se := core.SessionState{ID: "notes", Name: "notes", Kind: core.KindWork, Status: core.StatusWorking,
+		Projects: []core.Project{{Name: "notes", Dir: dir, Branch: "main", Primary: true}}, Threads: []core.Thread{th}}
+	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
+	s.Run("editor.open", registry.Args{"path": "notes.md"})
+	s.Frames(3)
+	if s.Find("resolved 1") != nil {
+		t.Fatal("the text shows a resolved button, though it never shows resolved threads")
+	}
+	s.Run("editor.presenter.open", registry.Args{"name": "markdown"})
+	s.Frames(3)
+	resolved := func() string {
+		v, _ := registry.Option[string](s.Registry().Options(), "editor.resolved_threads", registry.At{})
+		return v
+	}
+	for _, want := range []string{"hidden", "shown"} {
+		s.ClickNode("resolved 1")
+		s.Frames(2)
+		if got := resolved(); got != want {
+			t.Fatalf("the resolved button left editor.resolved_threads %q, not %q", got, want)
+		}
 	}
 }
 
