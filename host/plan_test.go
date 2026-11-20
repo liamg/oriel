@@ -287,3 +287,47 @@ func TestStartWorkSandboxAndNetwork(t *testing.T) {
 		t.Error("the open network still goes through the egress proxy")
 	}
 }
+
+// The plan pack (agent/packs/text/plan.md): "Ask what the research didn't settle, one question at a time: ask one, wait
+// for the answer, and let it shape the next ... Ask with your own question tool if you have one (`AskUserQuestion` in
+// Claude Code), which Oriel puts on the plan thread". Each question from the agent's own tool, which names no thread,
+// is asked on the plan thread, and the thread stays open for the plan.
+func TestAPlanAsksItsQuestionsOneAtATimeOnThePlanThread(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Round invoice lines", Provider: "fake", Model: "m1",
+		Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	a := r.agent()
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	plan := r.session(id).Threads[0].ID
+	for i, q := range []struct{ id, question, answer string }{
+		{"q1", "Round per line or per invoice?", "per line"},
+		{"q2", "Ties to even on per-line rounding?", "yes"},
+	} {
+		ch := a.Expect(q.id)
+		a.Emit(agent.Question{ID: q.id, Questions: []core.Question{{Question: q.question, Options: []string{q.answer, "no"}}}})
+		se := r.eventually(id, q.question, func(se core.SessionState) bool { return len(se.Asks) == 1 && se.Asks[0].ID == q.id })
+		if se.Asks[0].Thread != plan {
+			t.Errorf("question %d was asked in %q, want the plan thread %q", i+1, se.Asks[0].Thread, plan)
+		}
+		if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: q.id, Answers: map[string]string{q.question: q.answer}}); err != nil {
+			t.Fatal(err)
+		}
+		if d := <-ch; d.Answers[q.question] != q.answer {
+			t.Errorf("question %d answered %+v", i+1, d.Answers)
+		}
+	}
+	se := r.eventually(id, "both answers on the plan thread", func(se core.SessionState) bool {
+		th, _ := se.Thread(plan)
+		n := 0
+		for _, c := range th.Comments {
+			if c.Author == core.AuthorYou && c.Asked {
+				n++
+			}
+		}
+		return n == 2
+	})
+	if th, _ := se.Thread(plan); !th.Open() {
+		t.Errorf("the plan thread was closed by its questions: %s", th.Status)
+	}
+}
