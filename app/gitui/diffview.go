@@ -96,7 +96,7 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 		}
 		right := x.slotIDs(kit.DiffRight, st.root)
 		if len(x.slotIDs(kit.DiffSide, st.root)) > 0 {
-			c.Column("side", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles), ScrollY: true}, func(c *ui.Ctx) {
+			c.Column("side", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles), ScrollY: true, KeepScroll: diffScroll{st, "side"}}, func(c *ui.Ctx) {
 				x.slots(c, kit.DiffSide, st.root, 230)
 			})
 		}
@@ -245,7 +245,7 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 	st.panLines(c)
 	at := st.revealItem(c, bodyID)
 	c.Items("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: DiffKeyMode, Role: ui.RoleList, Label: "Changes",
-		Help: "files/diff#hunks"}, len(st.files), ui.ItemsOpts{Estimate: 35, Key: func(i int) any { return st.files[i].Path }, Reveal: at},
+		Help: "files/diff#hunks", KeepScroll: diffScroll{st, "files"}}, len(st.files), ui.ItemsOpts{Estimate: 35, Key: func(i int) any { return st.files[i].Path }, Reveal: at},
 		func(c *ui.Ctx, i int) { reveal = append(reveal, x.fileSection(c, st, st.files[i], layout)...) })
 	if st.reveal {
 		st.revealSel(c, bodyID, at)
@@ -253,6 +253,12 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 	for _, id := range reveal {
 		c.ScrollIntoView(bodyID, id)
 	}
+}
+
+// diffScroll is what a diff's scrolling lists keep their offsets under through a tab in front of them: its state's.
+type diffScroll struct {
+	st   *diffState
+	part string
 }
 
 // revealItem is the file the list is to scroll to the top of the view, -1 for none: the selected one while it's

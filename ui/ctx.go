@@ -89,6 +89,9 @@ func (c *Ctx) PointerOver(id ID) bool {
 func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 	e := c.u.add(c.e, key, kBox)
 	e.style = scaled(st, &e.scale, c.Scale())
+	if st.KeepScroll != nil {
+		c.u.keepScroll(e.id, st.KeepScroll)
+	}
 	if st.Theme != nil {
 		e.theme = st.Theme
 	}
@@ -265,6 +268,13 @@ func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i i
 		is := State[itemsState](lc, Child(id, "\x00items"))
 		if is.heights == nil {
 			is.heights = map[any]float32{}
+			if st.KeepScroll != nil {
+				is.heights = lc.u.keptOf(st.KeepScroll).heights // its rows as they were, for the offset it kept
+				if is.heights == nil {
+					is.heights = map[any]float32{}
+				}
+				lc.u.keptOf(st.KeepScroll).heights = is.heights
+			}
 		}
 		for _, k := range is.built {
 			if r, ok := lc.u.Rect(Child(id, k)); ok {
