@@ -376,3 +376,74 @@ func TestServeReactions(t *testing.T) {
 		t.Error("an emoji Oriel has no GitLab name for was taken")
 	}
 }
+
+// An MR's awards are read in one GraphQL query per 100 notes, who you are with them, rather than a request for each
+// note: a note past the first 100 still has its own.
+func TestServeReactionsInPages(t *testing.T) {
+	g := gitlabtest.New(t)
+	conn := keyed(t, g)
+	iid := g.AddMR("acme/api", gitlabtest.MR{Title: "feat: x", Author: gitlabtest.Me, Source: "eng-1", Target: "main"})
+	g.AddThread("acme/api", iid, gitlabtest.Thread{Author: "priya-k", Body: "Can this return an error?", Path: "handler.go", Line: 3})
+	for range 150 {
+		g.AddNote("acme/api", iid, "mkhan", "Any news?")
+	}
+	var got struct{ Threads []registry.ReviewThread }
+	read := func() {
+		t.Helper()
+		g.ClearCalls()
+		if err := conn.Call(t.Context(), "threads", Params{Repo: Repo{Remote: "https://gitlab.com/acme/api.git", Repo: "acme/api", Site: Public},
+			PR: registry.PR{Number: iid}}, &got); err != nil {
+			t.Fatal(err)
+		}
+		if len(got.Threads) != 2 || len(got.Threads[1].Comments) != 150 {
+			t.Fatalf("threads %+v", got.Threads)
+		}
+	}
+	read()
+	last := got.Threads[1].Comments[149]
+	first := got.Threads[0].Comments[0]
+	n, _ := strconv.Atoi(last.ID)
+	g.Award("acme/api", iid, n, gitlabtest.Me, "rocket")
+	d, _ := strconv.Atoi(first.ID)
+	g.Award("acme/api", iid, d, "priya-k", "eyes")
+
+	read()
+	if r := got.Threads[1].Comments[149].Reactions; !reflect.DeepEqual(r, []registry.PRReaction{{Emoji: "🚀", Count: 1, Mine: true, Who: []string{gitlabtest.Me}}}) {
+		t.Errorf("the 150th note's reactions: %+v", r)
+	}
+	if r := got.Threads[0].Comments[0].Reactions; !reflect.DeepEqual(r, []registry.PRReaction{{Emoji: "👀", Count: 1, Who: []string{"priya-k"}}}) {
+		t.Errorf("the diff note's reactions: %+v", r)
+	}
+	var awards, graphql, user int
+	for _, c := range g.Calls() {
+		switch {
+		case strings.Contains(c, "/award_emoji"):
+			awards++
+		case c == "POST /api/graphql":
+			graphql++
+		case c == "GET /api/v4/user":
+			user++
+		}
+	}
+	if awards != 0 || user != 0 || graphql != 2 {
+		t.Errorf("reading 151 notes' awards took %d award requests, %d of /user and %d GraphQL queries, want 0, 0 and 2:\n%s",
+			awards, user, graphql, strings.Join(g.Calls(), "\n"))
+	}
+}
+
+// Awards that can't be read leave the notes without reactions; the threads still come.
+func TestServeThreadsWithoutAwards(t *testing.T) {
+	g := gitlabtest.New(t)
+	conn := keyed(t, g)
+	iid := g.AddMR("acme/api", gitlabtest.MR{Title: "feat: x", Author: gitlabtest.Me, Source: "eng-1", Target: "main"})
+	g.AddNote("acme/api", iid, "mkhan", "Looks good overall.")
+	g.RefuseGraphQL()
+	var got struct{ Threads []registry.ReviewThread }
+	if err := conn.Call(t.Context(), "threads", Params{Repo: Repo{Remote: "https://gitlab.com/acme/api.git", Repo: "acme/api", Site: Public},
+		PR: registry.PR{Number: iid}}, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Threads) != 1 || len(got.Threads[0].Comments) != 1 || got.Threads[0].Comments[0].Reactions != nil {
+		t.Errorf("threads %+v", got.Threads)
+	}
+}

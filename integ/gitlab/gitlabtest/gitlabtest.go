@@ -106,6 +106,8 @@ type GitLab struct {
 	members  map[string]int  // by project path and user: access level
 	notes    []string        // notes posted through the API: "path!iid discussion: body"
 	awards   map[int][]award // by note id
+	calls    []string        // each request: "GET /api/v4/user"
+	noGraph  bool            // GraphQL refused
 }
 
 // award is an emoji a user awarded a note.
@@ -394,6 +396,11 @@ func (g *GitLab) serve(w http.ResponseWriter, r *http.Request) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.auths = append(g.auths, r.Host+" "+r.Header.Get("Authorization"))
+	g.calls = append(g.calls, r.Method+" "+r.URL.Path)
+	if r.URL.Path == "/api/graphql" && slices.Contains(g.hosts, r.Host) && r.Header.Get("Authorization") == "Bearer "+Key {
+		g.graphql(w, r)
+		return
+	}
 	rest, ok := strings.CutPrefix(r.URL.EscapedPath(), "/api/v4/")
 	if !slices.Contains(g.hosts, r.Host) || !ok {
 		reply(w, 404, map[string]string{"message": "404 Not Found"})

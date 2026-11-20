@@ -66,6 +66,64 @@ func (c Client) Awards(ctx context.Context, path string, iid, note int) ([]Award
 	return as, c.call(ctx, "GET", fmt.Sprintf("/projects/%s/merge_requests/%d/notes/%d/award_emoji?per_page=100", project(path), iid, note), nil, &as)
 }
 
+// noteAwardsQuery reads a page of an MR's notes' award emoji, with who the token's owner is.
+const noteAwardsQuery = `query($path: ID!, $iid: String!, $after: String) { currentUser { username } ` +
+	`project(fullPath: $path) { mergeRequest(iid: $iid) { notes(first: 100, after: $after) { ` +
+	`nodes { id awardEmoji { nodes { name user { username } } } } pageInfo { hasNextPage endCursor } } } } }`
+
+// NoteAwards are every note's award emoji on a merge request, by note id, read 100 notes at a time; and the token's
+// owner's username, to tell theirs.
+func (c Client) NoteAwards(ctx context.Context, path string, iid int) (map[int][]Award, string, error) {
+	out := map[int][]Award{}
+	vars := map[string]any{"path": path, "iid": strconv.Itoa(iid)}
+	for {
+		var res struct {
+			Data struct {
+				CurrentUser User `json:"currentUser"`
+				Project     *struct {
+					MergeRequest *struct {
+						Notes struct {
+							Nodes []struct {
+								ID         string `json:"id"`
+								AwardEmoji struct {
+									Nodes []Award `json:"nodes"`
+								} `json:"awardEmoji"`
+							} `json:"nodes"`
+							PageInfo struct {
+								Next   bool   `json:"hasNextPage"`
+								Cursor string `json:"endCursor"`
+							} `json:"pageInfo"`
+						} `json:"notes"`
+					} `json:"mergeRequest"`
+				} `json:"project"`
+			} `json:"data"`
+			Errors []struct {
+				Message string `json:"message"`
+			} `json:"errors"`
+		}
+		if err := (Client{Do: c.GraphQL}).call(ctx, "POST", "", map[string]any{"query": noteAwardsQuery, "variables": vars}, &res); err != nil {
+			return nil, "", err
+		}
+		if len(res.Errors) > 0 {
+			return nil, "", &Error{Status: 422, Message: res.Errors[0].Message}
+		}
+		if res.Data.Project == nil || res.Data.Project.MergeRequest == nil {
+			return nil, "", &Error{Status: 404, Message: fmt.Sprintf("no merge request !%d in %s", iid, path)}
+		}
+		notes := res.Data.Project.MergeRequest.Notes
+		for _, n := range notes.Nodes {
+			// A note's global id: gid://gitlab/DiffNote/123.
+			if id, err := strconv.Atoi(n.ID[strings.LastIndex(n.ID, "/")+1:]); err == nil {
+				out[id] = n.AwardEmoji.Nodes
+			}
+		}
+		if !notes.PageInfo.Next {
+			return out, res.Data.CurrentUser.Username, nil
+		}
+		vars["after"] = notes.PageInfo.Cursor
+	}
+}
+
 // reactions are a note's awards by emoji: those Oriel offers in their order, then the rest as they were first awarded.
 func reactions(as []Award, me string) []registry.PRReaction {
 	var out []registry.PRReaction
