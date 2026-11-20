@@ -184,7 +184,7 @@ func WrapUnder(c *ui.Ctx, key any, row ui.ID, text string, ts ui.TextStyle) {
 	})
 }
 
-// ReviewersBox is the Reviews box: each reviewer with where they stand, approved, changes, commented or waiting.
+// ReviewersBox is the Reviews box: each reviewer with where they stand, approved, re-review, changes, commented or waiting.
 func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 	th := c.Theme()
 	reviewers = MergeReviewers(reviewers)
@@ -200,6 +200,8 @@ func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 			switch r.State {
 			case registry.ReviewApproved:
 				word, tone = "approved", th.C(theme.OK)
+			case registry.ReviewStale:
+				word, tone = "re-review", th.C(TReviewStale)
 			case registry.ReviewChanges:
 				word, tone = "changes", th.C(theme.Error)
 			case registry.ReviewCommented:

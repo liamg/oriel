@@ -528,6 +528,8 @@ func stateLabel(r reviewRow) string {
 	switch r.req.State {
 	case registry.ReviewReRequested:
 		return "re-requested"
+	case registry.ReviewStale:
+		return "re-review"
 	case registry.ReviewChanges:
 		return "changes requested"
 	case registry.ReviewCommented:
@@ -545,7 +547,7 @@ func stateTone(r reviewRow) string {
 		return "error"
 	case "reviewing":
 		return "status.working"
-	case "changes requested":
+	case "changes requested", "re-review":
 		return "warn"
 	}
 	return "fg.faint"

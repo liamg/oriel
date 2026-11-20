@@ -38,7 +38,7 @@ const PRReviewsService = "pr.reviews"
 // PRReviews is the PRReviewsService.
 type PRReviews interface {
 	// Reviews are each reviewer's latest verdict on the PR at url in session id: registry.ReviewChanges,
-	// ReviewApproved or ReviewCommented.
+	// ReviewApproved, ReviewStale or ReviewCommented.
 	Reviews(id core.SessionID, url string) map[string]registry.ReviewState
 }
 

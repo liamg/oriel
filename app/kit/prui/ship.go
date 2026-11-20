@@ -141,6 +141,7 @@ var (
 	TReviewAccent   = theme.Declare("review.accent", "violet")
 	TReviewChanges  = theme.Declare("review.changes", "warn")
 	TReviewApproved = theme.Declare("review.approved", "ok")
+	TReviewStale    = theme.Declare("review.stale", "warn") // an approval that no longer stands: needs re-review
 )
 
 // ReviewWord is a reviewer's state as a code host gives it (registry.ReviewChanges…), in words.
@@ -150,6 +151,8 @@ func ReviewWord(s registry.ReviewState) (string, theme.TokenID) {
 		return "changes requested", TReviewChanges
 	case registry.ReviewApproved:
 		return "approved", TReviewApproved
+	case registry.ReviewStale:
+		return "re-review", TReviewStale
 	case registry.ReviewCommented:
 		return "commented", theme.FgFaint
 	}
