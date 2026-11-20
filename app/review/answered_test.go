@@ -49,3 +49,31 @@ func TestAnsweredReviewsAreTheirMove(t *testing.T) {
 		t.Errorf("you're listed %d more times among its reviewers", n)
 	}
 }
+
+// A pull request you approved that's been pushed to since isn't approved any more: it comes back to the list as
+// re-review, and its reviewers say so for you, rather than approved.
+func TestAnApprovalBeforeTheirLatestPushIsReReview(t *testing.T) {
+	s, _, hub, _ := reviewScene(t)
+	pr := hub.AddPR("acme/coast", gh.PR{Title: "Notify on drift", Author: "owen", Head: "drift", Base: "main"})
+	hub.AddCommit("acme/coast", pr.Number, "c1")
+	hub.AddReview("acme/coast", pr.Number, gh.Review{User: "you", State: gh.ReviewApproved, Commit: "c1"})
+
+	s.Run("reviews.open", nil)
+	s.Until("the requests", func() bool { return strings.Contains(s.Text(), "Retry flaky S3") })
+	s.Run("reviews.refresh", nil)
+	s.Run("reviews.refresh", nil)
+	if strings.Contains(s.Text(), "Notify on drift") {
+		t.Errorf("a pull request you approved at its head is listed:\n%s", s.Text())
+	}
+
+	hub.AddCommit("acme/coast", pr.Number, "c2")
+	s.Run("reviews.refresh", nil)
+	s.Until("it back as re-review", func() bool {
+		return strings.Contains(strings.ReplaceAll(s.Text(), "\n", " "), "Notify on drift 4w RE-REVIEW")
+	})
+	s.ClickText("Notify on drift")
+	s.Until("you among its reviewers, needing to re-review", func() bool { return s.Find("you re-review") != nil })
+	if s.Find("you approved") != nil {
+		t.Error("your approval of an older commit still shows as approved")
+	}
+}

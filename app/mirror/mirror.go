@@ -78,7 +78,7 @@ type prRead struct {
 	host    registry.CodeHost
 	repo    registry.CodeRepo
 	pr      registry.PR
-	reviews map[string]registry.ReviewState // reviewer → registry.ReviewChanges, ReviewApproved, ReviewCommented
+	reviews map[string]registry.ReviewState // reviewer → registry.ReviewChanges, ReviewApproved, ReviewStale, ReviewCommented
 }
 
 // prCached is a branch's PR as its code host last answered, and when.
@@ -783,7 +783,7 @@ func (x *Mirror) statusSegment(c *ui.Ctx) {
 		}
 	}
 	var parts []string
-	for _, s := range []registry.ReviewState{registry.ReviewChanges, registry.ReviewApproved} {
+	for _, s := range []registry.ReviewState{registry.ReviewChanges, registry.ReviewStale, registry.ReviewApproved} {
 		if n := counts[s]; n > 0 {
 			word, _ := prui.ReviewWord(s)
 			parts = append(parts, fmt.Sprintf("%d %s", n, word))

@@ -194,9 +194,21 @@ func (n gqlAsked) asked(me string) Asked {
 			out.Asked = ev.CreatedAt
 		}
 	}
+	commits := n.Commits.Nodes
+	head := ""
+	if len(commits) > 0 {
+		head = commits[len(commits)-1].Commit.OID
+	}
 	for _, rv := range n.LatestReviews.Nodes {
 		if rv.Author != nil && !strings.EqualFold(rv.Author.Login, me) {
-			out.Reviews = append(out.Reviews, Review{User: rv.Author.Login, State: rv.State})
+			r := Review{User: rv.Author.Login, State: rv.State}
+			if rv.Commit != nil {
+				r.Commit = rv.Commit.OID
+			}
+			if r.State == ReviewApproved && Stale(r, head, out.Reviewers) {
+				r.State = ReviewStale
+			}
+			out.Reviews = append(out.Reviews, r)
 		}
 	}
 	// The user's own from every review: latestReviews leaves out one that only commented.
@@ -212,7 +224,11 @@ func (n gqlAsked) asked(me string) Asked {
 		}
 	}
 	if out.Mine != "" {
-		out.Reviews = append(out.Reviews, Review{User: me, State: out.Mine})
+		mine := Review{User: me, State: out.Mine, Commit: at}
+		if mine.State == ReviewApproved && Stale(mine, head, nil) {
+			mine.State = ReviewStale
+		}
+		out.Reviews = append(out.Reviews, mine)
 	}
 	for _, c := range n.Comments.Nodes {
 		if c.Author != nil && strings.EqualFold(c.Author.Login, me) && c.Created.After(answered) {
@@ -220,7 +236,6 @@ func (n gqlAsked) asked(me string) Asked {
 		}
 	}
 	out.Answered = out.Requested && answered.After(out.Asked)
-	commits := n.Commits.Nodes
 	if at != "" {
 		for i, c := range commits {
 			if c.Commit.OID == at {

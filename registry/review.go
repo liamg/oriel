@@ -22,6 +22,7 @@ const (
 	ReviewChanges     ReviewState = "changes"      // you asked for changes: their move
 	ReviewCommented   ReviewState = "commented"    // you commented: their move
 	ReviewApproved    ReviewState = "approved"
+	ReviewStale       ReviewState = "stale" // approved, but before the latest push or before being asked again: needs re-review
 	ReviewRequested   ReviewState = "requested" // a PR's reviewer asked, and not reviewed yet
 )
 
@@ -44,7 +45,7 @@ type ReviewRequest struct {
 	CI     CheckState  `json:"ci,omitempty"`     // CheckOK, CheckFailed or CheckRunning; "" none
 	Source string      `json:"source,omitempty"` // the source's Title, filled in by RequestedReviews
 	// Reviewers are who's asked (State "requested", a team as "@org/team") and who has reviewed, by their latest
-	// review ("approved", "changes", "commented").
+	// review ("approved", "stale", "changes", "commented").
 	Reviewers []PRReviewer `json:"reviewers,omitempty"`
 	Base      string       `json:"base,omitempty"` // the branch it goes into
 	Head      string       `json:"head,omitempty"` // its own branch
@@ -108,10 +109,10 @@ type PREvent struct {
 	Reactions []PRReaction `json:"reactions,omitempty"`
 }
 
-// PRReviewer is someone asked to review, or who did: "requested", "approved", "changes", "commented".
+// PRReviewer is someone asked to review, or who did: "requested", "approved", "stale", "changes", "commented".
 type PRReviewer struct {
 	Login string      `json:"login"`
-	State ReviewState `json:"state"` // ReviewRequested, or a review's ReviewApproved, ReviewChanges or ReviewCommented
+	State ReviewState `json:"state"` // ReviewRequested, or a review's ReviewApproved, ReviewStale, ReviewChanges or ReviewCommented
 }
 
 // PRFileChange is a file a pull request changes.

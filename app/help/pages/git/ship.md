@@ -132,7 +132,7 @@ The **Pull request** panel in the dock reads top to bottom:
 - **Checks**: one line for all of them (all passed, how many fail, how many run, none reported), then each failing or
   running check. The footer says when the code host was last asked and at which commit (`checked 28s ago · at
   c3f1a9e`); it turns amber when the answer is stale, red with why when the host couldn't be reached.
-- **Reviews**: each reviewer and where they stand: approved, changes, commented or waiting.
+- **Reviews**: each reviewer and where they stand: approved, re-review (approved before the latest push, or asked again since), changes, commented or waiting.
 - **Branch**: committed, up to date with the base, pushed, and **On origin**: **new commits** when the PR's head isn't
   the commit checked out and nothing here waits to be pushed (someone else pushed). The footer says when git was read.
 
