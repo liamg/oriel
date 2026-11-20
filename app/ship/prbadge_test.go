@@ -46,7 +46,7 @@ func TestAnApprovalBeforeTheLatestPushNeedsReReview(t *testing.T) {
 	s.Run("review.threads.sync", registry.Args{"id": string(se.ID)})
 	s.Run("project.open", registry.Args{"project": "search-api"})
 	s.Run("project.panel.toggle", registry.Args{"name": "pull-request"}) // its Reviews box
-	s.Run("ship.pr.open", registry.Args{"project": "search-api"})       // its badge
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})        // its badge
 	s.Until("approved at the head", func() bool { return s.Find("Pull request: Approved") != nil && s.Find("priya-k approved") != nil })
 
 	hub.AddCommit("acme/search-api", pr.Number, "c2")

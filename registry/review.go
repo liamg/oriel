@@ -22,7 +22,7 @@ const (
 	ReviewChanges     ReviewState = "changes"      // you asked for changes: their move
 	ReviewCommented   ReviewState = "commented"    // you commented: their move
 	ReviewApproved    ReviewState = "approved"
-	ReviewStale       ReviewState = "stale" // approved, but before the latest push or before being asked again: needs re-review
+	ReviewStale       ReviewState = "stale"     // approved, but before the latest push or before being asked again: needs re-review
 	ReviewRequested   ReviewState = "requested" // a PR's reviewer asked, and not reviewed yet
 )
 
