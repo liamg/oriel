@@ -35,7 +35,37 @@ type threadsShown struct {
 func threadsOptions() []registry.OptionSpec {
 	return []registry.OptionSpec{{Name: "editor.threads", Type: registry.Enum, Values: []string{"shown", "hidden"}, Default: "shown",
 		Scopes: registry.ScopeUser | registry.ScopeProject,
-		Help:   "How files open: with their threads between the lines (shown), or behind speech bubbles in the gutter (hidden)."}}
+		Help:   "How files open: with their threads between the lines (shown), or behind speech bubbles in the gutter (hidden)."},
+		{Name: "editor.resolved_threads", Type: registry.Enum, Values: []string{"shown", "hidden"}, Default: "shown",
+			Scopes: registry.ScopeUser | registry.ScopeProject,
+			Help:   "Whether the diff and other presentations show resolved threads folded to a line (shown), or leave them out (hidden)."},
+		{Name: "editor.recent_comments", Type: registry.Int, Default: 2, Min: 1, Max: 50, Scopes: registry.ScopeUser | registry.ScopeProject,
+			Help: "How many of a thread's latest comments show beside its first; the ones between wait behind a link."}}
+}
+
+// recentComments is how many latest comments a collapsed thread shows, as editor.recent_comments says.
+func (x *Requests) recentComments() int {
+	n, _ := registry.Option[int](x.h.Options(), "editor.recent_comments", registry.At{})
+	return max(n, 1)
+}
+
+// toggleResolved sets editor.resolved_threads to {resolved}, or flips it. It's kept in the user's settings.toml, as
+// the settings page keeps it, so the choice outlasts a restart.
+func (x *Requests) toggleResolved(ctx registry.Ctx, a registry.Args) error {
+	v := a.String("resolved")
+	if v == "" {
+		v = map[bool]string{true: "shown", false: "hidden"}[x.resolvedHidden()]
+	}
+	if x.h.Available("settings.set", nil) {
+		return x.h.Run(ctx, "settings.set", registry.Args{"name": "editor.resolved_threads", "value": v, "scope": "user"})
+	}
+	return x.h.Options().Set("editor.resolved_threads", registry.LayerUser, registry.At{}, v)
+}
+
+// resolvedHidden reports whether editor.resolved_threads leaves resolved threads out.
+func (x *Requests) resolvedHidden() bool {
+	v, _ := registry.Option[string](x.h.Options(), "editor.resolved_threads", registry.At{})
+	return v == "hidden"
 }
 
 // hiddenIn reports whether window hides path's threads: as threads.toggle set it there, else as editor.threads says.
@@ -89,14 +119,17 @@ func (x *Requests) showThreads(a registry.Args) error {
 }
 
 // fileThreads is how many open threads the session in front has in path.
-func (x *Requests) fileThreads(path string) int {
+func (x *Requests) fileThreads(path string) int { return x.countThreads(path, true) }
+
+// countThreads is how many threads the session in front has in path, open or closed as open says.
+func (x *Requests) countThreads(path string, open bool) int {
 	se, ok := x.front()
 	if !ok {
 		return 0
 	}
 	n := 0
 	for _, t := range se.Threads {
-		if t.Anchor != nil && t.Open() && !t.Btw && filepath.Clean(kit.AnchorPath(se, t.Anchor)) == filepath.Clean(path) {
+		if t.Anchor != nil && t.Open() == open && !t.Btw && filepath.Clean(kit.AnchorPath(se, t.Anchor)) == filepath.Clean(path) {
 			n++
 		}
 	}
@@ -109,6 +142,17 @@ func (x *Requests) threadsAction() registry.EditorAction {
 		When: func(path string) bool { return x.fileThreads(path) > 0 },
 		On:   func(w registry.EditorWindow) bool { return !x.hiddenIn(w.ID, w.Path) },
 		Note: func(w registry.EditorWindow) string { return strconv.Itoa(x.fileThreads(w.Path)) }}
+}
+
+// resolvedAction is the resolved n editor action: lit while the file's resolved threads show. Only a presentation
+// has it, since the text never shows them.
+func (x *Requests) resolvedAction() registry.EditorAction {
+	return registry.EditorAction{Name: "threads.resolved", Label: "resolved", Command: "threads.resolved.toggle", Order: 91,
+		Help: "editor/pane#threads",
+		When: func(path string) bool { return x.countThreads(path, false) > 0 },
+		Show: func(w registry.EditorWindow) bool { return w.Presenter != "" },
+		On:   func(registry.EditorWindow) bool { return !x.resolvedHidden() },
+		Note: func(w registry.EditorWindow) string { return strconv.Itoa(x.countThreads(w.Path, false)) }}
 }
 
 // hiddenLayer is active while the focused editor window hides its threads and its cursor is on a line with some.

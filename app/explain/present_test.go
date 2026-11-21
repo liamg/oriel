@@ -268,6 +268,26 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 	}
 }
 
+// An oriel.editor.action with show(window) is only in the windows it says: here, those presenting the file.
+func TestLuaEditorActionShow(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.editor.presenter{ name = "csv", label = "Table",
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  build = function(ctx) ctx.block(1, #ctx.lines, function() return oriel.ui.text("a table") end) end }
+oriel.editor.action{ name = "csv.sum", label = "Sum", command = "editor.presenter.open", args = { name = "csv" },
+  show = function(window) return window.presenter == "csv" end }`)
+	if err := os.WriteFile(filepath.Join(s.Editor().Dir(), "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.Run("editor.open", registry.Args{"path": "prices.csv"})
+	s.Frames(2)
+	if s.Find("Sum") != nil {
+		t.Fatal("the action shows in the text, though show says only presentations")
+	}
+	s.Run("editor.presenter.open", registry.Args{"name": "csv"})
+	s.Frames(3)
+	s.Node("Sum")
+}
+
 // ␣cp shows the focused window with the first presenter that takes its file, and as text again; a file none takes
 // stays as text.
 func TestPresentKey(t *testing.T) {

@@ -338,11 +338,11 @@ func (x *Editor) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 			c.Text("ro", "read-only · "+ro, ui.TextStyle{Font: style.Font, Color: th.C(theme.Warn)})
 		}
 		path := x.path(p)
-		if acts := registry.EditorActions(x.h, path); len(acts) > 0 {
-			w := registry.EditorWindow{ID: strconv.Itoa(int(p.ID())), Path: path}
-			if wp != nil {
-				w.Presenter = wp.name
-			}
+		w := registry.EditorWindow{ID: strconv.Itoa(int(p.ID())), Path: path}
+		if wp != nil {
+			w.Presenter = wp.name
+		}
+		if acts := registry.EditorActions(x.h, w); len(acts) > 0 {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			for _, a := range acts {
 				x.action(c, a, w)
@@ -371,10 +371,7 @@ func (x *Editor) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWin
 	if widget.ToggleChip(c, "act-"+a.Name, label, on, o) == on {
 		return
 	}
-	args := registry.Args{"window": w.ID}
-	for k, v := range a.Args {
-		args[k] = v
-	}
+	args := registry.ContextArgs(x.h, a.Command, registry.Args{"window": w.ID}, a.Args)
 	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
 		x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -24,6 +25,19 @@ func (x *Diff) wraps() bool {
 // setWrap sets 'wrap' as :set wrap does where the window is.
 func (x *Diff) setWrap(on bool) error {
 	return x.settings().Set("wrap", vim.GlobalOption, "", "", on)
+}
+
+// resolvedChip shows and flips editor.resolved_threads, while a threads feature offers threads.resolved.toggle.
+func (x *Diff) resolvedChip(c *ui.Ctx) {
+	if !x.h.Available("threads.resolved.toggle", nil) {
+		return
+	}
+	v, _ := registry.Option[string](x.h.Options(), "editor.resolved_threads", registry.At{})
+	shown := v != "hidden"
+	if widget.ToggleChip(c, "resolved", "resolved", shown, widget.ToggleChipOpts{Label: "Show resolved threads", Help: "editor/pane#threads",
+		Tooltip: "Show resolved threads folded to a line, or leave them out (editor.resolved_threads)"}) != shown {
+		kit.RunOrNotify(x.h, "gitui", "threads.resolved.toggle", nil)
+	}
 }
 
 // diffPan is a sideways scroll of a file's lines: by columns, or halves of the view.

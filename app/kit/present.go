@@ -11,6 +11,9 @@ import (
 // PresentKeyMode is a presentation's keys: j/k between blocks, c or ⏎ to comment on one, o to go to its source.
 const PresentKeyMode = "present"
 
+// DiffKeyMode is the focused diff's keys, here so features beside the diff can bind keys in it.
+const DiffKeyMode = "diff"
+
 // PresenterService draws a buffer as a uireg.BufferPresenter builds it, the file's threads in its margin.
 const PresenterService = "presenter"
 

@@ -381,6 +381,22 @@ func TestDiffOpenIsAvailableWithHelp(t *testing.T) {
 	s.Lint("the diff")
 }
 
+// The diff's "resolved" chip flips editor.resolved_threads, lit while resolved threads show.
+func TestDiffResolvedThreadsChip(t *testing.T) {
+	r := rig.DiffRepo(t)
+	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
+	s.Quiet()
+	s.Run("diff.open", registry.Args{"path": r.Dir})
+	s.Until("the diff drawn", func() bool { return strings.Contains(s.Text(), "MARK REVIEWED") })
+	for _, want := range []string{"hidden", "shown"} {
+		s.ClickNode("Show resolved threads")
+		s.Quiet()
+		if v, _ := registry.Option[string](s.Registry().Options(), "editor.resolved_threads", registry.At{}); v != want {
+			t.Fatalf("the chip left editor.resolved_threads %q, not %q", v, want)
+		}
+	}
+}
+
 // An added line too long for its side is cut at the divider, beside the empty old side, not pushed over it: every
 // row's new side starts where the others' do.
 func TestDiffSplitLongAddedLineKeepsItsSide(t *testing.T) {
