@@ -121,7 +121,7 @@ L.command("scripts.run", function(args) run(args.name, args.project) end, {
 L.command("scripts.pick", function() L.run("picker.open", { source = "scripts" }) end, {
   desc = "Pick one of your scripts to run on the session in front", ex = "Scripts" })
 
-L.picker.source{ name = "scripts", title = "Scripts", order = 60,
+L.picker.source{ name = "scripts", title = "Scripts", prefix = "$", order = 60,
   items = function()
     local names = {}
     for name in pairs(scripts()) do

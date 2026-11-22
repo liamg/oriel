@@ -22,9 +22,9 @@ tmux switch-client -t {session_name}]],
 
 ## Running one {#run}
 
-Each script is a row in the omnibox, and `:Scripts` lists them alone. When it ends, a notice says whether it
-worked, with the last five lines it printed. It runs on your machine, in the session's workspace, for up to ten
-minutes.
+Each script is a row in the omnibox. Type `$` first to see only your scripts (`$tilt`), or use `:Scripts`.
+When it ends, a notice says whether it worked, with the last five lines it printed. It runs on your machine, in
+the session's workspace, for up to ten minutes.
 
 ## Slots {#slots}
 

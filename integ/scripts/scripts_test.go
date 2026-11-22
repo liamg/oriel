@@ -128,3 +128,13 @@ func TestScriptsPicker(t *testing.T) {
 	a.Run("scripts.pick", nil)
 	a.UntilText("Deploy", "Up · api", "Up · web")
 }
+
+// $ in the omnibox narrows it to the scripts.
+func TestScriptsPrefix(t *testing.T) {
+	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true", "Up": "cd {repo}"})
+	a.Run("omnibox.open", registry.Args{"query": "$"})
+	a.UntilText("Deploy", "Up · api", "Up · web")
+	if a.Has("Commands") {
+		t.Errorf("$ isn't narrowed to scripts:\n%s", a.Text())
+	}
+}
