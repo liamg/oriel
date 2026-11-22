@@ -666,3 +666,17 @@ end)`)
 		t.Error("a busy button was pressed")
 	}
 }
+
+// init.lua sets a plugin's option before the plugin declares it: the value waits, and the option has it once it's
+// declared.
+func TestInitLuaSetsAPluginOptionDeclaredLater(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.option["plugin.late.greeting"] = "hi"`)
+	vm := s.PluginVM(plugin.Caller{ID: "acme/late", Guard: plugin.NewGrants()})
+	if err := luaErr(t, vm, `oriel.option{ name = "plugin.late.greeting", type = "string" }`); err != "" {
+		t.Fatal(err)
+	}
+	s.Quiet()
+	if v, _, _ := s.Registry().Options().Get("plugin.late.greeting", registry.At{}); v != "hi" {
+		t.Errorf("plugin.late.greeting = %v, want hi", v)
+	}
+}
