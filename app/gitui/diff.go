@@ -102,6 +102,7 @@ type diffState struct {
 	root    string
 	head    bool // against HEAD (Uncommitted's), not the base (Changed's)
 	open    map[string]bool
+	expand  bool // diff.expanded: a file not yet shown or folded shows
 	sel     diffSel
 	span    diffSpan
 	reveal  bool
@@ -146,6 +147,8 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 	x.limit = make(chan struct{}, 4)
 	x.Add(h.Option(registry.OptionSpec{Name: "diff.layout", Section: "git", Type: registry.Enum, Values: []string{"split", "unified"}, Default: "split",
 		Scopes: registry.ScopeUser, Help: "How the diff shows a change: old and new side by side, or one above the other."}))
+	x.Add(h.Option(registry.OptionSpec{Name: "diff.expanded", Section: "git", Type: registry.Bool, Default: false,
+		Scopes: registry.ScopeUser, Help: "Open every file of the diff expanded, not only the first."}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -162,6 +165,7 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "?", Command: "diff.explain", Desc: "Explain"},
 		{Keys: "o", Command: "diff.source.open", Desc: "Open in the editor"},
 		{Keys: "<CR>", Command: "diff.expand", Desc: "Show or fold the file"},
+		{Keys: "zA", Command: "diff.expand", Args: registry.Args{"all": true}, Desc: "Show every file, or fold them all"},
 		{Keys: "zo", Command: "diff.context.expand", Desc: "Show hidden lines around the hunk"},
 		{Keys: "zR", Command: "diff.context.expand", Args: registry.Args{"all": true}, Desc: "Show every hidden line of the file"},
 		{Keys: "zl", Command: "diff.lines.scroll", Args: registry.Args{"columns": 1}, Desc: "Scroll right"},
@@ -246,10 +250,14 @@ func (x *Diff) commands() []registry.Command {
 				st.pan = append(st.pan, diffPan{file: st.sel.file, columns: a.Int("columns"), halves: a.Int("halves")})
 				return nil
 			})},
-		{ID: "diff.expand", Grant: registry.Open, Title: "Show or fold a file of the diff: {path}, the selected one if none", Available: has,
-			Args: []registry.Arg{registry.StringArg("path")}, Run: on(func(st *diffState, a registry.Args) error {
+		{ID: "diff.expand", Grant: registry.Open, Title: "Show or fold a file of the diff: {path}, the selected one if none; with {all}, show every file, or fold them all when every one shows", Available: has,
+			Args: []registry.Arg{registry.BoolArg("all"), registry.StringArg("path")}, Run: on(func(st *diffState, a registry.Args) error {
+				if a.Bool("all") {
+					expandAll(st)
+					return nil
+				}
 				p := cmp.Or(a.String("path"), st.sel.file)
-				st.open[p] = !st.open[p]
+				st.open[p] = !st.isOpen(p)
 				return nil
 			})},
 	}
@@ -273,6 +281,27 @@ func (x *Diff) layout() string {
 		return "unified"
 	}
 	return "split"
+}
+
+// isOpen says whether path's file shows its hunks: as it was last shown or folded, else as diff.expanded says.
+func (st *diffState) isOpen(path string) bool {
+	if open, ok := st.open[path]; ok {
+		return open
+	}
+	return st.expand
+}
+
+// anyFolded says whether a file of the diff is folded.
+func (st *diffState) anyFolded() bool {
+	return slices.ContainsFunc(st.files, func(f gitx.FileState) bool { return !st.isOpen(f.Path) })
+}
+
+// expandAll shows every file of the diff, or folds them all when every one already shows.
+func expandAll(st *diffState) {
+	open := st.anyFolded()
+	for _, f := range st.files {
+		st.open[f.Path] = open
+	}
 }
 
 func (x *Diff) state(instance string) *diffState {
