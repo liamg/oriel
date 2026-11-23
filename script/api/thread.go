@@ -13,7 +13,7 @@ import (
 //oriel:api name=thread cap=agent.prompt
 type Thread struct{ a *APIs }
 
-//oriel:api doc="The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }." returns=table cap=agent.read
+//oriel:api doc="The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, side (old on the file's lines before the change, a diff's removed ones; new otherwise), busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }." returns=table cap=agent.read
 func (t Thread) List() []any {
 	st := t.a.Host.State()
 	se, ok := st.Session(st.Focus)
@@ -26,7 +26,7 @@ func (t Thread) List() []any {
 		row := script.Table{"id": string(th.ID), "title": th.Heading(), "status": cmp.Or(string(th.Status), string(core.ThreadOpen)),
 			"busy": th.Busy, "urgent": th.Urgent, "btw": th.Btw, "comments": len(th.Comments)}
 		if a := th.Anchor; a != nil {
-			row["file"], row["line"] = a.File, a.Line
+			row["file"], row["line"], row["side"] = a.File, a.Line, cmp.Or(a.Side, "new")
 		}
 		if c, ok := th.Last(); ok {
 			row["last"], row["author"] = c.Body, string(c.Author)
@@ -36,7 +36,7 @@ func (t Thread) List() []any {
 	return out
 }
 
-//oriel:api doc="Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it." optional=opts
+//oriel:api doc="Open a request: with opts.body, send it now ({ body, file, line, side, urgent, btw }; no file is about the whole change; side = "old" puts it on the file's lines before the change, a diff's removed ones); without, open a thread on the editor's line at the cursor to write it." optional=opts
 func (t Thread) New(opts script.Table) error {
 	if str(opts, "body") == "" {
 		return t.a.Host.Run(context.Background(), "thread.new", nil)
@@ -63,6 +63,9 @@ func (t Thread) Open(id string) error {
 
 func commentArgs(o script.Table) registry.Args {
 	a := registry.Args{"body": str(o, "body"), "file": expand(str(o, "file"))}
+	if str(o, "side") == "old" {
+		a["side"] = "old"
+	}
 	if l, ok := o["line"].(float64); ok {
 		a["line"] = int(l)
 	}

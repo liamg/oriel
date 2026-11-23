@@ -121,3 +121,36 @@ func TestAnEveryLineSignIsOnEachLine(t *testing.T) {
 		t.Error("putting it on a line changed the provider's args")
 	}
 }
+
+// An Old decoration is on a line of the file before the change: only a presenter that shows removed lines gets it,
+// past the end of the new file too, and one that doesn't never sees it on a new line of the same number.
+func TestAnOldDecorationGoesOnlyToAPresenterOfRemovedLines(t *testing.T) {
+	r := uireg.New()
+	buf := text.New([]byte("a\nb\n"), text.Author{})
+	r.Decoration("p", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration {
+		return []uireg.Decoration{
+			{Kind: uireg.Block, Line: 1, Text: "new"},
+			{Kind: uireg.Block, Line: 1, Old: true, Text: "old"},
+			{Kind: uireg.Block, Line: 5, Old: true, Text: "old, past the end"},
+		}
+	}))
+	texts := func(ds []uireg.Decoration) (out []string) {
+		for _, d := range ds {
+			out = append(out, d.Text)
+		}
+		return out
+	}
+	ctx := uireg.DecorationCtx{Window: "editor", Path: "/f", Buffer: buf, Snap: buf.Snapshot(), Top: 0, Bottom: 2}
+	ds := r.Decorate(ctx)
+	if got := texts(ds[1]); !slices.Equal(got, []string{"new"}) || len(ds[5]) != 0 {
+		t.Errorf("an editor got line 1 %v, line 5 %v; want only the new one", got, texts(ds[5]))
+	}
+	ctx.Window, ctx.Removed = "diff", true
+	ds = r.Decorate(ctx)
+	if got := texts(ds[1]); !slices.Equal(got, []string{"new", "old"}) {
+		t.Errorf("a diff got line 1 %v, want both", got)
+	}
+	if got := texts(ds[5]); !slices.Equal(got, []string{"old, past the end"}) {
+		t.Errorf("a diff got line 5 %v, want the old one past the new file's end", got)
+	}
+}

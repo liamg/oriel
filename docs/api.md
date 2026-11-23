@@ -161,8 +161,8 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.thread
 
-- `oriel.thread.list()` (`agent.read`): The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.
-- `oriel.thread.new(opts?)` (`agent.prompt`): Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+- `oriel.thread.list()` (`agent.read`): The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, side (old on the file's lines before the change, a diff's removed ones; new otherwise), busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.
+- `oriel.thread.new(opts?)` (`agent.prompt`): Open a request: with opts.body, send it now ({ body, file, line, side, urgent, btw }; no file is about the whole change; side = 
 - `oriel.thread.open(id)` (`agent.prompt`): Show a request by id in the Requests view.
 - `oriel.thread.reply(id, body, opts?)` (`agent.prompt`): Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.
 - `oriel.thread.resolve(id, status?)` (`agent.prompt`): Resolve a request by id, or set its status: open, resolved, deferred or dismissed.
