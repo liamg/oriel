@@ -33,6 +33,7 @@ left for the shell.
 
 - `{session}`: the session's workspace.
 - `{session_name}`: the session's name.
+- `{primary}`: the primary project's checkout, or the workspace when the session has no projects.
 - `{repo}`: a project's checkout.
 - `{repo_name}`: the project's name.
 

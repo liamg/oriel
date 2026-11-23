@@ -110,6 +110,24 @@ func TestScriptThatFails(t *testing.T) {
 	}
 }
 
+// {primary} is the primary project's checkout, and a script naming it still runs once, for the whole session.
+func TestScriptWithThePrimaryProject(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Open": `printf '%s' {primary} > primary.txt`})
+	// web is primary but not first, so first-in-the-list and primary differ.
+	a.Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "tilt", Kind: core.KindWork, Dir: ws, Projects: []core.Project{
+		{Name: "api", Dir: filepath.Join(ws, "repos", "api")}, {Name: "web", Dir: filepath.Join(ws, "repos", "web"), Primary: true}}}})
+	a.Run("scripts.run", registry.Args{"name": "Open"})
+	noticeWith(a, "Open finished")
+	if got, want := read(t, filepath.Join(ws, "primary.txt")), filepath.Join(ws, "repos", "web"); got != want {
+		t.Errorf("{primary} = %q, want %q", got, want)
+	}
+	a.Run("scripts.pick", nil)
+	a.UntilText("Open")
+	if a.Has("Open · web") {
+		t.Errorf("a script naming {primary} is listed per project:\n%s", a.Text())
+	}
+}
+
 // A slot the plugin doesn't know is an error, and nothing runs.
 func TestUnknownSlot(t *testing.T) {
 	a, ws := scene(t, "tilt", map[string]string{"Odd": "touch ran.txt {nope}"})

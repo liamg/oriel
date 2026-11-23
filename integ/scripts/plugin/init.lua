@@ -4,10 +4,11 @@ local L = oriel
 
 L.option{ name = "plugin.scripts.list", type = "map",
   help = "Your scripts, by name: shell code, run with bash (sh without it), or under the interpreter a first #! line "
-    .. "names. {session} is the session's workspace and {session_name} its name. A script naming {repo} or "
+    .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
+    .. "checkout (the workspace when it has none). A script naming {repo} or "
     .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's." }
 
-local SLOTS = { session = true, session_name = true, repo = true, repo_name = true }
+local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
 local TAIL = 5      -- lines of output a notice has room for
 
@@ -84,13 +85,18 @@ local function run(name, project)
   end
   local bad = unknown(code)
   if bad then
-    return fail(name .. ": " .. bad .. " isn't a slot: use {session}, {session_name}, {repo} or {repo_name}")
+    return fail(name .. ": " .. bad .. " isn't a slot: use {session}, {session_name}, {primary}, {repo} or {repo_name}")
   end
   local se = L.session.current()
   if not se then
     return fail(name .. " runs on a session: open one first")
   end
-  local vals, dir = { session = se.dir, session_name = se.name ~= "" and se.name or se.id }, se.dir
+  local vals, dir = { session = se.dir, session_name = se.name ~= "" and se.name or se.id, primary = se.dir }, se.dir
+  for _, p in ipairs(se.projects) do
+    if p.primary then
+      vals.primary = p.dir
+    end
+  end
   if per_project(code) then
     if not project or project == "" then
       return fail(name .. " runs on one project: say which project")
