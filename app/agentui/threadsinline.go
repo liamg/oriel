@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/internal/words"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/markdown"
@@ -162,19 +164,20 @@ func (x *Requests) lineOf(ctx uireg.DecorationCtx, t core.Thread) int {
 	return line
 }
 
-// threadsKey is what the threads' decorations of ctx are made from: the state, whether the window hides them, the
-// thread to bring into view, and the composer being opened.
+// threadsKey is what the threads' decorations of ctx are made from: the state, whether the window hides them, whether
+// resolved ones are left out, the thread to bring into view, and the composer being opened.
 func (x *Requests) threadsKey(ctx uireg.DecorationCtx) any {
 	type made struct {
-		seq    uint64
-		hidden bool
-		reveal core.ThreadID
-		inline *inlineNew
-		buf    *text.Buffer
-		focus  bool
+		seq      uint64
+		hidden   bool
+		resolved bool
+		reveal   core.ThreadID
+		inline   *inlineNew
+		buf      *text.Buffer
+		focus    bool
 	}
 	st := x.h.State()
-	k := made{seq: st.Seq, hidden: x.hiddenIn(ctx.Window, ctx.Path), reveal: x.reveal}
+	k := made{seq: st.Seq, hidden: x.hiddenIn(ctx.Window, ctx.Path), resolved: x.resolvedHidden(), reveal: x.reveal}
 	if rs := x.state(st.Focus); rs.inline != nil {
 		k.inline, k.buf, k.focus = rs.inline, rs.inline.buf, rs.inline.focus
 	}
@@ -183,7 +186,8 @@ func (x *Requests) threadsKey(ctx uireg.DecorationCtx) any {
 
 // decorations put the session's threads anchored in the file under the line each is about, with a mark in the
 // gutter, and the composer of one being opened. In a presentation, where they're cards in its margin, the closed ones
-// stay folded to a line. Where the window hides them, each line with threads gets a speech bubble instead.
+// stay folded to a line unless editor.resolved_threads hides them. Where the window hides them, each line with
+// threads gets a speech bubble instead.
 func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	se, ok := x.front()
 	if !ok {
@@ -192,11 +196,12 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	st := x.state(se.ID)
 	hidden := x.hiddenIn(ctx.Window, ctx.Path)
 	present := ctx.Presenter != ""
+	folds := present && !hidden && !x.resolvedHidden()
 	var out []uireg.Decoration
 	byLine := map[int][]core.Thread{}
 	var lines []int
 	for _, t := range se.Threads {
-		if t.Anchor == nil || t.Btw || !t.Open() && !asksIn(se, t.ID) && (!present || hidden) || filepath.Clean(kit.AnchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
+		if t.Anchor == nil || t.Btw || !t.Open() && !asksIn(se, t.ID) && !folds || filepath.Clean(kit.AnchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
 			continue
 		}
 		line := x.lineOf(ctx, t)
@@ -312,7 +317,8 @@ func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 		if err := x.send(context.Background(), st, id, false); err != nil {
 			kit.NotifyError(x.h, "requests", err, true)
 		}
-	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) }})
+	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) },
+		Recent: x.recentComments(), Expanded: x.expanded[id], Expand: func(on bool) { x.expanded[id] = on }})
 }
 
 // foldedThread is a closed thread as one line: where it is, its state, what it asked and the answer, and reopen. It
@@ -367,6 +373,18 @@ type threadCardOpts struct {
 	Defer bool   // deferring it, so it doesn't hold up Start work
 	Focus bool   // its reply field takes focus
 	Fold  func() // collapses a closed thread back to its line
+
+	Recent   int           // latest comments a collapsed long thread shows after its first; 0 shows them all
+	Expanded bool          // the long thread shows every comment
+	Expand   func(on bool) // shows every comment, or collapses back
+}
+
+// hiddenComments is how many comments between a thread's first and its latest few stay behind the expand link.
+func hiddenComments(n int, o threadCardOpts) int {
+	if o.Recent <= 0 || o.Expand == nil {
+		return 0
+	}
+	return max(n-1-o.Recent, 0)
 }
 
 // inlineThreadCard is a thread as a card: its place, status and actions, the comments, and a reply field that send sends.
@@ -416,7 +434,20 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 		})
 		widget.RuleTone(c, "rule", tReqThreadBd)
 		c.Column("comments", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12}, func(c *ui.Ctx) {
-			for _, cm := range t.Comments {
+			hide := hiddenComments(len(t.Comments), o)
+			for i, cm := range t.Comments {
+				if i == 1 && hide > 0 {
+					label := "Show fewer"
+					if !o.Expanded {
+						label = fmt.Sprintf("Show %d earlier %s", hide, words.Plural(hide, "comment", "comments"))
+					}
+					if widget.Link(c, "more", label, "agent/requests#inline") {
+						o.Expand(!o.Expanded)
+					}
+				}
+				if hide > 0 && !o.Expanded && i >= 1 && i <= hide {
+					continue
+				}
 				inner := width - 62
 				row := ui.Style{W: ui.Flex(1), Gap: 10, Interactive: true} // so the pointer over it shows its ⋯
 				if cm.Draft {

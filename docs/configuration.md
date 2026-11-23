@@ -146,6 +146,8 @@ Every option Oriel registers. A test checks this table against the registry.
 | `editor.binary` | false | app | |
 | `editor.modelines` | false | app | |
 | `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | |
+| `editor.recent_comments` | `2`: how many of a long thread's latest comments show beside its first; the rest wait behind **Show n earlier comments** | app | |
+| `editor.resolved_threads` | `shown`: the diff and other presentations show resolved threads folded to a line; `hidden` leaves them out | app | |
 | `files.generated` | false | app | |
 | `git.gutter.base` | `scope`: the gutter follows the Explorer's scope, Uncommitted's against the last commit, else the branch's base; `branch`, where its branch left the base; `head`, the last commit; `index`, what's staged | app | |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |

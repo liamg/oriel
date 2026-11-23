@@ -37,7 +37,7 @@ import (
 const DiffView = kit.DiffView
 
 // DiffKeyMode is the focused diff's keys: ]h [h between hunks, r marks one reviewed, gc comments, ? explains.
-const DiffKeyMode = "diff"
+const DiffKeyMode = kit.DiffKeyMode
 
 // diffPresenter is DecorationCtx.Presenter while the diff asks for a file's decorations: their Blocks go between
 // its lines.

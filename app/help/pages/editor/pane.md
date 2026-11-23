@@ -186,3 +186,9 @@ lines](agent/requests#inline)). A file's threads open between its lines. `␣R` 
 behind speech bubbles in the gutter, coloured by the thread's state; `editor.threads = "hidden"` opens files that way.
 Hovering a bubble shows its threads without taking the keys; a click, or `⏎` on its line, shows them again at that
 thread with its reply field ready.
+
+A file shows only its open threads. The diff and other presentations also show resolved ones, each folded to a
+line. `␣H` (`threads.resolved.toggle`), the diff's **resolved** chip, or the **resolved** button above a
+presentation (with their count) leaves them out or brings them back; it sets `editor.resolved_threads` in your
+settings. A long thread shows its first comment and its latest two
+(`editor.recent_comments`); **Show n earlier comments** shows the rest, and **Show fewer** hides them again.

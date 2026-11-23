@@ -221,6 +221,35 @@ func TestPlanClosedThreadUnfoldsWithoutReopening(t *testing.T) {
 	}
 }
 
+// editor.resolved_threads = "hidden" leaves resolved threads out of the margin, folded line and all.
+func TestResolvedThreadsHiddenOption(t *testing.T) {
+	s := planScene(t)
+	if err := s.Registry().Options().Set("editor.resolved_threads", registry.LayerUser, registry.At{}, "hidden"); err != nil {
+		t.Fatal(err)
+	}
+	s.Run("plan.open", nil)
+	s.Until("the plan", func() bool { return s.Has("PLAN.MD · REV 4") })
+	s.Frames(3)
+	if s.Find("Show the thread") != nil {
+		t.Error("the resolved thread shows folded with editor.resolved_threads hidden")
+	}
+}
+
+// threads.resolved.toggle hides and brings back the resolved threads of a presentation already open.
+func TestResolvedThreadsToggleInOpenPresentation(t *testing.T) {
+	s := planScene(t)
+	s.Run("plan.open", nil)
+	s.Until("the plan", func() bool { return s.Has("PLAN.MD · REV 4") })
+	s.Frames(3)
+	for _, want := range []bool{false, true} {
+		s.Run("threads.resolved.toggle", nil)
+		s.Frames(3)
+		if got := s.Find("Show the thread") != nil; got != want {
+			t.Fatalf("after threads.resolved.toggle the resolved thread showing is %v, not %v", got, want)
+		}
+	}
+}
+
 // With no doc picked, the plan shows the first doc as the docs come in: PLAN.md once it's there, though another
 // doc was read first.
 func TestPlanShowsPLANOnceItComesIn(t *testing.T) {

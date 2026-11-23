@@ -91,7 +91,7 @@ func Explainers(r Contributions) []Explainer {
 
 // EditorAction is a button at the right of an editor's breadcrumb, for files it applies to: run this file's tests,
 // watch, coverage, a markdown file's Preview. Its command runs with the window it was clicked in added to Args as
-// "window", unless Args names one.
+// "window" when it takes one, unless Args names one.
 type EditorAction struct {
 	Name    string
 	Label   string
@@ -101,6 +101,7 @@ type EditorAction struct {
 	Command string
 	Args    Args
 	When    func(path string) bool      // nil: every file
+	Show    func(w EditorWindow) bool   // nil: every window on a file When takes; else the windows it says
 	On      func(w EditorWindow) bool   // lit while it says so, for the window it's in: a toggle
 	Note    func(w EditorWindow) string // dim text after the label: a count
 	Order   int
@@ -137,13 +138,16 @@ func (a EditorAction) Shown(w EditorWindow) (on bool, icon, label string) {
 func (EditorAction) ContributionKind() string   { return "editor.action" }
 func (a EditorAction) ContributionName() string { return a.Name }
 
-// EditorActions are the actions for a file, by Order.
-func EditorActions(r Contributions, path string) []EditorAction {
+// EditorActions are the actions for window w, by Order.
+func EditorActions(r Contributions, w EditorWindow) []EditorAction {
 	var out []EditorAction
 	for _, a := range ContributionsOf[EditorAction](r) {
 		ok := a.When == nil
 		if !ok {
-			IgnorePanic(func() { ok = a.When(path) })
+			IgnorePanic(func() { ok = a.When(w.Path) })
+		}
+		if ok && a.Show != nil {
+			IgnorePanic(func() { ok = a.Show(w) })
 		}
 		if ok {
 			out = append(out, a)

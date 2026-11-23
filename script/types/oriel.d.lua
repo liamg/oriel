@@ -220,7 +220,7 @@ function oriel.diagnostics.set(owner, file, list) end
 ---@class oriel.editor
 oriel.editor = {}
 
---- Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in; run is a function in its place.
+--- Add a button at the right of an editor's breadcrumb, for the files when(path) takes: { name, label, label_on, icon, icon_on, command, args, run = fn(window), when = fn(path), show = fn(window), on = fn(window), note = fn(window), order (50 by default), help }. window is { id, path, presenter }. show keeps it to the windows it says, such as those with a presenter; on lights it, and label_on and icon_on show while it's on; note is dim text after the label (a count). icon is a built-in icon's name or a glyph. command runs with args.window set to the window it was clicked in, when it takes one; run is a function in its place.
 ---@param spec table
 function oriel.editor.action(spec) end
 
