@@ -28,8 +28,9 @@ func (x *Runner) tools(h *session) []agent.Tool {
 	own := []agent.Tool{
 		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. The user resolves threads, not you: " +
 			"a reply that isn't working hands the thread back to them. " +
+			"proposes: the reply offers a change you haven't made and would make if asked (the user gets a Do it button); leave it off when you disagree, answer a question, or have already made the change. " +
 			"On a thread from a code host (origin=\"github\", \"gitlab\"…) your reply is a draft: the user reads it and forwards it there themselves. Don't post to the code host yourself.",
-			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl, "thread", "body"), Call: h.toolReply},
+			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"proposes":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: hostcore.Schema(`"thread":`+str, "thread"), Call: h.toolThread},
 		{Name: "threads", Description: "List the session's Oriel threads, open and closed, each with where it is, where it came from, who started it and its first line: the thread tool reads one in full. Those mirrored from a code host include other people's comments that weren't handed to you.", ReadOnly: true,
@@ -101,7 +102,7 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	runs := slices.Clone(h.runs)
 	h.mu.Unlock()
 	c := core.Comment{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.r.env.Now().UTC(),
-		Progress: working, Model: modelLabel(se.Agent, h.ranModel()), Draft: t.Hosted != nil && !working}
+		Progress: working, Model: modelLabel(se.Agent, h.ranModel()), Draft: t.Hosted != nil && !working, Proposes: a.Bool("proposes") && !working}
 	if !working {
 		c.Evidence, c.Unbacked = evidence(se, body, runs)
 	}

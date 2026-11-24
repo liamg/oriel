@@ -1,6 +1,6 @@
 ---
 id: agent/requests
-covers: [requests, request, requests.summary.toggle]
+covers: [requests, request, requests.summary.toggle, thread.proposal.accept]
 related: [agent/console, agent/asks, editor/pane]
 ---
 
@@ -45,6 +45,13 @@ markdown** its source, and **View markdown** shows the source in a dialog. While
 (queued), the menu also has **Edit**, which puts it back in the composer (sending replaces it, the messages after it
 staying where they are), and **Delete**, which takes out that message alone. `↑` in an empty composer edits your last
 queued message.
+
+## Do it {#do-it}
+
+A reply in which the agent proposes a change it hasn't made yet (it says so when it answers) ends with **Do it**, here
+and between the lines. A click sends your "Do it" in the thread, just as if you'd typed it. The button goes once
+anyone else writes in the thread. A reply that disagrees, answers a question, or reports a change already made gets no
+button. `thread.proposal.accept {thread}` does the same from keys or Lua.
 
 ## Evidence
 
