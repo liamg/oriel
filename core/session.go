@@ -235,6 +235,9 @@ type Ask struct {
 	Created   time.Time  `json:"created,omitzero"`
 }
 
+// InThread says the ask is a question drawn in a thread, not in the agent console.
+func (a Ask) InThread() bool { return a.Kind == AskQuestion && a.Thread != "" }
+
 // Question is one of the questions an agent asks, with the options it offers.
 type Question struct {
 	Header   string   `json:"header,omitempty"`

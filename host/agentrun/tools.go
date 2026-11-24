@@ -93,7 +93,7 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	}
 	working := a.Bool("working")
 	if !working {
-		if err := h.refuseUnseen(t.ID); err != nil {
+		if err := h.refuseUnseen(t.ID, "reply again"); err != nil {
 			return "", err
 		}
 	}
@@ -215,6 +215,9 @@ func (h *session) toolAsk(ctx context.Context, raw json.RawMessage) (string, err
 	if err != nil {
 		return "", err
 	}
+	if err := h.refuseUnseen(t.ID, "ask again only if they don't answer it"); err != nil {
+		return "", err
+	}
 	a, ok := h.ask(ctx, hostcore.NewID(6), t.ID, in.Questions)
 	if !ok {
 		return "", errors.New("the question went unanswered")
@@ -225,10 +228,10 @@ func (h *session) toolAsk(ctx context.Context, raw json.RawMessage) (string, err
 	return answerText(in.Questions, a), nil
 }
 
-// refuseUnseen refuses an answer to a thread, or resolving it, while it holds comments the agent hasn't been given:
+// refuseUnseen refuses an answer or a question in a thread while it holds comments the agent hasn't been given:
 // those of the first turn count as given while its start hands them over. The error hands them over, so they count as
 // given and the thread stays the agent's.
-func (h *session) refuseUnseen(tid core.ThreadID) error {
+func (h *session) refuseUnseen(tid core.ThreadID, then string) error {
 	// Read with h.mu held: the first turn's comments are marked given while it's held, as handing is cleared.
 	h.mu.Lock()
 	handing := h.handing
@@ -256,7 +259,7 @@ func (h *session) refuseUnseen(tid core.ThreadID) error {
 	if err != nil {
 		return err
 	}
-	return errors.New("refused: the user added comments you hadn't seen. Handle them, then reply again.\n\n" + renderThreadFull(se, t))
+	return errors.New("refused: the user added comments you hadn't seen. Handle them, then " + then + ".\n\n" + renderThreadFull(se, t))
 }
 
 func (h *session) toolComment(ctx context.Context, raw json.RawMessage) (string, error) {

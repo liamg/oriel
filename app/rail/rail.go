@@ -187,9 +187,10 @@ func (r *Rail) entries(h plugin.Host) {
 		if s.name == "requests" {
 			e.Badge = func() int {
 				n := 0
-				if se, ok := h.Session(h.State().Focus); ok {
-					for _, t := range se.Threads() {
-						if kit.GroupOf(t) == kit.GroupNeedsYou {
+				if ref, ok := h.Session(h.State().Focus); ok {
+					se := ref.Snapshot()
+					for _, t := range se.Threads {
+						if kit.GroupOf(t) == kit.GroupNeedsYou || slices.ContainsFunc(se.Asks, func(a core.Ask) bool { return a.InThread() && a.Thread == t.ID }) {
 							n++
 						}
 					}
