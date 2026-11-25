@@ -134,6 +134,16 @@ func TestScriptWithAShebangNeedsNoTempFile(t *testing.T) {
 	}
 }
 
+// A #! line saved with a Windows line ending still names its interpreter.
+func TestScriptWithAShebangAndACarriageReturn(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Crlf": "#!/bin/sh\r\nprintf ok > crlf.txt"})
+	a.Run("scripts.run", registry.Args{"name": "Crlf"})
+	noticeWith(a, "Crlf")
+	if got := read(t, filepath.Join(ws, "crlf.txt")); got != "ok" {
+		t.Errorf("crlf.txt = %q", got)
+	}
+}
+
 // A script that fails is an error notice with why and its last lines.
 func TestScriptThatFails(t *testing.T) {
 	a, _ := scene(t, "tilt", map[string]string{"Boom": "echo boom; exit 3"})

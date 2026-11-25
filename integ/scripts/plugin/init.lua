@@ -25,6 +25,7 @@ case $code in
 '#!'*)
   line=${code%%"
 "*}
+  line=${line%"$(printf '\r')"}
   set -f; set -- ${line#'#!'}; set +f
   printf '%s' "$code" | "$@" /dev/fd/3 3<&0 < /dev/null ;;
 *)
