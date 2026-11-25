@@ -91,7 +91,7 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 		x.prSeen(*ev)
 		return registry.Verdict{}, nil
 	}))
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it to done once the session's PRs are merged"}, func(_ registry.Ctx, ev *prui.PrMerged) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "asks to move the ticket to done once the session's PRs are merged and nothing is left uncommitted"}, func(_ registry.Ctx, ev *prui.PrMerged) (registry.Verdict, error) {
 		x.prMerged(*ev)
 		return registry.Verdict{}, nil
 	}))
@@ -479,9 +479,10 @@ func (x *Tickets) prSeen(ev prui.PrSeen) {
 	})
 }
 
-// prMerged moves a session's ticket to done once the last of its open PRs merges, whoever merged it.
+// prMerged asks to move a session's ticket to done once the last of its open PRs merges, whoever merged it, unless
+// its projects still have work uncommitted: that's more for the ticket.
 func (x *Tickets) prMerged(ev prui.PrMerged) {
-	if ev.Open > 0 {
+	if ev.Open > 0 || ev.Uncommitted > 0 {
 		return
 	}
 	x.askDone(strings.TrimSpace(ev.Ticket), core.SessionID(ev.Session))

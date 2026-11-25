@@ -39,8 +39,10 @@ docs open its ticket this way.
 ## As the work goes {#moves}
 
 A session started from a ticket moves it into progress, then into review once its PR is raised, and links the PR
-back. Once the session's PRs are all merged, Oriel asks whether to mark the ticket done (an Inbox card): a ticket may
-need more PRs, or something done by hand, so it's never marked done without a yes. **Not yet** leaves it as it is.
+back. Once the session's PRs are all merged, with nothing left uncommitted in its projects, Oriel asks whether to mark
+the ticket done (an Inbox card): a ticket may need more PRs, or something done by hand, so it's never marked done
+without a yes. Uncommitted changes are more for the ticket, so with any left it doesn't ask; it asks when their PR
+merges. **Not yet** leaves it as it is.
 
 ## In a session {#agent}
 

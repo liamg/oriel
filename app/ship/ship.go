@@ -411,11 +411,12 @@ func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []prui.PrSeen, 
 	if se, ok := x.h.Session(id); ok {
 		ticket, nextPR = se.Snapshot().Ticket, registry.Can(x.h, se.Kind(), core.NextPR)
 	}
-	open := 0 // a project its code host didn't answer for counts as open
+	open, uncommitted := 0, 0 // a project its code host didn't answer for counts as open
 	for _, s := range ships {
 		if s.PR.Open() || s.PR == nil && s.HostError != "" {
 			open++
 		}
+		uncommitted += len(s.Files)
 	}
 	for _, s := range ships {
 		if s.PR == nil || s.PR.URL == "" {
@@ -442,7 +443,7 @@ func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []prui.PrSeen, 
 		if s.PR.Merged && !x.merged[s.PR.URL] {
 			x.merged[s.PR.URL] = true
 			merged = append(merged, prui.PrMerged{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
-				Title: s.PR.Title, Open: open})
+				Title: s.PR.Title, Open: open, Uncommitted: uncommitted})
 		}
 	}
 	return seen, merged, asks
