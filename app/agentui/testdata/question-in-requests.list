@@ -294,8 +294,9 @@ clip 364,50 1236x924 r 0
     rect 424,882 815x30 fill #060606 radius 6
     clip 424,882 815x30 r 6
       text "Reply, or ask more" @434,901.5471 #7c7566 Inter 12.5
+      rect 434,889 1x16 fill #ffd23f
     pop
-    rect 424,882 815x30 radius 6 stroke 1 #332f27
+    rect 424,882 815x30 radius 6 stroke 1 #ffd23f
     rect 424,926 156x18 radius 4 stroke 1 #332f27
     text "URGENT · INTERRUPTS TURN" @430,938.60004 #7c7566 JetBrains Mono 10
     rect 586,926 30x18 radius 4 stroke 1 #332f27

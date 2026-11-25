@@ -182,8 +182,8 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 					width = min(max(r.Dx()-96, 280), 900)
 				}
 				c.Column("left", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-					// Its keys are the list's: j, k, o, R.
-					widget.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
+					// Its keys are the list's: j, k, o, R. A request's reply field takes focus first.
+					widget.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: !has, KeyMode: RequestsKeyMode, Role: ui.RoleList,
 						Label: "Conversation"}, ui.Style{Pad: ui.Insets{T: 20, B: 20}, Gap: 20, Cross: ui.Center}, func(c *ui.Ctx, block func(string) ui.ID) {
 						if !has {
 							x.newRequestNote(c, st, width)
@@ -467,7 +467,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Prose(c, "input", &d.text, widget.ProseOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID)})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID), DefaultFocus: has})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {
