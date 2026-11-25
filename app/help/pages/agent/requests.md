@@ -61,7 +61,8 @@ console, where a click opens one: the command, who ran it, what failed and what 
 
 ## Composer
 
-Write to the request: `⏎` sends, `⇧⏎` starts a new line, and the agent gets it at once when it's idle, or when its turn ends. `⌃a`
+A request's tab, opened or switched back to, puts you here, ready to reply; `Esc` goes to the list. Write to the
+request: `⏎` sends, `⇧⏎` starts a new line, and the agent gets it at once when it's idle, or when its turn ends. `⌃a`
 in a picker attaches what you pick; a terminal's output and a failing test attach the same way. `⌘⏎` sends now, interrupting the turn.
 
 Paste a screenshot (`⌘V`) and it goes in as a markdown image: the thread shows it and the agent is handed it. Paste
