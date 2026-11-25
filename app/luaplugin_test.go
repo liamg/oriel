@@ -585,13 +585,18 @@ func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
 		}
 	})
 	s := apptest.LuaScene(t, "")
-	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > timed.pid; sleep 30" }, { cwd = "` + dir + `", timeout = 0.2 },
+	s.Lua(`L.exec_async({ "sh", "-c", "sleep 300 & echo $! > timed.pid; sleep 300" }, { cwd = "` + dir + `", timeout = 60 },
 		function(out, err) timed = err or "no error" end)`)
+	s.Until("the program to start", func() bool {
+		pid, _ := os.ReadFile(filepath.Join(dir, "timed.pid"))
+		return strings.HasSuffix(string(pid), "\n")
+	})
+	s.Advance(time.Minute)
 	s.Until("the timed-out program", func() bool { return apptest.LuaGlobal(lua(s).VM(), "timed") != nil })
 	if alive("timed.pid") {
 		t.Error("the child of a timed-out program is still running")
 	}
-	if err, _ := apptest.LuaGlobal(lua(s).VM(), "timed").(string); !strings.Contains(err, "timed out after 200ms") {
+	if err, _ := apptest.LuaGlobal(lua(s).VM(), "timed").(string); !strings.Contains(err, "timed out after 1m0s") {
 		t.Errorf("a timeout says %q", err)
 	}
 	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > left.pid; echo hi" }, { cwd = "` + dir + `" },

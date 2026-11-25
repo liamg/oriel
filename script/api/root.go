@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/procgroup"
 	"github.com/liamg/oriel/internal/tailbuf"
 	"github.com/liamg/oriel/plugin"
@@ -245,6 +246,8 @@ const execWaitDelay = time.Second
 // fill memory.
 const execOutputMax = 64 * 1024
 
+var errTimedOut = errors.New("timed out")
+
 // program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
 func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
@@ -268,8 +271,11 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 	}
 	return func() (string, error) {
 		limit := time.Duration(secs * float64(time.Second))
-		ctx, cancel := context.WithTimeout(context.Background(), limit)
-		defer cancel()
+		// The deadline runs on Oriel's clock, which a test moves on by hand.
+		ctx, cancel := context.WithCancelCause(context.Background())
+		defer cancel(nil)
+		timer := clock.Or(r.a.Host.Clock()).AfterFunc(limit, func() { cancel(errTimedOut) })
+		defer timer.Stop()
 		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
 		cmd.Dir = dir
 		// The timeout stops all the program started, and a child it leaves holding its output can't hold up the
@@ -281,7 +287,7 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		cmd.Stdout, cmd.Stderr = out, errb
 		// ErrWaitDelay alone means the program ended well and left a child in the background holding its output.
 		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			if errors.Is(context.Cause(ctx), errTimedOut) {
 				err = fmt.Errorf("timed out after %v", limit)
 			}
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
