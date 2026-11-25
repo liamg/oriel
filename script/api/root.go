@@ -263,7 +263,8 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		secs = 10
 	}
 	return func() (string, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
+		limit := time.Duration(secs * float64(time.Second))
+		ctx, cancel := context.WithTimeout(context.Background(), limit)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
 		cmd.Dir = dir
@@ -274,8 +275,11 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		cmd.WaitDelay = execWaitDelay
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
-		// ErrWaitDelay alone means the program ended well and left a child in the background, as `tilt up &` does.
+		// ErrWaitDelay alone means the program ended well and left a child in the background holding its output.
 		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
+			if ctx.Err() == context.DeadlineExceeded {
+				err = fmt.Errorf("timed out after %v", limit)
+			}
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}
 		return out.String(), nil

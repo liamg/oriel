@@ -549,7 +549,8 @@ func TestLuaExecInBackground(t *testing.T) {
 }
 
 // A child left holding the program's output doesn't hold up fn: the timeout stops everything the program started,
-// and a program that ends on time is done though a child it left in the background runs on.
+// and a program that ends on time is done though a child it left in the background runs on. Once the program ends
+// its output closes, so a child that keeps printing sends its output elsewhere.
 func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip(err)
@@ -563,7 +564,7 @@ func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
 		return exec.Command("kill", "-0", strings.TrimSpace(string(pid))).Run() == nil
 	}
 	t.Cleanup(func() {
-		for _, name := range []string{"timed.pid", "left.pid"} {
+		for _, name := range []string{"timed.pid", "left.pid", "ticks.pid"} {
 			if pid, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
 				_ = exec.Command("kill", strings.TrimSpace(string(pid))).Run()
 			}
@@ -576,6 +577,9 @@ func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
 	if alive("timed.pid") {
 		t.Error("the child of a timed-out program is still running")
 	}
+	if err, _ := apptest.LuaGlobal(lua(s).VM(), "timed").(string); !strings.Contains(err, "timed out after 200ms") {
+		t.Errorf("a timeout says %q", err)
+	}
 	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > left.pid; echo hi" }, { cwd = "` + dir + `" },
 		function(out, err) left, lefterr = out, err end)`)
 	s.Until("the program that left a child", func() bool { return apptest.LuaGlobal(lua(s).VM(), "left") != nil })
@@ -584,6 +588,15 @@ func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
 	}
 	if !alive("left.pid") {
 		t.Error("the child a program left in the background was stopped")
+	}
+	s.Lua(`L.exec_async({ "sh", "-c", "while :; do echo tick; sleep 0.1; done > /dev/null 2>&1 & echo $! > ticks.pid; echo hi" },
+		{ cwd = "` + dir + `" }, function(out, err) ticks = err or out end)`)
+	s.Until("the program that left a printing child", func() bool { return apptest.LuaGlobal(lua(s).VM(), "ticks") != nil })
+	if got := apptest.LuaGlobal(lua(s).VM(), "ticks"); got != "hi\n" {
+		t.Errorf("ticks %q", got)
+	}
+	if !alive("ticks.pid") {
+		t.Error("a printing child with its output sent elsewhere was stopped")
 	}
 }
 
