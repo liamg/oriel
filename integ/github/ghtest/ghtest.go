@@ -34,6 +34,7 @@ type Server struct {
 	lag           bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
 	hold          chan struct{}         // while set, creating a PR waits for it to close
 	holdReactions chan struct{}         // while set, adding or taking back a reaction waits for it to close
+	holdList      *heldList             // while set, the next listing of PRs answers as of when it was asked, once released
 	heldReads     chan chan struct{}    // while set, a read of reactions, once answered, is handed here and waits
 	stopReads     chan struct{}         // closed: held reads go
 	unseen        map[string]bool       // owner/name#number: made while lagging
@@ -280,6 +281,23 @@ func (s *Server) HoldReactions(t interface{ Cleanup(func()) }) (release func()) 
 	return release
 }
 
+// heldList is a listing of PRs held back: asked tells it arrived, release lets it answer.
+type heldList struct {
+	asked, release chan struct{}
+}
+
+// HoldNextList makes the next listing of PRs answer, as of when it was asked, only once release is called (a test's
+// cleanup calls it too): a lookup still on its way while what it looked up changes. asked closes once it's asked.
+func (s *Server) HoldNextList(t interface{ Cleanup(func()) }) (asked <-chan struct{}, release func()) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	h := &heldList{asked: make(chan struct{}), release: make(chan struct{})}
+	s.holdList = h
+	release = sync.OnceFunc(func() { close(h.release) })
+	t.Cleanup(release)
+	return h.asked, release
+}
+
 // CatchUp lists every PR again.
 func (s *Server) CatchUp() {
 	s.mu.Lock()
@@ -300,6 +318,13 @@ func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		out = append(out, s.restPR(repo, p))
+	}
+	if h := s.holdList; h != nil {
+		s.holdList = nil
+		close(h.asked)
+		s.mu.Unlock()
+		<-h.release
+		s.mu.Lock()
 	}
 	reply(w, 200, out)
 }

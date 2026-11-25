@@ -11,6 +11,14 @@ import (
 func (x *Ship) ShipOf(id core.SessionID, project string) (Read, bool) { return x.ship(id, project) }
 func (x *Ship) Doing(id core.SessionID, project string) string        { return x.doing(id, project) }
 
+// Loading says a whole read of id's projects is running.
+func (x *Ship) Loading(id core.SessionID) bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	r := x.reports[id]
+	return r != nil && r.loading
+}
+
 // Fired says PrMerged has fired for url.
 func (x *Ship) Fired(url string) bool {
 	x.mu.Lock()

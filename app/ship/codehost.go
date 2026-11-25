@@ -144,24 +144,18 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	key := formKey(id, s.Project) + "/" + s.Branch
 	x.cache.mu.Lock()
 	g, ok := x.cache.read[key]
-	x.cache.mu.Unlock()
 	if ok && !fresh && x.now().Sub(g.at) < prTTL {
+		g.pr = x.raisedOr(key, g.pr)
+		x.cache.mu.Unlock()
 		return g
 	}
+	x.cache.mu.Unlock()
 	g = prRead{at: x.now()}
 	h, repo := *s.CodeHost, s.codeRepo(id)
 	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
 	last := x.cache.read[key]
-	if r, ok := x.cache.raised[key]; ok {
-		switch {
-		case pr != nil || x.now().Sub(r.at) >= raisedHold:
-			delete(x.cache.raised, key)
-		default:
-			raised := r.pr
-			pr = &raised // raised a moment ago: the lookup hasn't caught up, or failed
-		}
-	}
+	pr = x.raisedOr(key, pr)
 	if err != nil && pr == nil {
 		pr = last.pr // a failed lookup doesn't forget the PR the last one found
 	}
@@ -193,6 +187,22 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	x.cache.read[key] = g
 	x.cache.mu.Unlock()
 	return g
+}
+
+// raisedOr is pr, or the PR just raised from key's branch while a lookup, or an answer kept from before the raise
+// (none, or the branch's last PR, closed), doesn't have it yet. Finding it, or raisedHold passing, ends the stand-in.
+// x.cache.mu is held.
+func (x *Ship) raisedOr(key string, pr *registry.PR) *registry.PR {
+	r, ok := x.cache.raised[key]
+	switch {
+	case !ok:
+		return pr
+	case pr != nil && pr.Number == r.pr.Number || x.now().Sub(r.at) >= raisedHold:
+		delete(x.cache.raised, key)
+		return pr
+	}
+	raised := r.pr
+	return &raised
 }
 
 // forBranch is a branch's PR on h, which the session host is told of: the agent asks it whether the PR is open.
