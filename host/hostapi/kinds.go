@@ -20,7 +20,8 @@ var (
 		About: "Each repo gets a worktree on the session's branch, from a freshly fetched base, and the agent starts at once."}
 	PlanKind = core.KindSpec{Kind: core.KindPlan, Title: "Plan", Desc: "docs first, Start work later", From: core.FromPrompt, Pack: "plan",
 		Worktrees: core.WorktreesStartWork, Launcher: true, Order: 20, Caps: attended,
-		About: "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees."}
+		About: "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees.",
+		Opens: []core.KindCall{{Command: "plan.open"}}}
 	ReviewKind = core.KindSpec{Kind: core.KindReview, Title: "Review PR", Desc: "someone else's change", From: core.FromPR, Pack: "review",
 		Worktrees: core.WorktreesPR, Launcher: true, Order: 30,
 		Caps:  []core.Capability{core.AddProjects, core.Delete, core.OwnsBranch, core.CommentsInDiff, core.RestartsAgent, core.DeletesOnEnd},

@@ -182,8 +182,8 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 					width = min(max(r.Dx()-96, 280), 900)
 				}
 				c.Column("left", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-					// Its keys are the list's: j, k, o, R.
-					widget.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
+					// Its keys are the list's: j, k, o, R. A request's reply field takes focus first.
+					widget.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: !has, KeyMode: RequestsKeyMode, Role: ui.RoleList,
 						Label: "Conversation"}, ui.Style{Pad: ui.Insets{T: 20, B: 20}, Gap: 20, Cross: ui.Center}, func(c *ui.Ctx, block func(string) ui.ID) {
 						if !has {
 							x.newRequestNote(c, st, width)
@@ -235,7 +235,7 @@ func (x *Requests) requestHeader(c *ui.Ctx, se core.SessionState, t core.Thread,
 		if !has {
 			return
 		}
-		if widget.Button(c, "anchor", "Open in editor ↗", widget.ButtonOpts{Disabled: t.Anchor == nil, Help: "agent/requests#request"}) {
+		if widget.Button(c, "anchor", x.anchorLabel(se, t)+" ↗", widget.ButtonOpts{Disabled: t.Anchor == nil, Help: "agent/requests#request"}) {
 			x.run("request.anchor", nil)
 		}
 		diff := registry.Args{}
@@ -308,7 +308,7 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 			c.Text("l", span, widget.MonoFont(11, th.C(theme.FgGhost)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
-			if widget.Link(c, "open", "open in editor ↗", "agent/requests#request") {
+			if widget.Link(c, "open", strings.ToLower(x.anchorLabel(se, t))+" ↗", "agent/requests#request") {
 				x.run("request.anchor", registry.Args{"line": at + 1})
 			}
 		})
@@ -467,7 +467,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Prose(c, "input", &d.text, widget.ProseOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID)})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID), DefaultFocus: has})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {

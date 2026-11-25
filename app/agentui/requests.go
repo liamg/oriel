@@ -565,7 +565,23 @@ func (x *Requests) openAnchor(ctx context.Context, line int) error {
 	if line <= 0 {
 		line = anchoredLine(x.fileLines(path), t.Anchor) + 1
 	}
+	if t.Open() {
+		x.reveal = t.ID
+	}
+	if p, ok := uireg.AnchorPlaceFor(x.h, string(se.ID), path); ok {
+		return p.Open(ctx, string(se.ID), path, line)
+	}
 	return x.h.Run(ctx, "editor.open", registry.Args{"path": path, "line": line})
+}
+
+// anchorLabel is what going to thread t's anchor is called: "Open in editor", or the place that shows it.
+func (x *Requests) anchorLabel(se core.SessionState, t core.Thread) string {
+	if t.Anchor != nil {
+		if p, ok := uireg.AnchorPlaceFor(x.h, string(se.ID), kit.AnchorPath(se, t.Anchor)); ok && p.Label != "" {
+			return p.Label
+		}
+	}
+	return "Open in editor"
 }
 
 // run runs a command from a click, saying what went wrong in a notice.

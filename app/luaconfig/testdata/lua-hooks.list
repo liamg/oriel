@@ -127,7 +127,7 @@ clip 760,50 640x835.48 r 0
   clip 760,81 640x804.48 r 0
     clip 770,91 620x784.48 r 0
       text ":HOOKS" @784,111.2 #ffd23f JetBrains Mono 10
-      text "27 hooks · 12 events" @830,111.71 #7c7566 JetBrains Mono 10.5
+      text "26 hooks · 12 events" @830,111.71 #7c7566 JetBrains Mono 10.5
       text "EVENT" @784,130.55 #7c7566 JetBrains Mono 9.5
       text "HOOK" @932,130.55 #7c7566 JetBrains Mono 9.5
       text "KIND" @1110,130.55 #7c7566 JetBrains Mono 9.5
@@ -288,61 +288,61 @@ clip 760,50 640x835.48 r 0
       text "—" @1406,635.36 #4f4a40 JetBrains Mono 11
       text "DirChanged" @784,665.54 #ece6d8 JetBrains Mono 11.5
       clip 932,653.81 170x15.179993 r 0
-        text "opens the plan of a pl…" @932,665.54 #b3ab99 JetBrains Mono 11.5
+        text "the project's own plug…" @932,665.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,664.82 #b98aff JetBrains Mono 9.5
       clip 1198,654.14 200x14.52002 r 0
-        text "builtin:plan" @1198,665.36 #ffd23f JetBrains Mono 11
+        text "builtin:catalog" @1198,665.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,665.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,695.54 #ece6d8 JetBrains Mono 11.5
+      text "Permission" @784,695.54 #ece6d8 JetBrains Mono 11.5
       clip 932,683.81 170x15.179993 r 0
-        text "the project's own plug…" @932,695.54 #b3ab99 JetBrains Mono 11.5
+        text "—" @932,695.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,694.82 #b98aff JetBrains Mono 9.5
+      text "DECIDE" @1110,694.82 #b98aff JetBrains Mono 9.5
       clip 1198,684.14 200x14.52002 r 0
-        text "builtin:catalog" @1198,695.36 #ffd23f JetBrains Mono 11
+        text "init.lua:34" @1198,695.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,695.36 #4f4a40 JetBrains Mono 11
-      text "Permission" @784,725.54 #ece6d8 JetBrains Mono 11.5
+      text "<1ms" @1406,695.36 #b3ab99 JetBrains Mono 11
+      text "PrMerged" @784,725.54 #ece6d8 JetBrains Mono 11.5
       clip 932,713.81 170x15.179993 r 0
-        text "—" @932,725.54 #b3ab99 JetBrains Mono 11.5
+        text "the ticket's tracker m…" @932,725.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "DECIDE" @1110,724.82 #b98aff JetBrains Mono 9.5
+      text "OBSERVE" @1110,724.82 #b98aff JetBrains Mono 9.5
       clip 1198,714.14 200x14.52002 r 0
-        text "init.lua:34" @1198,725.36 #ffd23f JetBrains Mono 11
+        text "builtin:tickets" @1198,725.36 #ffd23f JetBrains Mono 11
       pop
-      text "<1ms" @1406,725.36 #b3ab99 JetBrains Mono 11
+      text "—" @1406,725.36 #4f4a40 JetBrains Mono 11
       text "PrMerged" @784,755.54 #ece6d8 JetBrains Mono 11.5
       clip 932,743.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,755.54 #b3ab99 JetBrains Mono 11.5
+        text "archive the session on…" @932,755.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,754.82 #b98aff JetBrains Mono 9.5
       clip 1198,744.14 200x14.52002 r 0
-        text "builtin:tickets" @1198,755.36 #ffd23f JetBrains Mono 11
+        text "builtin:session-end" @1198,755.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,755.36 #4f4a40 JetBrains Mono 11
-      text "PrMerged" @784,785.54 #ece6d8 JetBrains Mono 11.5
+      text "PrPushed" @784,785.54 #ece6d8 JetBrains Mono 11.5
       clip 932,773.81 170x15.179993 r 0
-        text "archive the session on…" @932,785.54 #b3ab99 JetBrains Mono 11.5
+        text "fetch a reviewed PR it…" @932,785.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,784.82 #b98aff JetBrains Mono 9.5
       clip 1198,774.14 200x14.52002 r 0
-        text "builtin:session-end" @1198,785.36 #ffd23f JetBrains Mono 11
+        text "builtin:pr-review" @1198,785.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,785.36 #4f4a40 JetBrains Mono 11
-      text "PrPushed" @784,815.54 #ece6d8 JetBrains Mono 11.5
+      text "PrSeen" @784,815.54 #ece6d8 JetBrains Mono 11.5
       clip 932,803.81 170x15.179993 r 0
-        text "fetch a reviewed PR it…" @932,815.54 #b3ab99 JetBrains Mono 11.5
+        text "the ticket's tracker l…" @932,815.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,814.82 #b98aff JetBrains Mono 9.5
       clip 1198,804.14 200x14.52002 r 0
-        text "builtin:pr-review" @1198,815.36 #ffd23f JetBrains Mono 11
+        text "builtin:tickets" @1198,815.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,815.36 #4f4a40 JetBrains Mono 11
-      text "PrSeen" @784,845.54 #ece6d8 JetBrains Mono 11.5
+      text "SessionStart" @784,845.54 #ece6d8 JetBrains Mono 11.5
       clip 932,833.81 170x15.179993 r 0
-        text "the ticket's tracker l…" @932,845.54 #b3ab99 JetBrains Mono 11.5
+        text "the ticket's tracker m…" @932,845.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,844.82 #b98aff JetBrains Mono 9.5
       clip 1198,834.14 200x14.52002 r 0
@@ -351,11 +351,11 @@ clip 760,50 640x835.48 r 0
       text "—" @1406,845.36 #4f4a40 JetBrains Mono 11
       text "SessionStart" @784,875.54 #ece6d8 JetBrains Mono 11.5
       clip 932,863.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,875.54 #b3ab99 JetBrains Mono 11.5
+        text "react to a PR as its r…" @932,875.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,874.82 #b98aff JetBrains Mono 9.5
       clip 1198,864.14 200x14.52002 r 0
-        text "builtin:tickets" @1198,875.36 #ffd23f JetBrains Mono 11
+        text "builtin:pr-review" @1198,875.36 #ffd23f JetBrains Mono 11
       pop
       text "—" @1406,875.36 #4f4a40 JetBrains Mono 11
     pop

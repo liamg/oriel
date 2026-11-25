@@ -124,148 +124,58 @@ clip 0,50 43x44 r 0
 pop
 rect 43,50 1x44 fill #24221d
 rect 44,50 1556x44 fill #060606
-clip 44,50 1556x44 r 0
-  effect glow-disc 292.72,86.32 22x22 blur 4 #ff8a1f38
-  effect glow 316.92,86.32 5.720001x22 blur 4 #ff8a1f4d
-  path 6 segments stroke 3.52 #ffd23f
-  path 5 segments fill #ff8a1f
-  text "ORIEL" @347,104.996 #ece6d8 Space Grotesk 26
-  text "v0.4.2" @1317.4375,99.96 #7c7566 JetBrains Mono 11
-  text "START" @287,153.69 #7c7566 JetBrains Mono 9.5
-  opacity 0.42000002
-    rect 287,166.54 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 303,180.54 38x38 fill #1f1c0f radius 9
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    clip 357,182.3105 390.8125x34.458984 r 0
-    pop
-    rect 763.8125,190.28 27.1875x18.520004 fill #121210 radius 4 stroke 1 #332f27
-    text "⌘N" @770.8125,203.5 #b3ab99 JetBrains Mono 11
+rect 44,50 260x44 fill #0c0c0b
+clip 44,50 260x44 r 0
+  rect 44,50 260x30 fill #0c0c0b
+  text "PLAN DOCS" @58,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @284.70312,67.96 #7c7566 JetBrains Mono 11
+  rect 44,80 260x1 fill #24221d
+  clip 44,81 260x13 r 0
+    rect 44,81 260x13 fill #0c0c0b
+    text "PLAN DOCS" @60,103.020004 #7c7566 JetBrains Mono 9.5
+    text "0 files" @246,103.2 #7c7566 JetBrains Mono 10
+    rect 44,116.2 260x1 fill #24221d
+    text "No docs yet: the agent writes" @60,140.825 #7c7566 Inter 12
+    text "PLAN.md here." @60,158.34453 #7c7566 Inter 12
+    rect 44,173.23906 260x1 fill #24221d
+    text "SOURCE" @60,197.92906 #7c7566 JetBrains Mono 9.5
+    rect 44,214.77905 260x1 fill #24221d
+    text "READINESS" @60,240.12906 #7c7566 JetBrains Mono 9.5
+    text "0 open" @248.4375,240.48906 #b3ab99 JetBrains Mono 10.5
+    rect 60,252.63905 228x3.9999847 fill #24221d radius 2
+    rect 60,252.63905 228x3.9999847 fill #4fe0a0 radius 2
+    text "Ready: every thread is resolved or" @60,276.77966 #7c7566 Inter 11.5
+    text "deferred." @60,293.6942 #7c7566 Inter 11.5
   pop
-  opacity 0.42000002
-    rect 287,242.54001 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 303,256.54 38x38 fill #1f1c0f radius 9
-    path 5 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 6 segments stroke 1.6363636 #7c7566
-    path 6 segments stroke 1.6363636 #7c7566
-    path 6 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    clip 357,258.31052 384.21875x34.458984 r 0
-    pop
-    rect 757.21875,266.28 33.78125x18.519989 fill #121210 radius 4 stroke 1 #332f27
-    text "⇧⌘N" @764.21875,279.5 #b3ab99 JetBrains Mono 11
+pop
+clip 304,50 1296x44 r 0
+  rect 304,50 1296x30 fill #0c0c0b
+  clip 304,50 1296x30 r 0
+    rect 304,50 71.40625x30 fill #121210
+    text "Plan" @318,68.365234 #ece6d8 Inter 12
+    text "✕" @356.10938,67.96 #7c7566 JetBrains Mono 11
+    rect 304,78 71.40625x2 fill #ffd23f
   pop
-  opacity 0.42000002
-    rect 287,318.54 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 303,332.54 38x38 fill #1f1c0f radius 9
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 3 segments stroke 1.6363636 #7c7566
-    clip 357,334.31052 390.8125x34.458984 r 0
-    pop
-    rect 763.8125,342.28 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
-    text "⌘O" @770.8125,355.5 #b3ab99 JetBrains Mono 11
-  pop
-  rect 287,394.54 520x66 fill #1d1a0f radius 10 stroke 1 #ffd23f73
-  rect 303,408.54 38x38 fill #1f1c0f radius 9
-  path 6 segments stroke 1.6363636 #ffd23f
-  path 6 segments stroke 1.6363636 #ffd23f
-  path 6 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 3 segments stroke 1.6363636 #ffd23f
-  path 3 segments stroke 1.6363636 #ffd23f
-  clip 357,410.31052 384.21875x34.458984 r 0
-  pop
-  rect 757.21875,418.28 33.78125x18.519989 fill #121210 radius 4 stroke 1 #332f27
-  text "⇧⌘V" @764.21875,431.5 #b3ab99 JetBrains Mono 11
-  rect 287,470.54 520x66.00003 fill #0c0c0b radius 10 stroke 1 #24221d
-  rect 303,484.54 38x38.00003 fill #1f1c0f radius 9
-  path 7 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  clip 357,486.31052 384.21875x34.459015 r 0
-  pop
-  rect 757.21875,494.28 33.78125x18.519989 fill #121210 radius 4 stroke 1 #332f27
-  text "⇧⌘O" @764.21875,507.5 #b3ab99 JetBrains Mono 11
-  rect 287,546.54004 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
-  rect 303,560.54004 38x38 fill #1f1c0f radius 9
-  path 6 segments stroke 1.6363636 #ffd23f
-  path 6 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  path 2 segments stroke 1.6363636 #ffd23f
-  clip 357,562.31055 390.8125x34.458984 r 0
-  pop
-  rect 763.8125,570.28 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
-  text "⌘," @770.8125,583.5 #b3ab99 JetBrains Mono 11
-  rect 287,624.54004 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Stats" @316,641.9053 #ece6d8 Inter 12
-  rect 362.60938,624.54004 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Usage" @391.60938,641.9053 #ece6d8 Inter 12
-  rect 445.96875,624.54004 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 5 segments stroke 1.25 #ffd23f
-  path 4 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 5 segments stroke 1.25 #ffd23f
-  text "Jobs" @474.96875,641.9053 #ece6d8 Inter 12
-  rect 520.6875,624.54004 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 4 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  text "Plugins" @549.6875,641.9053 #ece6d8 Inter 12
-  text "RECENT" @897,153.69 #7c7566 JetBrains Mono 9.5
-  text "↵ open · ⌫ forget" @1251.0469,154.2 #7c7566 JetBrains Mono 10
-  text "SESSIONS" @909,184.89 #7c7566 JetBrains Mono 9.5
-  rect 909,208.53473 26x26 fill #191815 radius 6
-  path 5 segments fill #4cc9f0
-  clip 947,205.73999 398x31.589493 r 0
-  pop
-  rect 909,262.12424 26x26 fill #191815 radius 6
-  path 5 segments fill #ff5f6d
-  clip 947,259.3295 398x31.589508 r 0
-  pop
-  rect 909,315.7137 26x26 fill #191815 radius 6
-  path 5 segments fill #b98aff
-  clip 947,312.91898 398x31.589508 r 0
-  pop
-  rect 909,369.30322 26x26 fill #191815 radius 6
-  path 5 segments fill #5c8dff
-  clip 947,366.50848 398x31.589478 r 0
-  pop
-  rect 909,422.8927 26x26 fill #191815 radius 6
-  path 5 segments fill #ff7ad6
-  clip 947,420.09796 398x31.589478 r 0
-  pop
-  rect 909,476.48218 26x26 fill #191815 radius 6
-  path 5 segments fill #4fe0a0
-  clip 947,473.68744 398x31.589478 r 0
-  pop
-  rect 909,530.07166 26x26 fill #191815 radius 6
-  path 5 segments fill #4f4a40
-  clip 947,527.2769 398x31.589478 r 0
+  rect 304,80 1296x1 fill #24221d
+  clip 304,81 1296x13 r 0
+    rect 304,81 1296x13 fill #060606
+    rect 324,96.73 40.28x16.54 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+    text "PLAN" @331,108.420006 #ff9b45 JetBrains Mono 9.5
+    text "pricing-rounding" @376.28,110.09277 #ece6d8 Inter 14
+    text "work started" @502.85812,108.78 #7c7566 JetBrains Mono 10.5
+    rect 1398.9844,92 89.0625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Preview diff" @1408.9844,109.365234 #ece6d8 Inter 12
+    rect 1500.0469,92 79.953125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Start work" @1510.0469,109.365234 #4f4a40 Inter 12
+    rect 304,129 1296x1 fill #24221d
+    text "NO PLAN DOCS YET" @893.36,121.55525 #ff9b45 JetBrains Mono 9.5
+    text "The agent drafts PLAN.md at the workspace root; it shows here as it writes." @719.75,144.99901 #7c7566 Inter 13
   pop
 pop
 rect 0,94 1600x26 fill #0c0c0b
-text "✕" @16,110.96 #b3ab99 JetBrains Mono 11
-text "0" @27.59375,110.96 #b3ab99 JetBrains Mono 11
-text "⚠" @48.1875,110.96 #b3ab99 JetBrains Mono 11
-text "0" @59.78125,110.96 #b3ab99 JetBrains Mono 11
+rect 0,94 55.415x26 fill #ff9b45
+text "PLAN" @12,110.78 #141006 JetBrains Mono 10.5
+text "✕" @71.415,110.96 #b3ab99 JetBrains Mono 11
+text "0" @83.00875,110.96 #b3ab99 JetBrains Mono 11
+text "⚠" @103.6025,110.96 #b3ab99 JetBrains Mono 11
+text "0" @115.19625,110.96 #b3ab99 JetBrains Mono 11

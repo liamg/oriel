@@ -33,6 +33,30 @@ func ThreadSourceFor(r registry.Contributions, origin string) (ThreadSource, boo
 	return ThreadSource{}, false
 }
 
+// AnchorPlace shows a thread's place in a view of a feature's own in place of the editor: a plan's doc in the plan.
+// Going to a thread's anchor (request.anchor) asks each; the first that Shows the path opens it.
+type AnchorPlace struct {
+	Name  string
+	Label string // what going there is called: "Open in plan"
+	// Shows says whether it shows path for session; Open opens it there at 1-based line, the thread in view.
+	Shows  func(session, path string) bool
+	Open   func(ctx registry.Ctx, session, path string, line int) error
+	Source string
+}
+
+func (AnchorPlace) ContributionKind() string   { return "anchor.place" }
+func (p AnchorPlace) ContributionName() string { return p.Name }
+
+// AnchorPlaceFor is the place that shows path for session, if one does.
+func AnchorPlaceFor(r registry.Contributions, session, path string) (AnchorPlace, bool) {
+	for _, p := range registry.ContributionsOf[AnchorPlace](r) {
+		if p.Shows != nil && p.Open != nil && p.Shows(session, path) {
+			return p, true
+		}
+	}
+	return AnchorPlace{}, false
+}
+
 // ThreadWhere is where a thread's card is drawn.
 type ThreadWhere string
 

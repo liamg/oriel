@@ -229,8 +229,17 @@ clip 44,50 1176x924 r 0
           text "· L46 ·" @191.95312,326.78 #7c7566 JetBrains Mono 10.5
           rect 246.10938,314.73 119.119995x16.540009 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
           text "CLAUDE · WORKING" @253.10938,326.42 #4cc9f0 JetBrains Mono 9.5
-          text "open ↗" @744.15625,326.36523 #ffd23f Inter 12
-          rect 744.15625,330.25977 41.46875x1 fill #ffd23fb3
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 4 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
           text "resolve" @793.625,326.36523 #ffd23f Inter 12
           rect 793.625,330.25977 42.375x1 fill #ffd23fb3
           text "t:7d45" @844,326.6 #4f4a40 JetBrains Mono 10
