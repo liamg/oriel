@@ -108,6 +108,14 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 	return in, nil
 }
 
+// RenewLogin renews the host's sign-in when it's near or past its end, by running the host's own claude (as the
+// sandboxes' keeper does), which nothing does while no sandboxed session runs.
+func (p *Provider) RenewLogin(ctx context.Context) {
+	p.box.Renew(ctx, func(ctx context.Context) { _ = p.readUsage(ctx) })
+}
+
+var _ agent.LoginRenewer = (*Provider)(nil)
+
 // login reads the sign-in from Claude's files, without asking the network (subscription), else an API key. mark
 // tells one token in the file from the next (agent.Install.Login).
 func login(env []string) (ok bool, account, mark string) {
