@@ -6,24 +6,27 @@ L.option{ name = "plugin.scripts.list", type = "map",
   help = "Your scripts, by name: shell code, run with bash (sh without it), or under the interpreter a first #! line "
     .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
     .. "checkout (the workspace when it has none). A script naming {repo} or "
-    .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's." }
+    .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's. Each is in the environment too, "
+    .. "unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
 
 local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
 local TAIL = 5      -- lines of output a notice has room for
 
--- RUNNER runs the code in $1. Code with a #! line goes through a file, so the OS picks its interpreter: the
--- plugin may only start sh itself.
+-- RUNNER runs the code in $1, with each NAME=value after it in its environment. Code with a #! line goes through a
+-- file, so the OS picks its interpreter: the plugin may only start sh itself.
 local RUNNER = [[
 exec 2>&1
-case $1 in
+code=$1; shift
+for kv in "$@"; do export "$kv"; done
+case $code in
 '#!'*)
   f=$(mktemp) || exit 1
   trap 'rm -f "$f"' EXIT
-  printf '%s' "$1" > "$f" && chmod +x "$f" && "$f" ;;
+  printf '%s' "$code" > "$f" && chmod +x "$f" && "$f" ;;
 *)
-  if command -v bash > /dev/null 2>&1; then exec bash -c "$1"; fi
-  exec sh -c "$1" ;;
+  if command -v bash > /dev/null 2>&1; then exec bash -c "$code"; fi
+  exec sh -c "$code" ;;
 esac]]
 
 local function quote(s)
@@ -110,9 +113,15 @@ local function run(name, project)
       return fail(name .. ": the session has no project " .. project)
     end
   end
-  L.exec_async({ "sh", "-c", RUNNER, "oriel-script", expand(code, vals) }, { cwd = dir, timeout = TIMEOUT },
+  -- Slots go in the environment too, for an interpreter that doesn't read shell quoting. ORIEL_SESSION is taken:
+  -- it marks a session's own processes.
+  local argv = { "sh", "-c", RUNNER, "oriel-script", expand(code, vals) }
+  for k, v in pairs(vals) do
+    argv[#argv + 1] = "ORIEL_SCRIPT_" .. k:upper() .. "=" .. v
+  end
+  L.exec_async(argv, { cwd = dir, timeout = TIMEOUT },
     function(out, err)
-      local title = project and (name .. " · " .. project) or name
+      local title = vals.repo_name and (name .. " · " .. vals.repo_name) or name
       if err then
         return fail(title .. " failed (" .. err:gsub(":%s*$", "") .. ")\n" .. tail(out))
       end

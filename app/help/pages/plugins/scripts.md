@@ -40,6 +40,10 @@ left for the shell.
 A script that names `{repo}` or `{repo_name}` runs for one project at a time, in its checkout: the omnibox has a row
 for it per project. Any other `{name}` is a mistake, and the script doesn't run.
 
+The quotes are a shell's. A script in another language reads the same values from its environment, unquoted:
+`ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and `ORIEL_SCRIPT_REPO` and
+`ORIEL_SCRIPT_REPO_NAME` when it runs for a project.
+
 ## Which shell {#shell}
 
 The code runs with bash, or sh where there's no bash. Start it with a `#!` line to pick another

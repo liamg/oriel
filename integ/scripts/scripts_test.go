@@ -90,6 +90,15 @@ func TestScriptForAProject(t *testing.T) {
 	}
 }
 
+// A project given for a script that doesn't run per project is left out of its notice, as it ran in the workspace.
+func TestScriptForTheSessionGivenAProject(t *testing.T) {
+	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true"})
+	a.Run("scripts.run", registry.Args{"name": "Deploy", "project": "api"})
+	if n := noticeWith(a, "Deploy"); !strings.HasPrefix(n.Text, "Deploy finished") {
+		t.Errorf("notice = %q", n.Text)
+	}
+}
+
 // A script starting with #! runs under the interpreter it names.
 func TestScriptWithAShebang(t *testing.T) {
 	a, ws := scene(t, "tilt", map[string]string{"Who": "#!/bin/sh\nprintf '%s' \"$0\" > shebang.txt"})
@@ -97,6 +106,18 @@ func TestScriptWithAShebang(t *testing.T) {
 	noticeWith(a, "Who")
 	if got := read(t, filepath.Join(ws, "shebang.txt")); got == "sh" || got == "bash" || got == "" {
 		t.Errorf("$0 = %q: it ran as -c code, not as a file", got)
+	}
+}
+
+// Slots are in the environment too, unquoted, for an interpreter that doesn't read shell quoting.
+func TestScriptSlotsInTheEnvironment(t *testing.T) {
+	a, ws := scene(t, "it's tilt", map[string]string{"Env": "#!/bin/sh\n" +
+		`printf '%s|%s|%s|%s|%s' "$ORIEL_SCRIPT_SESSION" "$ORIEL_SCRIPT_SESSION_NAME" "$ORIEL_SCRIPT_PRIMARY" "$ORIEL_SCRIPT_REPO" "$ORIEL_SCRIPT_REPO_NAME" > "$ORIEL_SCRIPT_SESSION/env.txt" # {repo}`})
+	a.Run("scripts.run", registry.Args{"name": "Env", "project": "web"})
+	noticeWith(a, "Env · web finished")
+	web := filepath.Join(ws, "repos", "web")
+	if got, want := read(t, filepath.Join(ws, "env.txt")), ws+"|it's tilt|"+filepath.Join(ws, "repos", "api")+"|"+web+"|web"; got != want {
+		t.Errorf("env = %q, want %q", got, want)
 	}
 }
 
