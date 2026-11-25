@@ -3,6 +3,8 @@ package tickets_test
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,9 +13,11 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
 	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/integ/linear/lineartest"
@@ -461,6 +465,96 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 	if c := jiraCalls(jira); calledTimes(c, "done OPS-12") != 1 {
 		t.Errorf("done %d times: %v", calledTimes(c, "done OPS-12"), c)
 	}
+}
+
+// Work left uncommitted when the session's last PR merges is more for the ticket, so Oriel doesn't ask to mark it
+// done; it asks once that work's own PR merges.
+func TestTicketDoneNotAskedWithWorkUncommitted(t *testing.T) {
+	s, _, hub, first, _ := apptest.ShipScene(t)
+	loadJira(t, s)
+	var repos []string
+	for _, p := range first.Projects {
+		repos = append(repos, p.Repo)
+	}
+	s.Run("session.start", registry.Args{"kind": "work", "prompt": "Queue depth alert", "ticket": "OPS-12", "provider": "fake", "repos": repos})
+	st := s.UntilState("the OPS-12 session in front", func(st core.State) bool {
+		se, ok := st.Session(st.Focus)
+		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != "" && len(se.Projects()) == 2
+	})
+	se, _ := st.Session(st.Focus)
+	id := se.ID()
+	project := func(name string) core.Project {
+		a, _ := s.Store().State().Session(id)
+		for _, p := range a.Snapshot().Projects {
+			if p.Name == name {
+				return p
+			}
+		}
+		t.Fatalf("no project %s", name)
+		return core.Project{}
+	}
+	asked := func() bool {
+		for _, n := range s.Store().State().Notifications {
+			if n.ID == "tickets.done.set:OPS-12" {
+				return true
+			}
+		}
+		return false
+	}
+	prs := shipPRs(t, s, hub, se.Snapshot(), "search-api", "web-dashboard")
+	dash := project("web-dashboard")
+	if err := os.WriteFile(filepath.Join(dash.Dir, "LATER.md"), []byte("the rest\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.Run("ship.refresh", nil)
+	s.ShipSettle("both PRs open, and the uncommitted file read", func() bool {
+		ships, _ := services.ShipsOf(s.Registry())
+		a, _ := s.Store().State().Session(id)
+		open := 0
+		for _, p := range ships.For(a.Snapshot()) {
+			if p.PR.Open() {
+				open++
+			}
+		}
+		return open == 2 && prui.Uncommitted(ships.For(a.Snapshot())) == 1
+	})
+
+	hub.Merge("acme/search-api", prs["search-api"].Number)
+	hub.Merge("acme/web-dashboard", prs["web-dashboard"].Number)
+	s.Run("ship.refresh", nil)
+	s.ShipSettle("both projects moved on to their next PRs", func() bool {
+		a, _ := s.Store().State().Session(id)
+		ships, _ := services.ShipsOf(s.Registry())
+		return len(a.Snapshot().Past) == 2 && len(ships.For(a.Snapshot())) == 2 && !slices.ContainsFunc(ships.For(a.Snapshot()), func(p services.ProjectShip) bool { return p.PR != nil })
+	})
+	s.Idle()
+	if asked() {
+		t.Fatal("asked to mark OPS-12 done with LATER.md uncommitted")
+	}
+
+	dash = project("web-dashboard")
+	git := gitx.Repo{Dir: dash.Dir}
+	if _, err := git.Run(context.Background(), "add", "LATER.md"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := git.Run(context.Background(), "commit", "-q", "-m", "docs: the rest"); err != nil {
+		t.Fatal(err)
+	}
+	a, _ := s.Store().State().Session(id)
+	rest := shipPRs(t, s, hub, a.Snapshot(), "web-dashboard")
+	s.ShipSettle("the rest's PR read", func() bool {
+		ships, _ := services.ShipsOf(s.Registry())
+		a, _ := s.Store().State().Session(id)
+		for _, p := range ships.For(a.Snapshot()) {
+			if p.Project == "web-dashboard" {
+				return p.PR != nil && p.PR.Number == rest["web-dashboard"].Number && len(p.Files) == 0
+			}
+		}
+		return false
+	})
+	hub.Merge("acme/web-dashboard", rest["web-dashboard"].Number)
+	s.Run("ship.refresh", nil)
+	s.ShipSettle("asked once the rest is merged", asked)
 }
 
 // Linear's done on merge is the same question, and Mark done the tracker's move, through its Lua and process: the

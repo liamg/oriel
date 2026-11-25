@@ -46,17 +46,19 @@ func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 	}
 	done := r.Done
 	done.Project, done.Branch, done.Closed = p.Name, branch, x.env.Now().UTC()
-	projects := slices.Clone(se.Projects)
-	for i := range projects {
-		if projects[i].Name == p.Name {
-			projects[i].Branch, projects[i].Base = fresh, base
+	if err := x.st.Mutate(se.ID, func(se core.SessionState) error { // as it is now: another project may have moved on too
+		projects := slices.Clone(se.Projects)
+		for i := range projects {
+			if projects[i].Name == p.Name {
+				projects[i].Branch, projects[i].Base = fresh, base
+			}
 		}
-	}
-	b := se.Branch
-	if pp, ok := (core.SessionState{Projects: projects}).Primary(); ok {
-		b = pp.Branch
-	}
-	if err := x.st.Emit(core.ProjectsChanged{ID: se.ID, Branch: b, Projects: projects, Past: append(slices.Clone(se.Past), done), Started: se.Started}); err != nil {
+		b := se.Branch
+		if pp, ok := (core.SessionState{Projects: projects}).Primary(); ok {
+			b = pp.Branch
+		}
+		return x.st.Emit(core.ProjectsChanged{ID: se.ID, Branch: b, Projects: projects, Past: append(slices.Clone(se.Past), done), Started: se.Started})
+	}); err != nil {
 		return err
 	}
 	for _, kind := range []string{"commit", "pr"} {

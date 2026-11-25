@@ -117,15 +117,17 @@ type PrSeen struct {
 }
 
 // PrMerged is the PrMerged hook's event: a session's pull request read as merged, the first time the app sees it so,
-// whoever merged it. Open is how many of the session's other PRs are still open, or not known.
+// whoever merged it. Open is how many of the session's other PRs are still open, or not known; Uncommitted how many
+// files its projects have uncommitted.
 type PrMerged struct {
-	Session string `json:"session"`
-	Project string `json:"project"`
-	Ticket  string `json:"ticket,omitempty"`
-	Number  int    `json:"number"`
-	URL     string `json:"url"`
-	Title   string `json:"title"`
-	Open    int    `json:"open"`
+	Session     string `json:"session"`
+	Project     string `json:"project"`
+	Ticket      string `json:"ticket,omitempty"`
+	Number      int    `json:"number"`
+	URL         string `json:"url"`
+	Title       string `json:"title"`
+	Open        int    `json:"open"`
+	Uncommitted int    `json:"uncommitted"`
 }
 
 // WordsOf are how h names a pull request; "PR" with no host.
