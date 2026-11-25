@@ -2,6 +2,7 @@ package ship_test
 
 import (
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -302,5 +303,87 @@ func TestTheFormIsLockedWhileThePRIsCreated(t *testing.T) {
 	shipSettle(s, t, "the PR's overview", func() bool { return len(hub.PRs("acme/search-api")) == 1 && !strings.Contains(s.Text(), "RAISE PR") })
 	if strings.Contains(s.Text(), "Creating the PR") {
 		t.Errorf("raised, the tab still says it's creating:\n%s", s.Text())
+	}
+}
+
+// Raised, the PR stays shown while the step's own read of it is still coming, though another read of the project
+// answers first from what the code host said before the raise (its git changed: the push, a file saved): the form
+// doesn't come back.
+func TestARaisedPRStaysThoughAReadFromBeforeAnswersFirst(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	dir := shipDir(se, "search-api")
+	writeFiles(t, dir, map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
+
+	releaseCreate := hub.HoldCreates(t)
+	s.ClickOn("Push + raise PR")
+	var releaseOwn func()
+	s.Midway(func() {
+		s.Until("the create sent", func() bool { return slices.Contains(hub.Calls(), "POST /repos/acme/search-api/pulls") })
+		var own <-chan struct{}
+		own, releaseOwn = hub.HoldNextList(t) // the step's own read, once the PR's raised
+		releaseCreate()
+		s.Until("the PR raised", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil })
+		<-own
+		writeFiles(t, dir, map[string]string{"y.go": "package x\n"})
+		s.FilesChanged(filepath.Join(dir, "y.go"))
+		s.Until("the project read again", func() bool {
+			sh, _ := x.ShipOf(se.ID, "search-api")
+			return len(sh.Files) == 1 && sh.Files[0].Path == "y.go"
+		})
+		s.Frames(2)
+		if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil {
+			t.Error("raised, the PR went once the project was read again from what the code host said before")
+		}
+		if strings.Contains(s.Text(), "Push + raise PR") {
+			t.Errorf("raised, the form came back once the project was read again:\n%s", s.Text())
+		}
+	})
+	releaseOwn()
+	shipSettle(s, t, "the raise done", func() bool { return x.Doing(se.ID, "search-api") == "" })
+	shipQuiet(s)
+	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil {
+		t.Error("raised, the project has no PR once every read is in")
+	}
+}
+
+// A new PR raised from a branch whose last PR was closed shows as soon as it's raised, though the code host's listing
+// still has only the closed one: the tab doesn't fall back to the closed PR.
+func TestANewPROverAClosedOneShowsOnceRaised(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.ClickOn("Push + raise PR")
+	shipSettle(s, t, "the first PR", func() bool {
+		sh, _ := x.ShipOf(se.ID, "search-api")
+		return sh.PR != nil && x.Doing(se.ID, "search-api") == ""
+	})
+	first, _ := x.ShipOf(se.ID, "search-api")
+	hub.ClosePR("acme/search-api", first.PR.Number)
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the PR closed", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil && sh.PR.State == "closed" })
+
+	hub.Lag()
+	s.ClickOn("Raise a new PR…")
+	s.ClickOn("Push + raise PR")
+	shipSettle(s, t, "the new PR", func() bool { return len(hub.PRs("acme/search-api")) == 2 && x.Doing(se.ID, "search-api") == "" })
+	shipQuiet(s)
+	sh, _ := x.ShipOf(se.ID, "search-api")
+	if sh.PR == nil || sh.PR.Number == first.PR.Number || !sh.PR.Open() {
+		t.Fatalf("raised again, the project's PR is %+v, not the new one", sh.PR)
+	}
+	if strings.Contains(s.Text(), "Raise a new PR…") {
+		t.Errorf("raised again, the closed PR's overview is back:\n%s", s.Text())
 	}
 }
