@@ -25,7 +25,7 @@ func (x *Console) questionFoot(c *ui.Ctx, session, thread string, _ uireg.Thread
 	}
 	se := ref.Snapshot()
 	for _, a := range se.Asks {
-		if a.Kind == core.AskQuestion && a.Thread != "" && string(a.Thread) == thread {
+		if a.InThread() && string(a.Thread) == thread {
 			c.Box("question."+a.ID, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, uireg.CardPlace{}, false) })
 		}
 	}
@@ -34,7 +34,7 @@ func (x *Console) questionFoot(c *ui.Ctx, session, thread string, _ uireg.Thread
 // asksIn says a question waits in thread tid: its card shows, resolved or not, until it's answered.
 func asksIn(se core.SessionState, tid core.ThreadID) bool {
 	for _, a := range se.Asks {
-		if a.Kind == core.AskQuestion && a.Thread != "" && a.Thread == tid {
+		if a.InThread() && a.Thread == tid {
 			return true
 		}
 	}

@@ -133,9 +133,10 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
 	x.unfolded = map[core.ThreadID]bool{}
 	x.expanded = map[core.ThreadID]bool{}
-	for _, c := range x.commands() {
+	for _, c := range append(x.commands(), x.proposalCommand()) {
 		x.Add(h.Command(c))
 	}
+	x.Add(h.Contribute(uireg.ThreadFoot{Name: "proposal", Draw: x.proposalFoot}))
 	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,
 		When: registry.MenuWhen{View: kit.RequestView, Help: panes.HelpTab}, Command: "request.rename"}))
@@ -183,8 +184,8 @@ func (x *Requests) commands() []registry.Command {
 		return out
 	}
 	return []registry.Command{
-		{ID: "request.comment", Grant: string(plugin.CapAgentPrompt), Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
-			Available: inFront, Args: []registry.Arg{registry.StringArg("body"), registry.BoolArg("btw"), registry.IntArg("col"), registry.IntArg("end_col"), registry.IntArg("end_line"), registry.StringArg("file"), registry.StringArg("finding"), registry.StringArg("id"), registry.IntArg("line"), registry.BoolArg("outgoing"), registry.StringArg("severity"), registry.StringArg("status"), registry.StringArg("text"), registry.StringArg("thread"), registry.StringArg("title"), registry.BoolArg("urgent")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
+		{ID: "request.comment", Grant: string(plugin.CapAgentPrompt), Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}, on the old file's lines when {side} is \"old\") or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
+			Available: inFront, Args: []registry.Arg{registry.StringArg("body"), registry.BoolArg("btw"), registry.IntArg("col"), registry.IntArg("end_col"), registry.IntArg("end_line"), registry.StringArg("file"), registry.StringArg("finding"), registry.StringArg("id"), registry.IntArg("line"), registry.BoolArg("outgoing"), registry.StringArg("severity"), registry.StringArg("side"), registry.StringArg("status"), registry.StringArg("text"), registry.StringArg("thread"), registry.StringArg("title"), registry.BoolArg("urgent")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
 		{ID: "request.rename", Grant: string(plugin.CapAgentPrompt), Title: "Rename a request: {thread} of {id}, the one selected by default, to {name}; with no {name}, edit it in its header",
 			Available: inFront, Args: []registry.Arg{registry.StringArg("id"), registry.StringArg("name"), registry.StringArg("thread")}, Run: func(ctx registry.Ctx, a registry.Args) error {
 				a = selected(a)
@@ -261,10 +262,10 @@ func (x *Requests) commands() []registry.Command {
 			}},
 		{ID: "request.attach", Grant: registry.Open, Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Args: []registry.Arg{registry.AnyArg("items"), registry.StringArg("text"), registry.StringArg("title")}, Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
-		{ID: "thread.new", Grant: string(plugin.CapAgentPrompt), Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
-			Available: inFront, Args: []registry.Arg{registry.IntArg("col"), registry.IntArg("end_col"), registry.IntArg("end_line"), registry.StringArg("file"), registry.IntArg("line"), registry.StringArg("to"), registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
+		{ID: "thread.new", Grant: string(plugin.CapAgentPrompt), Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col} (of the file before the change when {side} is \"old\": a diff's removed lines), or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
+			Available: inFront, Args: []registry.Arg{registry.IntArg("col"), registry.IntArg("end_col"), registry.IntArg("end_line"), registry.StringArg("file"), registry.IntArg("line"), registry.StringArg("side"), registry.StringArg("to"), registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
 		{ID: "thread.suggestion.add", Grant: registry.Open, Title: "Add a suggestion block to the comment for the author being written: the commented lines, to edit into the change",
-			Available: func(registry.Args) bool { n := x.state("").inline; return n != nil && n.toAuthor },
+			Available: func(registry.Args) bool { n := x.state("").inline; return n != nil && n.toAuthor && !n.old },
 			Args:      registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { return x.suggest() }},
 		{ID: "threads.toggle", Grant: registry.Open, Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Args: []registry.Arg{registry.StringArg("window")}, Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
@@ -709,6 +710,9 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 	if ev.Thread == "" && ev.File != "" {
 		req.Anchor = anchorIn(se, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		req.Anchor.Col, req.Anchor.EndCol = a.Int("col"), a.Int("end_col")
+		if a.String("side") == "old" {
+			req.Anchor.Side = "old"
+		}
 	}
 	_, err = w.Comment(ctx, req)
 	return err

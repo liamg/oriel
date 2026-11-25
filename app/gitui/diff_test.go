@@ -355,6 +355,46 @@ func TestAShiftClickWidensADiffThread(t *testing.T) {
 	}
 }
 
+// A click on a removed line opens a thread on that line of the old file, as GitHub's left side does: it reaches the
+// agent as the old side's line, and its card sits under the removed line, not under a new line near it.
+func TestAThreadOnARemovedLineStaysOnIt(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	dir := r.ProjectDir(r.Session)
+	path := filepath.Join(dir, "round.go")
+	if err := os.WriteFile(path, []byte(rig.RoundBase), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rig.Git(t, dir, "add", "-A")
+	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
+	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
+	if err := os.WriteFile(path, []byte(rig.RoundAgent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) }); err != nil {
+		t.Fatal(err)
+	}
+	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
+	r.WaitGit()
+	r.ClickText("unified")
+	r.WaitAccess("unified", func(r *apptest.Window) bool { return r.Access("\treturn r.Shift(-p)") != nil })
+	r.WaitGit()
+	// Old line 9: the new file has no such line, and its line 9 is another one.
+	r.ClickAccess("\treturn r.Shift(-p)")
+	r.WaitFrame("a thread on the old line 9", func(s string) bool { return apptest.HasAll(s, "New thread", "· L9") })
+	r.TypeText("Why drop this?")
+	r.WaitText("Why drop this?")
+	r.TypeKeys("<CR>")
+	in := a.WaitSent(t)
+	if !strings.Contains(in.Text, "round.go:9") || !strings.Contains(in.Text, `side="old"`) || !strings.Contains(in.Text, "Why drop this?") {
+		t.Errorf("the agent got %q", in.Text)
+	}
+	r.WaitAccess("the thread under the removed line", func(r *apptest.Window) bool {
+		removed, added, card := r.Access("\treturn r.Shift(-p)"), r.Access("\tt := scaled.Truncate(0)"), r.Access("Thread Why drop this?")
+		return removed != nil && added != nil && card != nil &&
+			card.Bounds.Min.Y >= removed.Bounds.Max.Y && card.Bounds.Max.Y <= added.Bounds.Min.Y
+	})
+}
+
 // sessionProject is the name of session w's project.
 func sessionProject(t *testing.T, r *apptest.Window) string {
 	t.Helper()

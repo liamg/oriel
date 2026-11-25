@@ -412,7 +412,7 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 		snap := buf.Snapshot()
 		decor := x.h.Decorate(uireg.DecorationCtx{Window: DiffView + ":" + st.root, Presenter: diffPresenter, Now: c.Now(), Name: f.Path,
 			Path: filepath.Join(st.root, filepath.FromSlash(f.Path)), Buffer: buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes,
-			Wake: c.WakeAt})
+			Wake: c.WakeAt, Removed: true})
 		gaps := hiddenGaps(d)
 		fc := st.context(f.Path, d.hunks)
 		for i, h := range d.hunks {
@@ -467,12 +467,17 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 				}
 			}
 		})
-		blocks := func(key any, line int) { reveal = append(reveal, lineBlocks(c, decor, key, line)...) }
+		blocks := func(key any, line int) { reveal = append(reveal, lineBlocks(c, decor, key, line, false)...) }
+		oldBlocks := func(key any, line int) {
+			reveal = append(reveal, lineBlocks(c, decor, fmt.Sprint("old.", key), line, true)...)
+		}
 		if layout == "unified" {
 			for k, l := range h.Lines {
 				x.unifiedRow(c, st, at, k, h)
 				if l.New > 0 {
 					blocks(k, l.New)
+				} else if l.Op == '-' {
+					oldBlocks(k, l.Old)
 				}
 			}
 			return
@@ -482,16 +487,19 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			if p[1] >= 0 {
 				blocks(r, h.Lines[p[1]].New)
 			}
+			if p[0] >= 0 && h.Lines[p[0]].Op == '-' {
+				oldBlocks(r, h.Lines[p[0]].Old)
+			}
 		}
 	})
 	return reveal
 }
 
-// lineBlocks draws the Block decorations of new line (from 1) under it, and returns those that asked to be brought
-// into view.
-func lineBlocks(c *ui.Ctx, decor map[int][]uireg.Decoration, key any, line int) (reveal []ui.ID) {
+// lineBlocks draws the Block decorations of line (from 1) under it, the old file's line when old, and returns those
+// that asked to be brought into view.
+func lineBlocks(c *ui.Ctx, decor map[int][]uireg.Decoration, key any, line int, old bool) (reveal []ui.ID) {
 	for _, d := range decor[line-1] {
-		if d.Kind != uireg.Block || d.Node == nil || line <= 0 {
+		if d.Kind != uireg.Block || d.Node == nil || line <= 0 || d.Old != old {
 			continue
 		}
 		k := fmt.Sprint(key, ".", d.Priority)

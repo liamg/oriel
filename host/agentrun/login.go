@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // carryOn is what an agent whose turn a lost login stopped is told once it's back.
@@ -23,7 +24,12 @@ type lostLogin struct {
 	// so it doesn't count as signed in again. "" when they held none; marked closes once it's read.
 	refused string
 	marked  chan struct{}
+	recheck clock.Timer // the next check it makes by itself
 }
+
+// recheckEvery is how often a lost login is checked again by itself, as Check again does: one renewed or signed in
+// again outside Oriel brings its sessions back with no click.
+const recheckEvery = time.Minute
 
 type loginAsk struct{ cancel context.CancelFunc }
 
@@ -71,6 +77,7 @@ func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
 		nl := &lostLogin{login: l, asks: map[core.SessionID]*loginAsk{}, marked: make(chan struct{})}
 		x.lost[key] = nl
 		x.env.Go("a lost login", func() { x.markRefused(nl) })
+		x.recheckLater(key, nl)
 	} else {
 		old.login = l
 	}
@@ -87,6 +94,26 @@ func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
 			h.askLogin(key)
 		}
 	}
+}
+
+// recheckLater checks lost login l again after recheckEvery, and again after that while it's still lost. loginMu is held.
+func (x *Runner) recheckLater(key string, l *lostLogin) {
+	provider := l.login.Provider
+	l.recheck = clock.Or(x.env.Clock).AfterFunc(recheckEvery, func() {
+		select {
+		case <-x.env.Closed:
+			return
+		default:
+		}
+		x.env.Go("a lost login's check", func() {
+			x.CheckLogin(provider, false)
+			x.loginMu.Lock()
+			defer x.loginMu.Unlock()
+			if x.lost[key] == l {
+				x.recheckLater(key, l)
+			}
+		})
+	})
 }
 
 // retryLogin starts a sandboxed agent that lost its sign-in again, once, on the host's handed over afresh, and says
@@ -220,6 +247,20 @@ func (x *Runner) detect(provider string) (agent.Install, bool) {
 	return in, err == nil
 }
 
+// renewLogin renews provider's sign-in on this machine if it's run out (agent.LoginRenewer), as starting Oriel again
+// would: nothing else does while its agents wait on a login.
+func (x *Runner) renewLogin(provider string) {
+	p, ok := x.deps.Providers.Get(provider)
+	if !ok {
+		return
+	}
+	if r, ok := p.(agent.LoginRenewer); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		r.RenewLogin(ctx)
+	}
+}
+
 // markRefused records the login the provider's files hold as it's lost.
 func (x *Runner) markRefused(l *lostLogin) {
 	defer close(l.marked)
@@ -242,6 +283,7 @@ func (x *Runner) CheckLogin(provider string, seen bool) bool {
 		x.loginBack(provider)
 		return true
 	}
+	x.renewLogin(provider)
 	in, ok := x.detect(provider)
 	if !ok || !in.LoggedIn {
 		x.env.Log.Info("agent login checked: still signed out", "provider", provider, "note", in.Note)
@@ -285,6 +327,9 @@ func (x *Runner) loginBack(provider string) {
 		}
 		for _, a := range l.asks {
 			asks = append(asks, a)
+		}
+		if l.recheck != nil {
+			l.recheck.Stop()
 		}
 		delete(x.lost, key)
 		cleared = true

@@ -41,7 +41,8 @@ type Fake struct {
 	seq       int // sessions it has named
 	resumed   []string
 	signedOut bool
-	logins    int // how many times it has signed in: its login's mark
+	logins    int  // how many times it has signed in: its login's mark
+	ranOut    bool // its login is past its end, still on disk: RenewLogin renews it
 	refuse    error
 	login     chan error // the sign-in under way, when there is one
 }
@@ -81,6 +82,16 @@ func (f *Fake) SignIn(in bool) {
 	defer f.mu.Unlock()
 	f.signedOut = !in
 	if in {
+		f.logins++
+	}
+}
+
+// RenewLogin renews a login that ran out (ExpireLogin): a new one, as a provider's CLI renews its token.
+func (f *Fake) RenewLogin(context.Context) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.ranOut && !f.signedOut {
+		f.ranOut = false
 		f.logins++
 	}
 }
@@ -352,6 +363,15 @@ func (s *FakeSession) LoseLogin(detail string) {
 // revoked: Detect still reports it signed in, with the same login.
 func (s *FakeSession) RevokeLogin(detail string) {
 	s.Emit(agent.AuthExpired{Provider: s.fake.ID(), Account: s.fake.Account, Detail: detail, Terminal: "/login", Shell: "fake, then /login"})
+}
+
+// ExpireLogin says the login ran out while its files still hold it, as a token past its end does: Detect reports the
+// same login until RenewLogin renews it.
+func (s *FakeSession) ExpireLogin(detail string) {
+	s.fake.mu.Lock()
+	s.fake.ranOut = true
+	s.fake.mu.Unlock()
+	s.RevokeLogin(detail)
 }
 
 // FakeTerminal is a fake session's terminal: it shows what's typed, and /login and Enter sign the fake back in.

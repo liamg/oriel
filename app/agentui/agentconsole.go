@@ -119,7 +119,7 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Contribute(uireg.RailEntry{Name: "agent", Icon: "agent", Title: "Agent console", Command: "agent.console.toggle", Order: 70,
 			Active: func(string) bool { return x.shown() }, Badge: func() int {
 				se, _ := x.front()
-				return len(se.Asks)
+				return len(slices.DeleteFunc(slices.Clone(se.Asks), core.Ask.InThread))
 			}}))
 	}
 	x.Add(h.View(AgentConsoleView, consoleView{x}))

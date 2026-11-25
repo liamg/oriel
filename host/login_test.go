@@ -282,3 +282,24 @@ func TestCloseWaitsOnlySoLongAndSaysForWhat(t *testing.T) {
 		t.Errorf("closing didn't say what it left running: %q", logged.String())
 	}
 }
+
+// A login that ran out while no agent was running is renewed by a check, as starting Oriel again renews it: Check
+// again brings the sessions back, and so does the check made by itself each minute, with no click.
+func TestARunOutLoginIsRenewedByACheck(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("x")
+	a.WaitSent(t)
+	a.ExpireLogin("OAuth token has expired · Please run /login")
+	card, _ := loginCard(r.eventually(id, "the login's card", flagged))
+	if err := r.w.run.Answer(hostapi.AnswerReq{Session: id, Ask: card.ID, Decision: "recheck"}); err != nil {
+		t.Fatal(err)
+	}
+	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+	r.signedIn()
+
+	a.ExpireLogin("OAuth token has expired · Please run /login")
+	r.eventually(id, "the login's card", flagged)
+	r.clock.Advance(time.Minute)
+	r.eventually(id, "the card to go by itself", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+	r.signedIn()
+}

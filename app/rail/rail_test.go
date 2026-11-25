@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -150,18 +151,24 @@ func TestRailKeyUnavailable(t *testing.T) {
 	}
 }
 
-// Requests' number counts the requests that want you, the agent's answer last, not those it's working on or owes.
+// Requests' number counts the requests that want you, the agent's answer last or its question open in them, not those
+// it's working on or owes. The agent console's counts only the asks it draws, not a question drawn in Requests.
 func TestRailRequestsCountsWhatWantsYou(t *testing.T) {
-	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: apptest.Connect(rig.NewHost(t).W)})
 	you := core.Comment{ID: "c1", Author: core.AuthorYou, Body: "fix it", Delivered: true}
 	working := core.Comment{ID: "c2", Author: core.AuthorAgent, Body: "on it", Progress: true}
 	answer := core.Comment{ID: "c2", Author: core.AuthorAgent, Body: "Which one?"}
 	if err := s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
 		Threads: []core.Thread{
 			{ID: "busy", Status: core.ThreadOpen, Busy: true, Comments: []core.Comment{you, working}},
+			{ID: "question", Status: core.ThreadOpen, Busy: true, Comments: []core.Comment{you, working}},
 			{ID: "owed", Status: core.ThreadOpen, Comments: []core.Comment{you}},
 			{ID: "asks", Status: core.ThreadOpen, Comments: []core.Comment{you, answer}},
 			{ID: "done", Status: core.ThreadResolved, Comments: []core.Comment{you, answer}},
+		},
+		Asks: []core.Ask{
+			{ID: "q", Kind: core.AskQuestion, Thread: "question", Questions: []core.Question{{Question: "Half to even?"}}},
+			{ID: "p", Kind: core.AskPermission, Tool: "Bash", Summary: "go test ./..."},
 		}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -169,13 +176,17 @@ func TestRailRequestsCountsWhatWantsYou(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Frame()
+	want := map[string]int{"requests": 2, "agent": 1}
 	for _, c := range s.Registry().Contributions("rail.entry") {
-		if e := c.(uireg.RailEntry); e.Name == "requests" {
-			if n := e.Badge(); n != 1 {
-				t.Errorf("Requests' badge is %d, not 1: the request that asks you", n)
+		e := c.(uireg.RailEntry)
+		if n, ok := want[e.Name]; ok {
+			if got := e.Badge(); got != n {
+				t.Errorf("%s's badge is %d, not %d", e.Name, got, n)
 			}
-			return
+			delete(want, e.Name)
 		}
 	}
-	t.Fatal("no Requests entry")
+	if len(want) > 0 {
+		t.Fatalf("no rail entries %v", want)
+	}
 }

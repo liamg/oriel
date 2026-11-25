@@ -451,11 +451,11 @@ function oriel.status.rule(spec, fn) end
 ---@class oriel.thread
 oriel.thread = {}
 
---- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.
+--- The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, side (old on the file's lines before the change, a diff's removed ones; new otherwise), busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.
 ---@return table
 function oriel.thread.list() end
 
---- Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.
+--- Open a request: with opts.body, send it now ({ body, file, line, side, urgent, btw }; no file is about the whole change; side = 
 ---@param opts? table
 function oriel.thread.new(opts) end
 
