@@ -306,7 +306,7 @@ clip 760,50 640x835.48 r 0
       text "<1ms" @1406,695.36 #b3ab99 JetBrains Mono 11
       text "PrMerged" @784,725.54 #ece6d8 JetBrains Mono 11.5
       clip 932,713.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,725.54 #b3ab99 JetBrains Mono 11.5
+        text "asks to move the ticke…" @932,725.54 #b3ab99 JetBrains Mono 11.5
       pop
       text "OBSERVE" @1110,724.82 #b98aff JetBrains Mono 9.5
       clip 1198,714.14 200x14.52002 r 0
