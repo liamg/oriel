@@ -548,6 +548,45 @@ func TestLuaExecInBackground(t *testing.T) {
 	}
 }
 
+// A child left holding the program's output doesn't hold up fn: the timeout stops everything the program started,
+// and a program that ends on time is done though a child it left in the background runs on.
+func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	dir := t.TempDir()
+	alive := func(name string) bool {
+		pid, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return exec.Command("kill", "-0", strings.TrimSpace(string(pid))).Run() == nil
+	}
+	t.Cleanup(func() {
+		for _, name := range []string{"timed.pid", "left.pid"} {
+			if pid, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+				_ = exec.Command("kill", strings.TrimSpace(string(pid))).Run()
+			}
+		}
+	})
+	s := apptest.LuaScene(t, "")
+	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > timed.pid; sleep 30" }, { cwd = "` + dir + `", timeout = 0.2 },
+		function(out, err) timed = err or "no error" end)`)
+	s.Until("the timed-out program", func() bool { return apptest.LuaGlobal(lua(s).VM(), "timed") != nil })
+	if alive("timed.pid") {
+		t.Error("the child of a timed-out program is still running")
+	}
+	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > left.pid; echo hi" }, { cwd = "` + dir + `" },
+		function(out, err) left, lefterr = out, err end)`)
+	s.Until("the program that left a child", func() bool { return apptest.LuaGlobal(lua(s).VM(), "left") != nil })
+	if out, err := apptest.LuaGlobal(lua(s).VM(), "left"), apptest.LuaGlobal(lua(s).VM(), "lefterr"); out != "hi\n" || err != nil {
+		t.Errorf("left %q, err %v", out, err)
+	}
+	if !alive("left.pid") {
+		t.Error("the child a program left in the background was stopped")
+	}
+}
+
 // A plugin's exec is checked against the program it runs: a relative one (./tool) is cwd's, both when its grant is
 // checked and when it runs, so a grant for that file lets it run, and nothing else of the name does.
 func TestLuaExecChecksTheProgramItRuns(t *testing.T) {

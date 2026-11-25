@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/procgroup"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -237,6 +238,9 @@ func (r Root) ExecAsync(argv []string, opts any, fn any) error {
 	return nil
 }
 
+// execWaitDelay is how long a program's output may stay open after it ends, held by a child it left running.
+const execWaitDelay = time.Second
+
 // program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
 func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
@@ -263,9 +267,15 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		defer cancel()
 		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
 		cmd.Dir = dir
+		// The timeout stops all the program started, and a child it leaves holding its output can't hold up the
+		// call past WaitDelay.
+		procgroup.Own(cmd)
+		cmd.Cancel = func() error { return procgroup.Kill(cmd) }
+		cmd.WaitDelay = execWaitDelay
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
-		if err := cmd.Run(); err != nil {
+		// ErrWaitDelay alone means the program ended well and left a child in the background, as `tilt up &` does.
+		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}
 		return out.String(), nil
