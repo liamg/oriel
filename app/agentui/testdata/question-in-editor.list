@@ -203,8 +203,8 @@ clip 44,50 1556x924 r 0
         text " " @179.25,254.36 #ece6d8 JetBrains Mono 13.5
         text "0" @187.65625,254.36 #ff9e64 JetBrains Mono 13.5
         text ":" @196.0625,254.36 #89ddff JetBrains Mono 13.5
-        rect 112,264 780x598.1111 fill #0c0c0b radius 6
-        clip 112,264 780x598.1111 r 6
+        rect 112,264 780x596.3601 fill #0c0c0b radius 6
+        clip 112,264 780x596.3601 r 6
           rect 124,277.5 7x7 fill #4cc9f0 radius 3.5
           text "Thread" @139,285.54712 #ece6d8 Inter 12.5
           text "· L46 ·" @191.95312,284.78 #7c7566 JetBrains Mono 10.5
@@ -276,93 +276,93 @@ clip 44,50 1556x924 r 0
           path 6 segments fill #4cc9f0b7
           text "Claude is working" @159,559.843 #b3ab99 Inter 12
           text "· 41s" @270.32812,559.2578 #7c7566 JetBrains Mono 10.5
-          rect 124,578.73755 756x231.37354 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+          rect 124,578.73755 756x229.62256 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
           rect 138,594.7998 7x7 fill #ff5f6d radius 3.5
           text "Claude asks" @153,602.8469 #ece6d8 Inter 12.5
           text "Should the negative cases round away from zero, or half to" @138,626.97144 #ece6d8 Inter 12.5
           text "even like the positive ones?" @138,645.09595 #ece6d8 Inter 12.5
-          rect 138,654.1111 728x32 radius 6 stroke 1 #332f27
-          text "○" @148,674.07104 #ffd23f JetBrains Mono 11
-          text "Half to even, as the positives" @162.59375,674.6582 #ece6d8 Inter 12.5
-          text "1" @850,673.7111 #4f4a40 JetBrains Mono 10
-          rect 138,692.1111 728x32 radius 6 stroke 1 #332f27
-          text "○" @148,712.07104 #ffd23f JetBrains Mono 11
-          text "Away from zero" @162.59375,712.6582 #ece6d8 Inter 12.5
-          text "2" @850,711.7111 #4f4a40 JetBrains Mono 10
-          rect 138,733.1111 728x30 fill #060606 radius 6
-          clip 138,733.1111 728x30 r 6
-            text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @148,752.6582 #7c7566 Inter 12.5
+          rect 138,654.1111 728x31.124512 radius 6 stroke 1 #332f27
+          text "○" @148,673.33105 #ffd23f JetBrains Mono 11
+          text "Half to even, as the positives" @162.59375,674.22046 #ece6d8 Inter 12.5
+          text "1" @850,672.3111 #4f4a40 JetBrains Mono 10
+          rect 138,691.2356 728x31.124512 radius 6 stroke 1 #332f27
+          text "○" @148,710.45557 #ffd23f JetBrains Mono 11
+          text "Away from zero" @162.59375,711.345 #ece6d8 Inter 12.5
+          text "2" @850,709.4356 #4f4a40 JetBrains Mono 10
+          rect 138,731.3601 728x30 fill #060606 radius 6
+          clip 138,731.3601 728x30 r 6
+            text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @148,750.9072 #7c7566 Inter 12.5
           pop
-          rect 138,733.1111 728x30 radius 6 stroke 1 #332f27
-          rect 138,772.1111 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-          text "Details" @148,789.4763 #ece6d8 Inter 12
-          rect 124,822.1111 756x30 fill #060606 radius 6
-          clip 124,822.1111 756x30 r 6
-            text "Reply…" @134,841.6582 #7c7566 Inter 12.5
+          rect 138,731.3601 728x30 radius 6 stroke 1 #332f27
+          rect 138,770.3601 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+          text "Details" @148,787.72534 #ece6d8 Inter 12
+          rect 124,820.3601 756x30 fill #060606 radius 6
+          clip 124,820.3601 756x30 r 6
+            text "Reply…" @134,839.9072 #7c7566 Inter 12.5
           pop
-          rect 124,822.1111 756x30 radius 6 stroke 1 #332f27
+          rect 124,820.3601 756x30 radius 6 stroke 1 #332f27
         pop
-        rect 112,264 780x598.1111 radius 6 stroke 1 #332f27
-        text "47" @75.1875,883.4711 #4f4a40 JetBrains Mono 13.5
-        text "        " @112,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "if" @179.25,883.4711 #c792ff JetBrains Mono 13.5
-        text " " @196.0625,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "floor" @204.46875,883.4711 #d6dde6 JetBrains Mono 13.5
-        text "." @246.5,883.4711 #89ddff JetBrains Mono 13.5
-        text "IntPart" @254.90625,883.4711 #5cd2ff JetBrains Mono 13.5
-        text "()" @313.75,883.4711 #89ddff JetBrains Mono 13.5
-        text "%" @330.5625,883.4711 #89ddff JetBrains Mono 13.5
-        text "2" @338.96875,883.4711 #ff9e64 JetBrains Mono 13.5
-        text " " @347.375,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "==" @355.78125,883.4711 #89ddff JetBrains Mono 13.5
-        text " " @372.59375,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "0" @381,883.4711 #ff9e64 JetBrains Mono 13.5
-        text " " @389.40625,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "{" @397.8125,883.4711 #89ddff JetBrains Mono 13.5
-        text " " @406.21875,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "return" @414.625,883.4711 #c792ff JetBrains Mono 13.5
-        text " " @465.0625,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "floor" @473.46875,883.4711 #d6dde6 JetBrains Mono 13.5
-        text "." @515.5,883.4711 #89ddff JetBrains Mono 13.5
-        text "Shift" @523.90625,883.4711 #5cd2ff JetBrains Mono 13.5
-        text "(" @565.9375,883.4711 #89ddff JetBrains Mono 13.5
-        text "-" @574.34375,883.4711 #89ddff JetBrains Mono 13.5
-        text "p" @582.75,883.4711 #d6dde6 JetBrains Mono 13.5
-        text ")" @591.15625,883.4711 #89ddff JetBrains Mono 13.5
-        text " " @599.5625,883.4711 #ece6d8 JetBrains Mono 13.5
-        text "}" @607.96875,883.4711 #89ddff JetBrains Mono 13.5
-        text "48" @75.1875,904.4711 #4f4a40 JetBrains Mono 13.5
-        text "        " @112,904.4711 #ece6d8 JetBrains Mono 13.5
-        text "return" @179.25,904.4711 #c792ff JetBrains Mono 13.5
-        text " " @229.6875,904.4711 #ece6d8 JetBrains Mono 13.5
-        text "floor" @238.09375,904.4711 #d6dde6 JetBrains Mono 13.5
-        text "." @280.125,904.4711 #89ddff JetBrains Mono 13.5
-        text "Add" @288.53125,904.4711 #5cd2ff JetBrains Mono 13.5
-        text "(" @313.75,904.4711 #89ddff JetBrains Mono 13.5
-        text "one" @322.15625,904.4711 #d6dde6 JetBrains Mono 13.5
-        text ")" @347.375,904.4711 #89ddff JetBrains Mono 13.5
-        text "." @355.78125,904.4711 #89ddff JetBrains Mono 13.5
-        text "Shift" @364.1875,904.4711 #5cd2ff JetBrains Mono 13.5
-        text "(" @406.21875,904.4711 #89ddff JetBrains Mono 13.5
-        text "-" @414.625,904.4711 #89ddff JetBrains Mono 13.5
-        text "p" @423.03125,904.4711 #d6dde6 JetBrains Mono 13.5
-        text ")" @431.4375,904.4711 #89ddff JetBrains Mono 13.5
-        text "49" @75.1875,925.4711 #4f4a40 JetBrains Mono 13.5
-        text "    " @112,925.4711 #ece6d8 JetBrains Mono 13.5
-        text "}" @145.625,925.4711 #89ddff JetBrains Mono 13.5
-        text "50" @75.1875,946.4711 #4f4a40 JetBrains Mono 13.5
-        text "    " @112,946.4711 #ece6d8 JetBrains Mono 13.5
-        text "return" @145.625,946.4711 #c792ff JetBrains Mono 13.5
-        text " " @196.0625,946.4711 #ece6d8 JetBrains Mono 13.5
-        text "floor" @204.46875,946.4711 #d6dde6 JetBrains Mono 13.5
-        text "." @246.5,946.4711 #89ddff JetBrains Mono 13.5
-        text "Shift" @254.90625,946.4711 #5cd2ff JetBrains Mono 13.5
-        text "(" @296.9375,946.4711 #89ddff JetBrains Mono 13.5
-        text "-" @305.34375,946.4711 #89ddff JetBrains Mono 13.5
-        text "p" @313.75,946.4711 #d6dde6 JetBrains Mono 13.5
-        text ")" @322.15625,946.4711 #89ddff JetBrains Mono 13.5
-        text "51" @75.1875,967.4711 #4f4a40 JetBrains Mono 13.5
-        text "}" @112,967.4711 #89ddff JetBrains Mono 13.5
+        rect 112,264 780x596.3601 radius 6 stroke 1 #332f27
+        text "47" @75.1875,881.72015 #4f4a40 JetBrains Mono 13.5
+        text "        " @112,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "if" @179.25,881.72015 #c792ff JetBrains Mono 13.5
+        text " " @196.0625,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "floor" @204.46875,881.72015 #d6dde6 JetBrains Mono 13.5
+        text "." @246.5,881.72015 #89ddff JetBrains Mono 13.5
+        text "IntPart" @254.90625,881.72015 #5cd2ff JetBrains Mono 13.5
+        text "()" @313.75,881.72015 #89ddff JetBrains Mono 13.5
+        text "%" @330.5625,881.72015 #89ddff JetBrains Mono 13.5
+        text "2" @338.96875,881.72015 #ff9e64 JetBrains Mono 13.5
+        text " " @347.375,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "==" @355.78125,881.72015 #89ddff JetBrains Mono 13.5
+        text " " @372.59375,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "0" @381,881.72015 #ff9e64 JetBrains Mono 13.5
+        text " " @389.40625,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "{" @397.8125,881.72015 #89ddff JetBrains Mono 13.5
+        text " " @406.21875,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "return" @414.625,881.72015 #c792ff JetBrains Mono 13.5
+        text " " @465.0625,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "floor" @473.46875,881.72015 #d6dde6 JetBrains Mono 13.5
+        text "." @515.5,881.72015 #89ddff JetBrains Mono 13.5
+        text "Shift" @523.90625,881.72015 #5cd2ff JetBrains Mono 13.5
+        text "(" @565.9375,881.72015 #89ddff JetBrains Mono 13.5
+        text "-" @574.34375,881.72015 #89ddff JetBrains Mono 13.5
+        text "p" @582.75,881.72015 #d6dde6 JetBrains Mono 13.5
+        text ")" @591.15625,881.72015 #89ddff JetBrains Mono 13.5
+        text " " @599.5625,881.72015 #ece6d8 JetBrains Mono 13.5
+        text "}" @607.96875,881.72015 #89ddff JetBrains Mono 13.5
+        text "48" @75.1875,902.72015 #4f4a40 JetBrains Mono 13.5
+        text "        " @112,902.72015 #ece6d8 JetBrains Mono 13.5
+        text "return" @179.25,902.72015 #c792ff JetBrains Mono 13.5
+        text " " @229.6875,902.72015 #ece6d8 JetBrains Mono 13.5
+        text "floor" @238.09375,902.72015 #d6dde6 JetBrains Mono 13.5
+        text "." @280.125,902.72015 #89ddff JetBrains Mono 13.5
+        text "Add" @288.53125,902.72015 #5cd2ff JetBrains Mono 13.5
+        text "(" @313.75,902.72015 #89ddff JetBrains Mono 13.5
+        text "one" @322.15625,902.72015 #d6dde6 JetBrains Mono 13.5
+        text ")" @347.375,902.72015 #89ddff JetBrains Mono 13.5
+        text "." @355.78125,902.72015 #89ddff JetBrains Mono 13.5
+        text "Shift" @364.1875,902.72015 #5cd2ff JetBrains Mono 13.5
+        text "(" @406.21875,902.72015 #89ddff JetBrains Mono 13.5
+        text "-" @414.625,902.72015 #89ddff JetBrains Mono 13.5
+        text "p" @423.03125,902.72015 #d6dde6 JetBrains Mono 13.5
+        text ")" @431.4375,902.72015 #89ddff JetBrains Mono 13.5
+        text "49" @75.1875,923.72015 #4f4a40 JetBrains Mono 13.5
+        text "    " @112,923.72015 #ece6d8 JetBrains Mono 13.5
+        text "}" @145.625,923.72015 #89ddff JetBrains Mono 13.5
+        text "50" @75.1875,944.72015 #4f4a40 JetBrains Mono 13.5
+        text "    " @112,944.72015 #ece6d8 JetBrains Mono 13.5
+        text "return" @145.625,944.72015 #c792ff JetBrains Mono 13.5
+        text " " @196.0625,944.72015 #ece6d8 JetBrains Mono 13.5
+        text "floor" @204.46875,944.72015 #d6dde6 JetBrains Mono 13.5
+        text "." @246.5,944.72015 #89ddff JetBrains Mono 13.5
+        text "Shift" @254.90625,944.72015 #5cd2ff JetBrains Mono 13.5
+        text "(" @296.9375,944.72015 #89ddff JetBrains Mono 13.5
+        text "-" @305.34375,944.72015 #89ddff JetBrains Mono 13.5
+        text "p" @313.75,944.72015 #d6dde6 JetBrains Mono 13.5
+        text ")" @322.15625,944.72015 #89ddff JetBrains Mono 13.5
+        text "51" @75.1875,965.72015 #4f4a40 JetBrains Mono 13.5
+        text "}" @112,965.72015 #89ddff JetBrains Mono 13.5
       pop
     pop
   pop
@@ -445,9 +445,9 @@ clip 44,50 1556x924 r 0
   clip 44,81 1556x893 r 0
     clip 44,81 1556x893 r 0
       clip 44,107 1556x867 r 0
-        clip 112,264 780x598.1111 r 6
-          clip 138,733.1111 728x30 r 6
-            rect 850.3333,744.1111 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
+        clip 112,264 780x596.3601 r 6
+          clip 138,731.3601 728x30 r 6
+            rect 850.3333,742.3601 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
             path 5 segments stroke 1.25 #7c7566
           pop
         pop
@@ -459,9 +459,9 @@ clip 44,50 1556x924 r 0
   clip 44,81 1556x893 r 0
     clip 44,81 1556x893 r 0
       clip 44,107 1556x867 r 0
-        clip 112,264 780x598.1111 r 6
-          clip 124,822.1111 756x30 r 6
-            rect 864.3333,833.1111 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
+        clip 112,264 780x596.3601 r 6
+          clip 124,820.3601 756x30 r 6
+            rect 864.3333,831.3601 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
             path 5 segments stroke 1.25 #7c7566
           pop
         pop
@@ -473,7 +473,7 @@ clip 44,50 1556x924 r 0
   clip 44,81 1556x893 r 0
     clip 44,81 1556x893 r 0
       clip 44,107 1556x867 r 0
-        text "?" @93.296875,881.8811 #4f4a40 JetBrains Mono 13.5
+        text "?" @93.296875,880.1301 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
