@@ -124,6 +124,9 @@ type OptionSpec struct {
 	Scopes               Scope
 	Aliases              []string // vim names
 	Source               string
+	// UserOnly is an option only your own config and the settings page set: no plugin, its own included. One whose
+	// value is code a plugin runs needs it, or any plugin could run code under that plugin's grants.
+	UserOnly bool
 }
 
 // Check says why v isn't a value s can hold: the wrong type, out of range, or not one of an Enum's values.

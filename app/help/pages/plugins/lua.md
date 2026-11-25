@@ -43,7 +43,8 @@ right-click entry.
 `oriel.option.name = value` sets your settings (by name or vim alias, at the Lua layer, which beats settings.toml);
 `oriel.buffer_option` the current buffer's; `oriel.session_option` the session's. A value for an option nothing has registered yet waits for it.
 `oriel.option{ name, type, default, help, values }` declares one, for the settings page and settings.toml; a
-plugin's are named `plugin.<name>.…` and saved under `[plugin.<name>]`.
+plugin's are named `plugin.<name>.…` and saved under `[plugin.<name>]`. Declare one `user_only = true` when its value is
+code the plugin runs: then only your own config and the settings page set it, not a plugin, its own included.
 
 ## Time and programs {#time}
 

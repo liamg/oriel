@@ -162,6 +162,14 @@ func TestScriptWithThePrimaryProject(t *testing.T) {
 	}
 }
 
+// The list is code run under this plugin's exec grant, so only your own config may set it.
+func TestScriptsListIsYoursAlone(t *testing.T) {
+	a, _ := scene(t, "tilt", nil)
+	if sp, ok := a.Registry().Options().Spec("plugin.scripts.list"); !ok || !sp.UserOnly {
+		t.Errorf("plugin.scripts.list = %+v, want user_only", sp)
+	}
+}
+
 // A slot the plugin doesn't know is an error, and nothing runs.
 func TestUnknownSlot(t *testing.T) {
 	a, ws := scene(t, "tilt", map[string]string{"Odd": "touch ran.txt {nope}"})

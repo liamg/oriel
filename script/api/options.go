@@ -105,6 +105,9 @@ func (a *APIs) options(vm *script.VM) {
 		}, func(args *script.Args, key string, v any) error {
 			l, at := where()
 			sp, ok := o.Spec(key)
+			if ok && sp.UserOnly && !a.Plugin.Trusted() {
+				return userOnly(a.Plugin.ID, sp.Name)
+			}
 			if err := a.optionGrant(ns, cmp.Or(sp.Name, key)); err != nil {
 				return err
 			}
@@ -165,7 +168,13 @@ func (a *APIs) optionGrant(ns, name string) error {
 	return a.Plugin.Check(plugin.CapSettings, name)
 }
 
-// declare registers an option from oriel.option{ name, type, default, help, values, min, max, step, follows, section, on_change }.
+// userOnly is the error for a plugin setting a user_only option.
+func userOnly(id, name string) error {
+	return fmt.Errorf("%s: only your own config sets %s, not a plugin", id, name)
+}
+
+// declare registers an option from oriel.option{ name, type, default, help, values, min, max, step, follows, section, on_change,
+// user_only }.
 // A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
 func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
@@ -174,7 +183,8 @@ func (a *APIs) declare(t script.Table, where string) error {
 		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list, map or table): %v", t)
 	}
 	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: plugin.Strings(t["values"]), Help: str(t, "help"),
-		Min: num(t["min"]), Max: num(t["max"]), Step: num(t["step"]), Follows: str(t, "follows"), Scopes: registry.ScopeUser, Source: where}
+		Min: num(t["min"]), Max: num(t["max"]), Step: num(t["step"]), Follows: str(t, "follows"), Scopes: registry.ScopeUser, Source: where,
+		UserOnly: t["user_only"] == true}
 	if !a.Plugin.Trusted() {
 		_, plugin, _ := strings.Cut(a.Plugin.ID, "/")
 		if !strings.HasPrefix(name, "plugin."+plugin+".") {
@@ -222,6 +232,9 @@ func (a *APIs) ApplyPending() int {
 			continue
 		}
 		delete(a.pending, key)
+		if sp.UserOnly && !a.Plugin.Trusted() {
+			continue
+		}
 		if cv, err := optionValue(sp, p.value); err == nil {
 			a.touch(o, sp.Name, p.layer, p.at)
 			_ = o.SetFrom(sp.Name, p.layer, p.at, cv, p.where)

@@ -2,7 +2,8 @@
 -- code are filled in before it runs, each single-quoted, so a value with spaces or quotes stays one shell word.
 local L = oriel
 
-L.option{ name = "plugin.scripts.list", type = "map",
+-- user_only: the list is code run under this plugin's exec grant, so no other plugin may write it.
+L.option{ name = "plugin.scripts.list", type = "map", user_only = true,
   help = "Your scripts, by name: shell code, run with bash (sh without it), or under the interpreter a first #! line "
     .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
     .. "checkout (the workspace when it has none). A script naming {repo} or {repo_name} runs once per project, in "
