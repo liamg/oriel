@@ -41,8 +41,9 @@ left for the shell.
 - `{repo_name}`: the project's name.
 
 A script that names `{repo}` or `{repo_name}` runs for one project at a time, in its checkout: the omnibox has a row
-for it per project. Any other `{name}` is a mistake, and the script doesn't run. Write `{{name}}` for a literal
-`{name}`, as awk and jq want: `awk '{{print}}'`.
+for it per project. Any other `{name}` is a mistake, and the script doesn't run: write it with spaces (`{ name }`,
+which awk, jq and Python read the same) for the text itself. `{{session}}` is a literal `{session}`, and any other
+`{{word}}` stays as written, so a Go template's `{{end}}` reaches kubectl or helm whole.
 
 The quotes are a shell's. A script in another language reads the same values from its environment, unquoted:
 `ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and `ORIEL_SCRIPT_REPO` and

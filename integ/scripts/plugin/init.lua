@@ -5,9 +5,9 @@ local L = oriel
 L.option{ name = "plugin.scripts.list", type = "map",
   help = "Your scripts, by name: shell code, run with bash (sh without it), or under the interpreter a first #! line "
     .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
-    .. "checkout (the workspace when it has none). A script naming {repo} or "
-    .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's, and {{name}} is a literal "
-    .. "{name}. Each is in the environment too, unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
+    .. "checkout (the workspace when it has none). A script naming {repo} or {repo_name} runs once per project, in "
+    .. "its checkout. ${x} stays the shell's, {{session}} is a literal {session}, and any other {{word}} stays as "
+    .. "written. Each is in the environment too, unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
 
 local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
@@ -35,15 +35,16 @@ local function quote(s)
   return "'" .. (s:gsub("'", [['\'']])) .. "'"
 end
 
--- LITERAL stands in for an escaped {{name}} while slots are found: no script holds a NUL.
+-- LITERAL stands in for a {{word}} while slots are found: no script holds a NUL. {{slot}} is the way to write a
+-- literal {slot}; any other {{word}} stays as written, as Go templates ({{end}}) need it.
 local LITERAL = "\0"
 
--- unescaped is code with each {{name}} hidden from the slot patterns.
+-- unescaped is code with each {{word}} hidden from the slot patterns.
 local function unescaped(code)
   return (code:gsub("{{([a-z_]+)}}", LITERAL .. "%1" .. LITERAL))
 end
 
--- each calls fn(pos, whole, name) for every {name} in code that isn't the shell's ${name} or an escaped {{name}}.
+-- each calls fn(pos, whole, name) for every {name} in code that isn't the shell's ${name} or inside a {{word}}.
 local function each(code, fn)
   code = unescaped(code)
   for pos, whole, name in code:gmatch("()({([a-z_]+)})") do
@@ -73,7 +74,9 @@ local function expand(code, vals)
     end
     return quote(vals[name])
   end)
-  return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, "{%1}"))
+  return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, function(word)
+    return SLOTS[word] and "{" .. word .. "}" or "{{" .. word .. "}}"
+  end))
 end
 
 -- tail is the last lines of out, without colors or carriage returns.
@@ -101,7 +104,8 @@ local function run(name, project)
   end
   local bad = unknown(code)
   if bad then
-    return fail(name .. ": " .. bad .. " isn't a slot: use {session}, {session_name}, {primary}, {repo} or {repo_name}")
+    return fail(name .. ": " .. bad .. " isn't a slot: use {session}, {session_name}, {primary}, {repo} or "
+      .. "{repo_name}, or write " .. bad:gsub("^{(.*)}$", "{ %1 }") .. " with spaces for the text itself")
   end
   local se = L.session.current()
   if not se then

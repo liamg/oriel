@@ -166,7 +166,7 @@ func TestScriptWithThePrimaryProject(t *testing.T) {
 func TestUnknownSlot(t *testing.T) {
 	a, ws := scene(t, "tilt", map[string]string{"Odd": "touch ran.txt {nope}"})
 	a.Run("scripts.run", registry.Args{"name": "Odd"})
-	if n := noticeWith(a, "{nope}"); n.Severity != core.SevError {
+	if n := noticeWith(a, "{nope}"); n.Severity != core.SevError || !strings.Contains(n.Text, "{ nope }") {
 		t.Errorf("notice = %+v", n)
 	}
 	if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
@@ -174,12 +174,13 @@ func TestUnknownSlot(t *testing.T) {
 	}
 }
 
-// {{name}} is a literal {name}, for awk, jq and the like, and isn't taken for a slot.
+// {{slot}} is a literal {slot}; any other {{word}} is left as written, so a Go template's {{end}} reaches kubectl or
+// helm whole.
 func TestScriptWithALiteralBrace(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Lit": `echo x | awk '{{print}}' > lit.txt; printf '%s|%s' "{{nope}}" {session} >> lit.txt`})
+	a, ws := scene(t, "tilt", map[string]string{"Lit": `printf '%s|%s|%s' '{{range .items}}{{else}}{{end}}' "{{session}}" {session} > lit.txt`})
 	a.Run("scripts.run", registry.Args{"name": "Lit"})
 	noticeWith(a, "Lit finished")
-	if got, want := read(t, filepath.Join(ws, "lit.txt")), "x\n{nope}|"+ws; got != want {
+	if got, want := read(t, filepath.Join(ws, "lit.txt")), "{{range .items}}{{else}}{{end}}|{session}|"+ws; got != want {
 		t.Errorf("lit.txt = %q, want %q", got, want)
 	}
 }
