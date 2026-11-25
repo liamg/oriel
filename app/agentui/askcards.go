@@ -428,26 +428,27 @@ func (x *Console) questions(c *ui.Ctx, se core.SessionState, a core.Ask, st *con
 	}
 	picked := st.chosen[a.ID]
 	help := "agent/asks#question"
+	const width = 380
 	for i, q := range a.Questions {
 		c.Column(fmt.Sprint("q", i), ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 			if q.Header != "" {
 				c.Text("h", strings.ToUpper(q.Header), widget.KickerFont(th.C(theme.FgFaint)))
 			}
-			widget.Wrap(c, "q", q.Question, 380, widget.UIFont(12.5, th.C(theme.Fg)))
+			widget.Wrap(c, "q", q.Question, width, widget.UIFont(12.5, th.C(theme.Fg)))
 			for j, opt := range q.Options {
 				on := containsStr(picked[i], opt)
 				fill, stroke := render.Color{}, th.C(theme.LineStrong)
 				if on {
 					fill, stroke = th.C(theme.AccentBg), th.C(theme.Accent)
 				}
-				in := widget.Clickable(c, fmt.Sprint("o", j), ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center,
+				in := widget.Clickable(c, fmt.Sprint("o", j), ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 8, Cross: ui.Start,
 					Fill: fill, Stroke: stroke, Border: 1, Radius: 6, Focusable: true, Help: help, Label: opt, Selected: on}, func(c *ui.Ctx) {
 					glyph := "○"
 					if on {
 						glyph = "●"
 					}
 					c.Text("g", glyph, widget.MonoFont(11, th.C(theme.Accent)))
-					c.Text("t", opt, widget.UIFont(12.5, th.C(theme.Fg)))
+					widget.Wrap(c, "t", opt, width-44, widget.UIFont(12.5, th.C(theme.Fg)))
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 					c.Text("n", fmt.Sprint(j+1), widget.MonoFont(10, th.C(theme.FgGhost)))
 				})

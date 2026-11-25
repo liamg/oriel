@@ -119,21 +119,23 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 1144,705.62646 440x258.37354 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
-text "PRICING-ROUNDING · QUESTION" @1158,730.04645 #ff5f6d JetBrains Mono 9.5
-text "✕" @1558,730.1905 #7c7566 JetBrains Mono 9.900001
-rect 1158,748.6887 7x7 fill #ff5f6d radius 3.5
-text "Claude asks" @1173,756.73584 #ece6d8 Inter 12.5
-text "Is pricing.RoundMinor safe to call for JPY amounts, or does it" @1158,780.86035 #ece6d8 Inter 12.5
-text "assume 2 decimal places?" @1158,798.98486 #ece6d8 Inter 12.5
-rect 1158,808 412x32 radius 6 stroke 1 #332f27
-text "○" @1168,827.95996 #ffd23f JetBrains Mono 11
-text "Safe: precision comes from the currency table" @1182.5938,828.5471 #ece6d8 Inter 12.5
-text "1" @1554,827.60004 #4f4a40 JetBrains Mono 10
-rect 1158,846 412x32 radius 6 stroke 1 #332f27
-text "○" @1168,865.95996 #ffd23f JetBrains Mono 11
-text "Not yet: lands with rethink/rounding" @1182.5938,866.5471 #ece6d8 Inter 12.5
-text "2" @1554,865.60004 #4f4a40 JetBrains Mono 10
+rect 1144,671.1284 440x292.87158 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+text "PRICING-ROUNDING · QUESTION" @1158,695.5484 #ff5f6d JetBrains Mono 9.5
+text "✕" @1558,695.69244 #7c7566 JetBrains Mono 9.900001
+rect 1158,714.1907 7x7 fill #ff5f6d radius 3.5
+text "Claude asks" @1173,722.2378 #ece6d8 Inter 12.5
+text "Is pricing.RoundMinor safe to call for JPY amounts, or does it" @1158,746.3623 #ece6d8 Inter 12.5
+text "assume 2 decimal places?" @1158,764.4868 #ece6d8 Inter 12.5
+rect 1158,773.50195 412x31.124512 radius 6 stroke 1 #332f27
+text "○" @1168,792.7219 #ffd23f JetBrains Mono 11
+text "Safe: precision comes from the currency table" @1182.5938,793.6113 #ece6d8 Inter 12.5
+text "1" @1554,791.70197 #4f4a40 JetBrains Mono 10
+rect 1158,810.62646 412x67.373535 radius 6 stroke 1 #332f27
+text "○" @1168,829.84644 #ffd23f JetBrains Mono 11
+text "Not yet: it lands with rethink/rounding, which reads" @1182.5938,830.73584 #ece6d8 Inter 12.5
+text "the minor units from the currency table and rounds" @1182.5938,848.86035 #ece6d8 Inter 12.5
+text "half to even" @1182.5938,866.98486 #ece6d8 Inter 12.5
+text "2" @1554,828.8265 #4f4a40 JetBrains Mono 10
 rect 1158,887 412x30 fill #060606 radius 6
 clip 1158,887 412x30 r 6
   text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @1168,906.5471 #7c7566 Inter 12.5
