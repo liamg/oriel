@@ -9,7 +9,7 @@
 - **`where="general"`**: instructions for the whole change, possibly across many files.
 - **More than a couple of edits**: first reply with `working: true` saying what you're about to do, then do it, then reply with the result. A reply without `working` tells Oriel you're done with the thread, so use it only for answers and questions.
 - **Several threads at once**: they all show as handed to you until you start one. As you start each, reply on it with `working: true` (or set its task `in_progress`), so the user sees which you're on; several can be at once, as subagents work.
-- A reply that isn't `working` fails if the user added a comment you haven't seen; the error holds it. Handle it, then reply again.
+- A reply that isn't `working`, or an `ask`, fails if the user added a comment you haven't seen; the error holds it. Handle it before you reply or ask again: it may already answer your question.
 - Replies render as markdown: code fences and tables work, diagrams don't.
 - Your edits show in the user's diff by themselves; never tell them to refresh.
 - To raise something yourself, `mcp__oriel__comment` on the line (`file`, `line`, `end_line`, `side`, `project`), or without `file` for a general comment.

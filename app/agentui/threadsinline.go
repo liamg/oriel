@@ -42,6 +42,7 @@ type inlineNew struct {
 	toAuthor    bool   // a comment for the pull request's author, not a question for the agent
 	review      bool   // the session is a review: it can be either
 	window      string // the window it was opened in, when it was asked from one: it follows that window's buffer
+	old         bool   // on the file's lines before the change, a diff's removed ones: no buffer holds them
 }
 
 // follow moves the composer to the buffer its window shows its file in now: the file was read again (the agent edited
@@ -103,11 +104,11 @@ func anchoredLine(lines []string, a *core.Anchor) int {
 func (x *Requests) newInline(a registry.Args) error {
 	st := x.state("")
 	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, col: a.Int("col"), endCol: a.Int("end_col"),
-		focus: true, window: a.String("window")}
+		focus: true, window: a.String("window"), old: a.String("side") == "old"}
 	if se, ok := x.front(); ok && services.ReviewedPR(x.h, se) != "" {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
-	if n.line < 0 {
+	if n.line < 0 && !n.old {
 		ed, ok := services.EditorsOf(x.h)
 		if !ok {
 			return errors.New("no editor")
@@ -133,12 +134,12 @@ func (x *Requests) newInline(a registry.Args) error {
 		return errors.New("thread.new needs a line")
 	}
 	if o := st.inline; o != nil && filepath.Clean(o.path) == filepath.Clean(n.path) && o.line == n.line && o.end == n.end &&
-		o.col == n.col && o.endCol == n.endCol {
+		o.col == n.col && o.endCol == n.endCol && o.old == n.old {
 		n.release()
 		o.focus, o.toAuthor = true, n.toAuthor
 		return nil
 	} else if o != nil {
-		if filepath.Clean(o.path) == filepath.Clean(n.path) && n.line <= o.line && o.line <= max(n.end, n.line) {
+		if filepath.Clean(o.path) == filepath.Clean(n.path) && o.old == n.old && n.line <= o.line && o.line <= max(n.end, n.line) {
 			// The same thread, widened to more lines: what's written in it stays.
 			n.draft, n.append = o.draft, o.append
 		}
@@ -205,10 +206,17 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		if t.Anchor == nil || t.Btw || !t.Open() && !asksIn(se, t.ID) && !folds || filepath.Clean(kit.AnchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
 			continue
 		}
-		line := x.lineOf(ctx, t)
-		x.lineNow[t.ID] = line
-		if line < ctx.Top || line >= ctx.Bottom {
-			continue
+		old := t.Anchor.Side == "old"
+		if old && (!ctx.Removed || hidden) {
+			continue // only a diff shows the removed lines it's on
+		}
+		line := t.Anchor.Line - 1
+		if !old {
+			line = x.lineOf(ctx, t)
+			x.lineNow[t.ID] = line
+			if line < ctx.Top || line >= ctx.Bottom {
+				continue
+			}
 		}
 		if hidden {
 			if byLine[line] == nil {
@@ -227,7 +235,7 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 			out = append(out, uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "▪", Style: sign.Name(), Priority: 20, Command: "request.open",
 				Args: registry.Args{"thread": string(id)}, Tooltip: t.Heading()})
 		}
-		d := uireg.Decoration{Kind: uireg.Block, Line: line, Priority: 20, Reveal: reveal, Node: &ui.Func{Key: "thread." + string(id), Fn: func(c *ui.Ctx) {
+		d := uireg.Decoration{Kind: uireg.Block, Line: line, Old: old, Priority: 20, Reveal: reveal, Node: &ui.Func{Key: "thread." + string(id), Fn: func(c *ui.Ctx) {
 			x.inlineThread(c, id)
 		}}}
 		if t.Open() {
@@ -244,7 +252,10 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		}
 		x.bubbles[ctx.Window] = bubbles
 	}
-	if n := st.inline; n != nil && filepath.Clean(n.path) == filepath.Clean(ctx.Path) {
+	if n := st.inline; n != nil && n.old && ctx.Removed && filepath.Clean(n.path) == filepath.Clean(ctx.Path) {
+		out = append(out, uireg.Decoration{Kind: uireg.Block, Line: n.line, Old: true, Priority: 25, Reveal: n.focus,
+			Node: &ui.Func{Key: "thread.new", Fn: func(c *ui.Ctx) { x.inlineComposer(c, st, n, n.line) }}})
+	} else if n != nil && !n.old && filepath.Clean(n.path) == filepath.Clean(ctx.Path) {
 		if n.buf != nil && ctx.Buffer != nil && n.buf != ctx.Buffer && n.window != "" && n.window == ctx.Window {
 			n.follow(ctx)
 		}
@@ -624,6 +635,9 @@ func (n *inlineNew) commentArgs(line int) registry.Args {
 	if n.toAuthor {
 		a["outgoing"] = true
 	}
+	if n.old {
+		a["side"] = "old"
+	}
 	return a
 }
 
@@ -633,6 +647,9 @@ func (x *Requests) suggest() error {
 	n := x.state("").inline
 	if n == nil || !n.toAuthor {
 		return errors.New("no comment for the author is being written")
+	}
+	if n.old {
+		return errors.New("a suggestion replaces lines of the change, and removed lines aren't in it")
 	}
 	if n.buf == nil {
 		return errors.New("the commented lines aren't read yet")

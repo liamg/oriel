@@ -106,7 +106,8 @@ this machine's: **Log in** opens a terminal on this machine running the provider
 `codex login`), and the sandboxes pick it up. Before asking, a sandboxed agent is started once again with this
 machine's sign-in handed over afresh, as its copy may be one the machine has renewed since. An agent with no way to
 sign in from here says what to run in a terminal. Once you're signed in the cards go by themselves, and the sessions
-carry on; **Check again** (`c`) looks now.
+carry on: Oriel looks again each minute, and **Check again** (`c`) looks now. A login that has only run out (Claude's,
+renewed only when claude runs) is renewed as it looks, the way starting Oriel again renews it.
 
 ## Terminal
 

@@ -60,6 +60,9 @@ type Decoration struct {
 	Bg string
 	// Was, for a LineBg on a changed line, is what the line read before, for a presenter that shows the change.
 	Was string
+	// Old puts it on Line of the file before the change: a diff's removed line. Only a presenter that shows removed
+	// lines (DecorationCtx.Removed) gets it, under that line's number beside the new lines' own.
+	Old bool
 }
 
 // EveryLine is the Line of a Sign drawn on each line, however many the file has: one decoration, which Decorate gives
@@ -134,6 +137,8 @@ type DecorationCtx struct {
 	FileBytes func() []byte
 	// Wake asks for a frame at a time: Decorate calls it for a RefreshAt. Nil for none.
 	Wake func(time.Time)
+	// Removed says the presenter shows the file's removed lines too, as a diff does: it gets Old decorations.
+	Removed bool
 
 	refresh *time.Time
 }
@@ -319,6 +324,13 @@ func byLine(ctx DecorationCtx, from []*decorAsked) map[int][]Decoration {
 	out := map[int][]Decoration{}
 	for _, a := range from {
 		for _, d := range a.ds {
+			if d.Old {
+				// Top and Bottom count the new file's lines, which say nothing of where an old one is.
+				if ctx.Removed && d.Line >= 0 {
+					out[d.Line] = append(out[d.Line], d)
+				}
+				continue
+			}
 			if d.Anchor != 0 {
 				o, ok := ctx.Buffer.Resolve(d.Anchor)
 				if !ok {

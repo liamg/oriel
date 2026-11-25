@@ -109,6 +109,13 @@ type LoginStarter interface {
 	StartLogin(ctx context.Context) (Login, error)
 }
 
+// LoginRenewer is a provider whose sign-in on this machine runs out and is renewed only when its own CLI runs
+// (Claude's, as it starts): one checked while signed out renews it first, as starting Oriel again would.
+type LoginRenewer interface {
+	// RenewLogin renews the sign-in if it's near or past its end; one still good, or gone for another reason, is left.
+	RenewLogin(ctx context.Context)
+}
+
 // Login is a sign-in under way.
 type Login struct {
 	URL  string

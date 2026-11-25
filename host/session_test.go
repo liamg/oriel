@@ -402,10 +402,15 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	}
 	<-ch
 
-	// Named, through Oriel's own tool, it's asked there, and the tool answers with the user's choice.
+	// Named, through Oriel's own tool, it's asked there, once the agent has its comment, and the tool answers with the
+	// user's choice.
+	named := map[string]any{"thread": string(other), "questions": []map[string]any{{"question": "Which zero?", "options": []string{"+0", "-0"}}}}
+	if _, err := a.CallErr("ask", named); err == nil || !strings.Contains(err.Error(), "and zero?") {
+		t.Fatalf("asking before the agent had the thread's comment: err = %v", err)
+	}
 	got := make(chan string, 1)
 	go func() {
-		out, err := a.CallErr("ask", map[string]any{"thread": string(other), "questions": []map[string]any{{"question": "Which zero?", "options": []string{"+0", "-0"}}}})
+		out, err := a.CallErr("ask", named)
 		if err != nil {
 			out = "error: " + err.Error()
 		}
@@ -1038,6 +1043,28 @@ func TestReplyRefusesUnseenComments(t *testing.T) {
 	a.Call(t, "reply", args)
 	if th, _ = r.session(id).Thread(tid); !slices.ContainsFunc(th.Comments, func(c core.Comment) bool { return c.Body == "Fixed." }) {
 		t.Error("replying again, with nothing unseen, wasn't posted")
+	}
+}
+
+// A question doesn't go to the user while the thread holds a comment the agent hasn't been given: the user may have
+// answered it already. The error hands the comment over.
+func TestAskRefusesUnseenComments(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("The DLQ page is broken")
+	a.WaitSent(t)
+	tid := r.session(id).Threads[0].ID
+	if _, err := r.w.run.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "it says NonExistentQueue"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := a.CallErr("ask", map[string]any{"thread": string(tid), "questions": []map[string]any{{"question": "What's the error?"}}})
+	if err == nil || !strings.Contains(err.Error(), "it says NonExistentQueue") {
+		t.Fatalf("asking with an unseen comment: err = %v", err)
+	}
+	if th, _ := r.session(id).Thread(tid); len(th.Undelivered()) != 0 {
+		t.Fatalf("after the refusal: undelivered %v", th.Undelivered())
+	}
+	if len(r.session(id).Asks) != 0 {
+		t.Errorf("the question was put to the user: %+v", r.session(id).Asks)
 	}
 }
 

@@ -145,6 +145,13 @@ func (x *Runner) HandOver() {
 
 // Close stops every agent, without handing them over, and waits for those starting.
 func (x *Runner) Close() {
+	x.loginMu.Lock()
+	for _, l := range x.lost {
+		if l.recheck != nil {
+			l.recheck.Stop()
+		}
+	}
+	x.loginMu.Unlock()
 	for _, h := range x.all() {
 		h.stop("the session host closed", "")
 	}
