@@ -222,9 +222,17 @@ func (x *Box) keepOnce(ctx context.Context, refresh func(context.Context)) {
 	if ownAuth(agent.SandboxPlace{Env: os.Getenv}, Settings()) {
 		return
 	}
+	if l, ok := x.Renew(ctx, refresh); ok {
+		SyncLogins(l)
+	}
+}
+
+// Renew is the host's sign-in, renewed first with refresh (the host's own claude) when it's near or past its end and
+// no renewal was tried in the last refreshGap.
+func (x *Box) Renew(ctx context.Context, refresh func(context.Context)) (Login, bool) {
 	l, ok := x.HostLogin()
 	if !ok {
-		return
+		return nil, false
 	}
 	x.keepMu.Lock()
 	now := clock.Or(x.Clock).Now()
@@ -236,13 +244,11 @@ func (x *Box) keepOnce(ctx context.Context, refresh func(context.Context)) {
 	if renew {
 		refresh(ctx)
 		if ctx.Err() != nil {
-			return
+			return nil, false
 		}
-		if l, ok = x.FreshHostLogin(); !ok {
-			return
-		}
+		return x.FreshHostLogin()
 	}
-	SyncLogins(l)
+	return l, true
 }
 
 // SyncLogin gives root's sandbox the host's sign-in. A sign-in made inside the
