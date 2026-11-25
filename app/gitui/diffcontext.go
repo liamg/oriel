@@ -162,7 +162,7 @@ func (x *Diff) gapRows(c *ui.Ctx, st *diffState, file string, d *diffFile, fc *f
 		for k := from; k <= to; k++ {
 			l := gitx.DiffLine{Op: ' ', Text: d.lines[k-1], New: k, Old: k + g.delta}
 			x.contextRow(c, st, file, l, spans[k-from], layout)
-			reveal = append(reveal, lineBlocks(c, decor, "c"+lineKey(l), k)...)
+			reveal = append(reveal, lineBlocks(c, decor, "c"+lineKey(l), k, false)...)
 		}
 	}
 	c.Column(fmt.Sprint("gap", g.i), ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {

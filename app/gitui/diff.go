@@ -543,11 +543,18 @@ func (x *Diff) moveLine(st *diffState, d int) {
 
 // comment opens a thread on the selection's lines, between them in the diff.
 func (x *Diff) comment(st *diffState, args registry.Args) error {
-	path, line, end, ok := st.selLine()
+	path, line, end, old := st.selRemoved()
+	ok := old
+	if !old {
+		path, line, end, ok = st.selLine()
+	}
 	if !ok {
 		return errors.New("no hunk is selected")
 	}
 	a := registry.Args{"file": path, "line": line, "to": args.String("to")}
+	if old {
+		a["side"] = "old"
+	}
 	if end > line {
 		a["end_line"] = end
 	}

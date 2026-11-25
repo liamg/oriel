@@ -347,6 +347,23 @@ func TestLuaThreads(t *testing.T) {
 	})
 }
 
+// oriel.thread.new opens a thread on a removed line with side = "old", and oriel.thread.list says which side it's on.
+func TestLuaThreadOnTheOldSide(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	lua := func(line string) {
+		t.Helper()
+		if err := r.Do(func() error { return r.Host.Run(context.Background(), "lua.eval", registry.Args{"args": line}) }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lua(`oriel.thread.new{ body = "Why drop this?", file = "round.go", line = 9, side = "old" }`)
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "round.go:9") || !strings.Contains(in.Text, `side="old"`) {
+		t.Errorf("the agent got %q", in.Text)
+	}
+	lua(`oriel.notify("side: " .. oriel.thread.list()[1].side)`)
+	r.WaitText("side: old")
+}
+
 // The summary's tasks rail follows the agent's task tools, its stats the turn, and the title bar shows the
 // plan's usage windows as the provider reports them.
 func TestTasksRailStatsAndUsage(t *testing.T) {

@@ -125,8 +125,8 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.status.rule(spec, fn?)", Doc: "A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it. Takes its spec too: { name, run = fn }.", Cap: "ui"},
 	},
 	"thread": {
-		{Call: "oriel.thread.list()", Doc: "The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.", Cap: "agent.read"},
-		{Call: "oriel.thread.new(opts?)", Doc: "Open a request: with opts.body, send it now ({ body, file, line, urgent, btw }; no file is about the whole change); without, open a thread on the editor's line at the cursor to write it.", Cap: "agent.prompt"},
+		{Call: "oriel.thread.list()", Doc: "The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, side (old on the file's lines before the change, a diff's removed ones; new otherwise), busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.", Cap: "agent.read"},
+		{Call: "oriel.thread.new(opts?)", Doc: "Open a request: with opts.body, send it now ({ body, file, line, side, urgent, btw }; no file is about the whole change; side = ", Cap: "agent.prompt"},
 		{Call: "oriel.thread.open(id)", Doc: "Show a request by id in the Requests view.", Cap: "agent.prompt"},
 		{Call: "oriel.thread.reply(id, body, opts?)", Doc: "Reply to a request by id: opts { urgent (interrupts the agent's turn), btw (a side question, answered by a fork) }.", Cap: "agent.prompt"},
 		{Call: "oriel.thread.resolve(id, status?)", Doc: "Resolve a request by id, or set its status: open, resolved, deferred or dismissed.", Cap: "agent.prompt"},

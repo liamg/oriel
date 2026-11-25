@@ -24,7 +24,8 @@ are reviewed. A click on the header shows or folds it. Plugins can add a column 
 Each hunk starts with git's `@@` line and the function, method or type it's in. Removed lines are red and added
 ones green, the words that changed in a changed line marked brighter. A click selects a line: it's filled and edged
 A click on a line selects it and starts a comment on it: a thread opens between the lines, its composer saying who
-it's for (in a review, the author or the agent; otherwise the agent). The selected line is filled and edged in the
+it's for (in a review, the author or the agent; otherwise the agent). On a removed line, or a range of only removed
+lines, the thread is on the old file's lines, as GitHub's left side is, and shows under them. The selected line is filled and edged in the
 accent, and the foot of the diff says where it is and the keys that act on it (`gc` comment, `ga` ask the agent,
 `o` open it in the editor, `?` explain). A right-click selects it too, with a menu: **Open in file** (the whole
 file in the editor, at that line), **Comment…**, **Ask the agent…**, **Explain** and **Copy reference** (`path:line`).

@@ -26,6 +26,32 @@ func (st *diffState) picked(s diffSel) bool {
 	return s.line >= first && s.line <= last
 }
 
+// selRemoved is the old side's line (1-based) of the selection and the last line of its range, when every line of it
+// is removed: the new file has no such lines, so a thread on them is on the old side.
+func (st *diffState) selRemoved() (path string, line, end int, ok bool) {
+	h, found := st.hunkAt(st.sel)
+	if !found {
+		return "", 0, 0, false
+	}
+	first, last := st.sel.line, st.sel.line
+	if f, l, ok := st.spanned(); ok {
+		first, last = f, l
+	}
+	if first < 0 || last >= len(h.Lines) {
+		return "", 0, 0, false
+	}
+	for _, l := range h.Lines[first : last+1] {
+		if l.Op != '-' {
+			return "", 0, 0, false
+		}
+	}
+	line, end = h.Lines[first].Old, h.Lines[last].Old
+	if end == line {
+		end = 0
+	}
+	return filepath.Join(st.root, filepath.FromSlash(st.sel.file)), line, end, true
+}
+
 // selLine is the new side's line (1-based) of the selection and the last line of its range: the line selected, or
 // the hunk's changed lines.
 func (st *diffState) selLine() (path string, line, end int, ok bool) {
