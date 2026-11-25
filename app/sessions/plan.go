@@ -90,15 +90,7 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "plan-docs", Icon: "doc", Title: "Plan docs", Command: "view.toggle", Args: planDocsArgs(),
 		Order: 45, Shown: func(string) bool { se, ok := x.front(); return ok && se.Planning() }}))
-	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
-		if _, ok := ev.(core.SessionFocused); ok {
-			h.Do(x.openIfPlanning)
-		}
-	}))
 	x.Add(h.Contribute(uireg.AnchorPlace{Name: "plan", Label: "Open in plan", Shows: x.showsDoc, Open: x.openDoc}))
-	h.Do(x.openIfPlanning)
-	// Once the window is on a planning session's directory, after its layout comes back.
-	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))
 	return nil
 }
 
@@ -144,17 +136,6 @@ func (x *Plan) state(id core.SessionID) *planState {
 		x.by[id] = st
 	}
 	return st
-}
-
-// openIfPlanning shows the plan when the window is on a session that's planning.
-func (x *Plan) openIfPlanning() {
-	se, ok := x.front()
-	if !ok || !se.Planning() || filepath.Clean(x.h.Here().Project) != filepath.Clean(kit.SessionDir(se)) {
-		return
-	}
-	if err := x.h.Run(context.Background(), "plan.open", nil); err != nil {
-		x.h.Log().Warn("plan", "err", err)
-	}
 }
 
 // open shows the plan's views: the doc in the main area, the docs docked at the left.
