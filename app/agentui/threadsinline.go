@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/edits"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -227,7 +228,7 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 				Args: registry.Args{"thread": string(id)}, Tooltip: t.Heading()})
 		}
 		d := uireg.Decoration{Kind: uireg.Block, Line: line, Priority: 20, Reveal: reveal, Node: &ui.Func{Key: "thread." + string(id), Fn: func(c *ui.Ctx) {
-			x.inlineThread(c, id, !present)
+			x.inlineThread(c, id)
 		}}}
 		if t.Open() {
 			d.Style = tok.Name()
@@ -288,9 +289,9 @@ func inlineCard(c *ui.Ctx, label string, body func(c *ui.Ctx, width float32)) {
 	})
 }
 
-// inlineThread is a thread's card: between the editor's lines (with open, for its request), or in a presentation's
-// margin, where a closed one folds to a line.
-func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
+// inlineThread is a thread's card: between the editor's lines, or in a presentation's margin, where a closed one folds
+// to a line.
+func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID) {
 	se, ok := x.front()
 	if !ok {
 		return
@@ -317,7 +318,7 @@ func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 		if err := x.send(context.Background(), st, id, false); err != nil {
 			kit.NotifyError(x.h, "requests", err, true)
 		}
-	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) },
+	}, threadCardOpts{Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) },
 		Recent: x.recentComments(), Expanded: x.expanded[id], Expand: func(on bool) { x.expanded[id] = on }})
 }
 
@@ -369,7 +370,6 @@ func reopenLink(c *ui.Ctx, h plugin.Host, id core.ThreadID) {
 
 // threadCardOpts is what a thread's card offers beside resolving it and replying.
 type threadCardOpts struct {
-	Open  bool   // a link to its request in the main area
 	Defer bool   // deferring it, so it doesn't hold up Start work
 	Focus bool   // its reply field takes focus
 	Fold  func() // collapses a closed thread back to its line
@@ -418,7 +418,8 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 				widget.Chip(c, "status", word, th.C(tok), "agent/requests#inline")
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if o.Open && widget.Link(c, "open", "open ↗", "agent/requests#inline") {
+			if widget.IconButton(c, "open", "", widget.IconButtonOpts{Label: "Full view", Tooltip: "Open the thread in full view, in Requests",
+				Help: "agent/requests#inline", Size: 20, Icon: func(c *ui.Ctx, fg render.Color) { icons.Icon(c, h, "icon", "requests", 13, fg) }}) {
 				run("request.open", registry.Args{"thread": string(id)})
 			}
 			if t.Open() && o.Defer && widget.Link(c, "defer", "defer", "agent/plan#readiness") {

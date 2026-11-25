@@ -281,11 +281,22 @@ clip 484,50 1116x924 r 0
         text "· L14 ·" @1232.8732,455.78 #7c7566 JetBrains Mono 10.5
         rect 1287.0294,443.73 73.130005x16.540009 fill #ff5f6d12 radius 10 stroke 1 #ff5f6d59
         text "NEEDS YOU" @1294.0294,455.42 #ff5f6d JetBrains Mono 9.5
-        text "defer" @1399.9219,455.36523 #ffd23f Inter 12
-        rect 1399.9219,459.25977 30.703125x1 fill #ffd23fb3
-        text "resolve" @1438.625,455.36523 #ffd23f Inter 12
-        rect 1438.625,459.25977 42.375x1 fill #ffd23fb3
-        text "t:a91c" @1489,455.6 #4f4a40 JetBrains Mono 10
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 4 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        text "defer" @1404.1594,455.36523 #ffd23f Inter 12
+        rect 1404.1594,459.25977 30.703125x1 fill #ffd23fb3
+        text "resolve" @1442.8625,455.36523 #ffd23f Inter 12
+        rect 1442.8625,459.25977 42.375x1 fill #ffd23fb3
+        text "t:a9…" @1493.2375,455.6 #4f4a40 JetBrains Mono 10
         rect 1152.92,469 384.07996x1 fill #332f27
         rect 1164.92,480 28x28 fill #ff9b45 radius 6
         text "LG" @1171.5901,497.42 #141006 JetBrains Mono 9.5
@@ -326,14 +337,25 @@ clip 484,50 1116x924 r 0
       clip 1152.92,755.80255 384.07996x237.94855 r 6
         rect 1164.92,769.30255 7x7 fill #4cc9f0 radius 3.5
         text "Thread" @1179.92,777.3497 #ece6d8 Inter 12.5
-        text "· L31 ·" @1232.8732,776.5826 #7c7566 JetBrains Mono 10.5
-        rect 1287.0294,764.53253 119.119995x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
-        text "CLAUDE · WORKING" @1294.0294,776.22253 #4cc9f0 JetBrains Mono 9.5
-        text "defer" @1422.1494,776.1678 #ffd23f Inter 12
-        rect 1422.1494,780.0623 30.703125x1 fill #ffd23fb3
-        text "resolve" @1460.8525,776.1678 #ffd23f Inter 12
-        rect 1460.8525,780.0623 42.375x1 fill #ffd23fb3
-        text "t…" @1511.2275,776.4026 #4f4a40 JetBrains Mono 10
+        text "· L…" @1232.8732,776.5826 #7c7566 JetBrains Mono 10.5
+        rect 1272.8019,764.53253 119.119995x16.539978 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+        text "CLAUDE · WORKING" @1279.8019,776.22253 #4cc9f0 JetBrains Mono 9.5
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 4 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 2 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        path 6 segments stroke 1.25 #7c7566
+        text "defer" @1435.9219,776.1678 #ffd23f Inter 12
+        rect 1435.9219,780.0623 30.703125x1 fill #ffd23fb3
+        text "resolve" @1474.625,776.1678 #ffd23f Inter 12
+        rect 1474.625,780.0623 42.375x1 fill #ffd23fb3
+        text "" @1525,776.4026 #4f4a40 JetBrains Mono 10
         rect 1152.92,789.80255 384.07996x1 fill #332f27
         rect 1164.92,800.80255 28x28 fill #ff9b45 radius 6
         text "LG" @1171.5901,818.22253 #141006 JetBrains Mono 9.5

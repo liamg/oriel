@@ -95,6 +95,7 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 			h.Do(x.openIfPlanning)
 		}
 	}))
+	x.Add(h.Contribute(uireg.AnchorPlace{Name: "plan", Label: "Open in plan", Shows: x.showsDoc, Open: x.openDoc}))
 	h.Do(x.openIfPlanning)
 	// Once the window is on a planning session's directory, after its layout comes back.
 	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))
@@ -588,6 +589,36 @@ func (x *Plan) document(c *ui.Ctx, vc uireg.ViewCtx, se core.SessionState, st *p
 		Root: root, Source: func(line int) {
 			x.run("editor.open", registry.Args{"path": d.path, "line": line + 1})
 		}}, vc.Width)
+}
+
+// showsDoc says path is one of session's plan docs: a markdown file at its workspace root, of a session with a plan.
+func (x *Plan) showsDoc(session, path string) bool {
+	ref, ok := x.h.Session(core.SessionID(session))
+	if !ok {
+		return false
+	}
+	se := ref.Snapshot()
+	return se.StartWork && se.Dir != "" && filepath.Clean(filepath.Dir(path)) == filepath.Clean(se.Dir) &&
+		strings.EqualFold(filepath.Ext(path), ".md")
+}
+
+// openDoc shows the plan at doc path, its 1-based line at the top.
+func (x *Plan) openDoc(ctx registry.Ctx, session, path string, line int) error {
+	if x.h.State().Focus != core.SessionID(session) {
+		return fmt.Errorf("session %s isn't in front", session)
+	}
+	if err := x.open(ctx, filepath.Base(path)); err != nil {
+		return err
+	}
+	if present, ok := kit.PresenterOf(x.h); ok && line > 0 {
+		st := x.state(core.SessionID(session))
+		name := filepath.Base(path)
+		if st.present[name] == nil {
+			st.present[name] = present.NewPresent()
+		}
+		st.present[name].ScrollTo(line - 1)
+	}
+	return nil
 }
 
 // planDocsArgs are view.open's args for the Plan docs panel: in the sidebar, alone and fixed.
