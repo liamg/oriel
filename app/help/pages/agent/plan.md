@@ -10,8 +10,8 @@ A plan session drafts the change as markdown docs before any code is written: `P
 piece, at the workspace root. You read them here as documents, comment on their lines, and press **Start work** when
 the plan is right. The docs hold decisions only: what the agent can't settle from the code or your request, it asks
 you in the plan thread first, one question at a time with options to pick from, each answer shaping the next, and
-writes the plan from your answers. It opens by itself when a plan session comes to the front; `plan.open` opens it
-again.
+writes the plan from your answers. It opens by itself the first time a plan session comes to the front; after that
+the session keeps your place (Requests, say) when you come back to it, and `plan.open` opens the plan again.
 
 ## Header
 
