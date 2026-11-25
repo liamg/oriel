@@ -121,6 +121,19 @@ func TestScriptSlotsInTheEnvironment(t *testing.T) {
 	}
 }
 
+// A #! script runs with no file of its own, so a temp folder mounted noexec doesn't stop it and a timeout leaves
+// nothing behind. Its stdin isn't its code.
+func TestScriptWithAShebangNeedsNoTempFile(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Who": "#!/bin/sh -e\nread -r line || true\nprintf '%s|%s' \"$line\" \"$0\" > who.txt"})
+	tmp := os.TempDir()
+	a.Run("scripts.run", registry.Args{"name": "Who"})
+	noticeWith(a, "Who finished")
+	stdin, file, _ := strings.Cut(read(t, filepath.Join(ws, "who.txt")), "|")
+	if stdin != "" || strings.HasPrefix(file, tmp) {
+		t.Errorf("stdin = %q, run from %q in the temp folder %q", stdin, file, tmp)
+	}
+}
+
 // A script that fails is an error notice with why and its last lines.
 func TestScriptThatFails(t *testing.T) {
 	a, _ := scene(t, "tilt", map[string]string{"Boom": "echo boom; exit 3"})
@@ -158,6 +171,16 @@ func TestUnknownSlot(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
 		t.Error("it ran")
+	}
+}
+
+// {{name}} is a literal {name}, for awk, jq and the like, and isn't taken for a slot.
+func TestScriptWithALiteralBrace(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Lit": `echo x | awk '{{print}}' > lit.txt; printf '%s|%s' "{{nope}}" {session} >> lit.txt`})
+	a.Run("scripts.run", registry.Args{"name": "Lit"})
+	noticeWith(a, "Lit finished")
+	if got, want := read(t, filepath.Join(ws, "lit.txt")), "x\n{nope}|"+ws; got != want {
+		t.Errorf("lit.txt = %q, want %q", got, want)
 	}
 }
 

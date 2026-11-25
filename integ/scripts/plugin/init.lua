@@ -6,24 +6,26 @@ L.option{ name = "plugin.scripts.list", type = "map",
   help = "Your scripts, by name: shell code, run with bash (sh without it), or under the interpreter a first #! line "
     .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
     .. "checkout (the workspace when it has none). A script naming {repo} or "
-    .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's. Each is in the environment too, "
-    .. "unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
+    .. "{repo_name} runs once per project, in its checkout. ${x} stays the shell's, and {{name}} is a literal "
+    .. "{name}. Each is in the environment too, unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
 
 local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
 local TAIL = 5      -- lines of output a notice has room for
 
--- RUNNER runs the code in $1, with each NAME=value after it in its environment. Code with a #! line goes through a
--- file, so the OS picks its interpreter: the plugin may only start sh itself.
+-- RUNNER runs the code in $1, with each NAME=value after it in its environment. Code with a #! line goes to the
+-- interpreter that line names, read from fd 3: no temp file to need an exec mount or outlive a killed run, and the
+-- script's stdin stays its own. The plugin may only start sh itself.
 local RUNNER = [[
 exec 2>&1
 code=$1; shift
 for kv in "$@"; do export "$kv"; done
 case $code in
 '#!'*)
-  f=$(mktemp) || exit 1
-  trap 'rm -f "$f"' EXIT
-  printf '%s' "$code" > "$f" && chmod +x "$f" && "$f" ;;
+  line=${code%%"
+"*}
+  set -f; set -- ${line#'#!'}; set +f
+  printf '%s' "$code" | "$@" /dev/fd/3 3<&0 < /dev/null ;;
 *)
   if command -v bash > /dev/null 2>&1; then exec bash -c "$code"; fi
   exec sh -c "$code" ;;
@@ -33,8 +35,17 @@ local function quote(s)
   return "'" .. (s:gsub("'", [['\'']])) .. "'"
 end
 
--- each calls fn(pos, whole, name) for every {name} in code that isn't the shell's ${name}.
+-- LITERAL stands in for an escaped {{name}} while slots are found: no script holds a NUL.
+local LITERAL = "\0"
+
+-- unescaped is code with each {{name}} hidden from the slot patterns.
+local function unescaped(code)
+  return (code:gsub("{{([a-z_]+)}}", LITERAL .. "%1" .. LITERAL))
+end
+
+-- each calls fn(pos, whole, name) for every {name} in code that isn't the shell's ${name} or an escaped {{name}}.
 local function each(code, fn)
+  code = unescaped(code)
   for pos, whole, name in code:gmatch("()({([a-z_]+)})") do
     if pos == 1 or code:sub(pos - 1, pos - 1) ~= "$" then
       fn(pos, whole, name)
@@ -55,12 +66,14 @@ local function unknown(code)
 end
 
 local function expand(code, vals)
-  return (code:gsub("()({([a-z_]+)})", function(pos, whole, name)
+  code = unescaped(code)
+  code = code:gsub("()({([a-z_]+)})", function(pos, whole, name)
     if pos > 1 and code:sub(pos - 1, pos - 1) == "$" then
       return whole
     end
     return quote(vals[name])
-  end))
+  end)
+  return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, "{%1}"))
 end
 
 -- tail is the last lines of out, without colors or carriage returns.

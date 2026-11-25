@@ -26,6 +26,9 @@ Each script is a row in the omnibox. Type `$` first to see only your scripts (`$
 When it ends, a notice says whether it worked, with the last five lines it printed. It runs on your machine, in
 the session's workspace, for up to ten minutes.
 
+A job it leaves running in the background (`tilt up &`) carries on once the script ends, but the script's output
+closes then, and a job still printing to it is stopped. Send its output elsewhere: `tilt up > /dev/null 2>&1 &`.
+
 ## Slots {#slots}
 
 These are filled in before the code runs, each in single quotes, so a value with spaces stays one word. `${x}` is
@@ -38,7 +41,8 @@ left for the shell.
 - `{repo_name}`: the project's name.
 
 A script that names `{repo}` or `{repo_name}` runs for one project at a time, in its checkout: the omnibox has a row
-for it per project. Any other `{name}` is a mistake, and the script doesn't run.
+for it per project. Any other `{name}` is a mistake, and the script doesn't run. Write `{{name}}` for a literal
+`{name}`, as awk and jq want: `awk '{{print}}'`.
 
 The quotes are a shell's. A script in another language reads the same values from its environment, unquoted:
 `ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and `ORIEL_SCRIPT_REPO` and
@@ -47,4 +51,5 @@ The quotes are a shell's. A script in another language reads the same values fro
 ## Which shell {#shell}
 
 The code runs with bash, or sh where there's no bash. Start it with a `#!` line to pick another
-(`#!/usr/bin/env fish`, `#!/usr/bin/env python3`): it's written to a file and run as a program.
+(`#!/usr/bin/env fish`, `#!/usr/bin/env python3`): that interpreter runs the code, read from a pipe rather than a
+file, so `$0` isn't a path to the script.
