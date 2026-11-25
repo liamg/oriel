@@ -133,9 +133,10 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
 	x.unfolded = map[core.ThreadID]bool{}
 	x.expanded = map[core.ThreadID]bool{}
-	for _, c := range x.commands() {
+	for _, c := range append(x.commands(), x.proposalCommand()) {
 		x.Add(h.Command(c))
 	}
+	x.Add(h.Contribute(uireg.ThreadFoot{Name: "proposal", Draw: x.proposalFoot}))
 	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,
 		When: registry.MenuWhen{View: kit.RequestView, Help: panes.HelpTab}, Command: "request.rename"}))

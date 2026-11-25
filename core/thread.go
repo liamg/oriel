@@ -84,6 +84,9 @@ type Comment struct {
 	Edited    bool       `json:"edited,omitempty"`    // changed where it came from since it was first mirrored
 	Mine      bool       `json:"mine,omitempty"`      // mirrored, and written there by the user: not the agent's to answer
 	Reactions []Reaction `json:"reactions,omitempty"` // mirrored: the emoji people reacted with where it came from
+	// Proposes is an agent's reply offering a change it hasn't made: while it's the thread's last word, the thread
+	// offers Do it.
+	Proposes bool `json:"proposes,omitempty"`
 }
 
 // OriginCodeHost is a thread mirrored from a code host's pull request (HostThread.Host names it).
