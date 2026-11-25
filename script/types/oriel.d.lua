@@ -51,7 +51,7 @@ function oriel.asset(path) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).
+--- Run a program, argv as a list, and return what it printed (its last 64 KiB), or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started.
 ---@param argv string|string[]
 ---@param opts? table
 ---@return string?,string?

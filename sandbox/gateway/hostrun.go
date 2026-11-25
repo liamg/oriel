@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/tailbuf"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -43,10 +43,13 @@ func HostRun(ctx context.Context, dir, command string) mcp.CallResult {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, hostShell(), "-c", command)
 	cmd.Dir = dir
-	var out tailBuffer
-	cmd.Stdout, cmd.Stderr = &out, &out
+	out := &tailbuf.Buffer{Max: hostRunCap}
+	cmd.Stdout, cmd.Stderr = out, out
 	err := cmd.Run()
 	text := StripANSI(out.String())
+	if out.Cut() {
+		text = "…(earlier output dropped)\n" + text
+	}
 	switch {
 	case ctx.Err() == context.DeadlineExceeded:
 		return mcp.TextResult(fmt.Sprintf("Ran on the host and timed out after %s.\n\n%s", hostRunTimeout, text), true)
@@ -54,31 +57,4 @@ func HostRun(ctx context.Context, dir, command string) mcp.CallResult {
 		return mcp.TextResult(fmt.Sprintf("Ran on the host and failed (%v).\n\n%s", err, text), true)
 	}
 	return mcp.TextResult("Ran on the host.\n\n"+text, false)
-}
-
-// tailBuffer keeps the last hostRunCap bytes written to it.
-type tailBuffer struct {
-	mu  sync.Mutex
-	b   []byte
-	cut bool
-}
-
-func (t *tailBuffer) Write(p []byte) (int, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.b = append(t.b, p...)
-	if len(t.b) > hostRunCap {
-		t.b = t.b[len(t.b)-hostRunCap:]
-		t.cut = true
-	}
-	return len(p), nil
-}
-
-func (t *tailBuffer) String() string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.cut {
-		return "…(earlier output dropped)\n" + string(t.b)
-	}
-	return string(t.b)
 }

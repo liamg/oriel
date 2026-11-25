@@ -548,6 +548,19 @@ func TestLuaExecInBackground(t *testing.T) {
 	}
 }
 
+// A program that prints a lot is held to the end of what it printed, so a long run can't fill memory.
+func TestLuaExecKeepsTheEndOfALongOutput(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	s := apptest.LuaScene(t, "")
+	s.Lua(`L.exec_async({ "sh", "-c", "head -c 500000 /dev/zero | tr '\\0' a; echo END" }, {}, function(out, err) long = out end)`)
+	s.Until("the output", func() bool { return apptest.LuaGlobal(lua(s).VM(), "long") != nil })
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "long").(string); len(out) > 64*1024 || !strings.HasSuffix(out, "aEND\n") {
+		t.Errorf("kept %d bytes ending %q", len(out), out[max(0, len(out)-10):])
+	}
+}
+
 // A child left holding the program's output doesn't hold up fn: the timeout stops everything the program started,
 // and a program that ends on time is done though a child it left in the background runs on. Once the program ends
 // its output closes, so a child that keeps printing sends its output elsewhere.

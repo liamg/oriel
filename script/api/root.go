@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/procgroup"
+	"github.com/liamg/oriel/internal/tailbuf"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -190,7 +190,7 @@ func (r Root) Asset(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns="string?,string?" cap=exec
+//oriel:api doc="Run a program, argv as a list, and return what it printed (its last 64 KiB), or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started." optional=opts returns="string?,string?" cap=exec
 func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
 	run, err := r.program(argv, opts)
 	if missing(err) {
@@ -241,6 +241,10 @@ func (r Root) ExecAsync(argv []string, opts any, fn any) error {
 // execWaitDelay is how long a program's output may stay open after it ends, held by a child it left running.
 const execWaitDelay = time.Second
 
+// execOutputMax is how much of a program's output, and of its stderr, is kept: the end of it, so a long run can't
+// fill memory.
+const execOutputMax = 64 * 1024
+
 // program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
 func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
@@ -273,11 +277,11 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		procgroup.Own(cmd)
 		cmd.Cancel = func() error { return procgroup.Kill(cmd) }
 		cmd.WaitDelay = execWaitDelay
-		var out, errb bytes.Buffer
-		cmd.Stdout, cmd.Stderr = &out, &errb
+		out, errb := &tailbuf.Buffer{Max: execOutputMax}, &tailbuf.Buffer{Max: execOutputMax}
+		cmd.Stdout, cmd.Stderr = out, errb
 		// ErrWaitDelay alone means the program ended well and left a child in the background holding its output.
 		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
-			if ctx.Err() == context.DeadlineExceeded {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				err = fmt.Errorf("timed out after %v", limit)
 			}
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
