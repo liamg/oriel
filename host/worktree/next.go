@@ -15,7 +15,9 @@ import (
 )
 
 // NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
-// It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
+// What's on the branch since its PR (uncommitted changes, and commits neither pushed, on the base nor the PR's) is
+// the next PR's, so it comes along; where git can't carry it (a conflict with the base), the project is left as it
+// was, on its branch, and the error says why.
 func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 	se, p, repo, err := hostcore.ProjectRepo(ctx, x.env.Git, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -28,24 +30,19 @@ func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 	if err != nil {
 		return err
 	}
-	if dirty, err := repo.Dirty(ctx); err != nil {
+	dirty, err := repo.Dirty(ctx)
+	if err != nil {
 		return err
-	} else if dirty {
-		return fmt.Errorf("%s has uncommitted changes on %s: commit or discard them first", p.Name, branch)
 	}
 	main := gitx.Repo{Dir: p.Repo}
 	base := main.SyncedBase(ctx)
-	n, err := leftBehind(ctx, repo, branch, base, r.Head)
+	carry, err := leftBehind(ctx, repo, branch, base, r.Head)
 	if err != nil {
 		return fmt.Errorf("%s: %w", p.Name, err)
 	}
-	if n > 0 {
-		return fmt.Errorf("%s has %s on %s that aren't pushed or on %s: push them, or drop them, first",
-			p.Name, words.Counted(n, "commit"), branch, strings.TrimPrefix(base, "origin/"))
-	}
 	fresh := main.FreshBranch(ctx, BranchName(hostcore.WhoAmI(ctx), se.Ticket, se.ID)+"-next")
-	if err := repo.CheckoutNew(ctx, fresh, base); err != nil {
-		return fmt.Errorf("%s: %w", p.Name, err)
+	if err := moveOnto(ctx, repo, branch, fresh, base, carry, dirty); err != nil {
+		return fmt.Errorf("%s stays on %s: %w", p.Name, branch, err)
 	}
 	done := r.Done
 	done.Project, done.Branch, done.Closed = p.Name, branch, x.env.Now().UTC()
@@ -69,13 +66,59 @@ func (x *Worktrees) NextPR(ctx context.Context, r hostapi.NextPRReq) error {
 	return nil
 }
 
-// leftBehind counts the commits on branch that are on none of base, origin's copy of it, or head.
-func leftBehind(ctx context.Context, repo gitx.Repo, branch, base, head string) (int, error) {
+// leftBehind are the commits on branch that are on none of base, origin's copy of it, or head, oldest first.
+func leftBehind(ctx context.Context, repo gitx.Repo, branch, base, head string) ([]string, error) {
+	args := []string{"rev-list", "--reverse", branch}
 	var not []string
 	for _, ref := range []string{base, "refs/remotes/origin/" + branch, head} {
 		if ref != "" && repo.Verify(ctx, ref) {
 			not = append(not, ref)
 		}
 	}
-	return repo.CountCommits(ctx, branch, not...)
+	if len(not) > 0 {
+		args = append(append(args, "--not"), not...)
+	}
+	out, err := repo.Run(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Fields(out), nil
+}
+
+// moveOnto checks out fresh, cut from base, with the commits carry picked onto it and, when dirty, the uncommitted
+// changes brought over. Where git can't, it puts the worktree back on branch as it was.
+func moveOnto(ctx context.Context, repo gitx.Repo, branch, fresh, base string, carry []string, dirty bool) error {
+	if dirty {
+		if _, err := repo.Run(ctx, "stash", "push", "--include-untracked", "--quiet", "-m", "oriel: carried to "+fresh); err != nil {
+			return fmt.Errorf("couldn't put its uncommitted changes aside: %w", err)
+		}
+	}
+	back := func(why string, err error) error {
+		_, _ = repo.Run(ctx, "cherry-pick", "--abort")
+		_, _ = repo.Run(ctx, "reset", "--hard", "--quiet")
+		if dirty { // what a stash that didn't apply left of its untracked files: the stash still has them
+			_, _ = repo.Run(ctx, "clean", "-fdq")
+		}
+		_, _ = repo.Run(ctx, "checkout", "--quiet", "--force", branch)
+		_, _ = repo.Run(ctx, "branch", "--quiet", "-D", fresh)
+		if dirty {
+			_, _ = repo.Run(ctx, "stash", "pop", "--quiet")
+		}
+		return fmt.Errorf("%s: %w", why, err)
+	}
+	if err := repo.CheckoutNew(ctx, fresh, base); err != nil {
+		return back("couldn't cut "+fresh, err)
+	}
+	if len(carry) > 0 {
+		if _, err := repo.Run(ctx, append([]string{"cherry-pick", "--allow-empty"}, carry...)...); err != nil {
+			return back(fmt.Sprintf("its %s since the PR %s on %s", words.Counted(len(carry), "commit"), words.Plural(len(carry), "doesn't apply", "don't apply"),
+				strings.TrimPrefix(base, "origin/")), err)
+		}
+	}
+	if dirty {
+		if _, err := repo.Run(ctx, "stash", "pop", "--quiet"); err != nil {
+			return back("its uncommitted changes don't apply on "+strings.TrimPrefix(base, "origin/"), err)
+		}
+	}
+	return nil
 }

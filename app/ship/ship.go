@@ -75,7 +75,7 @@ type Ship struct {
 	seenPRs map[string]bool // the PRs PrSeen has fired for, by URL
 	merged  map[string]bool // the PRs PrMerged has fired for, by URL
 	opened  map[string]bool // the PRs read open by this process, by URL
-	movedOn map[string]bool // the merged PRs whose next PR has been started or asked about, by URL
+	movedOn map[string]bool // the merged PRs whose next PR has been started, or is waiting, by URL
 	cache   prCache
 
 	// On the loop: what's typed, by session/project.
@@ -83,6 +83,7 @@ type Ship struct {
 	prs      map[string]*prForm
 	renaming map[string]*renameForm // the Git panel's branch names being typed
 	merging  *mergeAsk
+	waiting  map[core.SessionID]map[string]*registry.PR // merged while the agent worked: moved on when its turn ends
 }
 
 // shipReport is a session's projects as last read, and the steps running on them.
@@ -146,6 +147,10 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 			x.follow()
 		case core.DraftSaved:
 			x.readSoon(ev.Session, ev.Project, false)
+		case core.AgentChanged:
+			if !ev.Agent.Working {
+				h.Do(func() { x.turnEnded(ev.ID) })
+			}
 		}
 	}))
 	x.follow()
@@ -375,7 +380,8 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 	x.h.Redraw()
 }
 
-// fire fires PrSeen and PrMerged for what a read found new, asks about the next PR, and follows the PRs open now.
+// fire fires PrSeen and PrMerged for what a read found new, moves on from the PRs merged elsewhere, and follows the
+// PRs open now.
 func (x *Ship) fire(id core.SessionID, seen []prui.PrSeen, merged []prui.PrMerged, asks []shipRead) {
 	if len(seen)+len(merged)+len(asks) > 0 {
 		x.h.Do(func() {
@@ -386,7 +392,7 @@ func (x *Ship) fire(id core.SessionID, seen []prui.PrSeen, merged []prui.PrMerge
 				x.h.Fire(context.Background(), "PrMerged", ev.URL, &ev)
 			}
 			for _, s := range asks {
-				x.askNextPR(id, s, s.PR)
+				x.afterMerge(id, s.Project, s.PR)
 			}
 		})
 	}
