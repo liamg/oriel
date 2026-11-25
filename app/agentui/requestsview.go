@@ -235,7 +235,7 @@ func (x *Requests) requestHeader(c *ui.Ctx, se core.SessionState, t core.Thread,
 		if !has {
 			return
 		}
-		if widget.Button(c, "anchor", "Open in editor ↗", widget.ButtonOpts{Disabled: t.Anchor == nil, Help: "agent/requests#request"}) {
+		if widget.Button(c, "anchor", x.anchorLabel(se, t)+" ↗", widget.ButtonOpts{Disabled: t.Anchor == nil, Help: "agent/requests#request"}) {
 			x.run("request.anchor", nil)
 		}
 		diff := registry.Args{}
@@ -308,7 +308,7 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 			c.Text("l", span, widget.MonoFont(11, th.C(theme.FgGhost)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
-			if widget.Link(c, "open", "open in editor ↗", "agent/requests#request") {
+			if widget.Link(c, "open", strings.ToLower(x.anchorLabel(se, t))+" ↗", "agent/requests#request") {
 				x.run("request.anchor", registry.Args{"line": at + 1})
 			}
 		})

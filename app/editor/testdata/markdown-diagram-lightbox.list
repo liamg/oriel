@@ -196,6 +196,17 @@ clip 44,50 1556x924 r 0
           text "· L5 ·" @980.9531,307.78 #7c7566 JetBrains Mono 10.5
           rect 1028.5156,295.73 40.28003x16.540009 fill #7c756612 radius 10 stroke 1 #7c756659
           text "OPEN" @1035.5156,307.42 #7c7566 JetBrains Mono 9.5
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 4 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 2 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
+          path 6 segments stroke 1.25 #7c7566
           text "resolve" @1282.625,307.36523 #ffd23f Inter 12
           rect 1282.625,311.25977 42.375x1 fill #ffd23fb3
           text "t:t000" @1333,307.6 #4f4a40 JetBrains Mono 10

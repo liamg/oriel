@@ -29,7 +29,8 @@ Starts a request that isn't anchored to a line (`⌘N` in the list). It goes to 
 Its tab carries its name; the header shows only its state. Right-click the tab for **Rename…**, which edits the name
 in the header. A session started from a request is named by a small model
 (Claude's Haiku), and its first request shares the name; `sessions.auto_name` turns that off. The anchored code at the top, where it is now (it follows edits), then the conversation: your prompt as markdown with
-what you pasted, and the agent's replies. **Open in editor**, in the header or on the code, goes to the anchor, and a
+what you pasted, and the agent's replies. **Open in editor**, in the header or on the code, goes back to the anchor
+with the thread in view (**Open in plan** for a plan's doc, which opens in the plan), and a
 click on one of the code's lines goes to that line; **Resolve** closes the request and
 completes the tasks it asked for. At the right: where it is and who has it, the files it changed, the tasks and
 requests it spawned, and other requests about the same file.
@@ -84,7 +85,7 @@ on the line itself does the same. `ga` does the same on the cursor's line (`gc` 
 **Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the selection, or on the place
 clicked, and the agent is told its line and column (`round.go:4:7`, or `round.go:3:6-4:2` for a selection), and its header names the line (`L4`, or `L3–4` for a selection): `⏎` sends
 it (or **Ask**, **Comment** for the author, under the field), `⇧⏎` starts a new line, `Esc` (or **Cancel**) drops it. Open threads show under their line with the agent's state, and take replies there
-the same way.
+the same way. **Full view** (the Requests icon) in a thread's header, between the lines or in a plan's margin, opens it here as a request.
 
 ## Summary
 
