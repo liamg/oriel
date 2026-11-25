@@ -162,21 +162,23 @@ once nothing in its worktrees is uncommitted.
 branch (origin's, as a local branch: `main` here) on this machine, after asking in a dialog in the middle of the window. It's a fast-forward where it can be,
 else a merge commit; one that would conflict is refused, naming the files, and nothing changes. Where `main` is checked
 out (your own checkout, say), that checkout moves to it, and only when it has no uncommitted changes. Nothing is
-pushed: push `main` yourself when you're ready. Uncommitted work on the branch stays where it is.
+pushed: push `main` yourself when you're ready. Uncommitted work on the branch isn't merged: it comes along to the next PR.
 
 ## The next PR {#next}
 
-Once a project's PR is merged, or closed with nothing left on its branch, **Start next PR** (`ship.next_pr.start`) moves it
-on: it brings the default branch up to date and cuts a fresh branch from it, in the same worktree. It won't while the
-branch has uncommitted changes, or commits that aren't pushed or on the default branch: commit, push or drop them
-first. A PR closed with work still on its branch offers **Raise a new PR…** instead.
+Once a project's PR is merged, it moves on to the next PR by itself, with nothing asked: it brings the default branch
+up to date and cuts a fresh branch from it, in the same worktree, whether the PR was merged from Oriel (**Merge…**,
+**Merge into main**) or on GitHub. With the agent mid-turn, it waits for the turn to end, so the branch doesn't move
+under it. What's on the old branch since the PR comes along: uncommitted changes, and commits that aren't pushed or
+the PR's. Where git can't carry them (they conflict with the default branch), the project stays on its branch as it
+was and a notice says why, with **Start next PR** (`ship.next_pr.start`) to try again once that's sorted. A PR closed
+with work still on its branch offers **Raise a new PR…** instead; one closed with nothing left offers **Start next
+PR**.
 
-Merged from Oriel (**Merge…**, or **Merge into main**) with the agent idle and nothing uncommitted, the next PR starts
-by itself. Merged on GitHub, or with the agent mid-turn or changes uncommitted, a question asks first. After **Merge
-into main**, the new branch starts from your local `main`: push `main` before raising its PR, or the PR would show the
-merged commits again (the Pull request panel says **main pushed · n to push**). A project that moved on from a merged
-PR still counts as merged for **Finish session**; with `session.archive_on_merge` on, a merge that leaves every PR
-merged archives the session instead of starting the next PR.
+After **Merge into main**, the new branch starts from your local `main`: push `main` before raising its PR, or the PR
+would show the merged commits again (the Pull request panel says **main pushed · n to push**). A project that moved
+on from a merged PR still counts as merged for **Finish session**; with `session.archive_on_merge` on, a merge that
+leaves every PR merged archives the session instead of starting the next PR.
 
 **Previous** on the PR tab and the Ship page lists the PRs the session has moved on from, each with where it ended;
 click one to open it on its code host.

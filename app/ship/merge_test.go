@@ -3,6 +3,7 @@ package ship_test
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/agent"
 	"slices"
 	"strconv"
 	"strings"
@@ -174,21 +175,48 @@ func TestMergeArchivesRatherThanStartingTheNextPR(t *testing.T) {
 	}
 }
 
-// Merged on GitHub, the next PR is asked about, not started: the agent or your edits may be mid-way on the branch.
-func TestMergedOnGitHubAsksToStartTheNextPR(t *testing.T) {
+// Merged on GitHub, the next PR starts by itself, nothing asked: a fresh branch, the merged PR under Previous, and
+// what was uncommitted on the branch brought along.
+func TestMergedOnGitHubStartsTheNextPR(t *testing.T) {
 	s, _, hub, se, pr := raisedScene(t)
 	x := shipOf(s)
 	first, _ := x.ShipOf(se.ID, "search-api")
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"y.go": "package x\n"})
 	hub.Merge("acme/search-api", pr.Number)
 	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the question", func() bool { return strings.Contains(s.Text(), "Start the next PR in search-api") })
-	if len(pastPRs(s, se.ID)) != 0 {
-		t.Fatal("the next PR started without asking")
-	}
-	s.WantFrame(fmt.Sprintf("#%d MERGED", pr.Number), "Not now")
-	s.ClickText("Start next PR")
 	shipSettle(s, t, "the next PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Branch != first.Branch && sh.PR == nil })
 	if p := pastPRs(s, se.ID); len(p) != 1 || p[0].State != "merged" {
+		t.Errorf("past = %+v", p)
+	}
+	if sh, _ := x.ShipOf(se.ID, "search-api"); len(sh.Files) != 1 || sh.Files[0].Path != "y.go" {
+		t.Errorf("the uncommitted file didn't come along: %+v", sh.Files)
+	}
+	if text := s.Text(); strings.Contains(text, "Start next PR") || strings.Contains(text, "Start the next PR") {
+		t.Errorf("the next PR was asked about:\n%s", text)
+	}
+}
+
+// Merged while the agent is mid-turn, the branch doesn't move under it: the next PR starts once its turn ends.
+func TestMergedMidTurnStartsTheNextPROnceTheTurnEnds(t *testing.T) {
+	s, lw, hub, se, pr := raisedScene(t)
+	x := shipOf(s)
+	first, _ := x.ShipOf(se.ID, "search-api")
+	a := lw.Fake.WaitStarted(t)
+	a.Emit(agent.TurnStart{})
+	s.UntilState("the agent working", func(st core.State) bool {
+		sess, ok := st.Session(se.ID)
+		return ok && sess.Snapshot().Agent.Working
+	})
+	hub.Merge("acme/search-api", pr.Number)
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the merge read", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil && sh.PR.Merged })
+	shipQuiet(s)
+	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.Branch != first.Branch {
+		t.Fatalf("the branch moved to %q under the working agent", sh.Branch)
+	}
+	a.Emit(agent.TurnEnd{})
+	shipSettle(s, t, "the next PR, the turn over", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Branch != first.Branch && sh.PR == nil })
+	if p := pastPRs(s, se.ID); len(p) != 1 || p[0].Number != pr.Number {
 		t.Errorf("past = %+v", p)
 	}
 }
@@ -246,15 +274,13 @@ func TestStartingTheNextPRReadsOnlyItsProject(t *testing.T) {
 	x := shipOf(s)
 	first, _ := x.ShipOf(se.ID, "search-api")
 	hub.Merge("acme/search-api", pr.Number)
-	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the question", func() bool { return strings.Contains(s.Text(), "Start the next PR in search-api") })
 	shipQuiet(s)
 	whole := x.WholeReads(se.ID)
-	s.ClickText("Start next PR")
+	s.Run("ship.refresh", nil) // the one whole read: it finds the PR merged
 	shipSettle(s, t, "the next PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Branch != first.Branch && sh.PR == nil })
 	shipQuiet(s)
-	if n := x.WholeReads(se.ID) - whole; n > 0 {
-		t.Errorf("starting search-api's next PR read every project %d times", n)
+	if n := x.WholeReads(se.ID) - whole; n > 1 {
+		t.Errorf("starting search-api's next PR read every project %d more times", n-1)
 	}
 }
 

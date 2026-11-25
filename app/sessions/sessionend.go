@@ -211,9 +211,10 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 }
 
 // settle picks the choice the dialog starts on, until one is picked: Delete for a kind that ends that way
-// (core.DeletesOnEnd); Archive once anything left the machine or when closing a tab of a session that isn't done;
-// Delete otherwise. A session whose kind can't be deleted (a direct one's directory isn't Oriel's) archives.
-func (a *endAsk) settle(canDelete, deletes bool, ships []services.ProjectShip, st widget.LoadState) {
+// (core.DeletesOnEnd); Archive once anything left the machine (left: pushed, a PR, or PRs it has moved on from) or
+// when closing a tab of a session that isn't done; Delete otherwise. A session whose kind can't be deleted (a direct
+// one's directory isn't Oriel's) archives.
+func (a *endAsk) settle(canDelete, deletes, left bool, st widget.LoadState) {
 	switch {
 	case !canDelete:
 		a.how = 0
@@ -221,7 +222,7 @@ func (a *endAsk) settle(canDelete, deletes bool, ships []services.ProjectShip, s
 	case deletes:
 		a.how = 1
 	case st.Loading():
-	case leftMachine(ships), a.closing && a.done == "":
+	case left, a.closing && a.done == "":
 		a.how = 0
 	default:
 		a.how = 1
@@ -304,7 +305,7 @@ func (x *End) view(c *ui.Ctx) {
 		})
 		return
 	}
-	a.settle(registry.Can(x.h, se.Kind, core.Delete), deletes, ships, st)
+	a.settle(registry.Can(x.h, se.Kind, core.Delete), deletes, len(se.Past) > 0 || leftMachine(ships), st)
 	th := c.Theme()
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}

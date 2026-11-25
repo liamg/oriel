@@ -1,7 +1,6 @@
 package ship
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 
@@ -75,8 +74,9 @@ func (x *Ship) nextPR(se core.SessionState, p string, done *registry.PR) error {
 	}, func() { delete(x.prs, formKey(se.ID, p)) })
 }
 
-// afterMerge moves a project on to its next PR once Oriel has merged its branch: at once when nothing's in the way
-// (the agent idle, nothing uncommitted), else asking.
+// afterMerge moves a project on to its next PR once its PR is merged, here or on its code host, saying nothing unless
+// it can't: at once, or once the agent's turn ends so its branch doesn't move under it. What's on the branch since
+// comes along (NextPR). On the loop.
 func (x *Ship) afterMerge(id core.SessionID, p string, done *registry.PR) {
 	sess, ok := x.h.Session(id)
 	if !ok {
@@ -90,12 +90,27 @@ func (x *Ship) afterMerge(id core.SessionID, p string, done *registry.PR) {
 	if ships, _ := x.sessionShips(se); prui.ArchivesOnMerge(x.h, se, projectShips(ships)) {
 		return
 	}
-	if se.Agent.Working || len(s.Files) > 0 {
-		x.askNextPR(id, s, done)
+	if se.Agent.Working {
+		if x.waiting == nil {
+			x.waiting = map[core.SessionID]map[string]*registry.PR{}
+		}
+		if x.waiting[id] == nil {
+			x.waiting[id] = map[string]*registry.PR{}
+		}
+		x.waiting[id][p] = done
 		return
 	}
 	if err := x.nextPR(se, p, done); err != nil {
-		x.askNextPR(id, s, done)
+		x.cantMoveOn(id, s, err)
+	}
+}
+
+// turnEnded moves on the projects of session id whose PR merged while its agent was working. On the loop.
+func (x *Ship) turnEnded(id core.SessionID) {
+	waiting := x.waiting[id]
+	delete(x.waiting, id)
+	for p, done := range waiting {
+		x.afterMerge(id, p, done)
 	}
 }
 
@@ -113,28 +128,12 @@ func (x *Ship) mergedHere(id core.SessionID, s shipRead, pr registry.PR) {
 	x.cache.mu.Unlock()
 }
 
-// askNextPR asks whether to start a project's next PR, its PR having been merged.
-func (x *Ship) askNextPR(id core.SessionID, s shipRead, done *registry.PR) {
+// cantMoveOn says a project couldn't move on to its next PR by itself, and offers to try again.
+func (x *Ship) cantMoveOn(id core.SessionID, s shipRead, err error) {
 	w := s.words()
-	title := "Merged"
-	if done != nil {
-		title = fmt.Sprintf("%s%d merged", w.Sigil, done.Number)
-	}
-	why := ""
-	switch {
-	case len(s.Files) > 0:
-		why = fmt.Sprintf(" %s has uncommitted changes: commit or discard them first.", s.Branch)
-	default:
-		if sess, ok := x.h.Session(id); ok && sess.Snapshot().Agent.Working {
-			why = " The agent is working on it now."
-		}
-	}
-	x.h.Notify(core.Notice{ID: nextPRAsk(s.Project), Severity: core.SevQuestion, Session: id, Title: title,
-		Text: fmt.Sprintf("Start the next %s in %s, on a fresh branch from %s?%s", w.Short, s.Project, cmp.Or(s.Base, "its base"), why),
-		Actions: []core.Action{
-			{Title: "Start next " + w.Short, Command: "ship.next_pr.start", Args: map[string]any{"id": string(id), "project": s.Project}},
-			{Title: "Not now", Command: "notice.dismiss", Args: map[string]any{"id": nextPRAsk(s.Project)}},
-		}})
+	x.h.Notify(core.Notice{ID: nextPRAsk(s.Project), Severity: core.SevWarning, Session: id, Title: s.Project,
+		Text:    fmt.Sprintf("Couldn't start the next %s: %v", w.Short, err),
+		Actions: []core.Action{{Title: "Start next " + w.Short, Command: "ship.next_pr.start", Args: map[string]any{"id": string(id), "project": s.Project}}}})
 }
 
 // movesOn says a project's PR is done with and its branch has nothing left to raise: its next step is the next PR.
@@ -142,5 +141,5 @@ func movesOn(s shipRead) bool {
 	return s.PR != nil && !s.PR.Open() && (s.PR.Merged || s.Commits == 0)
 }
 
-// nextPRAsk is the id of the notice asking whether to start a project's next PR.
+// nextPRAsk is the id of the notice saying a project couldn't start its next PR by itself.
 func nextPRAsk(project string) string { return "ship.next_pr.start." + project }

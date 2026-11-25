@@ -466,38 +466,95 @@ func TestNextPRCutsAFreshBranchAndKeepsThePast(t *testing.T) {
 	}
 }
 
-// Start next PR leaves nothing behind: not uncommitted changes, and not commits that are neither pushed, on the
-// base, nor the PR's.
-func TestNextPRRefusesToLeaveWorkBehind(t *testing.T) {
+// Start next PR leaves nothing behind: commits since the PR (neither pushed, on the base, nor the PR's) and
+// uncommitted changes, tracked or new, come along onto the fresh branch.
+func TestNextPRCarriesTheWorkSinceThePR(t *testing.T) {
 	ctx := context.Background()
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p := r.session(id).Projects[0]
 	first := p.Branch
 	wt := gitx.Repo{Dir: p.Dir}
-	next := func() error { return r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name}) }
+	run := func(args ...string) string {
+		t.Helper()
+		out, err := wt.Run(ctx, args...)
+		if err != nil {
+			t.Fatalf("git %v: %v", args, err)
+		}
+		return strings.TrimSpace(out)
+	}
+	write := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(p.Dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("pr.go", "package pricing\n")
+	run("add", ".")
+	run("commit", "-qm", "the PR's")
+	head := run("rev-parse", "HEAD")
+	write("since.go", "package pricing\n\nfunc Since() {}\n")
+	run("add", ".")
+	run("commit", "-qm", "since the PR")
+	write("round.go", "package pricing\n\nfunc Round() int { return 0 }\n")
+	write("new.go", "package pricing\n")
 
-	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n\nfunc Round() int { return 0 }\n"), 0o644); err != nil {
+	if err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name, Head: head}); err != nil {
 		t.Fatal(err)
 	}
-	if err := next(); err == nil || !strings.Contains(err.Error(), "uncommitted changes") {
-		t.Errorf("with uncommitted changes: %v", err)
+	now := r.session(id).Projects[0]
+	if now.Branch == first || branchOf(t, p.Dir) != now.Branch {
+		t.Fatalf("still on %q", first)
 	}
-	if _, err := wt.Run(ctx, "commit", "-qam", "round to zero"); err != nil {
+	if log := run("log", "--format=%s", now.Base+".."+now.Branch); log != "since the PR" {
+		t.Errorf("the fresh branch's commits: %q, want the one since the PR alone", log)
+	}
+	if _, err := os.Stat(filepath.Join(p.Dir, "pr.go")); err == nil {
+		t.Error("the PR's own commit came along")
+	}
+	if st := run("status", "--porcelain"); !strings.Contains(st, "M round.go") || !strings.Contains(st, "?? new.go") {
+		t.Errorf("the uncommitted changes didn't come along: %q", st)
+	}
+	if stashes := run("stash", "list"); stashes != "" {
+		t.Errorf("a stash was left: %q", stashes)
+	}
+}
+
+// Where what's since the PR doesn't apply on the base, the project stays on its branch as it was, and says why.
+func TestNextPRStaysPutWhenTheWorkSinceDoesntApply(t *testing.T) {
+	ctx := context.Background()
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	p := r.session(id).Projects[0]
+	first := p.Branch
+	wt := gitx.Repo{Dir: p.Dir}
+	// The base moves on round.go while the branch holds an uncommitted change to the same line.
+	r.repo.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* base */ }\n"})
+	r.repo.Commit("Ada", "base moves")
+	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n\nfunc Round() { /* mine */ }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := next(); err == nil || !strings.Contains(err.Error(), "1 commit on "+first+" that aren't pushed") {
-		t.Errorf("with a commit nowhere else: %v", err)
-	}
-	head, err := wt.Run(ctx, "rev-parse", "HEAD")
-	if err != nil {
+	if err := os.WriteFile(filepath.Join(p.Dir, "new.go"), []byte("package pricing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name, Head: strings.TrimSpace(head)}); err != nil {
-		t.Errorf("with the commit the PR's: %v", err)
+	err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name})
+	if err == nil || !strings.Contains(err.Error(), "stays on "+first) || !strings.Contains(err.Error(), "uncommitted changes don't apply") {
+		t.Fatalf("NextPR = %v", err)
 	}
-	if b := r.session(id).Projects[0].Branch; b == first {
-		t.Errorf("still on %q", b)
+	if b := branchOf(t, p.Dir); b != first || r.session(id).Projects[0].Branch != first {
+		t.Errorf("moved to %q", b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(p.Dir, "round.go")); !strings.Contains(string(b), "mine") {
+		t.Errorf("round.go = %q, not the uncommitted change", b)
+	}
+	if _, err := os.Stat(filepath.Join(p.Dir, "new.go")); err != nil {
+		t.Errorf("the new file went: %v", err)
+	}
+	if out, _ := wt.Run(ctx, "stash", "list"); strings.TrimSpace(out) != "" {
+		t.Errorf("a stash was left: %q", out)
+	}
+	if out, _ := wt.Run(ctx, "branch", "--list", "*-next*"); strings.TrimSpace(out) != "" {
+		t.Errorf("the fresh branch was left: %q", out)
 	}
 }
 

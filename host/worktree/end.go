@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/core"
@@ -95,7 +96,8 @@ func (x *Worktrees) Delete(ctx context.Context, se core.SessionState) error {
 	return x.st.Emit(core.SessionClosed{ID: se.ID})
 }
 
-// DeleteBranches deletes each project's local branch, but a repo's default branch.
+// DeleteBranches deletes each project's local branch, and those of the PRs it moved on from, but a repo's default
+// branch.
 func DeleteBranches(ctx context.Context, se core.SessionState) error {
 	var failed []string
 	for _, p := range worktrees(se) {
@@ -103,11 +105,20 @@ func DeleteBranches(ctx context.Context, se core.SessionState) error {
 			continue
 		}
 		g := gitx.Repo{Dir: p.Repo}
-		if p.Branch == strings.TrimPrefix(g.DefaultBranch(ctx), "origin/") || !g.HasBranch(ctx, p.Branch) {
-			continue
+		branches := []string{p.Branch}
+		for _, past := range se.Past {
+			if past.Project == p.Name && past.Branch != "" && !slices.Contains(branches, past.Branch) {
+				branches = append(branches, past.Branch)
+			}
 		}
-		if err := g.DeleteBranch(ctx, p.Branch, true); err != nil {
-			failed = append(failed, fmt.Sprintf("%s: %v", p.Name, err))
+		def := strings.TrimPrefix(g.DefaultBranch(ctx), "origin/")
+		for _, b := range branches {
+			if b == def || !g.HasBranch(ctx, b) {
+				continue
+			}
+			if err := g.DeleteBranch(ctx, b, true); err != nil {
+				failed = append(failed, fmt.Sprintf("%s: %v", p.Name, err))
+			}
 		}
 	}
 	if len(failed) > 0 {
