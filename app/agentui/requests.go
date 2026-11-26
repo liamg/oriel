@@ -250,6 +250,7 @@ func (x *Requests) commands() []registry.Command {
 				} else if se, ok := x.front(); ok && a.Bool("first") && len(se.Threads) > 0 {
 					st.sel, st.writing = se.Threads[0].ID, false
 				}
+				x.draftFor(st, x.target(st)).compose = true // its reply field, even when its tab was showing another
 				return x.openRequest(ctx)
 			}},
 		{ID: "request.next", Grant: registry.Open, Title: "Requests: the next request", Args: registry.NoArgs, Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},

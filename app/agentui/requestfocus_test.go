@@ -38,3 +38,24 @@ func TestARequestsTabFocusesItsReplyField(t *testing.T) {
 		return n != nil && n.Value == "Yes, banker's"
 	})
 }
+
+// Picking another request in the Requests list, while a request's tab is showing, puts you in its reply field too.
+func TestPickingARequestFocusesItsReplyField(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	r.Run("request.comment", registry.Args{"body": "Round half to even?"})
+	a.WaitSent(t)
+	first := threadWith(t, r, "Round half to even?")
+	r.Run("request.comment", registry.Args{"body": "Cache the rates?"})
+	threadWith(t, r, "Cache the rates?")
+	r.Run("request.open", registry.Args{"thread": string(first.ID)})
+	r.WaitFocused("Write to the request")
+
+	r.ClickAccessIn("Requests", "Cache the rates?")
+	r.WaitFocused("Write to the request")
+	r.TypeText("Yes, for a minute")
+	r.WaitAccess("the reply typed in the picked request's field", func(r *apptest.Window) bool {
+		n := r.Access("Write to the request")
+		return n != nil && n.Value == "Yes, for a minute"
+	})
+	r.WaitText("Cache the rates?")
+}
