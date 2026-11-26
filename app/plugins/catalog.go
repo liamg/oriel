@@ -443,6 +443,17 @@ func (x *Catalog) apply(sts []catalog.Status) {
 		listed[st.Entry.ID] = true
 	}
 	x.syncBundled(func(id string) bool { return listed[id] })
+	// What won't run stops first, so a plugin refused for its name loads once the one holding the name goes.
+	for id := range x.loaded {
+		if !listed[id] {
+			x.stop(id)
+		}
+	}
+	for _, st := range sts {
+		if st.State == catalog.Revoked || st.State == catalog.Disabled {
+			x.stop(st.Entry.ID)
+		}
+	}
 	for _, st := range sts {
 		id := st.Entry.ID
 		switch st.State {
@@ -454,10 +465,7 @@ func (x *Catalog) apply(sts []catalog.Status) {
 				offers[id] = st
 			}
 		case catalog.Revoked:
-			x.stop(id)
 			revoked[id] = st
-		case catalog.Disabled:
-			x.stop(id)
 		case catalog.Consent:
 			waiting[id] = st
 		case catalog.Failed:
@@ -465,11 +473,6 @@ func (x *Catalog) apply(sts []catalog.Status) {
 				x.failed[id] = msg
 				x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Location: st.Entry.File, Text: msg})
 			}
-		}
-	}
-	for id := range x.loaded {
-		if !listed[id] {
-			x.stop(id)
 		}
 	}
 	x.mu.Lock()

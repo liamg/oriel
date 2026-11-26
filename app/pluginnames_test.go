@@ -80,3 +80,51 @@ func TestBundledPluginTurnedBackOnTakesItsName(t *testing.T) {
 		t.Errorf("no notice names both; notices: %v", noticeTexts(s.Store().State().Notifications))
 	}
 }
+
+// Taking out or turning off the plugin that has a name lets the one refused for it load: the one going away stops
+// before the others load.
+func TestPluginRefusedForANameLoadsWhenTheOtherGoes(t *testing.T) {
+	for _, tc := range []struct{ name, zed string }{
+		{"uninstalled", ""},
+		{"disabled", "\"zed/tools\" = { path = \"%s\", enabled = false }\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			zed := writePlugin(t, map[string]string{"oriel.toml": "id = \"zed/tools\"\nversion = \"1.0.0\"\n", "init.lua": `oriel.notify("zed loaded")`})
+			bob := writePlugin(t, map[string]string{"oriel.toml": "id = \"bob/tools\"\nversion = \"1.0.0\"\n", "init.lua": `oriel.notify("bob loaded")`})
+			s, settings := catalogScene(t, "")
+			head := "[ui]\ntheme = \"oriel\"\n\n[plugins]\n"
+			rig.WriteFile(t, settings, head+"\"zed/tools\" = { path = \""+zed+"\" }\n")
+			syncPlugins(s, t)
+			rig.WriteFile(t, settings, head+"\"zed/tools\" = { path = \""+zed+"\" }\n\"bob/tools\" = { path = \""+bob+"\" }\n")
+			syncPlugins(s, t)
+			loaded := func(id string) bool {
+				return slices.ContainsFunc(s.Host().Plugins(), func(m plugin.Manifest) bool { return m.ID == id })
+			}
+			if !loaded("zed/tools") || loaded("bob/tools") {
+				t.Fatalf("before: zed %v, bob %v", loaded("zed/tools"), loaded("bob/tools"))
+			}
+			refused := func() int {
+				n := 0
+				for _, x := range s.Store().State().Notifications {
+					if strings.Contains(x.Text, "bob/tools isn't loaded") {
+						n += x.Count
+					}
+				}
+				return n
+			}
+			before := refused()
+			rest := ""
+			if tc.zed != "" {
+				rest = strings.Replace(tc.zed, "%s", zed, 1)
+			}
+			rig.WriteFile(t, settings, head+"\"bob/tools\" = { path = \""+bob+"\" }\n"+rest)
+			syncPlugins(s, t)
+			if loaded("zed/tools") || !loaded("bob/tools") {
+				t.Errorf("after: zed %v, bob %v; notices: %v", loaded("zed/tools"), loaded("bob/tools"), noticeTexts(s.Store().State().Notifications))
+			}
+			if n := refused(); n != before {
+				t.Errorf("bob/tools was refused again while zed/tools was going: %d refusals, %d before", n, before)
+			}
+		})
+	}
+}
