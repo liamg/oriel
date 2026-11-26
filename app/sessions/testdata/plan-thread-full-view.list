@@ -263,10 +263,12 @@ clip 484,50 1116x924 r 0
       rect 554,889 1x16 fill #ffd23f
     pop
     rect 544,882 695x30 radius 6 stroke 1 #ffd23f
-    rect 544,926 156x18 radius 4 stroke 1 #332f27
-    text "URGENT · INTERRUPTS TURN" @550,938.60004 #7c7566 JetBrains Mono 10
-    rect 706,926 30x18 radius 4 stroke 1 #332f27
-    text "BTW" @712,938.60004 #7c7566 JetBrains Mono 10
+    path 2 segments stroke 1.25 #7c7566
+    path 2 segments stroke 1.25 #7c7566
+    rect 570,926 156x18 radius 4 stroke 1 #332f27
+    text "URGENT · INTERRUPTS TURN" @576,938.60004 #7c7566 JetBrains Mono 10
+    rect 732,926 30x18 radius 4 stroke 1 #332f27
+    text "BTW" @738,938.60004 #7c7566 JetBrains Mono 10
     text "markdown · claude opus" @1018.2031,938.78 #4f4a40 JetBrains Mono 10.5
     rect 1169.2656,922 69.734375x26 fill #191815 radius 6 stroke 1 #332f27
     text "Send" @1179.2656,939.36523 #4f4a40 Inter 12
