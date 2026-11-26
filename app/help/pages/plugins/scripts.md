@@ -58,6 +58,8 @@ than run in the wrong place.
 - Only you start one: from the omnibox, `:Scripts`, or a key or command of your own config. No plugin can run
   `scripts.run`.
 - The lines a notice shows are kept with your notices. Don't print secrets.
+- Any plugin can read `plugin.scripts.list`, though none can change it. Keep secrets out of it: have the script
+  read them from a file or your keychain.
 
 ## Which shell {#shell}
 
