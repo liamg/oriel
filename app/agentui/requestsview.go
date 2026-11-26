@@ -201,7 +201,10 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 							workingLine(c, "working", se, ui.Px(width))
 						}
 						if has {
-							uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), uireg.ThreadInRequest, width)
+							// Under the comments' text, past their avatars, as wide as it.
+							c.Column("feet", ui.Style{W: ui.Px(width), Pad: ui.Insets{L: commentIndent}, Gap: 8}, func(c *ui.Ctx) {
+								uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), uireg.ThreadInRequest, width-commentIndent)
+							})
 						}
 						startingCard(c, "starting", se, width)
 					})

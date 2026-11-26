@@ -57,11 +57,7 @@ func (x *Requests) proposalFoot(c *ui.Ctx, session, thread string, where uireg.T
 	if _, _, ok := x.proposalThread(a); !ok {
 		return
 	}
-	row := ui.Style{W: ui.Px(width), Gap: 6}
-	if where == uireg.ThreadInRequest {
-		row.Pad.L = commentIndent // under the comments' text, past their avatars
-	}
-	c.Row("proposal", row, func(c *ui.Ctx) {
+	c.Row("proposal", ui.Style{W: ui.Px(width), Gap: 6}, func(c *ui.Ctx) {
 		if widget.Button(c, "do", doIt, widget.ButtonOpts{Primary: true, Help: "Have the agent make the change it proposed"}) {
 			x.run("thread.proposal.accept", a)
 		}
