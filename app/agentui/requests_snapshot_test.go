@@ -1,6 +1,8 @@
 package agentui_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -103,4 +105,28 @@ func TestRequestsAreNamedOnce(t *testing.T) {
 	if n := strings.Count(s.Text(), "REQUESTS"); n != 1 {
 		t.Errorf("REQUESTS is drawn %d times, want once, on the tab", n)
 	}
+}
+
+// A file attached to a message is a card under it, its name and size: a click opens it, ↓ saves a copy.
+func TestAnAttachedFileSnapshot(t *testing.T) {
+	s := requestsScene(t)
+	focus := s.Store().State().Focus
+	se, _ := s.Store().State().Session(focus)
+	th, _ := se.Snapshot().Thread("7d45e1a0")
+	log := filepath.Join(t.TempDir(), "attachments", "k3v9qa-build.log")
+	if err := os.MkdirAll(filepath.Dir(log), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(log, []byte(strings.Repeat("FAIL TestRoundNegative\n", 120)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	th.Comments = append(th.Comments, core.Comment{ID: "c-log", Author: core.AuthorYou, Name: "you", Time: s.Now(),
+		Body: "CI fails the same way, here's its log: [build.log](" + log + ")"})
+	s.Apply(core.ThreadUpdated{Session: focus, Thread: th})
+	s.Run("view.open", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "size": 320})
+	s.Run("request.open", registry.Args{"thread": "7d45e1a0"})
+	s.Frame()
+	s.Until("the file's card", func() bool { return strings.Contains(s.Text(), "2.7 KB") })
+	s.Lint("an attached file")
+	s.Golden("attached-file")
 }

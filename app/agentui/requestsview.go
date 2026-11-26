@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/icons"
 	"github.com/liamg/oriel/app/kit/markdown"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -388,6 +389,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
+			x.fileCards(c, cm.Body)
 			shown := localImages(cm.Body)
 			for i, img := range cm.Images {
 				if slices.Contains(shown, img) {
@@ -479,6 +481,10 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			st.focusList = true
 		}
 		c.Row("tools", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+			if widget.IconButton(c, "attach-file", "+", widget.IconButtonOpts{Label: "Attach a file", Tooltip: "Attach a file on this machine: the agent gets a copy",
+				Help: "agent/requests#attach", Icon: func(c *ui.Ctx, fg render.Color) { icons.Icon(c, x.h, "icon", "plus", 13, fg) }}) {
+				x.run("request.file.attach", nil)
+			}
 			d.urgent = widget.ToggleChip(c, "urgent", "URGENT · INTERRUPTS TURN", d.urgent, widget.ToggleChipOpts{Label: "Urgent",
 				Tooltip: "Interrupt the agent's turn with it", Help: "agent/requests#urgent"})
 			d.btw = widget.ToggleChip(c, "btw", "BTW", d.btw, widget.ToggleChipOpts{Label: "By the way",
