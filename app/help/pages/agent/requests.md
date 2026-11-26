@@ -52,7 +52,8 @@ queued message.
 A reply in which the agent proposes a change it hasn't made yet (it says so when it answers) ends with **Do it**, here
 and between the lines. A click sends your "Do it" in the thread, just as if you'd typed it. The button goes once
 anyone else writes in the thread. A reply that disagrees, answers a question, or reports a change already made gets no
-button. `thread.proposal.accept {thread}` does the same from keys or Lua.
+button. A pull request review thread's draft reply that offers a fix gets it too, beside **↗ Forward**: the reviewer
+sees nothing until you forward a reply. `thread.proposal.accept {thread}` does the same from keys or Lua.
 
 ## Evidence
 

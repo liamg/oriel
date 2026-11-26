@@ -320,3 +320,58 @@ func TestReactWhileASyncRuns(t *testing.T) {
 		t.Error("the sync that read GitHub before the reaction showed the 🎉 taken back")
 	}
 }
+
+// The agent's draft reply on a review thread that offers a fix has Do it beside ↗ Forward: a click is your "Do it",
+// to the agent, and nothing reaches GitHub.
+func TestDoItOnAReviewThreadsDraft(t *testing.T) {
+	s, lw, hub, se, _ := apptest.ShipScene(t)
+	x := mirrorOf(s)
+	ag := lw.Fake.WaitStarted(t)
+	ag.WaitSent(t)
+	ag.Emit(agent.TurnStart{})
+	rig.Answered(t, s.Store(), ag)
+	ag.Emit(agent.TurnEnd{})
+	apiDir := apptest.ProjectDir(se, "search-api")
+	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
+	rig.WriteFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
+	var branch string
+	for _, p := range se.Projects {
+		if p.Name == "search-api" {
+			branch = p.Branch
+		}
+	}
+	pr := hub.AddPR("acme/search-api", gh.PR{Title: "feat(api): usage", Head: branch, Base: "main"})
+	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
+		Path: "internal/api/usage/handler.go", Line: 3, Body: "Can this return an error instead?"})
+	s.Run("review.threads.sync", nil)
+	var tid core.ThreadID
+	s.Until("the mirrored thread", func() bool {
+		x.Wait()
+		sess, _ := s.Store().State().Session(se.ID)
+		for _, th := range sess.Snapshot().Threads {
+			if th.Origin == core.OriginCodeHost && th.Hosted.Key == strconv.FormatInt(root.ID, 10) {
+				tid = th.ID
+			}
+		}
+		return tid != ""
+	})
+	ag.WaitSent(t)
+	ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Good call: `Handle` could return an error for a bad config.", "proposes": true})
+	rig.Answered(t, s.Store(), ag)
+	ag.Emit(agent.TurnEnd{})
+
+	s.Run("diff.open", registry.Args{"path": file})
+	s.Until("Do it beside Forward", func() bool { f := s.Text(); return strings.Contains(f, "↗ Forward to GitHub") && strings.Contains(f, "Do it") })
+	s.ClickOn("Do it")
+	if in := ag.WaitSent(t); !strings.Contains(in.Text, "Do it") {
+		t.Errorf("the agent was sent %q", in.Text)
+	}
+	sess, _ := s.Store().State().Session(se.ID)
+	th, _ := sess.Snapshot().Thread(tid)
+	if last, _ := th.Last(); last.Author != core.AuthorYou || last.Body != "Do it" {
+		t.Errorf("the thread ends %+v, want your Do it", last)
+	}
+	if p := ghPosts(hub); len(p) != 0 {
+		t.Errorf("GitHub was written to: %q", p)
+	}
+}

@@ -4,7 +4,7 @@ A thread with `origin="github"` mirrors a pull request review comment: a real pe
 
 - **Always end with a reply**, written as the answer the user would post: to the reviewer, terse and friendly, no work log. The user can forward it to GitHub verbatim, so nothing else belongs in it.
 - If you changed the code, the reply is still the reviewer's answer: "fixed, it now does X".
-- If the reviewer is right and you haven't changed it, say what the fix would be and offer it. Make it only when the user says so.
+- If the reviewer is right and you haven't changed it, say what the fix would be and offer it, with `proposes: true` on the reply: the user gets a **Do it** button. Make it only when the user says so.
 - If you disagree, say so plainly with the reason.
 - The user resolves it once the fix is pushed or the reply forwarded.
 - Never post to GitHub yourself, by any means.
