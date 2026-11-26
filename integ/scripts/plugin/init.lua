@@ -69,52 +69,82 @@ local function unknown(code)
   return bad
 end
 
--- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them. It doesn't follow
--- heredocs.
+-- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them, and how many `…`
+-- it's inside. A $(…) or `…` starts afresh, unquoted, even within "…". It doesn't follow heredocs.
 local function quoting(code)
-  local at, q, i = {}, nil, 1
+  local at, ticks, outer = {}, {}, {}
+  local q, depth, i = nil, 0, 1
+  local function open(closer)
+    outer[#outer + 1] = { q = q, depth = depth, closer = closer }
+    q, depth = nil, 0
+  end
+  local function close()
+    local o = table.remove(outer)
+    q, depth = o.q, o.depth
+  end
+  local function nticks()
+    local n = 0
+    for _, o in ipairs(outer) do
+      n = n + (o.closer == "`" and 1 or 0)
+    end
+    return n
+  end
   while i <= #code do
-    local c = code:sub(i, i)
-    at[i] = q
+    local c, closer = code:sub(i, i), outer[#outer] and outer[#outer].closer
+    at[i], ticks[i] = q, nticks()
     if c == "\\" and q ~= "'" then
-      at[i + 1] = q
+      at[i + 1], ticks[i + 1] = q, ticks[i]
       i = i + 1
+    elseif c == "$" and q ~= "'" and code:sub(i + 1, i + 1) == "(" then
+      open(")")
+      i = i + 1
+    elseif c == "`" and not q and closer == "`" then
+      close()
+    elseif c == "`" and q ~= "'" then
+      open("`")
+    elseif c == "(" and not q then
+      depth = depth + 1
+    elseif c == ")" and not q and depth > 0 then
+      depth = depth - 1
+    elseif c == ")" and not q and closer == ")" then
+      close()
     elseif c == "'" and q ~= '"' then
       q = not q and "'" or nil
     elseif c == '"' and q ~= "'" then
       q = not q and '"' or nil
     elseif c == "#" and not q and (i == 1 or code:sub(i - 1, i - 1):match("[%s;&|()]")) then
       -- A comment's quotes don't count: "# don't" opens nothing.
-      local stop = code:find("\n", i, true) or #code
-      for j = i, stop do
-        at[j] = nil
-      end
-      i = stop
+      i = (code:find("\n", i, true) or #code + 1) - 1
     end
     i = i + 1
   end
-  return at
+  return at, ticks
 end
 
--- fill is v as one word where the quoting is q: inside "…" the shell would still read \ $ ` and ", and inside '…'
--- the quotes close around it.
-local function fill(v, q)
+-- fill is v as one word where the quoting is q, inside n `…`: inside "…" the shell would still read \ $ ` and ",
+-- inside '…' the quotes close around it, and each `…` takes a backslash off \ $ and `.
+local function fill(v, q, n)
   if q == '"' then
-    return (v:gsub('[\\$`"]', "\\%0"))
+    v = v:gsub('[\\$`"]', "\\%0")
   elseif q == "'" then
-    return "'" .. quote(v) .. "'"
+    v = "'" .. quote(v) .. "'"
+  else
+    v = quote(v)
   end
-  return quote(v)
+  for _ = 1, n do
+    v = v:gsub("[\\$`]", "\\%0")
+  end
+  return v
 end
 
 local function expand(code, vals)
   code = unescaped(code)
-  local at = quoting(code)
+  local at, ticks = quoting(code)
   code = code:gsub("()({([a-z_]+)})", function(pos, whole, name)
     if pos > 1 and code:sub(pos - 1, pos - 1) == "$" then
       return whole
     end
-    return fill(vals[name], at[pos])
+    return fill(vals[name], at[pos], ticks[pos] or 0)
   end)
   return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, function(word)
     return SLOTS[word] and "{" .. word .. "}" or "{{" .. word .. "}}"
