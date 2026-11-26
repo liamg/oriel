@@ -27,7 +27,7 @@ import (
 //oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
-//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything." optional=opts
+//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything. user_only = true makes it yours alone to start: your keys, clicks and config run it, and no plugin can through oriel.run, its own included." optional=opts
 func (r Root) Command(name string, fn *script.Fn, opts script.Table, where string) error {
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
@@ -36,7 +36,7 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
-	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: exNames(opts["ex"]), ExArg: str(opts, "ex_arg"), Args: spec, Source: where,
+	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: exNames(opts["ex"]), ExArg: str(opts, "ex_arg"), Args: spec, Source: where, UserOnly: opts["user_only"] == true,
 		Run: func(_ registry.Ctx, args registry.Args) error {
 			_, err := r.a.VM.Call(fn, map[string]any(args))
 			return err

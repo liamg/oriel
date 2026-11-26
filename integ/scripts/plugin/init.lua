@@ -100,7 +100,8 @@ local function run(name, project)
     end)
 end
 
-L.command("scripts.run", function(args) run(args.name, args.project) end, {
+-- user_only: a script is yours to start, never another plugin's.
+L.command("scripts.run", function(args) run(args.name, args.project) end, { user_only = true,
   desc = "Run one of your scripts (plugin.scripts.list) on the session in front: {name}, and {project} for one that runs per project",
   args = { { name = "name", type = "string", required = true }, { name = "project", type = "string" } } })
 

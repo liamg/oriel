@@ -45,7 +45,7 @@ oriel = {}
 ---@return string?,string?
 function oriel.asset(path) end
 
---- Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything.
+--- Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything. user_only = true makes it yours alone to start: your keys, clicks and config run it, and no plugin can through oriel.run, its own included.
 ---@param name string
 ---@param fn function
 ---@param opts? table

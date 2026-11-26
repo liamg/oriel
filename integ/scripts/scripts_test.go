@@ -179,11 +179,15 @@ func TestScriptWithThePrimaryProject(t *testing.T) {
 	}
 }
 
-// The list is code run under this plugin's exec grant, so only your own config may set it.
+// The list is code run under this plugin's exec grant, so only your own config may set it, or run one.
 func TestScriptsListIsYoursAlone(t *testing.T) {
 	a, _ := scene(t, "tilt", nil)
 	if sp, ok := a.Registry().Options().Spec("plugin.scripts.list"); !ok || !sp.UserOnly {
 		t.Errorf("plugin.scripts.list = %+v, want user_only", sp)
+	}
+	// Running one is yours to start too: no plugin runs your deploy on its own say-so.
+	if c, ok := a.Registry().CommandFor("scripts.run"); !ok || !c.UserOnly {
+		t.Errorf("scripts.run = %+v, want UserOnly", c)
 	}
 }
 

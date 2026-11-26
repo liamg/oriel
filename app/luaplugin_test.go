@@ -331,6 +331,34 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 	}
 }
 
+// A plugin's command marked user_only does what only the user should start, such as running the user's own
+// scripts: no plugin runs it through oriel.run, its own included, while the user's config still can.
+func TestPluginCommandMarkedUserOnly(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	owner := s.PluginVM(plugin.Caller{ID: "acme/mine", Guard: g})
+	if err := luaErr(t, owner, `ran = 0
+oriel.command("acme.mine.run", function() ran = ran + 1 end, { user_only = true })
+oriel.command("acme.mine.open", function() end)`); err != "" {
+		t.Fatal(err)
+	}
+	if c, ok := s.Registry().CommandFor("acme.mine.run"); !ok || !c.UserOnly {
+		t.Errorf("acme.mine.run = %+v, want UserOnly", c)
+	}
+	if c, _ := s.Registry().CommandFor("acme.mine.open"); c.UserOnly {
+		t.Error("a command without user_only is the user's alone")
+	}
+	other := s.PluginVM(plugin.Caller{ID: "acme/other", Guard: g})
+	for name, vm := range map[string]*script.VM{"another plugin": other, "its own plugin": owner} {
+		if err := luaErr(t, vm, `oriel.run("acme.mine.run", {})`); !strings.Contains(err, "only you can run acme.mine.run") {
+			t.Errorf("%s ran it: %q", name, err)
+		}
+	}
+	if err := luaErr(t, s.PluginVM(plugin.Caller{ID: "init.lua"}), `oriel.run("acme.mine.run", {})`); err != "" {
+		t.Errorf("your config can't run it: %q", err)
+	}
+}
+
 // A plugin sets its own options freely; another option needs the settings capability, and the sandbox's settings
 // are never a plugin's to change. A buffer's options (an ftplugin's tabstop) are free.
 func TestPluginOptionsNeedTheSettingsCapability(t *testing.T) {
