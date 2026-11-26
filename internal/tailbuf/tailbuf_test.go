@@ -21,3 +21,12 @@ func TestBufferKeepsTheTail(t *testing.T) {
 		t.Errorf("a write larger than Max: n=%d err=%v %q", n, err, b.String())
 	}
 }
+
+// A buffer with no Max keeps everything.
+func TestBufferWithNoMaxKeepsAll(t *testing.T) {
+	b := &Buffer{}
+	b.Write([]byte(strings.Repeat("a", 100)))
+	if got := b.String(); len(got) != 100 || b.Cut() {
+		t.Errorf("kept %d bytes, cut=%v", len(got), b.Cut())
+	}
+}

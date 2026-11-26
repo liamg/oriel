@@ -4,7 +4,8 @@ package tailbuf
 
 import "sync"
 
-// Buffer keeps the last Max bytes written to it. It's safe for a program's stdout and stderr to share.
+// Buffer keeps the last Max bytes written to it, or all of them when Max is 0. It's safe for a program's stdout
+// and stderr to share.
 type Buffer struct {
 	Max int
 	mu  sync.Mutex
@@ -16,7 +17,7 @@ func (t *Buffer) Write(p []byte) (int, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.b = append(t.b, p...)
-	if len(t.b) > t.Max {
+	if t.Max > 0 && len(t.b) > t.Max {
 		t.b = append(t.b[:0], t.b[len(t.b)-t.Max:]...)
 		t.cut = true
 	}

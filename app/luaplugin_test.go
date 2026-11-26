@@ -549,16 +549,23 @@ func TestLuaExecInBackground(t *testing.T) {
 	}
 }
 
-// A program that prints a lot is held to the end of what it printed, so a long run can't fill memory.
+// A program's whole output comes back unless the caller asks for only its end (tail), as for a long run.
 func TestLuaExecKeepsTheEndOfALongOutput(t *testing.T) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip(err)
 	}
 	s := apptest.LuaScene(t, "")
-	s.Lua(`L.exec_async({ "sh", "-c", "head -c 500000 /dev/zero | tr '\\0' a; echo END" }, {}, function(out, err) long = out end)`)
-	s.Until("the output", func() bool { return apptest.LuaGlobal(lua(s).VM(), "long") != nil })
-	if out, _ := apptest.LuaGlobal(lua(s).VM(), "long").(string); len(out) > 64*1024 || !strings.HasSuffix(out, "aEND\n") {
-		t.Errorf("kept %d bytes ending %q", len(out), out[max(0, len(out)-10):])
+	prog := `{ "sh", "-c", "head -c 500000 /dev/zero | tr '\\0' a; echo END" }`
+	s.Lua(`L.exec_async(` + prog + `, {}, function(out, err) whole = out end)`)
+	s.Lua(`L.exec_async(` + prog + `, { tail = 1000 }, function(out, err) tail = out end)`)
+	s.Until("the output", func() bool {
+		return apptest.LuaGlobal(lua(s).VM(), "whole") != nil && apptest.LuaGlobal(lua(s).VM(), "tail") != nil
+	})
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "whole").(string); len(out) != 500004 {
+		t.Errorf("without tail, kept %d bytes of 500004", len(out))
+	}
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "tail").(string); len(out) > 1000 || !strings.HasSuffix(out, "aEND\n") {
+		t.Errorf("with tail = 1000, kept %d bytes ending %q", len(out), out[max(0, len(out)-10):])
 	}
 }
 

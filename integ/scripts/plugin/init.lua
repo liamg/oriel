@@ -13,6 +13,7 @@ L.option{ name = "plugin.scripts.list", type = "map", user_only = true,
 local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
 local TAIL = 5      -- lines of output a notice has room for
+local KEEP = 64 * 1024 -- bytes of output kept: the notice shows only its last lines
 
 -- RUNNER runs the code in $1, with each NAME=value after it in its environment. Code with a #! line goes to the
 -- interpreter that line names, read from fd 3: no temp file to need an exec mount or outlive a killed run, and the
@@ -138,7 +139,7 @@ local function run(name, project)
   for k, v in pairs(vals) do
     argv[#argv + 1] = "ORIEL_SCRIPT_" .. k:upper() .. "=" .. v
   end
-  L.exec_async(argv, { cwd = dir, timeout = TIMEOUT },
+  L.exec_async(argv, { cwd = dir, timeout = TIMEOUT, tail = KEEP },
     function(out, err)
       local title = vals.repo_name and (name .. " · " .. vals.repo_name) or name
       if err then
