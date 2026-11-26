@@ -268,26 +268,26 @@ clip 364,50 1236x924 r 0
       path 6 segments fill #4cc9f0b7
       text "Claude is working" @447,578.4829 #b3ab99 Inter 12
       text "· 41s" @558.3281,577.8977 #7c7566 JetBrains Mono 10.5
-      rect 364,605.37744 935x229.62256 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
-      rect 378,621.4397 7x7 fill #ff5f6d radius 3.5
-      text "Claude asks" @393,629.4868 #ece6d8 Inter 12.5
-      text "Should the negative cases round away from zero, or half to" @378,653.6113 #ece6d8 Inter 12.5
-      text "even like the positive ones?" @378,671.73584 #ece6d8 Inter 12.5
-      rect 378,680.751 907x31.124512 radius 6 stroke 1 #332f27
-      text "○" @388,699.97095 #ffd23f JetBrains Mono 11
-      text "Half to even, as the positives" @402.59375,700.86035 #ece6d8 Inter 12.5
-      text "1" @1269,698.951 #4f4a40 JetBrains Mono 10
-      rect 378,717.8755 907x31.124512 radius 6 stroke 1 #332f27
-      text "○" @388,737.09546 #ffd23f JetBrains Mono 11
-      text "Away from zero" @402.59375,737.98486 #ece6d8 Inter 12.5
-      text "2" @1269,736.0755 #4f4a40 JetBrains Mono 10
-      rect 378,758 907x30 fill #060606 radius 6
-      clip 378,758 907x30 r 6
-        text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @388,777.5471 #7c7566 Inter 12.5
+      rect 454,605.37744 797x229.62256 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+      rect 468,621.4397 7x7 fill #ff5f6d radius 3.5
+      text "Claude asks" @483,629.4868 #ece6d8 Inter 12.5
+      text "Should the negative cases round away from zero, or half to" @468,653.6113 #ece6d8 Inter 12.5
+      text "even like the positive ones?" @468,671.73584 #ece6d8 Inter 12.5
+      rect 468,680.751 769x31.124512 radius 6 stroke 1 #332f27
+      text "○" @478,699.97095 #ffd23f JetBrains Mono 11
+      text "Half to even, as the positives" @492.59375,700.86035 #ece6d8 Inter 12.5
+      text "1" @1221,698.951 #4f4a40 JetBrains Mono 10
+      rect 468,717.8755 769x31.124512 radius 6 stroke 1 #332f27
+      text "○" @478,737.09546 #ffd23f JetBrains Mono 11
+      text "Away from zero" @492.59375,737.98486 #ece6d8 Inter 12.5
+      text "2" @1221,736.0755 #4f4a40 JetBrains Mono 10
+      rect 468,758 769x30 fill #060606 radius 6
+      clip 468,758 769x30 r 6
+        text "or type an answer: ⏎ sends it, ⇧⏎ a new line" @478,777.5471 #7c7566 Inter 12.5
       pop
-      rect 378,758 907x30 radius 6 stroke 1 #332f27
-      rect 378,797 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Details" @388,814.36523 #ece6d8 Inter 12
+      rect 468,758 769x30 radius 6 stroke 1 #332f27
+      rect 468,797 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Details" @478,814.36523 #ece6d8 Inter 12
     pop
     rect 364,855 935x1 fill #24221d
     rect 412,870 839x90 fill #0c0c0b radius 8 stroke 1 #332f27
@@ -356,8 +356,8 @@ pop
 clip 364,50 1236x924 r 0
   clip 364,81 1236x893 r 0
     clip 364,134 935x721 r 0
-      clip 378,758 907x30 r 6
-        rect 1269.3334,769 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
+      clip 468,758 769x30 r 6
+        rect 1221.3334,769 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
         path 5 segments stroke 1.25 #7c7566
       pop
     pop

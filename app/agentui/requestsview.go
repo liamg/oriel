@@ -201,7 +201,10 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 							workingLine(c, "working", se, ui.Px(width))
 						}
 						if has {
-							uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), uireg.ThreadInRequest, width)
+							// Under the comments' text, past their avatars, as wide as it.
+							c.Column("feet", ui.Style{W: ui.Px(width), Pad: ui.Insets{L: commentIndent}, Gap: 8}, func(c *ui.Ctx) {
+								uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), uireg.ThreadInRequest, width-commentIndent)
+							})
 						}
 						startingCard(c, "starting", se, width)
 					})
@@ -343,6 +346,9 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 
 // comment is one message: who said it and when, its body as markdown, and for the agent's, a warning when it claims
 // what no run backs.
+// commentIndent is how far a comment's text sits in from its row: past its avatar and the gap after it.
+const commentIndent = 28 + 14
+
 func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm core.Comment, width float32) {
 	th := c.Theme()
 	src, sourced := uireg.ThreadSourceFor(x.h, t.Origin)
@@ -350,7 +356,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 	c.Row(cm.ID, ui.Style{W: ui.Px(width), Gap: 14, Interactive: true, Role: ui.RoleListItem, Label: cmp.Or(cm.Name, string(cm.Author))}, func(c *ui.Ctx) {
 		hover := widget.PointerIn(c)
 		avatar(c, "av", cm)
-		inner := width - 42
+		inner := width - commentIndent
 		c.Column("in", ui.Style{W: ui.Px(inner), Gap: 8}, func(c *ui.Ctx) {
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				name := cmp.Or(cm.Name, "you")
