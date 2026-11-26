@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -191,7 +192,7 @@ func (r Root) Asset(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started; tail (bytes): keep only the end of what it printed, for a long run." optional=opts returns="string?,string?" cap=exec
+//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started; tail (bytes): keep only the end of what it printed, for a long run. Without tail, output past 16 MiB stops the program and fails the call." optional=opts returns="string?,string?" cap=exec
 func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
 	run, err := r.program(argv, opts)
 	if missing(err) {
@@ -245,7 +246,30 @@ const execWaitDelay = time.Second
 // execStderrMax is how much of a program's stderr is kept, the end of it: it only goes into an error message.
 const execStderrMax = 64 * 1024
 
-var errTimedOut = errors.New("timed out")
+// execOutputMax is the most output a call returns whole: past it the call fails rather than return part of it, and a
+// caller wanting only the end of a long run asks for its tail.
+const execOutputMax = 16 << 20
+
+var (
+	errTimedOut = errors.New("timed out")
+	errTooMuch  = errors.New("too much output")
+)
+
+// capped passes writes on to w until more than max bytes have come, then calls over and fails.
+type capped struct {
+	w    io.Writer
+	n    int
+	max  int
+	over func()
+}
+
+func (c *capped) Write(p []byte) (int, error) {
+	if c.n += len(p); c.n > c.max {
+		c.over()
+		return 0, errTooMuch
+	}
+	return c.w.Write(p)
+}
 
 // program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
 func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
@@ -285,10 +309,16 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		cmd.WaitDelay = execWaitDelay
 		out, errb := &tailbuf.Buffer{Max: int(tail)}, &tailbuf.Buffer{Max: execStderrMax}
 		cmd.Stdout, cmd.Stderr = out, errb
+		if tail == 0 {
+			cmd.Stdout = &capped{w: out, max: execOutputMax, over: func() { cancel(errTooMuch) }}
+		}
 		// ErrWaitDelay alone means the program ended well and left a child in the background holding its output.
 		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
-			if errors.Is(context.Cause(ctx), errTimedOut) {
+			switch cause := context.Cause(ctx); {
+			case errors.Is(cause, errTimedOut):
 				err = fmt.Errorf("timed out after %v", limit)
+			case errors.Is(cause, errTooMuch):
+				return "", fmt.Errorf("%s: output over %d MiB: pass tail to keep only its end", argv[0], execOutputMax>>20)
 			}
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}

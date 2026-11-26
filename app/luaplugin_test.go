@@ -569,6 +569,23 @@ func TestLuaExecKeepsTheEndOfALongOutput(t *testing.T) {
 	}
 }
 
+// Output past the limit fails the call, saying how to keep only its end, and stops the program, so a caller never
+// gets part of it as if it were all.
+func TestLuaExecFailsOnOutputPastTheLimit(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	s := apptest.LuaScene(t, "")
+	s.Lua(`L.exec_async({ "sh", "-c", "yes" }, { timeout = 300 }, function(out, err) huge, hugeerr = out, err or "no error" end)`)
+	s.Until("the program to stop", func() bool { return apptest.LuaGlobal(lua(s).VM(), "hugeerr") != nil })
+	if err, _ := apptest.LuaGlobal(lua(s).VM(), "hugeerr").(string); !strings.Contains(err, "output over 16 MiB") || !strings.Contains(err, "tail") {
+		t.Errorf("err = %q", err)
+	}
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "huge").(string); out != "" {
+		t.Errorf("got %d bytes of output with the error", len(out))
+	}
+}
+
 // A child left holding the program's output doesn't hold up fn: the timeout stops everything the program started,
 // and a program that ends on time is done though a child it left in the background runs on. Once the program ends
 // its output closes, so a child that keeps printing sends its output elsewhere.
