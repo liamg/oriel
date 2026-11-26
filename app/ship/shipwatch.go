@@ -124,7 +124,7 @@ func (x *Ship) prSource(id core.SessionID) watch.Source[time.Time] {
 	key := "ship.prs:" + string(id)
 	return watch.Source[time.Time]{Key: key, Poll: true, Interval: func(maxAge time.Duration) time.Duration {
 		if maxAge < prBackground {
-			return maxAge // on screen: as asked
+			return x.budget.Paced(maxAge) // on screen: as asked, unless the rate limit is running low
 		}
 		return x.budget.Interval(maxAge)
 	}, Read: func(r watch.Reader) (time.Time, error) {

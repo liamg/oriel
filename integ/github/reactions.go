@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -100,37 +101,19 @@ type ReactedNode struct {
 	Reactions []Reaction
 }
 
-// CommentReactions are the reactions on a PR's comments, by their REST ids: its line comments, its conversation's
-// and its reviews' bodies. Each kind numbers its own, so they're kept apart.
-type CommentReactions struct {
-	Line, Issue, Review map[int64]ReactedNode
-}
-
 // reactionEnums are GraphQL's names for ReactionNames.
 var reactionEnums = map[string]string{"+1": "THUMBS_UP", "-1": "THUMBS_DOWN", "laugh": "LAUGH", "hooray": "HOORAY", "confused": "CONFUSED",
 	"heart": "HEART", "rocket": "ROCKET", "eyes": "EYES"}
 
-const reactedFields = `databaseId id reactionGroups { content viewerHasReacted reactors(first: 10) { totalCount nodes { ... on Actor { login } } } }`
+const reactedFields = `id reactionGroups { content viewerHasReacted reactors(first: 10) { totalCount nodes { ... on Actor { login } } } }`
 
-// A page of comments and reviews, each after its own cursor; one that's done is left out. A review's line comments
-// are its first 100: each reply in a line thread is a review of its own.
-const commentReactionsQuery = `query($owner: String!, $name: String!, $number: Int!, $commentsAfter: String, $reviewsAfter: String, ` +
-	`$withComments: Boolean!, $withReviews: Boolean!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { ` +
-	`comments(first: 100, after: $commentsAfter) @include(if: $withComments) { nodes { ` + reactedFields + ` } ` + pageInfo + ` } ` +
-	`reviews(first: 100, after: $reviewsAfter) @include(if: $withReviews) { nodes { ` + reactedFields +
-	` comments(first: 100) { nodes { ` + reactedFields + ` } } } ` + pageInfo + ` } } } }`
-
-const pageInfo = `pageInfo { hasNextPage endCursor }`
-
-type pageJSON struct {
-	Next   bool   `json:"hasNextPage"`
-	Cursor string `json:"endCursor"`
-}
+// nodeReactionsQuery reads the reactions on up to 100 comments by their nodes: one page of nodes, and nothing nested
+// under it that GitHub would count as more.
+const nodeReactionsQuery = `query($ids: [ID!]!) { nodes(ids: $ids) { ... on Reactable { ` + reactedFields + ` } } }`
 
 type reactedJSON struct {
-	DatabaseID int64  `json:"databaseId"`
-	ID         string `json:"id"`
-	Groups     []struct {
+	ID     string `json:"id"`
+	Groups []struct {
 		Content  string `json:"content"`
 		Mine     bool   `json:"viewerHasReacted"`
 		Reactors struct {
@@ -159,55 +142,32 @@ func (r reactedJSON) node() ReactedNode {
 	return n
 }
 
-func (a API) CommentReactions(ctx context.Context, repo Repo, number int) (CommentReactions, error) {
-	type conn[T any] struct {
-		Nodes []T      `json:"nodes"`
-		Page  pageJSON `json:"pageInfo"`
-	}
-	res := CommentReactions{Line: map[int64]ReactedNode{}, Issue: map[int64]ReactedNode{}, Review: map[int64]ReactedNode{}}
-	vars := map[string]any{"owner": repo.Owner, "name": repo.Name, "number": number, "withComments": true, "withReviews": true}
-	for vars["withComments"] == true || vars["withReviews"] == true {
-		var out struct {
+// CommentReactions are the reactions on comments (line, conversation or review bodies), by their nodes: a comment
+// the REST lists give with reactions, or a review's body, which they give none for. Each 100 is one cheap query.
+func (a API) CommentReactions(ctx context.Context, nodes []string) (map[string]ReactedNode, error) {
+	out := map[string]ReactedNode{}
+	for batch := range slices.Chunk(nodes, 100) {
+		var res struct {
 			Data struct {
-				Repository struct {
-					PullRequest struct {
-						Comments *conn[reactedJSON] `json:"comments"`
-						Reviews  *conn[struct {
-							reactedJSON
-							Comments conn[reactedJSON] `json:"comments"`
-						}] `json:"reviews"`
-					} `json:"pullRequest"`
-				} `json:"repository"`
+				Nodes []*reactedJSON `json:"nodes"`
 			} `json:"data"`
 			Errors []struct {
 				Message string `json:"message"`
 			} `json:"errors"`
 		}
-		if err := a.T.Do(ctx, "POST", "graphql", map[string]any{"query": commentReactionsQuery, "variables": vars}, &out); err != nil {
-			return CommentReactions{}, err
+		if err := a.T.Do(ctx, "POST", "graphql", map[string]any{"query": nodeReactionsQuery, "variables": map[string]any{"ids": batch}}, &res); err != nil {
+			return nil, err
 		}
-		if len(out.Errors) > 0 {
-			return CommentReactions{}, &Error{Status: 422, Message: out.Errors[0].Message}
+		if len(res.Errors) > 0 {
+			return nil, &Error{Status: 422, Message: res.Errors[0].Message}
 		}
-		pr := out.Data.Repository.PullRequest
-		vars["withComments"], vars["withReviews"] = false, false
-		if c := pr.Comments; c != nil {
-			for _, n := range c.Nodes {
-				res.Issue[n.DatabaseID] = n.node()
+		for _, n := range res.Data.Nodes {
+			if n != nil && n.ID != "" {
+				out[n.ID] = n.node()
 			}
-			vars["withComments"], vars["commentsAfter"] = c.Page.Next, c.Page.Cursor
-		}
-		if rs := pr.Reviews; rs != nil {
-			for _, rv := range rs.Nodes {
-				res.Review[rv.DatabaseID] = rv.node()
-				for _, n := range rv.Comments.Nodes {
-					res.Line[n.DatabaseID] = n.node()
-				}
-			}
-			vars["withReviews"], vars["reviewsAfter"] = rs.Page.Next, rs.Page.Cursor
 		}
 	}
-	return res, nil
+	return out, nil
 }
 
 // ReactNode adds the user's name reaction (ReactionNames) to a comment's node, or with on false takes it back.

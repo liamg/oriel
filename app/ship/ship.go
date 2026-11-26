@@ -130,6 +130,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.commands()
 	x.views()
 	x.budget.PerHour = prBudget
+	x.budget.Strain = func() float64 { return statefile.CodeHostStrain(x.ctx, x.h) }
 	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused, core.TabOpened, core.TabClosed, core.SessionOpened, core.SessionArchived, core.SessionClosed:
