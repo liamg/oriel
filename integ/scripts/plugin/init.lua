@@ -66,7 +66,8 @@ local function unknown(code)
   return bad
 end
 
--- heredoc marks the bodies of the heredocs in pending, from pos, as "<" in at, and is where the code goes on.
+-- heredoc marks the bodies of the heredocs in pending, from pos, in at: "<", or "<'" for a quoted delimiter's,
+-- where nothing expands. It's where the code goes on.
 local function heredoc(code, pos, pending, at)
   for _, h in ipairs(pending) do
     while pos <= #code do
@@ -77,7 +78,7 @@ local function heredoc(code, pos, pending, at)
         break
       end
       for j = pos, eol do
-        at[j] = "<"
+        at[j] = h.quoted and "<'" or "<"
       end
       pos = eol + 1
     end
@@ -85,8 +86,8 @@ local function heredoc(code, pos, pending, at)
   return pos
 end
 
--- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them, "<" in a heredoc's
--- body. A $(…) or `…` starts afresh, unquoted, even within "…". It doesn't follow $'…' or a case's ) inside $(…):
+-- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them, "<" or "<'" in a
+-- heredoc's body. A $(…) or `…` starts afresh, unquoted, even within "…". It doesn't follow $'…' or a case's ) inside $(…):
 -- a wrong guess only changes how a slot reads, since fill never puts a value in the code.
 local function quoting(code)
   local at, outer, pending = {}, {}, {}
@@ -106,9 +107,9 @@ local function quoting(code)
       at[i + 1] = q
       i = i + 1
     elseif c == "<" and not q and code:find("^<<[^<]", i) then
-      local _, e, tabs, _, word = code:find("^<<(%-?)[ \t]*(['\"]?)([%a_][%w_]*)%2", i)
+      local _, e, tabs, bs, mark, word = code:find("^<<(%-?)[ \t]*(\\?)(['\"]?)([%a_][%w_]*)%3", i)
       if e then
-        pending[#pending + 1] = { word = word, tabs = tabs == "-" }
+        pending[#pending + 1] = { word = word, tabs = tabs == "-", quoted = bs .. mark ~= "" }
         i = e
       end
     elseif c == "\n" and not q and #pending > 0 then
@@ -228,6 +229,12 @@ local function run(name, project)
   if not sh and slot then
     return fail(name .. ": " .. slot[1] .. " works only in shell code: read ORIEL_SCRIPT_" .. slot[2]:upper()
       .. " from the environment instead")
+  end
+  local at, quoted = quoting(unescaped(code)), nil
+  each(code, function(pos, whole, n) quoted = quoted or (SLOTS[n] and at[pos] == "<'" and whole) end)
+  if quoted then
+    return fail(name .. ": " .. quoted .. " can't go in a quoted heredoc (<<'EOF'), where nothing expands: use <<EOF, "
+      .. "and write any other $ in it as \\$")
   end
   local se = L.session.current()
   if not se then

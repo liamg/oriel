@@ -34,7 +34,8 @@ closes then, and a job still printing to it is stopped. Send its output elsewher
 Each slot becomes a reference to an environment variable that holds its value, so a value with spaces or quotes
 stays one word, whether you wrote the slot bare (`cd {repo}`) or in quotes of your own (`cd "{repo}"`,
 `echo "Deploying {session_name}"`) or in a heredoc's body. A value is never pasted into the code, so a session's
-name can't run as code. `${x}` is left for the shell.
+name can't run as code. `${x}` is left for the shell. A quoted heredoc (`<<'EOF'`) expands nothing, so a slot in
+one is an error: use `<<EOF`, and write any other `$` in it as `\$`.
 
 - `{session}`: the session's workspace.
 - `{session_name}`: the session's name.

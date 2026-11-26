@@ -118,7 +118,7 @@ name: {session_name}s
 it's done
 EOF
 cat <<-'EOF' > /dev/null
-	{session_name}
+	it's done
 	EOF
 printf '%s' {session_name} > after.txt`})
 	a.Run("scripts.run", registry.Args{"name": "Deploy"})
@@ -131,6 +131,21 @@ printf '%s' {session_name} > after.txt`})
 	}
 	if _, err := os.Stat(filepath.Join(ws, "pwned")); err == nil {
 		t.Error("the session name ran as code")
+	}
+}
+
+// Nothing expands in a quoted heredoc's body, so a slot can't give its value there: it's refused, before anything
+// runs.
+func TestScriptSlotInAQuotedHeredoc(t *testing.T) {
+	for _, q := range []string{`'EOF'`, `"EOF"`, `\EOF`} {
+		a, ws := scene(t, "tilt", map[string]string{"Apply": "touch ran.txt\ncat <<" + q + "\nname: {session_name}\nEOF"})
+		a.Run("scripts.run", registry.Args{"name": "Apply"})
+		if n := noticeWith(a, "quoted heredoc"); n.Severity != core.SevError || !strings.Contains(n.Text, "{session_name}") {
+			t.Errorf("<<%s: notice = %+v", q, n)
+		}
+		if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
+			t.Errorf("<<%s: the script ran", q)
+		}
 	}
 }
 
