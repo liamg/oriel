@@ -49,7 +49,7 @@ func (x *Requests) proposalCommand() registry.Command {
 }
 
 // proposalFoot offers Do it under a thread that ends on a proposal.
-func (x *Requests) proposalFoot(c *ui.Ctx, session, thread string, where uireg.ThreadWhere, _ float32) {
+func (x *Requests) proposalFoot(c *ui.Ctx, session, thread string, where uireg.ThreadWhere, width float32) {
 	if where == uireg.ThreadInFinding {
 		return
 	}
@@ -57,7 +57,11 @@ func (x *Requests) proposalFoot(c *ui.Ctx, session, thread string, where uireg.T
 	if _, _, ok := x.proposalThread(a); !ok {
 		return
 	}
-	c.Row("proposal", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+	row := ui.Style{W: ui.Px(width), Gap: 6}
+	if where == uireg.ThreadInRequest {
+		row.Pad.L = commentIndent // under the comments' text, past their avatars
+	}
+	c.Row("proposal", row, func(c *ui.Ctx) {
 		if widget.Button(c, "do", doIt, widget.ButtonOpts{Primary: true, Help: "Have the agent make the change it proposed"}) {
 			x.run("thread.proposal.accept", a)
 		}

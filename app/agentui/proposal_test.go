@@ -12,7 +12,7 @@ import (
 )
 
 // An agent's reply that proposes a change offers Do it in its thread: a click is your "Do it", sent to the agent, and
-// the offer goes with it. A reply that proposes nothing offers nothing.
+// the offer goes with it. It sits under the reply's text. A reply that proposes nothing offers nothing.
 func TestAProposalIsDoneWithAClick(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	r.Run("request.comment", registry.Args{"body": "Is the retry loop right?"})
@@ -33,6 +33,11 @@ func TestAProposalIsDoneWithAClick(t *testing.T) {
 	a.WaitSent(t)
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "I'd double the delay each attempt, capped at 30s.", "proposes": true})
 	a.Emit(agent.TurnEnd{})
+	offered := r.Latest("Do it under the proposal", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Do it") })
+	do, said := runLeft(offered, "Do it"), runLeft(offered, "I'd double the delay each attempt, capped at 30s.")
+	if do < said || do > said+24 {
+		t.Errorf("Do it starts at x=%v, want it under the reply's text at x=%v", do, said)
+	}
 	pickInThread(t, r, "Conversation", "Do it")
 	if in := a.WaitSent(t); !strings.Contains(in.Text, "Do it") {
 		t.Errorf("the agent was sent %q", in.Text)
@@ -41,4 +46,14 @@ func TestAProposalIsDoneWithAClick(t *testing.T) {
 		t.Errorf("the thread ends %+v, want your Do it", last)
 	}
 	cardGone(r, "Conversation", "Do it")
+}
+
+// runLeft is where the first run of text reading text starts across.
+func runLeft(f headless.Frame, text string) float32 {
+	for _, r := range f.Runs() {
+		if r.Text == text {
+			return r.Box.Min.X
+		}
+	}
+	return -1
 }
