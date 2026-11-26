@@ -5,12 +5,13 @@ import (
 	"github.com/liamg/oriel/integ/azure"
 	"github.com/liamg/oriel/integ/gitlab"
 	"github.com/liamg/oriel/integ/linear"
+	"github.com/liamg/oriel/integ/scripts"
 	"github.com/liamg/oriel/plugin"
 )
 
 // Bundled are the plugins built into oriel: loaded at start unless disabled, or replaced by an install of the same id.
 func Bundled() []plugin.Bundled {
-	return []plugin.Bundled{linear.Plugin, gitlab.Plugin, azure.Plugin, acp.Plugin}
+	return []plugin.Bundled{linear.Plugin, gitlab.Plugin, azure.Plugin, acp.Plugin, scripts.Plugin}
 }
 
 // Mains are the bundled plugins' process mains, by the name `oriel plugin-process` runs them by.

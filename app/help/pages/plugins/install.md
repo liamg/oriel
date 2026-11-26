@@ -162,9 +162,13 @@ Change your settings other than its own (`plugin.<name>.…`, which it needs not
 sandbox's settings, and it can't run the settings page's commands: those, like installing plugins and changing
 secrets, are yours alone. **High risk.**
 
+`<name>` is the part of its id after the slash, so only one plugin of a name runs at a time: a second
+(`someone/scripts` beside the bundled `oriel/scripts`) isn't loaded, and a notice says which plugin has the name. A
+bundled plugin keeps its name: turning it back on stops a plugin installed under that name while it was off.
+
 ## Bundled plugins {#bundled}
 
-Some plugins ship inside Oriel (Linear): they load at start with what their manifest declares, without
+Some plugins ship inside Oriel (Linear, [Scripts](plugins/scripts)): they load at start with what their manifest declares, without
 asking, because they come with Oriel. The page marks them **bundled**. **Disable** turns one off (it's listed in
 `bundled.disabled`) and **Enable** turns it back on; they can't be uninstalled. Installing the same id from a
 registry replaces the bundled copy while it's installed.

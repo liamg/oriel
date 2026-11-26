@@ -3,6 +3,7 @@ package plugins
 import (
 	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -74,6 +75,14 @@ func (x *Catalog) syncBundled(installed func(id string) bool) {
 			}
 			bp.state = want
 			continue
+		}
+		if bp.stop == nil {
+			// A bundled plugin keeps its name: one installed while it was off gives the name back.
+			for _, other := range slices.Sorted(maps.Keys(x.loaded)) {
+				if shortName(other) == shortName(id) {
+					x.refuse(other, id, "")
+				}
+			}
 		}
 		switch {
 		case bp.stop != nil: // running, or waiting for its first use

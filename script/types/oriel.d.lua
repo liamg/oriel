@@ -45,13 +45,13 @@ oriel = {}
 ---@return string?,string?
 function oriel.asset(path) end
 
---- Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything.
+--- Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything. user_only = true makes it yours alone to start: your keys, clicks and config run it, and no plugin can through oriel.run, its own included.
 ---@param name string
 ---@param fn function
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).
+--- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started; tail (bytes): keep only the end of what it printed, for a long run. Without tail, output past 16 MiB stops the program and fails the call.
 ---@param argv string|string[]
 ---@param opts? table
 ---@return string?,string?
@@ -395,6 +395,10 @@ oriel.session = {}
 ---@param spec any
 ---@param fn? function
 function oriel.session.chips(spec, fn) end
+
+--- The session in front, as oriel.session's other functions pass it: { id, name, kind, status, dir (its workspace), branch, projects = { { name, dir, repo, branch, primary } }, data, ... }, or nil when none is.
+---@return any
+function oriel.session.current() end
 
 --- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.
 ---@param spec any

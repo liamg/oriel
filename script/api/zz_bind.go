@@ -470,6 +470,13 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.Chips(c.Any(0), c.Fn(1), c.Where())
 			},
+			"current": func(c *script.Args) ([]any, error) {
+				if err := a.check("session.control"); err != nil {
+					return nil, err
+				}
+				v, err := x.Current()
+				return []any{v}, err
+			},
 			"done": func(c *script.Args) ([]any, error) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err

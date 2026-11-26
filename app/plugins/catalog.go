@@ -443,6 +443,17 @@ func (x *Catalog) apply(sts []catalog.Status) {
 		listed[st.Entry.ID] = true
 	}
 	x.syncBundled(func(id string) bool { return listed[id] })
+	// What won't run stops first, so a plugin refused for its name loads once the one holding the name goes.
+	for id := range x.loaded {
+		if !listed[id] {
+			x.stop(id)
+		}
+	}
+	for _, st := range sts {
+		if st.State == catalog.Revoked || st.State == catalog.Disabled {
+			x.stop(st.Entry.ID)
+		}
+	}
 	for _, st := range sts {
 		id := st.Entry.ID
 		switch st.State {
@@ -454,10 +465,7 @@ func (x *Catalog) apply(sts []catalog.Status) {
 				offers[id] = st
 			}
 		case catalog.Revoked:
-			x.stop(id)
 			revoked[id] = st
-		case catalog.Disabled:
-			x.stop(id)
 		case catalog.Consent:
 			waiting[id] = st
 		case catalog.Failed:
@@ -465,11 +473,6 @@ func (x *Catalog) apply(sts []catalog.Status) {
 				x.failed[id] = msg
 				x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Location: st.Entry.File, Text: msg})
 			}
-		}
-	}
-	for id := range x.loaded {
-		if !listed[id] {
-			x.stop(id)
 		}
 	}
 	x.mu.Lock()
@@ -483,6 +486,10 @@ func (x *Catalog) apply(sts []catalog.Status) {
 // first used, unless a version of it was running already.
 func (x *Catalog) load(st catalog.Status) {
 	id := st.Entry.ID
+	if other := x.nameTaken(id); other != "" {
+		x.refuse(id, other, st.Entry.File)
+		return
+	}
 	lazy := !st.Manifest.Lazy.Empty()
 	l := x.loaded[id]
 	if l != nil && l.dir == st.Dir && (!l.waits || lazy) {
@@ -495,6 +502,36 @@ func (x *Catalog) load(st catalog.Status) {
 		return
 	}
 	_ = x.start(st)
+}
+
+// refuse stops id, whose name other has, and says why.
+func (x *Catalog) refuse(id, other, file string) {
+	x.stop(id)
+	msg := fmt.Sprintf("%s isn't loaded: %s, which is running, has the name %q, and options are named by it, so either could change the other's. Uninstall or disable one of them.", id, other, shortName(id))
+	x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Location: file, Text: msg})
+}
+
+// shortName is the part of a plugin's id after the slash, which its options are named by (plugin.<name>.…).
+func shortName(id string) string {
+	_, name, _ := strings.Cut(id, "/")
+	return name
+}
+
+// nameTaken is another running or waiting plugin with id's short name, or "". A bundled one counts first, so an
+// install can't take a bundled plugin's options.
+func (x *Catalog) nameTaken(id string) string {
+	name := shortName(id)
+	for _, other := range x.bundledIDs {
+		if other != id && shortName(other) == name && x.bundled[other].stop != nil {
+			return other
+		}
+	}
+	for _, other := range slices.Sorted(maps.Keys(x.loaded)) {
+		if other != id && shortName(other) == name {
+			return other
+		}
+	}
+	return ""
 }
 
 func (x *Catalog) start(st catalog.Status) error {

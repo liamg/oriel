@@ -1,12 +1,12 @@
 package api
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -16,6 +16,9 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/procgroup"
+	"github.com/liamg/oriel/internal/tailbuf"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -24,7 +27,7 @@ import (
 //oriel:api name= cap=ui
 type Root struct{ a *APIs }
 
-//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything." optional=opts
+//oriel:api doc="Add a command: name is its id, what :name, the omnibox and oriel.run run; fn gets the command's arguments. opts: desc; ex, an ex command that runs it too, or a list of them (ex = 'Hi' makes :Hi {text} run it), with what's typed after it as args.args, or as the argument ex_arg names, and a ! as args.bang; args, the arguments it takes, each { name, type, required, doc } with type any, string, text, int, float, bool, list or map: a run with a key it doesn't name, a value of the wrong type or a required one missing fails, saying so. Without args it takes anything. user_only = true makes it yours alone to start: your keys, clicks and config run it, and no plugin can through oriel.run, its own included." optional=opts
 func (r Root) Command(name string, fn *script.Fn, opts script.Table, where string) error {
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
@@ -33,7 +36,7 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 	if err != nil {
 		return fmt.Errorf("%s: %w", name, err)
 	}
-	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: exNames(opts["ex"]), ExArg: str(opts, "ex_arg"), Args: spec, Source: where,
+	r.a.own(r.a.Host.Command(registry.Command{ID: name, Title: str(opts, "desc"), Ex: exNames(opts["ex"]), ExArg: str(opts, "ex_arg"), Args: spec, Source: where, UserOnly: opts["user_only"] == true,
 		Run: func(_ registry.Ctx, args registry.Args) error {
 			_, err := r.a.VM.Call(fn, map[string]any(args))
 			return err
@@ -189,7 +192,7 @@ func (r Root) Asset(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns="string?,string?" cap=exec
+//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed or timed out). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default): a timeout stops all the program started; tail (bytes): keep only the end of what it printed, for a long run. Without tail, output past 16 MiB stops the program and fails the call." optional=opts returns="string?,string?" cap=exec
 func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
 	run, err := r.program(argv, opts)
 	if missing(err) {
@@ -237,6 +240,37 @@ func (r Root) ExecAsync(argv []string, opts any, fn any) error {
 	return nil
 }
 
+// execWaitDelay is how long a program's output may stay open after it ends, held by a child it left running.
+const execWaitDelay = time.Second
+
+// execStderrMax is how much of a program's stderr is kept, the end of it: it only goes into an error message.
+const execStderrMax = 64 * 1024
+
+// execOutputMax is the most output a call returns whole: past it the call fails rather than return part of it, and a
+// caller wanting only the end of a long run asks for its tail.
+const execOutputMax = 16 << 20
+
+var (
+	errTimedOut = errors.New("timed out")
+	errTooMuch  = errors.New("too much output")
+)
+
+// capped passes writes on to w until more than max bytes have come, then calls over and fails.
+type capped struct {
+	w    io.Writer
+	n    int
+	max  int
+	over func()
+}
+
+func (c *capped) Write(p []byte) (int, error) {
+	if c.n += len(p); c.n > c.max {
+		c.over()
+		return 0, errTooMuch
+	}
+	return c.w.Write(p)
+}
+
 // program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
 func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
@@ -254,18 +288,38 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 	} else if _, err := os.Stat(prog); err != nil {
 		return nil, &notFound{err}
 	}
+	tail, _ := opts["tail"].(float64)
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {
 		secs = 10
 	}
 	return func() (string, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
-		defer cancel()
+		limit := time.Duration(secs * float64(time.Second))
+		// The deadline runs on Oriel's clock, which a test moves on by hand.
+		ctx, cancel := context.WithCancelCause(context.Background())
+		defer cancel(nil)
+		timer := clock.Or(r.a.Host.Clock()).AfterFunc(limit, func() { cancel(errTimedOut) })
+		defer timer.Stop()
 		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
 		cmd.Dir = dir
-		var out, errb bytes.Buffer
-		cmd.Stdout, cmd.Stderr = &out, &errb
-		if err := cmd.Run(); err != nil {
+		// The timeout stops all the program started, and a child it leaves holding its output can't hold up the
+		// call past WaitDelay.
+		procgroup.Own(cmd)
+		cmd.Cancel = func() error { return procgroup.Kill(cmd) }
+		cmd.WaitDelay = execWaitDelay
+		out, errb := &tailbuf.Buffer{Max: int(tail)}, &tailbuf.Buffer{Max: execStderrMax}
+		cmd.Stdout, cmd.Stderr = out, errb
+		if tail == 0 {
+			cmd.Stdout = &capped{w: out, max: execOutputMax, over: func() { cancel(errTooMuch) }}
+		}
+		// ErrWaitDelay alone means the program ended well and left a child in the background holding its output.
+		if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
+			switch cause := context.Cause(ctx); {
+			case errors.Is(cause, errTimedOut):
+				err = fmt.Errorf("timed out after %v", limit)
+			case errors.Is(cause, errTooMuch):
+				return "", fmt.Errorf("%s: output over %d MiB: pass tail to keep only its end", argv[0], execOutputMax>>20)
+			}
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}
 		return out.String(), nil

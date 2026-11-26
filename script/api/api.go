@@ -64,6 +64,8 @@ func InstallPlugin(vm *script.VM, h plugin.Host, p plugin.Caller) *APIs {
 	a := &APIs{Host: h, VM: vm, Plugin: p, pending: map[string]pendingOption{}, touched: map[optKey]optPrev{}}
 	a.bind(vm)
 	a.options(vm)
+	// init.lua runs before plugins declare their options, so what it set for them waits until they do.
+	a.own(h.Options().Registered(func() { h.Do(func() { a.ApplyPending() }) }))
 	vm.SetValue("api", "version", Version)
 	vm.SetValue("", "platform", runtime.GOOS)
 	for ns, ticket := range futures {

