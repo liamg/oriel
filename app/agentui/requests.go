@@ -75,6 +75,8 @@ type Requests struct {
 	unfolded   map[core.ThreadID]bool           // closed threads opened to read in a presentation's margin
 	expanded   map[core.ThreadID]bool           // long threads showing all their comments
 
+	hostFiles hostFiles // request.file.*: attaching a file on this machine, and saving one attached
+
 	edits map[string]*agentEdit // the agent's latest edit to each file decorated, by path
 	files kit.FileTexts         // the anchored files' text, by path
 }
@@ -133,9 +135,13 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	x.shown, x.bubbles, x.lineNow = map[string]threadsShown{}, map[string]map[int]core.ThreadID{}, map[core.ThreadID]int{}
 	x.unfolded = map[core.ThreadID]bool{}
 	x.expanded = map[core.ThreadID]bool{}
-	for _, c := range append(x.commands(), x.proposalCommand()) {
+	x.hostFiles = hostFiles{x: x}
+	for _, c := range append(append(x.commands(), x.proposalCommand()), x.hostFiles.commands()...) {
 		x.Add(h.Command(c))
 	}
+	x.Add(h.Picker(x.hostFiles.attachSource()))
+	x.Add(h.Picker(x.hostFiles.saveSource()))
+	x.Add(registry.DisposeFunc(x.hostFiles.chooser.Stop))
 	x.Add(h.Contribute(uireg.ThreadFoot{Name: "proposal", Draw: x.proposalFoot}))
 	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
 	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,

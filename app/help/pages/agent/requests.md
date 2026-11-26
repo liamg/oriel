@@ -70,6 +70,13 @@ files copied in Finder or the file manager, or drop them on the box, and each go
 an image. A file from outside the session is copied into the session's agent folder first, so a sandboxed agent can
 read it too. Threads between the editor's lines take them the same way.
 
+## Attach {#attach}
+
+**+** under the box attaches a file on this machine: type its path (`~/` lists your home; a folder opens as you
+pick it), or pick **Browse…** for the system's file chooser. It goes in as a link to a copy the agent can read, as a
+dropped file does. In the conversation, a message's attached files show as cards under it: click one to open the file
+in a tab, or **↓** to save a copy: type where (it starts in `~/Downloads`), pick a folder to save in, or **Browse…**.
+
 ## Urgent
 
 Sends the message in front of the running turn: the agent is interrupted and gets it at once.
