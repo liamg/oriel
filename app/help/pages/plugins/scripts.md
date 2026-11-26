@@ -46,6 +46,19 @@ Quote the variables as you would any other (`cd "$ORIEL_SCRIPT_REPO"`). Anyone w
 name, so treat `ORIEL_SCRIPT_SESSION_NAME` as untrusted text. Pass it as an argument, never inside a string that
 another shell runs (`ssh host "…"`, `sh -c "…"`, `eval`), where it would run as code.
 
+Only the list entry's text is checked for `ORIEL_SCRIPT_REPO`, so a script file that reads it needs it passed from
+the entry: `~/bin/deploy "$ORIEL_SCRIPT_REPO"`. Write `"${ORIEL_SCRIPT_REPO:?}"` to fail when it's empty rather
+than run in the wrong place.
+
+## What a script can reach {#reach}
+
+- It runs on your machine, as you, even for a sandboxed session. `make` or `tilt up` in a project runs the Makefile
+  or Tiltfile the session's agent may have written, outside its sandbox.
+- It gets Oriel's whole environment, so any tokens Oriel was started with reach it.
+- Only you start one: from the omnibox, `:Scripts`, or a key or command of your own config. No plugin can run
+  `scripts.run`.
+- The lines a notice shows are kept with your notices. Don't print secrets.
+
 ## Which shell {#shell}
 
 The code runs with bash, or sh where there's no bash. Start it with a `#!` line to pick another
