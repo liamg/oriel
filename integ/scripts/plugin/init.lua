@@ -66,6 +66,9 @@ local function run(name, project)
   if not se then
     return fail(name .. " runs on a session: open one first")
   end
+  if se.dir == "" then
+    return fail(name .. " needs a session with a workspace: " .. (se.name ~= "" and se.name or se.id) .. " has none yet")
+  end
   local vals, dir = { session = se.dir, session_name = se.name ~= "" and se.name or se.id, primary = se.dir }, se.dir
   for _, p in ipairs(se.projects) do
     if p.primary then

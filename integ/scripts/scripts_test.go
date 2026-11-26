@@ -96,6 +96,24 @@ func TestScriptForAProject(t *testing.T) {
 	}
 }
 
+// A session with no workspace yet has no folder to run in: the script is refused, so it never runs in Oriel's own
+// folder with its paths empty.
+func TestScriptOnASessionWithNoWorkspace(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Deploy": `touch "$ORIEL_SCRIPT_SESSION/ran.txt" ran.txt`})
+	a.Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "tilt", Kind: core.KindWork}})
+	a.Run("scripts.run", registry.Args{"name": "Deploy"})
+	if n := noticeWith(a, "needs a session with a workspace"); n.Severity != core.SevError {
+		t.Errorf("notice = %+v", n)
+	}
+	if _, err := os.Stat("ran.txt"); err == nil {
+		os.Remove("ran.txt")
+		t.Error("it ran in Oriel's own folder")
+	}
+	if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
+		t.Error("it ran")
+	}
+}
+
 // A project given for a script that doesn't run per project is left out of its notice, as it ran in the workspace.
 func TestScriptForTheSessionGivenAProject(t *testing.T) {
 	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true"})
