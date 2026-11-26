@@ -55,122 +55,33 @@ func read(t *testing.T, path string) string {
 	return string(b)
 }
 
-// A script for the whole session runs in the workspace with its slots filled in, each a single shell word however
-// it's spelled; ${x} is the shell's. The notice shows the last lines it printed, stderr too.
+// A script runs in the workspace exactly as written, with the session's values in its environment: braces are
+// plain text, and the session's name is only ever data. The notice shows the last lines it printed, stderr too.
 func TestScriptForTheSession(t *testing.T) {
-	a, ws := scene(t, "it's tilt", map[string]string{
-		"Deploy": `printf '%s|%s|%s' {session} {session_name} "${HOME:+home}" > slots.txt
+	name := "it's x$(touch pwned)`touch pwned2`"
+	a, ws := scene(t, name, map[string]string{
+		"Deploy": `printf '%s|%s|%s' "$ORIEL_SCRIPT_SESSION" "$ORIEL_SCRIPT_SESSION_NAME" '{session}' > vars.txt
 for i in 1 2 3 4 5 6; do echo line$i; done
 echo warned >&2`,
 	})
 	a.Run("scripts.run", registry.Args{"name": "Deploy"})
 	n := noticeWith(a, "Deploy")
-	if got, want := read(t, filepath.Join(ws, "slots.txt")), ws+"|it's tilt|home"; got != want {
-		t.Errorf("slots = %q, want %q", got, want)
+	if got, want := read(t, filepath.Join(ws, "vars.txt")), ws+"|"+name+"|{session}"; got != want {
+		t.Errorf("vars.txt = %q, want %q", got, want)
+	}
+	for _, f := range []string{"pwned", "pwned2"} {
+		if _, err := os.Stat(filepath.Join(ws, f)); err == nil {
+			t.Errorf("the session name ran as code: %s exists", f)
+		}
 	}
 	if n.Severity != core.SevInfo || strings.Contains(n.Text, "line2") || !strings.Contains(n.Text, "line3") || !strings.Contains(n.Text, "warned") {
 		t.Errorf("notice = %v %q", n.Severity, n.Text)
 	}
 }
 
-// A slot inside double or single quotes, or in a $(…) or `…` within them, is filled in as that quoting needs, so
-// `cd "{repo}"` works as written, and the value stays one word that the shell reads nothing in.
-func TestScriptWithQuotedSlots(t *testing.T) {
-	name := "it's \"a  b\" $HOME \\ `id`"
-	a, ws := scene(t, name, map[string]string{
-		"Deploy": `# don't let the quote in this comment count
-printf '%s|%s|%s|%s' "{session_name}" "Deploying {session_name}!" '{session_name}' "{session_name}s" > quoted.txt
-printf '%s|%s|%s' "$(printf '%s' {session_name})" "$(printf '%s' '{session_name}')" "` + "`printf '%s' {session_name}`" + `" > nested.txt`,
-	})
-	a.Run("scripts.run", registry.Args{"name": "Deploy"})
-	noticeWith(a, "Deploy")
-	if got, want := read(t, filepath.Join(ws, "quoted.txt")), name+"|Deploying "+name+"!|"+name+"|"+name+"s"; got != want {
-		t.Errorf("quoted.txt = %q, want %q", got, want)
-	}
-	if got, want := read(t, filepath.Join(ws, "nested.txt")), name+"|"+name+"|"+name; got != want {
-		t.Errorf("in $(…) and backticks: %q, want %q", got, want)
-	}
-}
-
-// A slot the quote tracker reads wrongly gives wrong text, never code: here the escaped quote in $'…', which it
-// doesn't follow.
-func TestScriptSlotNeverRunsAsCode(t *testing.T) {
-	a, ws := scene(t, "x$(touch pwned)`touch pwned2`", map[string]string{"Deploy": `echo $'it\'s' > /dev/null
-echo {session_name} > out.txt`})
-	a.Run("scripts.run", registry.Args{"name": "Deploy"})
-	noticeWith(a, "Deploy")
-	for _, f := range []string{"pwned", "pwned2"} {
-		if _, err := os.Stat(filepath.Join(ws, f)); err == nil {
-			t.Errorf("the session name ran as code: %s exists", f)
-		}
-	}
-	if got := read(t, filepath.Join(ws, "out.txt")); got == "" {
-		t.Error("the script didn't run")
-	}
-}
-
-// A slot in a heredoc's body reads as its value, and the code after the heredoc is read afresh: the body's
-// apostrophe opens nothing.
-func TestScriptSlotInAHeredoc(t *testing.T) {
-	name := "it's x$(touch pwned)"
-	a, ws := scene(t, name, map[string]string{"Deploy": `cat <<EOF > here.txt
-name: {session_name}s
-it's done
-EOF
-cat <<-'EOF' > /dev/null
-	it's done
-	EOF
-printf '%s' {session_name} > after.txt`})
-	a.Run("scripts.run", registry.Args{"name": "Deploy"})
-	noticeWith(a, "Deploy")
-	if got, want := read(t, filepath.Join(ws, "here.txt")), "name: "+name+"s\nit's done\n"; got != want {
-		t.Errorf("here.txt = %q, want %q", got, want)
-	}
-	if got := read(t, filepath.Join(ws, "after.txt")); got != name {
-		t.Errorf("after the heredocs: %q, want %q", got, name)
-	}
-	if _, err := os.Stat(filepath.Join(ws, "pwned")); err == nil {
-		t.Error("the session name ran as code")
-	}
-}
-
-// Nothing expands in a quoted heredoc's body, so a slot can't give its value there: it's refused, before anything
-// runs.
-func TestScriptSlotInAQuotedHeredoc(t *testing.T) {
-	for _, q := range []string{`'EOF'`, `"EOF"`, `\EOF`} {
-		a, ws := scene(t, "tilt", map[string]string{"Apply": "touch ran.txt\ncat <<" + q + "\nname: {session_name}\nEOF"})
-		a.Run("scripts.run", registry.Args{"name": "Apply"})
-		if n := noticeWith(a, "quoted heredoc"); n.Severity != core.SevError || !strings.Contains(n.Text, "{session_name}") {
-			t.Errorf("<<%s: notice = %+v", q, n)
-		}
-		if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
-			t.Errorf("<<%s: the script ran", q)
-		}
-	}
-}
-
-// A #! line that runs a shell through env with a variable set is still a shell, and fills slots.
-func TestScriptWithAShebangThroughEnv(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Env": "#!/usr/bin/env FOO=1 sh\nprintf '%s|%s' {session_name} \"$FOO\" > env.txt"})
-	a.Run("scripts.run", registry.Args{"name": "Env"})
-	noticeWith(a, "Env")
-	if got := read(t, filepath.Join(ws, "env.txt")); got != "tilt|1" {
-		t.Errorf("env.txt = %q", got)
-	}
-}
-
-// A #! script for an interpreter that isn't a shell can't use slots: it reads the environment instead.
-func TestScriptSlotInAShebangThatIsntAShell(t *testing.T) {
-	a, _ := scene(t, "tilt", map[string]string{"Py": "#!/usr/bin/env python3\nprint('{session_name}')"})
-	a.Run("scripts.run", registry.Args{"name": "Py"})
-	if n := noticeWith(a, "ORIEL_SCRIPT_SESSION_NAME"); n.Severity != core.SevError {
-		t.Errorf("notice = %+v", n)
-	}
-}
-
-// A script naming {repo} or {repo_name} runs in the project it's run for, and needs one.
+// A script that reads ORIEL_SCRIPT_REPO or ORIEL_SCRIPT_REPO_NAME runs in the project it's run for, and needs one.
 func TestScriptForAProject(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Up": `printf '%s|%s' {repo_name} "$(pwd)" > {repo}/up.txt`})
+	a, ws := scene(t, "tilt", map[string]string{"Up": `printf '%s|%s' "$ORIEL_SCRIPT_REPO_NAME" "$(pwd)" > "$ORIEL_SCRIPT_REPO/up.txt"`})
 	a.Run("scripts.run", registry.Args{"name": "Up", "project": "web"})
 	noticeWith(a, "Up")
 	dir := filepath.Join(ws, "repos", "web")
@@ -204,10 +115,10 @@ func TestScriptWithAShebang(t *testing.T) {
 	}
 }
 
-// Slots are in the environment too, unquoted, for an interpreter that doesn't read shell quoting.
-func TestScriptSlotsInTheEnvironment(t *testing.T) {
+// A #! script in any language reads every value from its environment, and runs per project the same way.
+func TestScriptWithAShebangReadsTheEnvironment(t *testing.T) {
 	a, ws := scene(t, "it's tilt", map[string]string{"Env": "#!/bin/sh\n" +
-		`printf '%s|%s|%s|%s|%s' "$ORIEL_SCRIPT_SESSION" "$ORIEL_SCRIPT_SESSION_NAME" "$ORIEL_SCRIPT_PRIMARY" "$ORIEL_SCRIPT_REPO" "$ORIEL_SCRIPT_REPO_NAME" > "$ORIEL_SCRIPT_SESSION/env.txt" # {repo}`})
+		`printf '%s|%s|%s|%s|%s' "$ORIEL_SCRIPT_SESSION" "$ORIEL_SCRIPT_SESSION_NAME" "$ORIEL_SCRIPT_PRIMARY" "$ORIEL_SCRIPT_REPO" "$ORIEL_SCRIPT_REPO_NAME" > "$ORIEL_SCRIPT_SESSION/env.txt"`})
 	a.Run("scripts.run", registry.Args{"name": "Env", "project": "web"})
 	noticeWith(a, "Env · web finished")
 	web := filepath.Join(ws, "repos", "web")
@@ -249,21 +160,22 @@ func TestScriptThatFails(t *testing.T) {
 	}
 }
 
-// {primary} is the primary project's checkout, and a script naming it still runs once, for the whole session.
+// ORIEL_SCRIPT_PRIMARY is the primary project's checkout, and a script reading it still runs once, for the whole
+// session.
 func TestScriptWithThePrimaryProject(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Open": `printf '%s' {primary} > primary.txt`})
+	a, ws := scene(t, "tilt", map[string]string{"Open": `printf '%s' "$ORIEL_SCRIPT_PRIMARY" > primary.txt`})
 	// web is primary but not first, so first-in-the-list and primary differ.
 	a.Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "tilt", Kind: core.KindWork, Dir: ws, Projects: []core.Project{
 		{Name: "api", Dir: filepath.Join(ws, "repos", "api")}, {Name: "web", Dir: filepath.Join(ws, "repos", "web"), Primary: true}}}})
 	a.Run("scripts.run", registry.Args{"name": "Open"})
 	noticeWith(a, "Open finished")
 	if got, want := read(t, filepath.Join(ws, "primary.txt")), filepath.Join(ws, "repos", "web"); got != want {
-		t.Errorf("{primary} = %q, want %q", got, want)
+		t.Errorf("ORIEL_SCRIPT_PRIMARY = %q, want %q", got, want)
 	}
 	a.Run("scripts.pick", nil)
 	a.UntilText("Open")
 	if a.Has("Open · web") {
-		t.Errorf("a script naming {primary} is listed per project:\n%s", a.Text())
+		t.Errorf("a script reading ORIEL_SCRIPT_PRIMARY is listed per project:\n%s", a.Text())
 	}
 }
 
@@ -275,39 +187,16 @@ func TestScriptsListIsYoursAlone(t *testing.T) {
 	}
 }
 
-// A slot the plugin doesn't know is an error, and nothing runs.
-func TestUnknownSlot(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Odd": "touch ran.txt {nope}"})
-	a.Run("scripts.run", registry.Args{"name": "Odd"})
-	if n := noticeWith(a, "{nope}"); n.Severity != core.SevError || !strings.Contains(n.Text, "{ nope }") {
-		t.Errorf("notice = %+v", n)
-	}
-	if _, err := os.Stat(filepath.Join(ws, "ran.txt")); err == nil {
-		t.Error("it ran")
-	}
-}
-
-// {{slot}} is a literal {slot}; any other {{word}} is left as written, so a Go template's {{end}} reaches kubectl or
-// helm whole.
-func TestScriptWithALiteralBrace(t *testing.T) {
-	a, ws := scene(t, "tilt", map[string]string{"Lit": `printf '%s|%s|%s' '{{range .items}}{{else}}{{end}}' "{{session}}" {session} > lit.txt`})
-	a.Run("scripts.run", registry.Args{"name": "Lit"})
-	noticeWith(a, "Lit finished")
-	if got, want := read(t, filepath.Join(ws, "lit.txt")), "{{range .items}}{{else}}{{end}}|{session}|"+ws; got != want {
-		t.Errorf("lit.txt = %q, want %q", got, want)
-	}
-}
-
 // The picker lists each script once, and a project's script once for each project.
 func TestScriptsPicker(t *testing.T) {
-	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true", "Up": "cd {repo}"})
+	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true", "Up": `cd "$ORIEL_SCRIPT_REPO"`})
 	a.Run("scripts.pick", nil)
 	a.UntilText("Deploy", "Up · api", "Up · web")
 }
 
 // $ in the omnibox narrows it to the scripts.
 func TestScriptsPrefix(t *testing.T) {
-	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true", "Up": "cd {repo}"})
+	a, _ := scene(t, "tilt", map[string]string{"Deploy": "true", "Up": `cd "$ORIEL_SCRIPT_REPO"`})
 	a.Run("omnibox.open", registry.Args{"query": "$"})
 	a.UntilText("Deploy", "Up · api", "Up · web")
 	if a.Has("Commands") {

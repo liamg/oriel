@@ -12,11 +12,11 @@ script and its code:
 
 ```lua
 oriel.option["plugin.scripts.list"] = {
-  ["Deploy to Tilt"] = "~/bin/tilt-deploy {session}",
+  ["Deploy to Tilt"] = '~/bin/tilt-deploy "$ORIEL_SCRIPT_SESSION"',
   ["Open in tmux"] = [[#!/usr/bin/env fish
-tmux new-session -d -s {session_name} -c {session} 2>/dev/null
-tmux switch-client -t {session_name}]],
-  ["Test"] = "cd {repo} && make test",
+tmux new-session -d -s $ORIEL_SCRIPT_SESSION_NAME -c $ORIEL_SCRIPT_SESSION 2>/dev/null
+tmux switch-client -t $ORIEL_SCRIPT_SESSION_NAME]],
+  ["Test"] = 'cd "$ORIEL_SCRIPT_REPO" && make test',
 }
 ```
 
@@ -29,29 +29,22 @@ the session's workspace, for up to ten minutes.
 A job it leaves running in the background (`tilt up &`) carries on once the script ends, but the script's output
 closes then, and a job still printing to it is stopped. Send its output elsewhere: `tilt up > /dev/null 2>&1 &`.
 
-## Slots {#slots}
+## The session's values {#values}
 
-Each slot becomes a reference to an environment variable that holds its value, so a value with spaces or quotes
-stays one word, whether you wrote the slot bare (`cd {repo}`) or in quotes of your own (`cd "{repo}"`,
-`echo "Deploying {session_name}"`) or in a heredoc's body. A value is never pasted into the code, so a session's
-name can't run as code. `${x}` is left for the shell. A quoted heredoc (`<<'EOF'`) expands nothing, so a slot in
-one is an error: use `<<EOF`, and write any other `$` in it as `\$`.
+The code runs exactly as written. The session's values are in its environment:
 
-- `{session}`: the session's workspace.
-- `{session_name}`: the session's name.
-- `{primary}`: the primary project's checkout, or the workspace when the session has no projects.
-- `{repo}`: a project's checkout.
-- `{repo_name}`: the project's name.
+- `ORIEL_SCRIPT_SESSION`: the session's workspace.
+- `ORIEL_SCRIPT_SESSION_NAME`: the session's name.
+- `ORIEL_SCRIPT_PRIMARY`: the primary project's checkout, or the workspace when the session has no projects.
+- `ORIEL_SCRIPT_REPO`: a project's checkout.
+- `ORIEL_SCRIPT_REPO_NAME`: the project's name.
 
-A script that names `{repo}` or `{repo_name}` runs for one project at a time, in its checkout: the omnibox has a row
-for it per project. Any other `{name}` is a mistake, and the script doesn't run: write it with spaces (`{ name }`,
-which awk, jq and Python read the same) for the text itself. `{{session}}` is a literal `{session}`, and any other
-`{{word}}` stays as written, so a Go template's `{{end}}` reaches kubectl or helm whole.
+A script that mentions `ORIEL_SCRIPT_REPO` or `ORIEL_SCRIPT_REPO_NAME` anywhere in its text runs for one project at
+a time, in its checkout: the omnibox has a row for it per project. That works in any language.
 
-The variables are `ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and
-`ORIEL_SCRIPT_REPO` and `ORIEL_SCRIPT_REPO_NAME` when it runs for a project. Slots work in shell code only (bash,
-sh, zsh, dash, ksh, mksh, ash, fish): a `#!` script in another language, such as Python, reads these variables,
-and a slot in it is an error. To run one per project, call it from a line of shell: `python3 ~/bin/deploy.py {repo}`.
+Quote the variables as you would any other (`cd "$ORIEL_SCRIPT_REPO"`). Anyone who can rename a session sets its
+name, so treat `ORIEL_SCRIPT_SESSION_NAME` as untrusted text. Pass it as an argument, never inside a string that
+another shell runs (`ssh host "…"`, `sh -c "…"`, `eval`), where it would run as code.
 
 ## Which shell {#shell}
 
