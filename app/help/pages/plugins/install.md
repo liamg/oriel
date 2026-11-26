@@ -164,7 +164,7 @@ secrets, are yours alone. **High risk.**
 
 `<name>` is the part of its id after the slash, so only one plugin of a name runs at a time: a second
 (`someone/scripts` beside the bundled `oriel/scripts`) isn't loaded, and a notice says which plugin has the name. A
-bundled plugin keeps its name.
+bundled plugin keeps its name: turning it back on stops a plugin installed under that name while it was off.
 
 ## Bundled plugins {#bundled}
 

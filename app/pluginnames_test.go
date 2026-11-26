@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -8,7 +9,9 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 )
 
 // Options are named by the part of a plugin's id after the slash, so a second plugin of that name could change the
@@ -37,5 +40,43 @@ func TestPluginWithATakenNameIsNotLoaded(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("no notice names acme/hi; notices: %v", noticeTexts(s.Store().State().Notifications))
+	}
+}
+
+// A bundled plugin keeps its name when it's turned back on: an installed plugin that took the name while it was
+// off is stopped, and a notice says why.
+func TestBundledPluginTurnedBackOnTakesItsName(t *testing.T) {
+	hi := plugin.Bundled{FS: fstest.MapFS{
+		"oriel.toml": {Data: []byte("id = \"acme/hi\"\nversion = \"1.0.0\"\n")},
+		"init.lua":   {Data: []byte(hiPlugin)},
+	}}
+	dir := writePlugin(t, map[string]string{"oriel.toml": "id = \"other/hi\"\nversion = \"1.0.0\"\n", "init.lua": `oriel.notify("other loaded")`})
+	s, settings := catalogScene(t, "", func(cfg *apptest.Config) { cfg.Bundled = []plugin.Bundled{hi} })
+	x := apptest.PluginOf[*plugins.Catalog](s, "catalog")
+	s.Run("settings.set", registry.Args{"name": plugins.BundledDisabledOption, "value": []string{"acme/hi"}, "scope": "user"})
+	s.Until("acme/hi off", func() bool { return x.State("acme/hi") == "disabled" })
+	off, err := os.ReadFile(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rig.WriteFile(t, settings, string(off)+"\n[plugins]\n\"other/hi\" = { path = \""+dir+"\" }\n")
+	syncPlugins(s, t)
+	loaded := func(id string) bool {
+		return slices.ContainsFunc(s.Host().Plugins(), func(m plugin.Manifest) bool { return m.ID == id })
+	}
+	if !loaded("other/hi") {
+		t.Fatal("other/hi didn't load while acme/hi was off")
+	}
+	s.Run("settings.set", registry.Args{"name": plugins.BundledDisabledOption, "value": []string{}, "scope": "user"})
+	s.Until("acme/hi on", func() bool { return x.State("acme/hi") == "loaded" })
+	if loaded("other/hi") {
+		t.Error("other/hi still runs beside acme/hi")
+	}
+	found := false
+	for _, n := range s.Store().State().Notifications {
+		found = found || strings.Contains(n.Title+n.Text, "other/hi") && strings.Contains(n.Text, "acme/hi")
+	}
+	if !found {
+		t.Errorf("no notice names both; notices: %v", noticeTexts(s.Store().State().Notifications))
 	}
 }

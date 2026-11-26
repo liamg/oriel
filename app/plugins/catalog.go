@@ -484,9 +484,7 @@ func (x *Catalog) apply(sts []catalog.Status) {
 func (x *Catalog) load(st catalog.Status) {
 	id := st.Entry.ID
 	if other := x.nameTaken(id); other != "" {
-		x.stop(id)
-		msg := fmt.Sprintf("%s isn't loaded: %s, which is running, has the name %q, and options are named by it, so either could change the other's. Uninstall or disable one of them.", id, other, shortName(id))
-		x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Location: st.Entry.File, Text: msg})
+		x.refuse(id, other, st.Entry.File)
 		return
 	}
 	lazy := !st.Manifest.Lazy.Empty()
@@ -501,6 +499,13 @@ func (x *Catalog) load(st catalog.Status) {
 		return
 	}
 	_ = x.start(st)
+}
+
+// refuse stops id, whose name other has, and says why.
+func (x *Catalog) refuse(id, other, file string) {
+	x.stop(id)
+	msg := fmt.Sprintf("%s isn't loaded: %s, which is running, has the name %q, and options are named by it, so either could change the other's. Uninstall or disable one of them.", id, other, shortName(id))
+	x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Location: file, Text: msg})
 }
 
 // shortName is the part of a plugin's id after the slash, which its options are named by (plugin.<name>.…).
