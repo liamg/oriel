@@ -160,10 +160,10 @@ func num(r *http.Request) int {
 
 func user(login string) map[string]string { return map[string]string{"login": login} }
 
-func restReview(c *gh.ReviewComment) map[string]any {
-	m := map[string]any{"id": c.ID, "pull_request_review_id": c.Review, "user": user(c.User), "author_association": c.Association, "body": c.Body,
+func (s *Server) restReview(c *gh.ReviewComment) map[string]any {
+	m := map[string]any{"id": c.ID, "node_id": node(LineComment, c.ID), "pull_request_review_id": c.Review, "user": user(c.User), "author_association": c.Association, "body": c.Body,
 		"path": c.Path, "side": c.Side, "html_url": c.URL, "created_at": c.Created, "updated_at": c.Updated, "original_line": c.OriginalLine, "line": nil,
-		"reactions": restReactions(c.Reactions)}
+		"reactions": restReactions(s.reactionsWith(LineComment, c.ID, c.Reactions))}
 	if c.Line != 0 {
 		m["line"] = c.Line
 	}
@@ -173,9 +173,9 @@ func restReview(c *gh.ReviewComment) map[string]any {
 	return m
 }
 
-func restIssue(c *gh.IssueComment) map[string]any {
-	return map[string]any{"id": c.ID, "user": user(c.User), "author_association": c.Association, "body": c.Body, "html_url": c.URL,
-		"created_at": c.Created, "updated_at": c.Updated, "reactions": restReactions(c.Reactions)}
+func (s *Server) restIssue(c *gh.IssueComment) map[string]any {
+	return map[string]any{"id": c.ID, "node_id": node(IssueNote, c.ID), "user": user(c.User), "author_association": c.Association, "body": c.Body, "html_url": c.URL,
+		"created_at": c.Created, "updated_at": c.Updated, "reactions": restReactions(s.reactionsWith(IssueNote, c.ID, c.Reactions))}
 }
 
 // restReactions is a reactions summary as GitHub sends it: every reaction's count, 0 for none, and the total.
@@ -308,7 +308,7 @@ func (s *Server) listReviewComments(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 	out := []map[string]any{}
 	for _, c := range s.review[prKey(repoOf(r), num(r))] {
-		out = append(out, restReview(c))
+		out = append(out, s.restReview(c))
 	}
 	reply(w, 200, out)
 }
@@ -335,7 +335,7 @@ func (s *Server) reply(w http.ResponseWriter, r *http.Request) {
 		to = root.InReplyTo
 	}
 	c := s.addReview(repoOf(r), num(r), gh.ReviewComment{InReplyTo: to, User: s.login, Association: "OWNER", Body: in.Body})
-	reply(w, 201, restReview(c))
+	reply(w, 201, s.restReview(c))
 }
 
 func (s *Server) listReviews(w http.ResponseWriter, r *http.Request) {
@@ -343,7 +343,7 @@ func (s *Server) listReviews(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 	out := []map[string]any{}
 	for _, rv := range s.reviews[prKey(repoOf(r), num(r))] {
-		out = append(out, map[string]any{"id": rv.ID, "user": user(rv.User), "author_association": rv.Association, "state": rv.State, "body": rv.Body,
+		out = append(out, map[string]any{"id": rv.ID, "node_id": node(ReviewBody, rv.ID), "user": user(rv.User), "author_association": rv.Association, "state": rv.State, "body": rv.Body,
 			"html_url": rv.URL, "submitted_at": rv.Submitted, "commit_id": rv.Commit})
 	}
 	reply(w, 200, out)
@@ -354,7 +354,7 @@ func (s *Server) listIssueComments(w http.ResponseWriter, r *http.Request) {
 	defer s.mu.Unlock()
 	out := []map[string]any{}
 	for _, c := range s.issue[prKey(repoOf(r), num(r))] {
-		out = append(out, restIssue(c))
+		out = append(out, s.restIssue(c))
 	}
 	reply(w, 200, out)
 }
@@ -374,7 +374,7 @@ func (s *Server) addIssueComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := s.addIssue(repoOf(r), num(r), gh.IssueComment{User: s.login, Association: "OWNER", Body: in.Body})
-	reply(w, 201, restIssue(c))
+	reply(w, 201, s.restIssue(c))
 }
 
 func (s *Server) member(w http.ResponseWriter, r *http.Request) {

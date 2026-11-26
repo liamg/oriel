@@ -307,7 +307,6 @@ func TestReactWhileASyncRuns(t *testing.T) {
 		s.Run("review.threads.sync", nil)
 		old := take("a sync's read of the reactions, before the user's")
 		s.ClickOn("🎉 1 on priya-k's comment")
-		take("the reaction's lookup of the comment")()
 		s.Until("GitHub has the user's 🎉", func() bool { return slices.Contains(hub.ReactionsOn(ghtest.LineComment, root.ID)["hooray"], "you") })
 		old()
 		next := take("the read of the sync after the reaction")

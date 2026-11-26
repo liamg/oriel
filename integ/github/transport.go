@@ -21,6 +21,7 @@ type HTTP struct {
 	Base   string
 	Token  string
 	Client *http.Client // http.DefaultClient if nil
+	Limits *Limits      // keeps the rate limits GitHub's answers report, if set
 }
 
 func (h HTTP) Do(ctx context.Context, method, path string, in, out any) error {
@@ -56,6 +57,7 @@ func (h HTTP) Do(ctx context.Context, method, path string, in, out any) error {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	h.Limits.note(resp.Header)
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err

@@ -77,6 +77,37 @@ func TestGitHubHostThreads(t *testing.T) {
 	}
 }
 
+// A PR's comments are read for their reactions only where REST counts some (and on reviews' bodies, which it
+// doesn't count): with none, a sync asks GitHub's GraphQL nothing about reactions, which its rate limit charges heavily.
+func TestGitHubHostReadsReactionsOnlyWhereThereAreSome(t *testing.T) {
+	s, _, hub, _, _ := apptest.ShipScene(t)
+	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
+	root := hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: "priya", Path: "round.go", Line: 3, Body: "Name the mode."})
+	hub.AddIssueComment("acme/pricing", pr.Number, gh.IssueComment{User: "bo", Body: "When does this ship?"})
+	h, _ := registry.HostByName(s.Registry(), "github")
+	repo := registry.CodeRepo{Repo: "acme/pricing", Site: registry.Site{Host: "github.com"}}
+	rpr := registry.PR{Number: pr.Number, URL: pr.URL, Author: "bob"}
+	if _, err := h.Threads(context.Background(), repo, rpr); err != nil {
+		t.Fatal(err)
+	}
+	if n := hub.ReactionReads(); n != 0 {
+		t.Fatalf("a sync with no reactions read them %d times", n)
+	}
+	hub.ReactAs("bo", ghtest.LineComment, root.ID, "+1")
+	ts, err := h.Threads(context.Background(), repo, rpr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := hub.ReactionReads(); n != 1 {
+		t.Errorf("a sync with a reaction read them %d times, want once", n)
+	}
+	for _, th := range ts {
+		if th.ID != "" && !reflect.DeepEqual(th.Comments[0].Reactions, []registry.PRReaction{{Emoji: "👍", Count: 1, Who: []string{"bo"}}}) {
+			t.Errorf("the line comment's reactions: %+v", th.Comments[0].Reactions)
+		}
+	}
+}
+
 // GitHub's code host offers its 8 reactions. A mirrored comment carries its reactions, the user's own marked, and
 // ReactNote adds the user's reaction to a line comment, a conversation comment or a review's body, or takes it back.
 func TestGitHubHostCommentReactions(t *testing.T) {
@@ -139,5 +170,45 @@ func TestGitHubHostCommentReactions(t *testing.T) {
 	}
 	if err := h.ReactNote(ctx, repo, rpr, review, id(root.ID), "🦄", true); err == nil {
 		t.Error("a reaction GitHub doesn't have was taken")
+	}
+}
+
+// GitHub's code host says what its answers' headers report is left of each rate limit, and polls slow down as
+// GraphQL's points run out ahead of the hour: 100 of 5000 left with 50 minutes to go slows them all the way.
+func TestGitHubHostReportsItsAllowance(t *testing.T) {
+	s, _, hub, _, _ := apptest.ShipScene(t)
+	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
+	hub.AddReview("acme/pricing", pr.Number, gh.Review{User: "priya", State: gh.ReviewCommented, Body: "A few things."})
+	reset := time.Now().Add(50 * time.Minute).Truncate(time.Second)
+	hub.SetAllowance("core", 4500, 5000, reset)
+	hub.SetAllowance("graphql", 100, 5000, reset)
+	h, _ := registry.HostByName(s.Registry(), "github")
+	repo := registry.CodeRepo{Repo: "acme/pricing", Site: registry.Site{Host: "github.com"}}
+	if _, err := h.Threads(context.Background(), repo, registry.PR{Number: pr.Number, URL: pr.URL, Author: "bob"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := h.Allowance(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []registry.Allowance{{Name: "core", Limit: 5000, Remaining: 4500, Reset: reset}, {Name: "graphql", Limit: 5000, Remaining: 100, Reset: reset}}
+	for i := range got {
+		got[i].Reset = got[i].Reset.UTC()
+	}
+	for i := range want {
+		want[i].Reset = want[i].Reset.UTC()
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("the allowance: %+v, want %+v", got, want)
+	}
+	if strain := registry.Strain(registry.Allowances(context.Background(), s.Registry()), time.Now()); strain != 8 {
+		t.Errorf("polls slow %vx, want 8x", strain)
+	}
+	hub.SetAllowance("graphql", 4500, 5000, reset)
+	if _, err := h.Threads(context.Background(), repo, registry.PR{Number: pr.Number, URL: pr.URL, Author: "bob"}); err != nil {
+		t.Fatal(err)
+	}
+	if strain := registry.Strain(registry.Allowances(context.Background(), s.Registry()), time.Now()); strain != 1 {
+		t.Errorf("with plenty left, polls slow %vx, want 1x", strain)
 	}
 }

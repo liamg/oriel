@@ -52,9 +52,9 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 	if err != nil {
 		resolved = nil // unknown: each thread's resolution is left as it is
 	}
-	reacted, err := c.CommentReactions(ctx, repo, n)
+	reacted, err := c.CommentReactions(ctx, reactable(comments, issue, reviews))
 	if err != nil {
-		reacted = gh.CommentReactions{} // unknown: the comments show none
+		reacted = nil // unknown: the comments show none
 	}
 	states := gh.ReviewStatesAt(reviews, pr.Head, pr.Reviewers)
 	state := func(user string) registry.ReviewState {
@@ -96,17 +96,17 @@ func (x *Host) threads(ctx context.Context, r registry.CodeRepo, pr registry.PR)
 			t.Resolved = &v
 		}
 		for _, rc := range cs {
-			t.Comments = append(t.Comments, note(rc.ID, rc.User, rc.Association, rc.Body, rc.Created, reacted.Line[rc.ID]))
+			t.Comments = append(t.Comments, note(rc.ID, rc.User, rc.Association, rc.Body, rc.Created, reacted[rc.Node]))
 		}
 		out = append(out, t)
 	}
 	convo := registry.ReviewThread{URL: pr.URL, Comments: []registry.ReviewNote{}}
 	for _, ic := range issue {
-		convo.Comments = append(convo.Comments, note(ic.ID, ic.User, ic.Association, ic.Body, ic.Created, reacted.Issue[ic.ID]))
+		convo.Comments = append(convo.Comments, note(ic.ID, ic.User, ic.Association, ic.Body, ic.Created, reacted[ic.Node]))
 	}
 	for _, rv := range reviews {
 		if strings.TrimSpace(rv.Body) != "" {
-			convo.Comments = append(convo.Comments, note(rv.ID, rv.User, rv.Association, rv.Body, rv.Submitted, reacted.Review[rv.ID]))
+			convo.Comments = append(convo.Comments, note(rv.ID, rv.User, rv.Association, rv.Body, rv.Submitted, reacted[rv.Node]))
 		}
 	}
 	slices.SortStableFunc(convo.Comments, func(a, b registry.ReviewNote) int { return a.At.Compare(b.At) })
@@ -175,7 +175,7 @@ func reactions(n gh.ReactedNode) []registry.PRReaction {
 }
 
 // reactNote adds the user's emoji reaction to a comment of a thread, or takes it back. GitHub reacts by a comment's
-// node, which the comments' reactions give. In the conversation, a note is a comment or a review's body: GitHub
+// node, which the REST lists give. In the conversation, a note is a comment or a review's body: GitHub
 // numbers those apart, so one id found as both can't be told apart.
 func (x *Host) reactNote(ctx context.Context, r registry.CodeRepo, pr registry.PR, t registry.ReviewThread, note, emoji string, on bool) error {
 	name := gh.ReactionName(emoji)
@@ -194,15 +194,9 @@ func (x *Host) reactNote(ctx context.Context, r registry.CodeRepo, pr registry.P
 	if err != nil {
 		return fmt.Errorf("%q isn't a GitHub comment", note)
 	}
-	reacted, err := c.CommentReactions(ctx, repo, n)
+	nodes, err := noteNodes(ctx, c, repo, n, t.ID != "", id)
 	if err != nil {
 		return err
-	}
-	var nodes []string
-	if t.ID != "" {
-		nodes = append(nodes, reacted.Line[id].Node)
-	} else {
-		nodes = append(nodes, reacted.Issue[id].Node, reacted.Review[id].Node)
 	}
 	nodes = slices.DeleteFunc(nodes, func(s string) bool { return s == "" })
 	switch len(nodes) {
@@ -212,6 +206,65 @@ func (x *Host) reactNote(ctx context.Context, r registry.CodeRepo, pr registry.P
 		return c.ReactNode(ctx, nodes[0], name, on)
 	}
 	return fmt.Errorf("comment %s is both a comment and a review there; react on GitHub", note)
+}
+
+// reactable are the comments whose reactions are worth reading: those the REST lists say have some, and the reviews'
+// bodies, which REST gives no reactions for.
+func reactable(lines []gh.ReviewComment, issue []gh.IssueComment, reviews []gh.Review) []string {
+	var out []string
+	for _, c := range lines {
+		if len(c.Reactions) > 0 && c.Node != "" {
+			out = append(out, c.Node)
+		}
+	}
+	for _, c := range issue {
+		if len(c.Reactions) > 0 && c.Node != "" {
+			out = append(out, c.Node)
+		}
+	}
+	for _, r := range reviews {
+		if strings.TrimSpace(r.Body) != "" && r.Node != "" {
+			out = append(out, r.Node)
+		}
+	}
+	return out
+}
+
+// noteNodes are the nodes of the comments numbered id on PR n: its line comment, or in the conversation, its comment
+// and its review body, each kind numbering its own.
+func noteNodes(ctx context.Context, c gh.Client, repo gh.Repo, n int, line bool, id int64) ([]string, error) {
+	var nodes []string
+	if line {
+		cs, err := c.ReviewComments(ctx, repo, n)
+		if err != nil {
+			return nil, err
+		}
+		for _, rc := range cs {
+			if rc.ID == id {
+				nodes = append(nodes, rc.Node)
+			}
+		}
+		return nodes, nil
+	}
+	issue, err := c.IssueComments(ctx, repo, n)
+	if err != nil {
+		return nil, err
+	}
+	for _, ic := range issue {
+		if ic.ID == id {
+			nodes = append(nodes, ic.Node)
+		}
+	}
+	reviews, err := c.Reviews(ctx, repo, n)
+	if err != nil {
+		return nil, err
+	}
+	for _, rv := range reviews {
+		if rv.ID == id {
+			nodes = append(nodes, rv.Node)
+		}
+	}
+	return nodes, nil
 }
 
 // rootOf is a review thread's first comment's id.

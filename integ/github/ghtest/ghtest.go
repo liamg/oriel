@@ -25,19 +25,21 @@ type Server struct {
 	mu            sync.Mutex
 	now           time.Time
 	nextID        int
-	prs           map[string][]*gh.PR   // by owner/name
-	checks        map[string][]gh.Check // by owner/name@ref
-	logs          map[int64]string      // Actions jobs' logs
-	flows         map[int64]int64       // check suite → Actions workflow
-	fail          map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
-	calls         []string              // "POST /repos/acme/api/pulls"
-	lag           bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
-	hold          chan struct{}         // while set, creating a PR waits for it to close
-	holdReactions chan struct{}         // while set, adding or taking back a reaction waits for it to close
-	holdList      *heldList             // while set, the next listing of PRs answers as of when it was asked, once released
-	heldReads     chan chan struct{}    // while set, a read of reactions, once answered, is handed here and waits
-	stopReads     chan struct{}         // closed: held reads go
-	unseen        map[string]bool       // owner/name#number: made while lagging
+	prs           map[string][]*gh.PR     // by owner/name
+	checks        map[string][]gh.Check   // by owner/name@ref
+	logs          map[int64]string        // Actions jobs' logs
+	flows         map[int64]int64         // check suite → Actions workflow
+	fail          map[string]*gh.Error    // "METHOD path-prefix" → the error it answers
+	calls         []string                // "POST /repos/acme/api/pulls"
+	lag           bool                    // PRs made while it's set are left out of listings, as GitHub's search lags
+	hold          chan struct{}           // while set, creating a PR waits for it to close
+	holdReactions chan struct{}           // while set, adding or taking back a reaction waits for it to close
+	holdList      *heldList               // while set, the next listing of PRs answers as of when it was asked, once released
+	heldReads     chan chan struct{}      // while set, a read of reactions, once answered, is handed here and waits
+	allowance     map[string]gh.Allowance // what each rate limit's headers say is left, by resource
+	reactionReads int                     // reads of comments' reactions
+	stopReads     chan struct{}           // closed: held reads go
+	unseen        map[string]bool         // owner/name#number: made while lagging
 
 	login         string                         // who the fake's client is: what it posts is by them
 	review        map[string][]*gh.ReviewComment // by owner/name#number
@@ -101,6 +103,16 @@ func New(t testing.TB) *Server {
 	s.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		s.calls = append(s.calls, r.Method+" "+r.URL.Path)
+		res := "core"
+		if r.URL.Path == "/graphql" {
+			res = "graphql"
+		}
+		if a, ok := s.allowance[res]; ok {
+			w.Header().Set("X-RateLimit-Resource", res)
+			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(a.Limit))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(a.Remaining))
+			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(a.Reset.Unix(), 10))
+		}
 		for k, e := range s.fail {
 			if strings.HasPrefix(r.Method+" "+r.URL.Path, k) {
 				s.mu.Unlock()
@@ -116,6 +128,16 @@ func New(t testing.TB) *Server {
 	}))
 	t.Cleanup(s.Close)
 	return s
+}
+
+// SetAllowance has the fake's answers say what's left of a rate limit (resource "core" or "graphql") until reset.
+func (s *Server) SetAllowance(resource string, remaining, limit int, reset time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.allowance == nil {
+		s.allowance = map[string]gh.Allowance{}
+	}
+	s.allowance[resource] = gh.Allowance{Resource: resource, Limit: limit, Remaining: remaining, Reset: reset}
 }
 
 // Client is a gh.Client talking to the fake.

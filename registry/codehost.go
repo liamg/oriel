@@ -76,7 +76,58 @@ type CodeHost struct {
 	Blockers     func(ctx context.Context, r CodeRepo, pr PR) ([]MergeBlocker, error)
 	Merge        func(ctx context.Context, r CodeRepo, pr PR, o MergeOpts) error
 
+	// Allowance is what's left of the host's rate limits, as its servers last said: background polls slow down as
+	// one runs low (Strain).
+	Allowance func(ctx context.Context) ([]Allowance, error)
+
 	Source string
+}
+
+// Allowance is what's left of one of a code host's rate limits until it resets ("graphql": 1200 of 5000 points).
+type Allowance struct {
+	Name      string    `json:"name"`
+	Limit     int       `json:"limit"`
+	Remaining int       `json:"remaining"`
+	Reset     time.Time `json:"reset"`
+}
+
+// allowanceWindow is how long a rate limit's allowance lasts, as GitHub's and GitLab's do.
+const allowanceWindow = time.Hour
+
+// maxStrain is the most Strain slows polls by.
+const maxStrain = 8
+
+// Strain is how many times slower polls of the code hosts should run to keep within their rate limits at now: 1
+// while every allowance is spent no faster than its window passes, more the further one is ahead of it, up to 8.
+func Strain(as []Allowance, now time.Time) float64 {
+	strain := 1.0
+	for _, a := range as {
+		left := a.Reset.Sub(now)
+		if a.Limit <= 0 || left <= 0 {
+			continue
+		}
+		spare := float64(a.Remaining) / float64(a.Limit)
+		window := min(float64(left)/float64(allowanceWindow), 1)
+		if spare >= window {
+			continue
+		}
+		strain = max(strain, min(window/max(spare, 1.0/maxStrain/2), maxStrain))
+	}
+	return strain
+}
+
+// Allowances are every code host's allowances, each asked for no longer than ctx allows.
+func Allowances(ctx context.Context, r Contributions) []Allowance {
+	var out []Allowance
+	for _, h := range CodeHosts(r) {
+		if h.Allowance == nil {
+			continue
+		}
+		if as, err := h.Allowance(ctx); err == nil {
+			out = append(out, as...)
+		}
+	}
+	return out
 }
 
 func (CodeHost) ContributionKind() string   { return "code.host" }

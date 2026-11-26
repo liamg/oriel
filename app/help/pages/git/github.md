@@ -20,6 +20,10 @@ conversation (its comments and reviews' summaries) is one more thread. Oriel syn
 seconds while the session is in front, and at once with `review.threads.sync`. An edit on GitHub changes the thread here, and
 the agent is given it again; a thread resolved on GitHub is resolved here, and reopened with it.
 
+Reactions are read only for comments that have some, so a sync costs little of GitHub's rate limit. When GitHub's
+answers say an allowance (REST's requests or GraphQL's points) is being spent faster than its hour passes, the syncs
+and the [Ship](git/ship) page's PR reads slow down, up to eight times, until it recovers.
+
 ## Forward to GitHub {#forward}
 
 Under the agent's draft reply: **↗ Forward to GitHub** posts it as you, with your own [GitHub token](git/github#token),

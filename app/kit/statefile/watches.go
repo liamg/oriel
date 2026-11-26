@@ -215,13 +215,49 @@ func (s *Subs) Close() { s.KeepOnly(nil) }
 
 // Budget shares an API's request allowance between the sources polling it: each says how many requests a read
 // makes, and Interval stretches every poll so that together they keep to PerHour. A rate limit hit doubles the
-// intervals for a while.
+// intervals for a while, and Strain, when set, stretches them further as the API says its allowance runs low.
 type Budget struct {
 	PerHour int // requests an hour the polls may make
+	// Strain is how many times slower to poll for what the API says is left of its allowance (registry.Strain); 1
+	// while there's plenty. It's asked at most once a minute.
+	Strain func() float64
 
-	mu     sync.Mutex
-	users  map[string]int // requests a read makes, by source
-	backed time.Time      // intervals are doubled until then
+	mu       sync.Mutex
+	users    map[string]int // requests a read makes, by source
+	backed   time.Time      // intervals are doubled until then
+	strain   float64        // Strain's last answer
+	strained time.Time      // when it was asked
+}
+
+// strainNow is Strain's last answer, asked again (without b.mu held: a plugin may take a while) once it's a minute
+// old; meanwhile the last answer stands.
+func (b *Budget) strainNow() float64 {
+	now := time.Now()
+	b.mu.Lock()
+	f, last := b.Strain, max(b.strain, 1)
+	if f == nil || !b.strained.IsZero() && now.Sub(b.strained) < time.Minute {
+		b.mu.Unlock()
+		return last
+	}
+	b.strained = now
+	b.mu.Unlock()
+	s := max(f(), 1)
+	b.mu.Lock()
+	b.strain = s
+	b.mu.Unlock()
+	return s
+}
+
+// Paced is how often a poll on screen, wanting maxAge, runs: as asked, stretched only by the rate limit's strain.
+func (b *Budget) Paced(maxAge time.Duration) time.Duration {
+	strain := b.strainNow()
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	d := time.Duration(float64(maxAge) * strain)
+	if time.Now().Before(b.backed) {
+		d *= 2
+	}
+	return d
 }
 
 // Use counts key's reads, of perRead requests each, until the release.
@@ -241,6 +277,7 @@ func (b *Budget) Use(key string, perRead int) (release func()) {
 
 // Interval is how often a poll wanting maxAge runs: no sooner than the allowance lets every user poll in turn.
 func (b *Budget) Interval(maxAge time.Duration) time.Duration {
+	strain := b.strainNow()
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n := 0
@@ -251,6 +288,7 @@ func (b *Budget) Interval(maxAge time.Duration) time.Duration {
 	if b.PerHour > 0 && n > 0 {
 		d = max(d, time.Duration(n)*time.Hour/time.Duration(b.PerHour))
 	}
+	d = time.Duration(float64(d) * strain)
 	if time.Now().Before(b.backed) {
 		d *= 2
 	}
@@ -262,4 +300,11 @@ func (b *Budget) BackOff() {
 	b.mu.Lock()
 	b.backed = time.Now().Add(15 * time.Minute)
 	b.mu.Unlock()
+}
+
+// CodeHostStrain is registry.Strain over every code host's allowance, each given a few seconds to say.
+func CodeHostStrain(ctx context.Context, r registry.Contributions) float64 {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return registry.Strain(registry.Allowances(ctx, r), time.Now())
 }

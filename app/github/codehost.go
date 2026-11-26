@@ -62,7 +62,7 @@ func (x *Host) Activate(_ context.Context, h plugin.Host) error {
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve,
 		Reactions: githubReactions, ReactNote: x.reactNote,
-		Template: githubTemplate, Owners: githubOwners}))
+		Template: githubTemplate, Owners: githubOwners, Allowance: x.allowance}))
 	for _, t := range gatewayTools() {
 		x.Add(h.Contribute(t))
 	}
@@ -71,6 +71,15 @@ func (x *Host) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Option(registry.OptionSpec{Name: trustedUsersOption, Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
 		Help: "GitHub logins whose review comments the agent may read, beside the trusted orgs' members."}))
 	return nil
+}
+
+// allowance is what GitHub's answers have said is left of its rate limits: REST's requests, GraphQL's points.
+func (x *Host) allowance(context.Context) ([]registry.Allowance, error) {
+	var out []registry.Allowance
+	for _, l := range x.clients.Limits() {
+		out = append(out, registry.Allowance{Name: l.Resource, Limit: l.Limit, Remaining: l.Remaining, Reset: l.Reset})
+	}
+	return out, nil
 }
 
 // on is the client for a GitHub server, with its token, else the one found for it.

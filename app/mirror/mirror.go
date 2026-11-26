@@ -125,6 +125,7 @@ func (x *Mirror) Activate(_ context.Context, h plugin.Host) error {
 		}
 	}))
 	x.budget.PerHour = syncBudget
+	x.budget.Strain = func() float64 { return statefile.CodeHostStrain(x.ctx, x.h) }
 	x.follow()
 	return nil
 }
@@ -196,7 +197,7 @@ func (x *Mirror) follow() {
 		x.subs.Hold(key, m, need, func() statefile.Closer {
 			src := statefile.Every(key, func(ctx context.Context) error { return x.syncWait(ctx, id) }, func(maxAge time.Duration) time.Duration {
 				if maxAge < reviewPoll {
-					return maxAge
+					return x.budget.Paced(maxAge)
 				}
 				return x.budget.Interval(maxAge)
 			})

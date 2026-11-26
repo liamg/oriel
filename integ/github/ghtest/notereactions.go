@@ -2,6 +2,8 @@ package ghtest
 
 import (
 	"fmt"
+
+	gh "github.com/liamg/oriel/integ/github"
 	"net/http"
 	"slices"
 	"strings"
@@ -51,16 +53,30 @@ func (s *Server) reactedNode(n string) map[string]any {
 		groups = append(groups, map[string]any{"content": enum, "viewerHasReacted": slices.Contains(who, s.login),
 			"reactors": map[string]any{"totalCount": len(who), "nodes": nodes}})
 	}
-	var id int64
-	_, _ = fmt.Sscanf(n[strings.LastIndex(n, "_")+1:], "%d", &id)
-	return map[string]any{"databaseId": id, "id": n, "reactionGroups": groups}
+	return map[string]any{"id": n, "reactionGroups": groups}
 }
 
-// commentReactions answers the query for a PR's comments' reactions, a page of 100 comments and reviews at a time
-// after each one's cursor. Its line comments all come under its first review.
+// reactionsWith are a comment's reactions as its REST summary counts them: those set on it, and those people made.
+func (s *Server) reactionsWith(kind string, id int64, set gh.Reactions) gh.Reactions {
+	out := gh.Reactions{}
+	for name, n := range set {
+		out[name] += n
+	}
+	for name, who := range s.noteReactions[node(kind, id)] {
+		out[name] += len(who)
+	}
+	return out
+}
+
+// commentReactions answers the query for comments' reactions by their nodes, counting each read of it.
 func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 	s.mu.Lock()
-	body := s.reactionsPage(vars)
+	nodes := []map[string]any{}
+	ids, _ := vars["ids"].([]any)
+	for _, id := range ids {
+		nodes = append(nodes, s.reactedNode(fmt.Sprint(id)))
+	}
+	s.reactionReads++
 	held, stop := s.heldReads, s.stopReads
 	s.mu.Unlock()
 	if held != nil {
@@ -74,7 +90,14 @@ func (s *Server) commentReactions(w http.ResponseWriter, vars map[string]any) {
 		case <-stop:
 		}
 	}
-	reply(w, 200, body)
+	reply(w, 200, map[string]any{"data": map[string]any{"nodes": nodes}})
+}
+
+// ReactionReads is how many times comments' reactions have been read.
+func (s *Server) ReactionReads() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.reactionReads
 }
 
 // HoldReactionReads holds each read of reactions after it has read them. held takes the next one waiting, if any,
@@ -93,46 +116,6 @@ func (s *Server) HoldReactionReads(t interface{ Cleanup(func()) }) (held func() 
 			return nil, false
 		}
 	}
-}
-
-func (s *Server) reactionsPage(vars map[string]any) map[string]any {
-	n, _ := vars["number"].(float64)
-	key := prKey(fmt.Sprint(vars["owner"])+"/"+fmt.Sprint(vars["name"]), int(n))
-	issue, lines, reviews := []map[string]any{}, []map[string]any{}, []map[string]any{}
-	for _, c := range s.issue[key] {
-		issue = append(issue, s.reactedNode(node(IssueNote, c.ID)))
-	}
-	for _, c := range s.review[key] {
-		lines = append(lines, s.reactedNode(node(LineComment, c.ID)))
-	}
-	for _, r := range s.reviews[key] {
-		reviews = append(reviews, s.reactedNode(node(ReviewBody, r.ID)))
-	}
-	if len(reviews) == 0 {
-		reviews = append(reviews, s.reactedNode(node(ReviewBody, 0)))
-	}
-	reviews[0]["comments"] = map[string]any{"nodes": lines}
-	pr := map[string]any{}
-	if vars["withComments"] != false {
-		pr["comments"] = page(issue, vars["commentsAfter"])
-	}
-	if vars["withReviews"] != false {
-		pr["reviews"] = page(reviews, vars["reviewsAfter"])
-	}
-	return map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": pr}}}
-}
-
-// page is GitHub's connection of the 100 nodes after the cursor, which is the index of the last one given.
-func page(nodes []map[string]any, after any) map[string]any {
-	start := 0
-	if a, ok := after.(string); ok {
-		_, _ = fmt.Sscanf(a, "%d", &start)
-		start++
-	}
-	start = min(start, len(nodes))
-	end := min(start+100, len(nodes))
-	return map[string]any{"nodes": nodes[start:end],
-		"pageInfo": map[string]any{"hasNextPage": end < len(nodes), "endCursor": fmt.Sprint(end - 1)}}
 }
 
 // reactNode is GitHub's addReaction and removeReaction mutations, as the signed-in user.

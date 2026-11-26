@@ -27,6 +27,7 @@ const (
 // ReviewComment is a comment on a line of a pull request's diff, or a reply in its thread.
 type ReviewComment struct {
 	ID           int64     `json:"id"`
+	Node         string    `json:"node,omitempty"`      // its GraphQL id, which reactions go on
 	InReplyTo    int64     `json:"inReplyTo,omitempty"` // the thread's first comment, for a reply
 	Review       int64     `json:"review,omitempty"`
 	User         string    `json:"user"`
@@ -45,6 +46,7 @@ type ReviewComment struct {
 // Review is a submitted review: its state and what it says overall.
 type Review struct {
 	ID          int64     `json:"id"`
+	Node        string    `json:"node,omitempty"`
 	User        string    `json:"user"`
 	Association string    `json:"association,omitempty"`
 	State       string    `json:"state"`
@@ -57,6 +59,7 @@ type Review struct {
 // IssueComment is a comment in a pull request's conversation.
 type IssueComment struct {
 	ID          int64     `json:"id"`
+	Node        string    `json:"node,omitempty"`
 	User        string    `json:"user"`
 	Association string    `json:"association,omitempty"`
 	Body        string    `json:"body"`
@@ -125,6 +128,7 @@ type restUser struct {
 
 type restReviewComment struct {
 	ID           int64     `json:"id"`
+	Node         string    `json:"node_id"`
 	InReplyTo    int64     `json:"in_reply_to_id"`
 	Review       int64     `json:"pull_request_review_id"`
 	User         restUser  `json:"user"`
@@ -141,7 +145,7 @@ type restReviewComment struct {
 }
 
 func (c restReviewComment) comment() ReviewComment {
-	out := ReviewComment{ID: c.ID, InReplyTo: c.InReplyTo, Review: c.Review, User: c.User.Login, Association: c.Association, Body: c.Body,
+	out := ReviewComment{ID: c.ID, Node: c.Node, InReplyTo: c.InReplyTo, Review: c.Review, User: c.User.Login, Association: c.Association, Body: c.Body,
 		Path: c.Path, Side: c.Side, URL: c.HTMLURL, Created: c.CreatedAt, Updated: c.UpdatedAt, Reactions: c.Reactions}
 	if c.Line != nil {
 		out.Line = *c.Line
@@ -154,6 +158,7 @@ func (c restReviewComment) comment() ReviewComment {
 
 type restIssueComment struct {
 	ID          int64     `json:"id"`
+	Node        string    `json:"node_id"`
 	User        restUser  `json:"user"`
 	Association string    `json:"author_association"`
 	Body        string    `json:"body"`
@@ -164,7 +169,7 @@ type restIssueComment struct {
 }
 
 func (c restIssueComment) comment() IssueComment {
-	return IssueComment{ID: c.ID, User: c.User.Login, Association: c.Association, Body: c.Body, URL: c.HTMLURL, Created: c.CreatedAt, Updated: c.UpdatedAt,
+	return IssueComment{ID: c.ID, Node: c.Node, User: c.User.Login, Association: c.Association, Body: c.Body, URL: c.HTMLURL, Created: c.CreatedAt, Updated: c.UpdatedAt,
 		Reactions: c.Reactions}
 }
 
@@ -183,6 +188,7 @@ func (a API) ReviewComments(ctx context.Context, repo Repo, number int) ([]Revie
 func (a API) Reviews(ctx context.Context, repo Repo, number int) ([]Review, error) {
 	var list []struct {
 		ID          int64     `json:"id"`
+		Node        string    `json:"node_id"`
 		User        restUser  `json:"user"`
 		Association string    `json:"author_association"`
 		State       string    `json:"state"`
@@ -196,7 +202,7 @@ func (a API) Reviews(ctx context.Context, repo Repo, number int) ([]Review, erro
 	}
 	out := make([]Review, 0, len(list))
 	for _, r := range list {
-		out = append(out, Review{ID: r.ID, User: r.User.Login, Association: r.Association, State: r.State, Body: r.Body, URL: r.HTMLURL,
+		out = append(out, Review{ID: r.ID, Node: r.Node, User: r.User.Login, Association: r.Association, State: r.State, Body: r.Body, URL: r.HTMLURL,
 			Submitted: r.SubmittedAt, Commit: r.CommitID})
 	}
 	return out, nil
