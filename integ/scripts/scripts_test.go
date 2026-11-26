@@ -73,6 +73,21 @@ echo warned >&2`,
 	}
 }
 
+// A slot inside double or single quotes is filled in as that quoting needs, so `cd "{repo}"` works as written, and
+// the value stays one word that the shell reads nothing in.
+func TestScriptWithQuotedSlots(t *testing.T) {
+	name := "it's \"a  b\" $HOME \\ `id`"
+	a, ws := scene(t, name, map[string]string{
+		"Deploy": `# don't let the quote in this comment count
+printf '%s|%s|%s' "{session_name}" "Deploying {session_name}!" '{session_name}' > quoted.txt`,
+	})
+	a.Run("scripts.run", registry.Args{"name": "Deploy"})
+	noticeWith(a, "Deploy")
+	if got, want := read(t, filepath.Join(ws, "quoted.txt")), name+"|Deploying "+name+"!|"+name; got != want {
+		t.Errorf("quoted.txt = %q, want %q", got, want)
+	}
+}
+
 // A script naming {repo} or {repo_name} runs in the project it's run for, and needs one.
 func TestScriptForAProject(t *testing.T) {
 	a, ws := scene(t, "tilt", map[string]string{"Up": `printf '%s|%s' {repo_name} "$(pwd)" > {repo}/up.txt`})

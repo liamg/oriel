@@ -1,5 +1,5 @@
 -- Scripts of your own, run on the session in front: deploy its projects, open its workspace in tmux. Slots in the
--- code are filled in before it runs, each single-quoted, so a value with spaces or quotes stays one shell word.
+-- code are filled in before it runs, quoted for where they sit, so a value with spaces or quotes stays one shell word.
 local L = oriel
 
 -- user_only: the list is code run under this plugin's exec grant, so no other plugin may write it.
@@ -69,13 +69,52 @@ local function unknown(code)
   return bad
 end
 
+-- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them. It doesn't follow
+-- heredocs.
+local function quoting(code)
+  local at, q, i = {}, nil, 1
+  while i <= #code do
+    local c = code:sub(i, i)
+    at[i] = q
+    if c == "\\" and q ~= "'" then
+      at[i + 1] = q
+      i = i + 1
+    elseif c == "'" and q ~= '"' then
+      q = not q and "'" or nil
+    elseif c == '"' and q ~= "'" then
+      q = not q and '"' or nil
+    elseif c == "#" and not q and (i == 1 or code:sub(i - 1, i - 1):match("[%s;&|()]")) then
+      -- A comment's quotes don't count: "# don't" opens nothing.
+      local stop = code:find("\n", i, true) or #code
+      for j = i, stop do
+        at[j] = nil
+      end
+      i = stop
+    end
+    i = i + 1
+  end
+  return at
+end
+
+-- fill is v as one word where the quoting is q: inside "…" the shell would still read \ $ ` and ", and inside '…'
+-- the quotes close around it.
+local function fill(v, q)
+  if q == '"' then
+    return (v:gsub('[\\$`"]', "\\%0"))
+  elseif q == "'" then
+    return "'" .. quote(v) .. "'"
+  end
+  return quote(v)
+end
+
 local function expand(code, vals)
   code = unescaped(code)
+  local at = quoting(code)
   code = code:gsub("()({([a-z_]+)})", function(pos, whole, name)
     if pos > 1 and code:sub(pos - 1, pos - 1) == "$" then
       return whole
     end
-    return quote(vals[name])
+    return fill(vals[name], at[pos])
   end)
   return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, function(word)
     return SLOTS[word] and "{" .. word .. "}" or "{{" .. word .. "}}"

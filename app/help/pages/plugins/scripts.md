@@ -31,8 +31,9 @@ closes then, and a job still printing to it is stopped. Send its output elsewher
 
 ## Slots {#slots}
 
-These are filled in before the code runs, each in single quotes, so a value with spaces stays one word. `${x}` is
-left for the shell.
+These are filled in before the code runs, quoted so a value with spaces or quotes stays one word, whether you
+wrote the slot bare (`cd {repo}`) or in quotes of your own (`cd "{repo}"`, `echo "Deploying {session_name}"`).
+`${x}` is left for the shell. In a heredoc, use the environment variables below instead.
 
 - `{session}`: the session's workspace.
 - `{session_name}`: the session's name.
