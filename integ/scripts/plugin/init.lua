@@ -1,5 +1,5 @@
--- Scripts of your own, run on the session in front: deploy its projects, open its workspace in tmux. Slots in the
--- code are filled in before it runs, quoted for where they sit, so a value with spaces or quotes stays one shell word.
+-- Scripts of your own, run on the session in front: deploy its projects, open its workspace in tmux. Each slot in the
+-- code becomes a reference to an environment variable holding its value, so a value never runs as code.
 local L = oriel
 
 -- user_only: the list is code run under this plugin's exec grant, so no other plugin may write it.
@@ -8,7 +8,8 @@ L.option{ name = "plugin.scripts.list", type = "map", user_only = true,
     .. "names. {session} is the session's workspace, {session_name} its name and {primary} its primary project's "
     .. "checkout (the workspace when it has none). A script naming {repo} or {repo_name} runs once per project, in "
     .. "its checkout. ${x} stays the shell's, {{session}} is a literal {session}, and any other {{word}} stays as "
-    .. "written. Each is in the environment too, unquoted, as ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME and so on." }
+    .. "written. Each slot reads its environment variable (ORIEL_SCRIPT_SESSION, ORIEL_SCRIPT_REPO_NAME…), which a #! "
+    .. "script that isn't a shell reads in place of slots." }
 
 local SLOTS = { session = true, session_name = true, primary = true, repo = true, repo_name = true }
 local TIMEOUT = 600 -- seconds: a deploy can take minutes
@@ -33,10 +34,6 @@ case $code in
   if command -v bash > /dev/null 2>&1; then exec bash -c "$code"; fi
   exec sh -c "$code" ;;
 esac]]
-
-local function quote(s)
-  return "'" .. (s:gsub("'", [['\'']])) .. "'"
-end
 
 -- LITERAL stands in for a {{word}} while slots are found: no script holds a NUL. {{slot}} is the way to write a
 -- literal {slot}; any other {{word}} stays as written, as Go templates ({{end}}) need it.
@@ -69,10 +66,30 @@ local function unknown(code)
   return bad
 end
 
--- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them, and how many `…`
--- it's inside. A $(…) or `…` starts afresh, unquoted, even within "…". It doesn't follow heredocs.
+-- heredoc marks the bodies of the heredocs in pending, from pos, as "<" in at, and is where the code goes on.
+local function heredoc(code, pos, pending, at)
+  for _, h in ipairs(pending) do
+    while pos <= #code do
+      local eol = code:find("\n", pos, true) or #code + 1
+      local line = code:sub(pos, eol - 1):gsub("\r$", "")
+      if (h.tabs and line:gsub("^\t+", "") or line) == h.word then
+        pos = eol + 1
+        break
+      end
+      for j = pos, eol do
+        at[j] = "<"
+      end
+      pos = eol + 1
+    end
+  end
+  return pos
+end
+
+-- quoting is the shell quoting at each byte of code: nil outside quotes, "'" or '"' inside them, "<" in a heredoc's
+-- body. A $(…) or `…` starts afresh, unquoted, even within "…". It doesn't follow $'…' or a case's ) inside $(…):
+-- a wrong guess only changes how a slot reads, since fill never puts a value in the code.
 local function quoting(code)
-  local at, ticks, outer = {}, {}, {}
+  local at, outer, pending = {}, {}, {}
   local q, depth, i = nil, 0, 1
   local function open(closer)
     outer[#outer + 1] = { q = q, depth = depth, closer = closer }
@@ -82,19 +99,21 @@ local function quoting(code)
     local o = table.remove(outer)
     q, depth = o.q, o.depth
   end
-  local function nticks()
-    local n = 0
-    for _, o in ipairs(outer) do
-      n = n + (o.closer == "`" and 1 or 0)
-    end
-    return n
-  end
   while i <= #code do
     local c, closer = code:sub(i, i), outer[#outer] and outer[#outer].closer
-    at[i], ticks[i] = q, nticks()
+    at[i] = q
     if c == "\\" and q ~= "'" then
-      at[i + 1], ticks[i + 1] = q, ticks[i]
+      at[i + 1] = q
       i = i + 1
+    elseif c == "<" and not q and code:find("^<<[^<]", i) then
+      local _, e, tabs, _, word = code:find("^<<(%-?)[ \t]*(['\"]?)([%a_][%w_]*)%2", i)
+      if e then
+        pending[#pending + 1] = { word = word, tabs = tabs == "-" }
+        i = e
+      end
+    elseif c == "\n" and not q and #pending > 0 then
+      i = heredoc(code, i + 1, pending, at) - 1
+      pending = {}
     elseif c == "$" and q ~= "'" and code:sub(i + 1, i + 1) == "(" then
       open(")")
       i = i + 1
@@ -118,33 +137,58 @@ local function quoting(code)
     end
     i = i + 1
   end
-  return at, ticks
+  return at
 end
 
--- fill is v as one word where the quoting is q, inside n `…`: inside "…" the shell would still read \ $ ` and ",
--- inside '…' the quotes close around it, and each `…` takes a backslash off \ $ and `.
-local function fill(v, q, n)
-  if q == '"' then
-    v = v:gsub('[\\$`"]', "\\%0")
-  elseif q == "'" then
-    v = "'" .. quote(v) .. "'"
-  else
-    v = quote(v)
+local SHELLS = { sh = true, bash = true, zsh = true, dash = true, ksh = true, mksh = true, ash = true, fish = true }
+
+-- shell is the shell that runs code ("fish", or "sh" for the POSIX ones), or nil for an interpreter that isn't one.
+local function shell(code)
+  local line = code:match("^#!([^\n]*)")
+  if not line then
+    return "sh"
   end
-  for _ = 1, n do
-    v = v:gsub("[\\$`]", "\\%0")
+  local words = {}
+  for w in line:gsub("\r$", ""):gmatch("%S+") do
+    words[#words + 1] = w
   end
-  return v
+  local i = 1
+  if words[1] and words[1]:match("[^/]+$") == "env" then
+    i = 2
+    while words[i] and (words[i]:sub(1, 1) == "-" or words[i]:find("^[%w_]+=")) do
+      i = i + 1
+    end
+  end
+  local name = words[i] and words[i]:match("[^/]+$")
+  return SHELLS[name] and (name == "fish" and "fish" or "sh") or nil
 end
 
-local function expand(code, vals)
+-- fill is the slot name as a reference to its environment variable, one word where the quoting is q. The value
+-- itself never goes in the code, so it can't run as code however the quoting was read. A letter or [ after it
+-- would read as part of the name: POSIX shells take ${V}; fish has no ${…}, so its quotes close around $V, which
+-- fish never splits.
+local function fill(name, q, sh, after)
+  local v = "ORIEL_SCRIPT_" .. name:upper()
+  if q == "'" then
+    return "'\"$" .. v .. "\"'"
+  elseif q == "<" then
+    return "${" .. v .. "}"
+  elseif q == '"' and after:match("[%w_%[]") then
+    return sh == "fish" and '"$' .. v .. '"' or "${" .. v .. "}"
+  elseif q == '"' then
+    return "$" .. v
+  end
+  return '"$' .. v .. '"'
+end
+
+local function expand(code, sh)
   code = unescaped(code)
-  local at, ticks = quoting(code)
-  code = code:gsub("()({([a-z_]+)})", function(pos, whole, name)
+  local at = quoting(code)
+  code = code:gsub("()({([a-z_]+)})()", function(pos, whole, name, after)
     if pos > 1 and code:sub(pos - 1, pos - 1) == "$" then
       return whole
     end
-    return fill(vals[name], at[pos], ticks[pos] or 0)
+    return fill(name, at[pos], sh, code:sub(after, after))
   end)
   return (code:gsub(LITERAL .. "([a-z_]+)" .. LITERAL, function(word)
     return SLOTS[word] and "{" .. word .. "}" or "{{" .. word .. "}}"
@@ -179,6 +223,12 @@ local function run(name, project)
     return fail(name .. ": " .. bad .. " isn't a slot: use {session}, {session_name}, {primary}, {repo} or "
       .. "{repo_name}, or write " .. bad:gsub("^{(.*)}$", "{ %1 }") .. " with spaces for the text itself")
   end
+  local sh, slot = shell(code), nil
+  each(code, function(_, whole, n) slot = slot or (SLOTS[n] and { whole, n }) end)
+  if not sh and slot then
+    return fail(name .. ": " .. slot[1] .. " works only in shell code: read ORIEL_SCRIPT_" .. slot[2]:upper()
+      .. " from the environment instead")
+  end
   local se = L.session.current()
   if not se then
     return fail(name .. " runs on a session: open one first")
@@ -202,9 +252,8 @@ local function run(name, project)
       return fail(name .. ": the session has no project " .. project)
     end
   end
-  -- Slots go in the environment too, for an interpreter that doesn't read shell quoting. ORIEL_SESSION is taken:
-  -- it marks a session's own processes.
-  local argv = { "sh", "-c", RUNNER, "oriel-script", expand(code, vals) }
+  -- Slots read their values from the environment. ORIEL_SESSION is taken: it marks a session's own processes.
+  local argv = { "sh", "-c", RUNNER, "oriel-script", expand(code, sh) }
   for k, v in pairs(vals) do
     argv[#argv + 1] = "ORIEL_SCRIPT_" .. k:upper() .. "=" .. v
   end

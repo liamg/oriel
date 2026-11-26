@@ -79,16 +79,77 @@ func TestScriptWithQuotedSlots(t *testing.T) {
 	name := "it's \"a  b\" $HOME \\ `id`"
 	a, ws := scene(t, name, map[string]string{
 		"Deploy": `# don't let the quote in this comment count
-printf '%s|%s|%s' "{session_name}" "Deploying {session_name}!" '{session_name}' > quoted.txt
+printf '%s|%s|%s|%s' "{session_name}" "Deploying {session_name}!" '{session_name}' "{session_name}s" > quoted.txt
 printf '%s|%s|%s' "$(printf '%s' {session_name})" "$(printf '%s' '{session_name}')" "` + "`printf '%s' {session_name}`" + `" > nested.txt`,
 	})
 	a.Run("scripts.run", registry.Args{"name": "Deploy"})
 	noticeWith(a, "Deploy")
-	if got, want := read(t, filepath.Join(ws, "quoted.txt")), name+"|Deploying "+name+"!|"+name; got != want {
+	if got, want := read(t, filepath.Join(ws, "quoted.txt")), name+"|Deploying "+name+"!|"+name+"|"+name+"s"; got != want {
 		t.Errorf("quoted.txt = %q, want %q", got, want)
 	}
 	if got, want := read(t, filepath.Join(ws, "nested.txt")), name+"|"+name+"|"+name; got != want {
 		t.Errorf("in $(…) and backticks: %q, want %q", got, want)
+	}
+}
+
+// A slot the quote tracker reads wrongly gives wrong text, never code: here the escaped quote in $'…', which it
+// doesn't follow.
+func TestScriptSlotNeverRunsAsCode(t *testing.T) {
+	a, ws := scene(t, "x$(touch pwned)`touch pwned2`", map[string]string{"Deploy": `echo $'it\'s' > /dev/null
+echo {session_name} > out.txt`})
+	a.Run("scripts.run", registry.Args{"name": "Deploy"})
+	noticeWith(a, "Deploy")
+	for _, f := range []string{"pwned", "pwned2"} {
+		if _, err := os.Stat(filepath.Join(ws, f)); err == nil {
+			t.Errorf("the session name ran as code: %s exists", f)
+		}
+	}
+	if got := read(t, filepath.Join(ws, "out.txt")); got == "" {
+		t.Error("the script didn't run")
+	}
+}
+
+// A slot in a heredoc's body reads as its value, and the code after the heredoc is read afresh: the body's
+// apostrophe opens nothing.
+func TestScriptSlotInAHeredoc(t *testing.T) {
+	name := "it's x$(touch pwned)"
+	a, ws := scene(t, name, map[string]string{"Deploy": `cat <<EOF > here.txt
+name: {session_name}s
+it's done
+EOF
+cat <<-'EOF' > /dev/null
+	{session_name}
+	EOF
+printf '%s' {session_name} > after.txt`})
+	a.Run("scripts.run", registry.Args{"name": "Deploy"})
+	noticeWith(a, "Deploy")
+	if got, want := read(t, filepath.Join(ws, "here.txt")), "name: "+name+"s\nit's done\n"; got != want {
+		t.Errorf("here.txt = %q, want %q", got, want)
+	}
+	if got := read(t, filepath.Join(ws, "after.txt")); got != name {
+		t.Errorf("after the heredocs: %q, want %q", got, name)
+	}
+	if _, err := os.Stat(filepath.Join(ws, "pwned")); err == nil {
+		t.Error("the session name ran as code")
+	}
+}
+
+// A #! line that runs a shell through env with a variable set is still a shell, and fills slots.
+func TestScriptWithAShebangThroughEnv(t *testing.T) {
+	a, ws := scene(t, "tilt", map[string]string{"Env": "#!/usr/bin/env FOO=1 sh\nprintf '%s|%s' {session_name} \"$FOO\" > env.txt"})
+	a.Run("scripts.run", registry.Args{"name": "Env"})
+	noticeWith(a, "Env")
+	if got := read(t, filepath.Join(ws, "env.txt")); got != "tilt|1" {
+		t.Errorf("env.txt = %q", got)
+	}
+}
+
+// A #! script for an interpreter that isn't a shell can't use slots: it reads the environment instead.
+func TestScriptSlotInAShebangThatIsntAShell(t *testing.T) {
+	a, _ := scene(t, "tilt", map[string]string{"Py": "#!/usr/bin/env python3\nprint('{session_name}')"})
+	a.Run("scripts.run", registry.Args{"name": "Py"})
+	if n := noticeWith(a, "ORIEL_SCRIPT_SESSION_NAME"); n.Severity != core.SevError {
+		t.Errorf("notice = %+v", n)
 	}
 }
 

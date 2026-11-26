@@ -31,9 +31,10 @@ closes then, and a job still printing to it is stopped. Send its output elsewher
 
 ## Slots {#slots}
 
-These are filled in before the code runs, quoted so a value with spaces or quotes stays one word, whether you
-wrote the slot bare (`cd {repo}`) or in quotes of your own (`cd "{repo}"`, `echo "Deploying {session_name}"`).
-`${x}` is left for the shell. In a heredoc, use the environment variables below instead.
+Each slot becomes a reference to an environment variable that holds its value, so a value with spaces or quotes
+stays one word, whether you wrote the slot bare (`cd {repo}`) or in quotes of your own (`cd "{repo}"`,
+`echo "Deploying {session_name}"`) or in a heredoc's body. A value is never pasted into the code, so a session's
+name can't run as code. `${x}` is left for the shell.
 
 - `{session}`: the session's workspace.
 - `{session_name}`: the session's name.
@@ -46,9 +47,10 @@ for it per project. Any other `{name}` is a mistake, and the script doesn't run:
 which awk, jq and Python read the same) for the text itself. `{{session}}` is a literal `{session}`, and any other
 `{{word}}` stays as written, so a Go template's `{{end}}` reaches kubectl or helm whole.
 
-The quotes are a shell's. A script in another language reads the same values from its environment, unquoted:
-`ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and `ORIEL_SCRIPT_REPO` and
-`ORIEL_SCRIPT_REPO_NAME` when it runs for a project.
+The variables are `ORIEL_SCRIPT_SESSION`, `ORIEL_SCRIPT_SESSION_NAME`, `ORIEL_SCRIPT_PRIMARY`, and
+`ORIEL_SCRIPT_REPO` and `ORIEL_SCRIPT_REPO_NAME` when it runs for a project. Slots work in shell code only (bash,
+sh, zsh, dash, ksh, mksh, ash, fish): a `#!` script in another language, such as Python, reads these variables,
+and a slot in it is an error. To run one per project, call it from a line of shell: `python3 ~/bin/deploy.py {repo}`.
 
 ## Which shell {#shell}
 
