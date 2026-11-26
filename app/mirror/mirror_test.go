@@ -361,7 +361,10 @@ func TestDoItOnAReviewThreadsDraft(t *testing.T) {
 	ag.Emit(agent.TurnEnd{})
 
 	s.Run("diff.open", registry.Args{"path": file})
-	s.Until("Do it beside Forward", func() bool { f := s.Text(); return strings.Contains(f, "↗ Forward to GitHub") && strings.Contains(f, "Do it") })
+	s.Until("Do it beside Forward", func() bool {
+		f := s.Text()
+		return strings.Contains(f, "↗ Forward to GitHub") && strings.Contains(f, "Do it")
+	})
 	s.ClickOn("Do it")
 	if in := ag.WaitSent(t); !strings.Contains(in.Text, "Do it") {
 		t.Errorf("the agent was sent %q", in.Text)
