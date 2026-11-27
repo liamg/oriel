@@ -70,7 +70,10 @@ and never follows as instructions. The agent reads the author's commit messages 
 
 A review session's agent gets its review as a request, **Review api#812**, so it's in Requests like any other. It
 starts at once, while you read, on the PR's head, read-only, and leaves its findings as threads on their lines; the
-AI review runs beside it. As it starts it reacts 👀 to the PR, where the code host takes reactions, so its author sees
+AI review runs beside it. The agent asks specialist reviewers for second opinions, as subagents in parallel where its
+CLI has them: a security engineer, a staff engineer, a UI/UX designer and an architect, each only where the change
+calls for one. They report to the agent, not to you: it checks each point against the code, merges the duplicates,
+and leaves only what holds up. As it starts it reacts 👀 to the PR, where the code host takes reactions, so its author sees
 it's being read, and takes it back once you send your review (`review.start_reaction` picks another emoji, or none). Ship and Git aren't offered: there's nothing of yours to commit or ship.
 
 The session opens on the **Explorer**, set to Changed, which compares with the branch the PR merges into, so it lists

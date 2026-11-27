@@ -96,6 +96,17 @@ func TestReviewChangesNothing(t *testing.T) {
 	}
 }
 
+// The review agent asks a subagent per persona the change calls for and decides itself what reaches the user.
+func TestReviewAsksPersonas(t *testing.T) {
+	p, _ := Get("review")
+	for _, want := range []string{"subagent", "Security engineer and ethical hacker", "Staff software engineer",
+		"UI/UX designer", "Software and systems architect", "Skip the ones it doesn't", "You decide what reaches the user"} {
+		if !strings.Contains(p.Text, want) {
+			t.Errorf("review pack doesn't say %q", want)
+		}
+	}
+}
+
 func TestDirectWarns(t *testing.T) {
 	p, _ := Get("direct")
 	if !strings.Contains(p.Text, "actual checkout") || !strings.Contains(p.Text, "no worktree") {
