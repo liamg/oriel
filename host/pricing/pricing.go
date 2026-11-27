@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/internal/atomicfile"
+	"github.com/liamg/oriel/internal/useragent"
 )
 
 // Every is how often the list is fetched again.
@@ -165,6 +166,7 @@ func (p *Pricing) fetch(ctx context.Context, etag string) ([]byte, string, error
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
+	useragent.Set(req)
 	client := http.DefaultClient
 	if p.deps.Client != nil {
 		client = p.deps.Client

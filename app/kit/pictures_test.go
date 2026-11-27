@@ -82,6 +82,25 @@ func TestPictureClientRedirects(t *testing.T) {
 	}
 }
 
+// It names itself in User-Agent: hosts such as Wikimedia refuse Go's default one.
+func TestPictureClientSendsUserAgent(t *testing.T) {
+	img := pngBytes(t, solidImage(2, 2, color.NRGBA{A: 255}))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.UserAgent(), "Oriel") {
+			http.Error(w, "no user agent", http.StatusForbidden)
+			return
+		}
+		if _, err := w.Write(img); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer srv.Close()
+	c := newPictureClient(func(string, string, syscall.RawConn) error { return nil })
+	if _, err := getPicture(context.Background(), c, srv.URL+"/a.png"); err != nil {
+		t.Errorf("fetched with User-Agent: %v", err)
+	}
+}
+
 // A failed fetch is tried again once its backoff has passed, and not before.
 func TestRemotePictureRetries(t *testing.T) {
 	const src = "https://example.com/late.png"

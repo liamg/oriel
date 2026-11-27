@@ -24,6 +24,7 @@ import (
 
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/imagex"
+	"github.com/liamg/oriel/internal/useragent"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -247,6 +248,7 @@ func getPicture(ctx context.Context, client *http.Client, src string) ([]byte, e
 		return nil, err
 	}
 	req.Header.Set("Accept", "image/*")
+	useragent.Set(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

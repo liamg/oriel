@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/internal/useragent"
 )
 
 // HTTP calls the API at Base (https://api.github.com/, or a fake's) with a token.
@@ -48,6 +50,7 @@ func (h HTTP) Do(ctx context.Context, method, path string, in, out any) error {
 	if h.Token != "" {
 		req.Header.Set("Authorization", "Bearer "+h.Token)
 	}
+	useragent.Set(req)
 	c := h.Client
 	if c == nil {
 		c = http.DefaultClient

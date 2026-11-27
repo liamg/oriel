@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/useragent"
 	"github.com/liamg/oriel/jsonrpc"
 )
 
@@ -151,6 +152,7 @@ func (t *httpTransport) do(ctx context.Context, method string, body []byte) (*ht
 	if s := t.sessionID(); s != "" {
 		req.Header.Set("Mcp-Session-Id", s)
 	}
+	useragent.Set(req)
 	return t.hc.Do(req)
 }
 
