@@ -212,7 +212,7 @@ clip 44,0 1556x974 r 0
     text "↺" @1550.5469,434.6123 #4f4a40 Inter 12
     rect 313,480.98932 3x36 fill #ffd23f radius 2
     text "ui.reduced_motion" @332,484.99707 #ece6d8 JetBrains Mono 12.5
-    text "Jump straight to the end of every animation." @332,504.85645 #7c7566 Inter 12.5
+    text "Jump straight to the end of every animation, and show animated GIFs and WebPs still." @332,504.85645 #7c7566 Inter 12.5
     text "init.lua wins over settings.toml" @332,522.5816 #b98aff JetBrains Mono 10.5
     text "Open init.lua:12" @551,522.5816 #ffd23f JetBrains Mono 10.5
     text "set in init.lua:12" @1129.8594,502.76932 #b98aff JetBrains Mono 10.5

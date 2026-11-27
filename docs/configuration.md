@@ -192,7 +192,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `ui.completion.font_size` | follows `ui.font_size` until set | app | |
 | `ui.tooltip.font_size` | follows `ui.font_size` until set | app | |
 | `sidebar.form` | auto: how a window's project sidebar starts, `wide`, `narrow`, or wide with 2+ projects; `«`/`»` set a window's own, kept with its layout | app | |
-| `ui.reduced_motion` | false | app | |
+| `ui.reduced_motion` | false: jump straight to the end of every animation, and show animated GIFs and WebPs still | app | |
 | `ui.scrollbars` | auto | app | |
 | `ui.theme` | `oriel` | app | |
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | |
