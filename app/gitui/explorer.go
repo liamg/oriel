@@ -203,6 +203,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "u", Command: "explorer.unstage", Desc: "Unstage"},
 		{Keys: "x", Command: "explorer.discard", Desc: "Discard"},
 		{Keys: "=", Command: "explorer.diff.open", Desc: "Diff"},
+		{Keys: "o", Command: "explorer.file.open", Desc: "Open in the editor"},
 		{Keys: "c", Command: "explorer.commit", Desc: "Commit"},
 		{Keys: "C", Command: "explorer.commit", Args: registry.Args{"all": true}, Desc: "Commit all"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
@@ -295,6 +296,12 @@ func (e *Explorer) commands() []registry.Command {
 		{ID: "explorer.diff.open", Grant: registry.Open, Title: "Open the selected file's diff", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
 				return e.openDiff(ctx, f.Path)
+			}
+			return nil
+		}},
+		{ID: "explorer.file.open", Grant: registry.Open, Title: "Open the selected file in the editor", Args: registry.NoArgs, Run: func(ctx registry.Ctx, _ registry.Args) error {
+			if f, ok := e.selectedFile(); ok {
+				return h.Run(ctx, "editor.open", registry.Args{"path": e.git().abs(f.Path)})
 			}
 			return nil
 		}},
@@ -532,16 +539,16 @@ func (e *Explorer) footer(c *ui.Ctx, sc gitx.Scope) {
 	hint := "⌥1 changed · ⌥2 uncommitted · ⌥3 all"
 	switch sc {
 	case gitx.Uncommitted:
-		hint = "s stage · u unstage · x discard · = diff · c commit"
+		hint = "s stage · u unstage · x discard · o file · c commit"
 	case gitx.Changed:
-		hint = "⏎ opens the diff, not the file"
+		hint = "⏎ diff · o file"
 	}
 	c.Row("footer", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Stroke: c.Theme().C(theme.Line)}, func(c *ui.Ctx) {
 		c.Text("keys", hint, widget.MonoTok(c, 10, theme.FgFaint))
 	})
 }
 
-// activate opens a row: in Changed its diff, elsewhere the file.
+// activate opens a row: in Changed and Uncommitted its diff, in All the file.
 func (e *Explorer) activate(id string, sc gitx.Scope) {
 	if strings.HasPrefix(id, scratchID) {
 		e.openScratch(id)
@@ -550,7 +557,7 @@ func (e *Explorer) activate(id string, sc gitx.Scope) {
 	_, p, _ := strings.Cut(id, "\x00")
 	ctx := context.Background()
 	var err error
-	if sc == gitx.Changed {
+	if sc == gitx.Changed || sc == gitx.Uncommitted {
 		err = e.openDiff(ctx, p)
 	} else {
 		err = e.h.Run(ctx, "editor.open", registry.Args{"path": e.git().abs(p)})

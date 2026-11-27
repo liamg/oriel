@@ -20,6 +20,8 @@ Aim the first version small and working: a build that passes, tests, and a READM
 
 <!-- include: plandocs -->
 
+<!-- include: repos -->
+
 <!-- include: comments -->
 
 <!-- include: handling -->

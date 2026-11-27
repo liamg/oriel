@@ -12,7 +12,7 @@ The user pressed Run on a job: a prompt they keep and run again. Nobody is waiti
 
 The job's prompt follows these instructions, is the run's request thread, and is in `JOB.md` at the workspace root. It is your whole task; nothing else was said. Note the thread id: progress and the outcome go there.
 
-The run starts with no projects: a job says what to do, not where. Bring in the repositories it names (see Projects). If it needs one that isn't available and says to clone it, clone it and add it; if it is simply missing, the run is blocked.
+The run starts with no projects: a job says what to do, not where. Bring in the repositories it names (see Adding repositories). If it needs one that isn't available and says to clone it, clone it and add it; if it is simply missing, the run is blocked.
 
 ## Do it
 
@@ -45,6 +45,8 @@ If the user comes back with comments after the run, handle them as below.
 <!-- include: handling -->
 
 <!-- include: projects -->
+
+<!-- include: repos -->
 
 <!-- include: tasks -->
 

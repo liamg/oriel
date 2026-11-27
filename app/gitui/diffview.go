@@ -70,6 +70,7 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 // loaded is the diff of a work tree whose status has been read.
 func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.GitTree, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
+	st.expand, _ = registry.Option[bool](x.h.Options(), "diff.expanded", registry.At{})
 	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		files := gs.Files(gitx.Changed)
 		if st.head {
@@ -82,7 +83,7 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 		st.drawn, st.marks = map[string]*diffFile{}, map[string]map[string]bool{}
 		for _, f := range files {
 			d := x.made(tree.Root(), f.Path, st.head)
-			if st.open[f.Path] || st.sel.file == f.Path {
+			if st.isOpen(f.Path) || st.sel.file == f.Path {
 				d, _ = x.diffFor(tree, gs, f, true, st.head)
 			}
 			if d != nil {
@@ -101,7 +102,11 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 			})
 		}
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-			x.slots(c, kit.DiffHeader, st.root, vc.Width)
+			c.Row("header", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				x.slots(c, kit.DiffHeader, st.root, vc.Width)
+				expandAllButton(c, st)
+			})
 			x.body(c, vc, st, gs, root)
 			lineKeys(c, st)
 		})
@@ -109,6 +114,22 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.
 			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
 				x.slots(c, kit.DiffRight, st.root, 360)
 			})
+		}
+	})
+}
+
+// expandAllButton shows every file, or folds them all once every one shows: as zA does.
+func expandAllButton(c *ui.Ctx, st *diffState) {
+	if len(st.files) < 2 {
+		return
+	}
+	label := "Fold all"
+	if st.anyFolded() {
+		label = "Expand all"
+	}
+	c.Row("expand-all", ui.Style{Pad: ui.PadXY(12, 4)}, func(c *ui.Ctx) {
+		if widget.Button(c, "go", label, widget.ButtonOpts{Help: "files/diff#files"}) {
+			expandAll(st)
 		}
 	})
 }
@@ -285,8 +306,8 @@ func (st *diffState) revealSel(c *ui.Ctx, bodyID ui.ID, at int) {
 		id, ok = st.ids[diffSel{file: st.sel.file, hunk: -1, line: -1}]
 	}
 	_, laid := c.Rect(id)
-	making := st.open[st.sel.file] && st.drawn[st.sel.file] == nil // the diff's arrival draws the next frame
-	arrived := st.making && !making                                // laid out last frame, before its diff
+	making := st.isOpen(st.sel.file) && st.drawn[st.sel.file] == nil // the diff's arrival draws the next frame
+	arrived := st.making && !making                                  // laid out last frame, before its diff
 	st.making = making
 	if !making {
 		st.tries++
@@ -328,7 +349,7 @@ func (st *diffState) atTop(c *ui.Ctx, bodyID ui.ID) bool {
 // its hunks. It returns the decorations that asked to be brought into view.
 func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout string) (reveal []ui.ID) {
 	th := c.Theme()
-	open := st.open[f.Path]
+	open := st.isOpen(f.Path)
 	d := st.drawn[f.Path]
 	c.Column(f.Path, ui.Style{W: ui.Flex(1), Role: ui.RoleGroup, Label: f.Path}, func(c *ui.Ctx) {
 		st.ids[diffSel{file: f.Path, hunk: -1, line: -1}] = c.Next("head")

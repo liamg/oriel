@@ -16,6 +16,8 @@ The request the session started from follows these instructions, and is also its
 
 <!-- include: projects -->
 
+<!-- include: repos -->
+
 <!-- include: tasks -->
 
 <!-- include: drafts -->

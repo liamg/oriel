@@ -240,6 +240,42 @@ func TestExplorerOpensFiles(t *testing.T) {
 	}
 }
 
+// help files/explorer#scopes: "Uncommitted: ... ⏎ or a click opens a file's diff against HEAD".
+func TestExplorerOpensUncommittedFilesInTheirDiff(t *testing.T) {
+	s, r := explorerScene(t)
+	s.Run("explorer.scope.set", registry.Args{"scope": "uncommitted"})
+	s.Quiet()
+	s.Click(s.TextPoint("internal/pricing/round.go"), 0)
+	s.Frame()
+	if file, ok := diffOf(s).UncommittedFile(r.Dir); !s.Showing(gitui.DiffView) || !ok || file != "internal/pricing/round.go" {
+		t.Fatalf("a click on round.go in Uncommitted didn't open its diff against HEAD: %q %v", file, ok)
+	}
+}
+
+// help files/explorer#scopes: "o opens the file", in Changed and Uncommitted.
+func TestExplorerOOpensTheFileInTheEditor(t *testing.T) {
+	// A row that folds, clicked twice, focuses the tree without opening a file.
+	for scope, fold := range map[string]string{"changed": "pricing", "uncommitted": "UNSTAGED"} {
+		t.Run(scope, func(t *testing.T) {
+			s, r := explorerScene(t)
+			s.Run("explorer.scope.set", registry.Args{"scope": scope})
+			s.Quiet()
+			if !strings.Contains(s.Text(), fold) {
+				t.Fatalf("no %q:\n%s", fold, s.Text())
+			}
+			s.Click(s.TextPoint(fold), 0)
+			s.Click(s.TextPoint(fold), 0)
+			selectRow(t, s, "internal/pricing/round.go")
+			s.Press("o")
+			s.Frame()
+			eds, _ := services.EditorsOf(s.Registry())
+			if b, ok := eds.Current(); !ok || b.Path != filepath.Join(r.Dir, "internal/pricing/round.go") {
+				t.Fatalf("o in %s opened %q", scope, b.Path)
+			}
+		})
+	}
+}
+
 // The explorer's markers appear on editor tabs too: a changed file's tab carries its status letter.
 func TestEditorTabsCarryGitMarks(t *testing.T) {
 	s, r := explorerScene(t)
