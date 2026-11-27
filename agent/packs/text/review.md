@@ -72,4 +72,6 @@ A **summary request** lists the findings going with the review the user is about
 
 <!-- include: comments -->
 
+<!-- include: repos -->
+
 <!-- include: github -->

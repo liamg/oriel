@@ -96,6 +96,19 @@ func TestReviewChangesNothing(t *testing.T) {
 	}
 }
 
+// A pack that offers add_project tells its agent to add repositories itself, not to ask the user to.
+func TestPacksWithAddProjectAddReposThemselves(t *testing.T) {
+	for _, p := range (&Set{}).All() {
+		if !slices.Contains(p.Tools, "add_project") {
+			continue
+		}
+		if !strings.Contains(p.Text, "You add repositories to the session yourself") ||
+			!strings.Contains(p.Text, "Don't ask the user to add a repository you can add") {
+			t.Errorf("%s offers add_project but doesn't tell the agent to add repositories itself", p.Name)
+		}
+	}
+}
+
 func TestDirectWarns(t *testing.T) {
 	p, _ := Get("direct")
 	if !strings.Contains(p.Text, "actual checkout") || !strings.Contains(p.Text, "no worktree") {
