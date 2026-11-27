@@ -100,7 +100,8 @@ func TestReviewChangesNothing(t *testing.T) {
 func TestReviewAsksPersonas(t *testing.T) {
 	p, _ := Get("review")
 	for _, want := range []string{"subagent", "Security engineer and ethical hacker", "Staff software engineer",
-		"UI/UX designer", "Software and systems architect", "Skip the ones it doesn't", "You decide what reaches the user"} {
+		"UI/UX designer", "Software and systems architect", "Skip the ones it doesn't", "You decide what reaches the user",
+		"They do the reviewing", "`severity`, `category`"} {
 		if !strings.Contains(p.Text, want) {
 			t.Errorf("review pack doesn't say %q", want)
 		}

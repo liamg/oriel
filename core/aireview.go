@@ -20,6 +20,17 @@ const OriginAIReview = "ai-review"
 // Severities are a review finding's ratings, worst first: the threads' scale (Comment.Severity).
 var Severities = []string{"critical", "high", "medium", "low", "nit"}
 
+// Categories are the words a review finding's kind is said in (Comment.Category, Finding.Category).
+var Categories = []string{"security", "correctness", "performance", "architecture", "ux", "tests", "api", "style", "docs"}
+
+// FindingLabel is a finding's kind and severity as its badge says them: "security: critical", or the severity alone.
+func FindingLabel(category, severity string) string {
+	if category == "" {
+		return severity
+	}
+	return category + ": " + severity
+}
+
 // SeverityRank is a severity's place in Severities, len(Severities) for one it doesn't know.
 func SeverityRank(s string) int {
 	if i := slices.Index(Severities, s); i >= 0 {
@@ -64,7 +75,7 @@ type Finding struct {
 	ID       string   `json:"id"`
 	Review   string   `json:"review"`             // the AIReview it came from
 	Severity string   `json:"severity"`           // one of Severities
-	Category string   `json:"category,omitempty"` // correctness, tests, api, style…
+	Category string   `json:"category,omitempty"` // one of Categories, or another word
 	Title    string   `json:"title"`
 	Project  string   `json:"project,omitempty"`
 	File     string   `json:"file,omitempty"` // relative to the project

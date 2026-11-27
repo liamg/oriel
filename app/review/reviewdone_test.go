@@ -71,7 +71,7 @@ func TestClosingAReviewWithAnUnsentReviewAsks(t *testing.T) {
 	for a.Spec.Pack.Name != "review" {
 		a = lw.Fake.WaitStarted(t)
 	}
-	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "body": "Takes one whatever the cost."})
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "category": "correctness", "body": "Takes one whatever the cost."})
 	s.Quiet()
 	closeReview(s, id)
 	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "Your review isn't sent: 1 comment, lost.") })
@@ -95,7 +95,7 @@ func TestApprovedReviewIsQuiet(t *testing.T) {
 	for a.Spec.Pack.Name != "review" {
 		a = lw.Fake.WaitStarted(t)
 	}
-	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "body": "Takes one whatever the cost."})
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "category": "correctness", "body": "Takes one whatever the cost."})
 	sess, _ := s.Store().State().Session(id)
 	a.Call(t, "reply", map[string]any{"thread": string(sess.Snapshot().Threads[0].ID), "body": "Looks fine bar the cost."})
 	s.Run("ship.pr.open", nil)

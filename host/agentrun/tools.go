@@ -37,8 +37,8 @@ func (x *Runner) tools(h *session) []agent.Tool {
 			Schema: hostcore.Schema(""), Call: h.toolThreads},
 		{Name: "ask", Description: "Ask the user something in an Oriel thread and wait for the answer: the thread you're working on, where the user sees the question with its options as buttons and a field for an answer of their own. Each question has its options (header: a short label; multi: several may be picked). Returns each question with the user's answer.",
 			Schema: hostcore.Schema(`"thread":`+str+`,"questions":`+questionsType, "thread", "questions"), Call: h.toolAsk},
-		{Name: "comment", Description: `Start a thread of your own: on a line of a file (file, line, optional end_line and side "old"/"new", project in a session with more than one), or a general one with no file. severity rates a review finding: nit, low, medium, high or critical.`,
-			Schema: hostcore.Schema(`"body":`+str+`,"file":`+str+`,"line":`+num+`,"end_line":`+num+`,"side":`+str+`,"project":`+str+`,"severity":{"type":"string","enum":["nit","low","medium","high","critical"]}`, "body"),
+		{Name: "comment", Description: `Start a thread of your own: on a line of a file (file, line, optional end_line and side "old"/"new", project in a session with more than one), or a general one with no file. severity rates a review finding: nit, low, medium, high or critical; a rated finding also names its category, one word: ` + strings.Join(core.Categories, ", ") + `.`,
+			Schema: hostcore.Schema(`"body":`+str+`,"file":`+str+`,"line":`+num+`,"end_line":`+num+`,"side":`+str+`,"project":`+str+`,"severity":{"type":"string","enum":["nit","low","medium","high","critical"]},"category":`+str, "body"),
 			Call:   h.toolComment},
 		{Name: "task_add", Description: "Queue a task on the Tasks rail the user watches, and get its id. thread: the thread that asked for it, which links the two and completes the task when the thread is resolved.",
 			Schema: hostcore.Schema(`"subject":`+str+`,"thread":`+str, "subject"), Call: h.toolTaskAdd},
@@ -269,6 +269,10 @@ func (h *session) toolComment(ctx context.Context, raw json.RawMessage) (string,
 	if body == "" {
 		return "", errors.New("the comment is empty")
 	}
+	sev, cat := a.Str("severity"), strings.ToLower(strings.TrimSpace(a.Str("category")))
+	if sev != "" && cat == "" {
+		return "", errors.New("a finding with a severity needs a category too: one word, such as " + strings.Join(core.Categories, ", "))
+	}
 	se, err := h.r.st.Session(h.id)
 	if err != nil {
 		return "", err
@@ -276,7 +280,7 @@ func (h *session) toolComment(ctx context.Context, raw json.RawMessage) (string,
 	now := h.r.env.Now().UTC()
 	t := core.Thread{ID: core.ThreadID(hostcore.NewID(8)), Status: core.ThreadOpen, Created: now, Updated: now,
 		Comments: []core.Comment{{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: now,
-			Severity: a.Str("severity"), Model: modelLabel(se.Agent, h.ranModel()), Delivered: true}}}
+			Severity: sev, Category: cat, Model: modelLabel(se.Agent, h.ranModel()), Delivered: true}}}
 	if f := a.Str("file"); f != "" {
 		line := max(1, a.Int("line"))
 		t.Anchor = &core.Anchor{Project: a.Str("project"), File: f, Line: line, EndLine: a.Int("end_line"), Side: a.Str("side")}

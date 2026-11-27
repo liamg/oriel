@@ -356,7 +356,7 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 				c.RequestFocus(c.Next("go"))
 				f.focus = false
 			}
-			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewHelp)
+			widget.Chip(c, "sev", strings.ToUpper(prui.FindingShort(it.cat, cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewHelp)
 			at := widget.Clickable(c, "at", ui.Style{Role: ui.RoleLink, Label: "Show " + place, Tooltip: "Show it in the diff", Help: prReviewKeysHelp},
 				func(c *ui.Ctx) { c.Text("t", place, widget.MonoFont(11, th.C(theme.Accent))) })
 			if at.Clicked {
@@ -676,7 +676,7 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhe
 				state = "not sent unless you keep it"
 			}
 			c.Text("cap", "YOUR REVIEW", widget.MonoFont(9.5, th.C(theme.FgFaint)))
-			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewKeysHelp)
+			widget.Chip(c, "sev", strings.ToUpper(prui.FindingShort(it.cat, cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewKeysHelp)
 			c.Row("state", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", state, widget.MonoFont(10.5, th.C(theme.FgMuted))) })
 			if it.pick.State != core.PickKeep && widget.Button(c, "keep", "Keep", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
 				x.run("review.pr.pick", a(registry.Args{"state": core.PickKeep}))

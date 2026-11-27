@@ -270,6 +270,24 @@ func TestReviewCommentsStayInTheDiff(t *testing.T) {
 		!strings.Contains(err.Error(), "lines 7-13") {
 		t.Errorf("the refusal names the diff's lines: %v", err)
 	}
+
+	// A rated finding says what kind it is too: a severity with no category is refused.
+	if _, err := a.CallErr("comment", map[string]any{"file": "long.go", "line": 10, "severity": "high", "body": "Unrated kind."}); err == nil ||
+		!strings.Contains(err.Error(), "category") {
+		t.Errorf("a severity with no category: %v, want refused", err)
+	}
+	if _, err := a.CallErr("comment", map[string]any{"file": "long.go", "line": 10, "severity": "high", "category": "Security", "body": "Leaks it."}); err != nil {
+		t.Fatal(err)
+	}
+	var got core.Comment
+	for _, th := range r.session(id).Threads {
+		if th.Comments[0].Body == "Leaks it." {
+			got = th.Comments[0]
+		}
+	}
+	if got.Severity != "high" || got.Category != "security" {
+		t.Errorf("the finding is %q, %q; want high, security", got.Severity, got.Category)
+	}
 }
 
 // A review fetches its PR again on asking: the pinned worktree moves to the head the author has pushed since.

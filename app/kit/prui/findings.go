@@ -1,6 +1,7 @@
 package prui
 
 import (
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 )
@@ -19,6 +20,11 @@ func SeverityShort(s string) string {
 		return "med"
 	}
 	return s
+}
+
+// FindingShort is a finding's kind and severity as a chip says them: "security: med", or the severity alone.
+func FindingShort(category, severity string) string {
+	return core.FindingLabel(category, SeverityShort(severity))
 }
 
 // SeverityTone is a finding's tone by its severity.

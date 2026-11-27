@@ -17,7 +17,7 @@ func TestYourReviewSitsUnderTheCommentInRequests(t *testing.T) {
 	for a.Spec.Pack.Name != "review" {
 		a = lw.Fake.WaitStarted(t)
 	}
-	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 1, "severity": "nit", "body": "Name the package for what it limits."})
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 1, "severity": "nit", "category": "style", "body": "Name the package for what it limits."})
 	var tid core.ThreadID
 	s.UntilState("the reviewer's comment", func(st core.State) bool {
 		sess, _ := st.Session(id)
