@@ -411,9 +411,16 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 
 	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.Run("ship.refresh", nil)
+	// Read merged, or already moved on from: a project whose PR merged starts its next PR, and has none until then.
 	s.ShipSettle("the first PR read merged", func() bool {
+		a, _ := s.Store().State().Session(se.ID())
+		if slices.ContainsFunc(a.Snapshot().Past, func(p core.PastPR) bool {
+			return p.Project == "search-api" && p.Number == prs["search-api"].Number && p.State == core.PRMerged
+		}) {
+			return true
+		}
 		ships, _ := services.ShipsOf(s.Registry())
-		for _, p := range ships.For(se.Snapshot()) {
+		for _, p := range ships.For(a.Snapshot()) {
 			if p.Project == "search-api" {
 				return p.PR != nil && p.PR.Merged
 			}
