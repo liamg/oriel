@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/useragent"
 )
 
 // ModelRevision is the commit of huggingface.co/ggerganov/whisper.cpp models
@@ -246,6 +247,7 @@ func (w *Whisper) fetchTo(name string, d *download, src modelSource) error {
 	if have > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", have))
 	}
+	useragent.Set(req)
 	res, err := cmp.Or(w.Net, modelClient).Do(req)
 	if err != nil {
 		return err

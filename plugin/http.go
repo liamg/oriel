@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/useragent"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -159,6 +160,7 @@ func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPRespon
 		}
 		req.Header.Set("Authorization", v)
 	}
+	useragent.Set(req)
 	c := *n.Net()
 	next := c.CheckRedirect
 	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
