@@ -17,7 +17,9 @@ selects that line, removed or added, in the middle of the view.
 
 The diff is every file the branch changes; the Explorer's Changed scope lists them, and a click on one there
 expands it here and scrolls it to the top. Each file has a header with its path and size, and how many of its hunks
-are reviewed. A click on the header shows or folds it. Plugins can add a column of their own boxes at the left.
+are reviewed. A click on the header shows or folds it. Only the first file opens expanded, or every file with
+`diff.expanded` on; **Expand all** at the top of the diff, or `zA` (`diff.expand` with `all`), shows every file; with every one shown,
+**Fold all** (or `zA` again) folds them. Plugins can add a column of their own boxes at the left.
 
 ## Hunks {#hunks}
 
@@ -63,7 +65,7 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 ## Keys {#keys}
 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
-line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, `zo` and
+line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, `zA` every file, `zo` and
 `zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. A click on a line opens a thread on it too
 (see [Between the lines](agent/requests#inline)), and a Shift-click on another line of its hunk widens that thread to
 the lines between, keeping what you've written.

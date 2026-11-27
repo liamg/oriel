@@ -11,9 +11,10 @@ The work tree, in three scopes. `⌥1` `⌥2` `⌥3` switch between them, and ea
 ## Scopes {#scopes}
 
 - **Changed**: every file the branch changes against its base (the merge-base with origin's default branch, or
-  main), uncommitted work and new untracked files included. `⏎` opens a file's diff.
-- **Uncommitted**: the work tree against HEAD, in Staged, Unstaged and Untracked. A file's diff from here
-  (`explorer.diff.open`) is against HEAD too, and the editor's gutter marks what isn't committed while it shows.
+  main), uncommitted work and new untracked files included. `⏎` or a click opens a file's diff; `o` opens the file.
+- **Uncommitted**: the work tree against HEAD, in Staged, Unstaged and Untracked. `⏎` or a click opens a file's diff
+  against HEAD (`explorer.diff.open`); `o` opens the file, and the editor's gutter marks what isn't committed while
+  it shows.
 - **All**: every file, marked as Changed marks it. Ignored directories are dimmed and not opened.
 
 ## Changed {#changed}
@@ -63,7 +64,7 @@ dialog), `explorer.rename` (`{name}`), `explorer.duplicate`, `explorer.delete` (
 ## Keys {#keys}
 
 In Uncommitted, fugitive's keys: `s` stages the file (or unstages a staged one), `u` unstages, `x` discards its
-unstaged changes after asking (an untracked file is deleted), `=` opens its diff. `c` commits what's staged and `C`
+unstaged changes after asking (an untracked file is deleted), `=` opens its diff and `o` the file. `c` commits what's staged and `C`
 everything uncommitted, past the commit gates (**Commit…** does the same).
 
 {{keys "explorer.*"}}

@@ -152,6 +152,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `git.gutter.base` | `scope`: the gutter follows the Explorer's scope, Uncommitted's against the last commit, else the branch's base; `branch`, where its branch left the base; `head`, the last commit; `index`, what's staged | app | |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
+| `diff.expanded` | false: the review diff opens with only the first file expanded; true, every file | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
 | `review.ai.provider` | `auto`: the session agent's; or a provider's name (`claude`, `codex`, a plugin's) | app | |
 | `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |

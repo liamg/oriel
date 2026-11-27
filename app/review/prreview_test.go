@@ -415,7 +415,7 @@ func TestLGTMOnAReviewThatIsntAnApprovalAsks(t *testing.T) {
 func TestReviewComesBackAsLeft(t *testing.T) {
 	s, lw, _, _, id, _ := prReviewScene(t, false)
 	s.Until("its Explorer on Changed and the PR's diff", func() bool {
-		return s.Showing(kit.ExplorerView) && s.Showing(kit.DiffView) && s.Has("⏎ opens the diff, not the file")
+		return s.Showing(kit.ExplorerView) && s.Showing(kit.DiffView) && s.Has("⏎ diff · o file")
 	})
 	s.ClickText("flat")
 	s.Press("<M-2>")
@@ -435,7 +435,7 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 		t.Error("the review's opening views opened again")
 	}
 	s.Press("<M-1>")
-	s.Until("Changed, flat", func() bool { return s.Has("⏎ opens the diff, not the file") && !s.Has("rate") })
+	s.Until("Changed, flat", func() bool { return s.Has("⏎ diff · o file") && !s.Has("rate") })
 }
 
 // ⌘G (or Suggest a change) in a comment for the author adds a suggestion block holding the commented line, to edit into

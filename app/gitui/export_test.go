@@ -18,6 +18,11 @@ func (x *Diff) SelectedFile(root string) (string, bool) {
 	return st.sel.file, true
 }
 
+// UncommittedFile is the file selected in root's Uncommitted diff (against HEAD), if it's open.
+func (x *Diff) UncommittedFile(root string) (string, bool) {
+	return x.SelectedFile(diffInstance(root, true))
+}
+
 // NewText is path's new text, as its diff was last made.
 func (x *Diff) NewText(path string) ([]byte, bool) {
 	x.mu.Lock()
