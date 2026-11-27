@@ -26,7 +26,7 @@ type aiReviewRun struct {
 func (r *aiReviewRun) tools() []agent.Tool {
 	sev, str := `{"type":"string","enum":["critical","high","medium","low","nit"]}`, hostcore.StrType
 	return []agent.Tool{
-		{Name: "finding", Description: "Report one finding of the review: severity, a one-word category (correctness, tests, api, security, performance, style, docs), a title of a few words, the file (relative to its project) and line in the new code, a body of one to three sentences, project when the session has several, and repo when it's about a repository outside the session.",
+		{Name: "finding", Description: "Report one finding of the review: severity, a one-word category (" + strings.Join(core.Categories, ", ") + "), a title of a few words, the file (relative to its project) and line in the new code, a body of one to three sentences, project when the session has several, and repo when it's about a repository outside the session.",
 			Schema: hostcore.Schema(`"severity":`+sev+`,"category":`+str+`,"title":`+str+`,"body":`+str+`,"file":`+str+`,"line":`+hostcore.IntType+`,"project":`+str+`,"repo":`+str, "severity", "title"),
 			Call:   r.toolFinding},
 		{Name: "projects", Description: "List the session's projects: name, directory, branch, and whether it has uncommitted changes.", ReadOnly: true,

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -19,22 +20,30 @@ import (
 // severityColors run from grey for a nit to red for a critical finding.
 var severityColors = map[string]string{"nit": "9E9E9E", "low": "2E7D32", "medium": "F9A825", "high": "EF6C00", "critical": "C62828"}
 
-// severityBadge is a shields.io badge of a comment's severity, as markdown; "" for one it doesn't know.
-func severityBadge(sev string) string {
+// severityBadge is a shields.io badge of a comment's kind and severity ("security | critical"), else its severity
+// alone, as markdown; "" for a severity it doesn't know.
+func severityBadge(cat, sev string) string {
 	color, ok := severityColors[sev]
 	if !ok {
 		return ""
 	}
-	return "![" + sev + "](https://img.shields.io/badge/severity-" + sev + "-" + color + ")"
+	label := cmp.Or(cat, "severity")
+	return "![" + core.FindingLabel(cat, sev) + "](https://img.shields.io/badge/" + shieldsText(label) + "-" + sev + "-" + color + ")"
 }
 
-// posted is the text a kept item is posted with: its words, headed by its severity's badge when badges are on.
+// shieldsText is text as a shields.io badge's path takes it: dashes and underscores doubled, spaces as underscores.
+func shieldsText(s string) string {
+	s = strings.NewReplacer("-", "--", "_", "__", " ", "_").Replace(s)
+	return url.PathEscape(s)
+}
+
+// posted is the text a kept item is posted with: its words, headed by its kind and severity's badge when badges are on.
 func (x *PRReview) posted(it reviewItem) string {
 	body := strings.TrimSpace(it.words())
 	if on, _ := registry.Option[bool](x.h.Options(), optSeverityBadges, registry.At{}); !on {
 		return body
 	}
-	if b := severityBadge(it.severity()); b != "" && !strings.HasPrefix(body, b) {
+	if b := severityBadge(it.cat, it.severity()); b != "" && !strings.HasPrefix(body, b) {
 		return b + "\n\n" + body
 	}
 	return body

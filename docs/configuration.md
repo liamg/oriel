@@ -158,7 +158,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | |
-| `review.severity_badges` | `true`: each comment a review session posts is headed with a badge of its severity | app | |
+| `review.severity_badges` | `true`: each comment a review session posts is headed with a badge of its kind and severity | app | |
 | `review.auto_rereview` | `true`: when the author pushes to a PR under review, fetch it and ask the agent to review what changed | app | |
 | `review.start_reaction` | `👀`: the reaction a review session puts on its PR as it starts, where the host takes reactions, and takes back once you send your review; empty for none | app | |
 | `reviews.poll` | `5m`: how often every review source is asked for the pull requests waiting on your review | app | |

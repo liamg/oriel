@@ -87,6 +87,7 @@ type reviewItem struct {
 	finding string        // the AI review's finding, alone or found on the thread's line too
 	mine    bool
 	sev     string // the reviewer's rating
+	cat     string // the finding's kind: security, correctness…
 	title   string
 	body    string // the reviewer's words
 	at      core.Anchor
@@ -95,6 +96,9 @@ type reviewItem struct {
 
 // severity is the item's rating: the user's, else the reviewer's.
 func (it reviewItem) severity() string { return cmp.Or(it.pick.Severity, it.sev) }
+
+// label is its kind and severity as its chip and badge say them: "security: critical".
+func (it reviewItem) label() string { return core.FindingLabel(it.cat, it.severity()) }
 
 // words are what the author gets: the user's, else the reviewer's.
 func (it reviewItem) words() string { return cmp.Or(it.pick.Body, it.body) }
@@ -184,7 +188,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 func (x *PRReview) options() []registry.OptionSpec {
 	out := []registry.OptionSpec{
 		{Name: optSeverityBadges, Type: registry.Bool, Default: true,
-			Help: "Head each comment a review posts with a badge of its severity, so the author sees how much it matters."},
+			Help: "Head each comment a review posts with a badge of its kind and severity (security: critical), so the author sees what it is and how much it matters."},
 		{Name: optAutoRereview, Type: registry.Bool, Default: true,
 			Help: "When the author pushes to a pull request under review, fetch it and ask the agent to review what changed."},
 		{Name: optStartReaction, Type: registry.String, Default: "👀",
@@ -432,7 +436,7 @@ func reviewItems(se core.SessionState, d core.ReviewDraft) []reviewItem {
 		if c.Author != core.AuthorAgent && !t.Outgoing {
 			continue
 		}
-		out = append(out, reviewItem{id: string(t.ID), thread: t.ID, mine: t.Outgoing, sev: c.Severity, title: cmp.Or(t.Title, kit.FirstLine(c.Body)),
+		out = append(out, reviewItem{id: string(t.ID), thread: t.ID, mine: t.Outgoing, sev: c.Severity, cat: c.Category, title: cmp.Or(t.Title, kit.FirstLine(c.Body)),
 			body: c.Body, at: *t.Anchor, pick: d.Picks[string(t.ID)]})
 	}
 	for _, f := range se.Findings {
@@ -449,9 +453,10 @@ func reviewItems(se core.SessionState, d core.ReviewDraft) []reviewItem {
 			if core.SeverityRank(f.Severity) < core.SeverityRank(it.sev) {
 				it.sev = f.Severity
 			}
+			it.cat = cmp.Or(it.cat, f.Category)
 			continue
 		}
-		out = append(out, reviewItem{id: f.ID, finding: f.ID, sev: f.Severity, title: f.Title, body: body, at: core.Anchor{File: f.File, Line: f.Line},
+		out = append(out, reviewItem{id: f.ID, finding: f.ID, sev: f.Severity, cat: f.Category, title: f.Title, body: body, at: core.Anchor{File: f.File, Line: f.Line},
 			pick: d.Picks[f.ID]})
 	}
 	slices.SortStableFunc(out, func(a, b reviewItem) int {

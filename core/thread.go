@@ -73,6 +73,7 @@ type Comment struct {
 	Images    []string   `json:"images,omitempty"`
 	Model     string     `json:"model,omitempty"` // the agent's model and effort when it wrote this
 	Severity  string     `json:"severity,omitempty"`
+	Category  string     `json:"category,omitempty"` // a rated finding's kind: one of Categories, or another word
 	Evidence  []Evidence `json:"evidence,omitempty"`
 	Unbacked  string     `json:"unbacked,omitempty"` // a claim with no evidence: "says tests pass, but ran none"
 	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a code host's thread's).

@@ -96,6 +96,18 @@ func TestReviewChangesNothing(t *testing.T) {
 	}
 }
 
+// The review agent asks a subagent per persona the change calls for and decides itself what reaches the user.
+func TestReviewAsksPersonas(t *testing.T) {
+	p, _ := Get("review")
+	for _, want := range []string{"subagent", "Security engineer and ethical hacker", "Staff software engineer",
+		"UI/UX designer", "Software and systems architect", "Skip the ones it doesn't", "You decide what reaches the user",
+		"They do the reviewing", "`severity`, `category`"} {
+		if !strings.Contains(p.Text, want) {
+			t.Errorf("review pack doesn't say %q", want)
+		}
+	}
+}
+
 // A pack that offers add_project tells its agent to add repositories itself, not to ask the user to.
 func TestPacksWithAddProjectAddReposThemselves(t *testing.T) {
 	for _, p := range (&Set{}).All() {

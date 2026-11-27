@@ -123,8 +123,8 @@ func TestReviewSessionPRTab(t *testing.T) {
 	for a.Spec.Pack.Name != "review" {
 		a = lw.Fake.WaitStarted(t) // the AI review's reviewer starts first
 	}
-	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "body": "Takes one whatever the cost."})
-	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 1, "severity": "nit", "body": "Name the package for what it limits."})
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "category": "correctness", "body": "Takes one whatever the cost."})
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 1, "severity": "nit", "category": "style", "body": "Name the package for what it limits."})
 	s.Run("request.comment", registry.Args{"file": "bucket.go", "line": 2, "body": "Say why it's 1.", "outgoing": true})
 	reviewEntry := func() uireg.RailEntry {
 		for _, e := range uireg.RailEntries(s.Registry()) {
@@ -140,6 +140,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 		return strings.Contains(text, "YOUR REVIEW") && strings.Contains(text, "Takes one whatever") && strings.Contains(text, "Adds a token bucket") &&
 			strings.Contains(text, "CHANGED 1") && strings.Contains(text, "vs origin/m") && strings.Contains(text, "3 comments · 0 of 3 triaged · 2 to post")
 	})
+	s.WantFrame("CORRECTNESS: HIGH", "STYLE: NIT") // each comment's chip says its kind with its severity
 	thread := func(st core.State, body string) core.Thread {
 		sess, _ := st.Session(id)
 		for _, th := range sess.Snapshot().Threads {
@@ -275,7 +276,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 	s.Run("notice.dismiss", registry.Args{"id": "review.pr.done." + string(id)})
 	s.ClickText("Request changes…")
 	s.Until("the preview", func() bool { return strings.Contains(s.Text(), "Post: Changes requested") })
-	badge := "![high](https://img.shields.io/badge/severity-high-EF6C00)\n\n"
+	badge, styleBadge := "![correctness: high](https://img.shields.io/badge/correctness-high-EF6C00)\n\n", "![style: high](https://img.shields.io/badge/style-high-EF6C00)\n\n"
 	s.WantFrame("Could Take charge the request's cost rather than 1?", "Say why it's 1.")
 	s.ClickText("Post: Changes requested")
 	s.Until("the review on GitHub", func() bool { return len(hub.Reviews("acme/api", pr.Number)) == 1 })
@@ -285,7 +286,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 		bodies[c.Body] = true
 	}
 	if rs[0].State != gh.ReviewChangesRequested || rs[0].Body != "the cost isn't charged yet; the rest is optional." || len(cs) != 3 ||
-		!bodies[badge+"Could Take charge the request's cost rather than 1?"] || !bodies[badge+"Name the package for what it limits. Ratelimit, say."] ||
+		!bodies[badge+"Could Take charge the request's cost rather than 1?"] || !bodies[styleBadge+"Name the package for what it limits. Ratelimit, say."] ||
 		!bodies["Say why it's 1."] {
 		t.Fatalf("posted %+v with %+v", rs, cs)
 	}
