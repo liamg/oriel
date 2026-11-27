@@ -42,6 +42,8 @@ type Images struct {
 // viewedFile is a file as its tab reads it, off the loop.
 type viewedFile struct {
 	img     image.Image
+	frames  int // an animation's; 0 for a still
+	play    widget.Frames
 	doc     *svg.Doc
 	format  string
 	err     error
@@ -109,7 +111,10 @@ func (x *Images) file(c *ui.Ctx, path string) *viewedFile {
 	f.size = fi.Size()
 	if imagex.IsImage(path) {
 		pc := kit.PicturesOf(c).File(path)
-		f.img, f.doc, f.format, f.err, f.loading = pc.Img, pc.Doc, pc.Format, pc.Err, pc.Loading
+		f.img, f.doc, f.format, f.err, f.loading, f.play = pc.Img, pc.Doc, pc.Format, pc.Err, pc.Loading, pc.Frames()
+		if pc.Anim != nil {
+			f.frames = len(pc.Anim.Frames)
+		}
 	}
 	return f
 }
@@ -136,15 +141,19 @@ func (x *Images) view(c *ui.Ctx, vc uireg.ViewCtx) {
 		}
 		availW, availH := max(vc.Width-48, 16), max(vc.Height-48-12-16, 16)
 		w := min(size.X, availW, availH*size.X/max(size.Y, 1))
-		o := widget.ImageOpts{Label: name, Help: imageHelp, Zoom: true, Group: "file:" + path}
+		o := widget.ImageOpts{Label: name, Help: imageHelp, Zoom: true, Group: "file:" + path, Frames: f.play}
 		if f.img != nil {
 			widget.Image(c, "img", f.img, w, o)
 		} else {
 			doc, sh := f.doc, c.Shaper()
 			widget.VectorImage(c, "img", widget.Vector{Size: size, Fill: th.C(tImageViewBg), Draw: func(fr render.Frame, r render.Rect) { doc.Draw(fr, r, sh) }}, w, o)
 		}
-		c.Text("info", fmt.Sprintf("%d × %d · %s · %s", int(math.Round(float64(size.X))), int(math.Round(float64(size.Y))), kit.Bytes(f.size),
-			strings.ToUpper(f.format)), widget.MonoFont(11, th.C(theme.FgFaint)))
+		info := fmt.Sprintf("%d × %d · %s · %s", int(math.Round(float64(size.X))), int(math.Round(float64(size.Y))), kit.Bytes(f.size),
+			strings.ToUpper(f.format))
+		if f.frames > 0 {
+			info += fmt.Sprintf(" · %d frames", f.frames)
+		}
+		c.Text("info", info, widget.MonoFont(11, th.C(theme.FgFaint)))
 	})
 }
 

@@ -111,7 +111,7 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 		o.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: keys, Command: cmd}))
 	}
 	o.Add(h.Option(registry.OptionSpec{Name: "ui.reduced_motion", Type: registry.Bool, Default: false,
-		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
+		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation, and show animated GIFs and WebPs still."}))
 	o.Add(h.Option(registry.OptionSpec{Name: "ui.scrollbars", Type: registry.Enum, Values: []string{"auto", "always"}, Default: "auto",
 		Scopes: registry.ScopeUser, Help: "When scrollbars show: auto, while the pointer is over what scrolls and for a moment after it scrolls; or always, whenever there's more than fits."}))
 	o.Add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return kit.ThemeNames(h) },

@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -97,5 +98,73 @@ func TestImageShrink(t *testing.T) {
 		if whole.RGBAAt(x, 1) != part.RGBAAt(x-8, 1) {
 			t.Errorf("a part's pixel %d is %v, the whole's %v", x, part.RGBAAt(x-8, 1), whole.RGBAAt(x, 1))
 		}
+	}
+}
+
+// solid is a w×h picture of one colour.
+func solid(w, h int, c color.RGBA) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for i := 0; i < len(img.Pix); i += 4 {
+		img.Pix[i], img.Pix[i+1], img.Pix[i+2], img.Pix[i+3] = c.R, c.G, c.B, c.A
+	}
+	return img
+}
+
+// twoFrames shows red for 100ms then blue for 200ms, over and over.
+type twoFrames struct{ red, blue *image.RGBA }
+
+func (f twoFrames) At(elapsed time.Duration) (image.Image, time.Duration) {
+	t := elapsed % (300 * time.Millisecond)
+	if t < 100*time.Millisecond {
+		return f.red, 100*time.Millisecond - t
+	}
+	return f.blue, 300*time.Millisecond - t
+}
+
+// An animated image plays its frames from when it's first drawn, on the UI's clock, asking for a frame when the next
+// is due; with ui.reduced_motion it stays on its still.
+func TestImagePlaysItsFrames(t *testing.T) {
+	frames := twoFrames{red: solid(10, 10, color.RGBA{R: 255, A: 255}), blue: solid(10, 10, color.RGBA{B: 255, A: 255})}
+	h := newHarness(t, theme.Dark, render.Point{X: 200, Y: 100}, func(c *ui.Ctx) {
+		Image(c, "anim", frames.red, 10, ImageOpts{Label: "a gif", Frames: frames})
+	})
+	o := h.u.Options()
+	o.ReducedMotion = false
+	h.u.SetOptions(o)
+	drawn := func() color.RGBA {
+		t.Helper()
+		for _, op := range h.list.Ops {
+			if op.Kind == render.OpImage {
+				return op.Image.RGBAAt(5, 5)
+			}
+		}
+		t.Fatal("no image drawn")
+		return color.RGBA{}
+	}
+	h.frame()
+	start := h.clock.Now()
+	if c := drawn(); c.R != 255 {
+		t.Errorf("first drawn %v, want the red frame", c)
+	}
+	if next := h.u.NextFrame(); !next.Equal(start.Add(100 * time.Millisecond)) {
+		t.Errorf("asks for a frame at %v, want 100ms on, when blue is due", next.Sub(start))
+	}
+	h.clock.Set(start.Add(150 * time.Millisecond))
+	h.frame()
+	if c := drawn(); c.B != 255 {
+		t.Errorf("150ms on drew %v, want the blue frame", c)
+	}
+	h.clock.Set(start.Add(320 * time.Millisecond))
+	h.frame()
+	if c := drawn(); c.R != 255 {
+		t.Errorf("320ms on drew %v, want red again", c)
+	}
+
+	o.ReducedMotion = true
+	h.u.SetOptions(o)
+	h.clock.Set(start.Add(450 * time.Millisecond))
+	h.frame()
+	if c := drawn(); c.R != 255 {
+		t.Errorf("with reduced motion drew %v, want the still", c)
 	}
 }

@@ -121,6 +121,18 @@ func TestPacksWithAddProjectAddReposThemselves(t *testing.T) {
 	}
 }
 
+// The plan docs are made easy to read: bullets, diagrams, emoji, the odd meme or GIF, and told not to overdo it.
+func TestPlanDocsAreEasyToRead(t *testing.T) {
+	for _, name := range []string{"plan", "newrepo"} {
+		p, _ := Get(name)
+		for _, want := range []string{"bullets", "```mermaid", "emoji", "meme or a GIF", "GIFs play", "Don't overdo it"} {
+			if !strings.Contains(p.Text, want) {
+				t.Errorf("%s pack doesn't say %q", name, want)
+			}
+		}
+	}
+}
+
 func TestDirectWarns(t *testing.T) {
 	p, _ := Get("direct")
 	if !strings.Contains(p.Text, "actual checkout") || !strings.Contains(p.Text, "no worktree") {

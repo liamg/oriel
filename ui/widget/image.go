@@ -6,6 +6,7 @@ import (
 	"image/draw"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
@@ -20,11 +21,42 @@ type ImageOpts struct {
 	Help  string
 	Zoom  bool   // a click opens it in the lightbox, large over the window
 	Group string // the images the lightbox's ← and → move between, as one document's; alone if ""
+	// Frames plays an animation in place of the image, from when it's first drawn; a still UI (ui.reduced_motion)
+	// shows the image.
+	Frames Frames
+}
+
+// Frames is an animation: the frame showing elapsed into it, and how long until the next (0 once it stops).
+type Frames interface {
+	At(elapsed time.Duration) (image.Image, time.Duration)
+}
+
+// playing is an animated image's start, kept while it shows the same frames.
+type playing struct {
+	frames Frames
+	start  time.Time
+}
+
+// frameNow is the frame of o.Frames due now for the image at key, asking for a frame when the next is due.
+func frameNow(c *ui.Ctx, key any, img image.Image, o ImageOpts) image.Image {
+	if o.Frames == nil || c.Still() {
+		return img
+	}
+	st, now := ui.State[playing](c, c.Next(key)), c.Now()
+	if st.frames != o.Frames {
+		st.frames, st.start = o.Frames, now
+	}
+	f, next := o.Frames.At(now.Sub(st.start))
+	if next > 0 {
+		c.WakeAt(now.Add(next))
+	}
+	return f
 }
 
 // Image draws img w wide, its height kept to its shape, in the device's own pixels: it's scaled once per size and kept.
 // It returns the image's id; its rect is where annotations over it go.
 func Image(c *ui.Ctx, key any, img image.Image, w float32, o ImageOpts) ui.ID {
+	img = frameNow(c, key, img, o)
 	b := img.Bounds()
 	if b.Dx() <= 0 || b.Dy() <= 0 || w <= 0 {
 		return c.Box(key, ui.Style{W: ui.Px(w)}, nil)

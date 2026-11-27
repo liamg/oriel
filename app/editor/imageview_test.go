@@ -191,3 +191,26 @@ func TestAnImagesMenuCopiesIt(t *testing.T) {
 		t.Errorf("copied a %v picture, want the 640×400 file's", b.Size())
 	}
 }
+
+// An animated GIF or WebP opens in the image view playing, and says how many frames it has; a WebP that
+// x/image/webp can't read as a still (an animated one) shows rather than failing.
+func TestAnimatedImageFileTab(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"anim.gif", "anim.webp"} {
+		b, err := os.ReadFile(filepath.Join("..", "..", "internal", "imagex", "testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
+	for _, f := range []struct{ name, want string }{{"anim.gif", "· GIF · 3 frames"}, {"anim.webp", "· WEBP · 3 frames"}} {
+		s.Run("editor.open", registry.Args{"path": f.name})
+		s.Until(f.name+" playing in the image view", func() bool { return s.Showing(editor.ImageView) && drew(s, f.want) })
+		if s.NodeRole("image", f.name) == nil {
+			t.Errorf("%s isn't drawn:\n%s", f.name, s.Text())
+		}
+	}
+}

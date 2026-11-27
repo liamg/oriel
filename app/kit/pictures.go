@@ -28,6 +28,7 @@ import (
 	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // Pictures are a window's images decoded from files, data: URIs and the web, each read and decoded off the loop
@@ -78,7 +79,7 @@ func newPictures(q *landing, o ReadsOpts) *Pictures {
 		frame = func() int { return 0 }
 	}
 	p := &Pictures{q: q, client: client, made: map[string]made{}, retries: map[string]retry{}, note: func(ui.LoadState) {}}
-	size := func(pc *Picture) int64 { return pc.Bytes }
+	size := func(pc *Picture) int64 { return pc.Bytes + pc.Anim.Bytes() }
 	p.files = plugin.NewCache(q, func(_ context.Context, path string) (*Picture, error) {
 		b, err := os.ReadFile(path)
 		if err != nil {
@@ -127,6 +128,7 @@ func (p *Pictures) Memo(key string, from any, make func() *Picture) *Picture {
 // remote one that failed says when it's fetched again.
 type Picture struct {
 	Img     image.Image
+	Anim    *imagex.Animation // an animated GIF or WebP's frames; Img is its first
 	Doc     *svg.Doc
 	Format  string
 	Density float32 // its pixels per point, as its file says: 2 for a Retina screenshot; 0 when it doesn't say
@@ -135,6 +137,14 @@ type Picture struct {
 	Src     string    // a remote one's URL
 	Bytes   int64     // the file's size
 	Retry   time.Time // when a failed remote one is fetched again
+}
+
+// Frames is its animation for widget.ImageOpts.Frames; nil for a still.
+func (pc *Picture) Frames() widget.Frames {
+	if pc.Anim == nil {
+		return nil
+	}
+	return pc.Anim
 }
 
 const (
@@ -193,7 +203,7 @@ func decoded(b []byte) (*Picture, error) {
 		pc.Format = "svg"
 		pc.Doc, pc.Err = svg.Parse(b)
 	} else {
-		pc.Img, pc.Format, pc.Err = imagex.Decode(b)
+		pc.Img, pc.Format, pc.Anim, pc.Err = imagex.DecodeAnimated(b)
 		if pc.Format == "png" {
 			pc.Density = imagex.PNGDensity(b)
 		}

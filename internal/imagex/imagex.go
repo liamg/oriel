@@ -1,4 +1,5 @@
-// Package imagex decodes the pictures Oriel shows: PNG, JPEG, GIF, WebP, BMP and ICO, and a PNG's pixel density.
+// Package imagex decodes the pictures Oriel shows: PNG, JPEG, GIF, WebP, BMP and ICO, a PNG's pixel density, and
+// animated GIFs and WebPs.
 package imagex
 
 import (
@@ -35,7 +36,32 @@ func Decode(b []byte) (image.Image, string, error) {
 		img, err := decodeICO(b)
 		return img, "ico", err
 	}
-	return image.Decode(bytes.NewReader(b))
+	img, format, err := image.Decode(bytes.NewReader(b))
+	if err != nil && isWebP(b) {
+		if a, aerr := Animate(b); aerr == nil && a != nil {
+			return a.Frames[0], "webp", nil
+		}
+	}
+	return img, format, err
+}
+
+// DecodeAnimated is Decode, and the animation too when it's an animated GIF or WebP: its first frame is the still.
+// One too big to play is the still alone.
+func DecodeAnimated(b []byte) (image.Image, string, *Animation, error) {
+	a, aerr := Animate(b)
+	if aerr == nil && a != nil {
+		format := "gif"
+		if isWebP(b) {
+			format = "webp"
+		}
+		return a.Frames[0], format, a, nil
+	}
+	img, format, err := Decode(b)
+	return img, format, nil, err
+}
+
+func isWebP(b []byte) bool {
+	return len(b) >= 12 && string(b[:4]) == "RIFF" && string(b[8:12]) == "WEBP"
 }
 
 // decodeICO decodes the largest image in an icon file: a PNG, or a bitmap without its file header.

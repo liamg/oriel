@@ -1,6 +1,7 @@
 package sessions_test
 
 import (
+	"image/color"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui/layout"
 )
 
@@ -360,4 +362,52 @@ func TestAComposerOutlivesTheDocBeingReadAgain(t *testing.T) {
 	s.ClickText("Round each line in minor units, ties to even.")
 	s.Quiet()
 	s.WantFrame("New thread", "· L14")
+}
+
+// A plan doc's GIF plays in place, on the window's clock: the fixture is red for 100ms, then blue in the middle.
+func TestAPlanDocsGIFPlays(t *testing.T) {
+	ws, dir := t.TempDir(), t.TempDir()
+	gif, err := os.ReadFile(filepath.Join("..", "..", "internal", "imagex", "testdata", "anim.gif"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, "demo.gif"), gif, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte("# Plan\n\n- 🚀 ship it\n\n![the demo](demo.gif)\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	o := s.UI().Options()
+	o.ReducedMotion = false
+	s.UI().SetOptions(o)
+	s.SetNow(time.Unix(1000, 0))
+	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "p", Name: "p", Kind: core.KindPlan, StartWork: true, Status: core.StatusQuiet,
+		Dir: ws, Projects: []core.Project{{Name: "x", Repo: dir, Dir: dir, Primary: true, ReadOnly: true}}}})
+	s.Apply(core.SessionFocused{ID: "p"})
+	s.Run("plan.open", nil)
+	s.Until("the GIF drawn", func() bool {
+		s.SettleReads()
+		return s.NodeRole("image", "the demo") != nil
+	})
+	middle := func() color.RGBA {
+		t.Helper()
+		r := s.NodeRole("image", "the demo").Bounds
+		for _, op := range s.List().Ops {
+			if op.Kind == render.OpImage && op.At.X >= r.Min.X-1 && op.At.X <= r.Max.X && op.At.Y >= r.Min.Y-1 && op.At.Y <= r.Max.Y {
+				return op.Image.RGBAAt(op.Image.Rect.Dx()/2, op.Image.Rect.Dy()/2)
+			}
+		}
+		t.Fatal("the GIF's pixels aren't drawn")
+		return color.RGBA{}
+	}
+	s.Frames(2)
+	if c := middle(); c.R != 255 || c.B != 0 {
+		t.Errorf("first drawn %v, want the red frame", c)
+	}
+	s.SetNow(s.Now().Add(150 * time.Millisecond))
+	s.Frames(2)
+	if c := middle(); c.B != 255 || c.R != 0 {
+		t.Errorf("150ms on, drawn %v, want the blue frame", c)
+	}
 }

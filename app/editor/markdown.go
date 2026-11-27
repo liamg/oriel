@@ -378,6 +378,7 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 	type pic struct {
 		im      mdImage
 		img     image.Image
+		frames  widget.Frames
 		doc     *svg.Doc
 		loading bool
 		why     string
@@ -392,7 +393,7 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 	for _, im := range imgs {
 		p := pic{im: im}
 		pc, why := mdPicture(kit.PicturesOf(c), im.Src, o.Dir)
-		p.img, p.doc, p.loading, p.why = pc.Img, pc.Doc, pc.Loading, why
+		p.img, p.frames, p.doc, p.loading, p.why = pc.Img, pc.Frames(), pc.Doc, pc.Loading, why
 		if pc.Err != nil && pc.Src != "" {
 			p.retry = pc.Src
 		}
@@ -445,7 +446,7 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 					label := cmp.Or(p.im.Alt, p.im.Src)
 					switch {
 					case p.img != nil:
-						widget.Image(c, i, p.img, p.w, widget.ImageOpts{Label: label, Help: o.Help, Zoom: true, Group: o.Group})
+						widget.Image(c, i, p.img, p.w, widget.ImageOpts{Label: label, Help: o.Help, Zoom: true, Group: o.Group, Frames: p.frames})
 						continue
 					case p.doc != nil:
 						doc, sh := p.doc, c.Shaper()
