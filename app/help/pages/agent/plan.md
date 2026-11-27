@@ -20,7 +20,8 @@ shows the docs as a diff when something offers one. **Start work** is lit once t
 
 ## Doc
 
-The doc rendered: headings, paragraphs, lists, tables, fenced code and mermaid diagrams (click one to zoom it). A
+The doc rendered: headings, paragraphs, lists, tables, fenced code, mermaid diagrams and images, GIFs playing (click
+one to zoom it). The agent is asked to keep the docs easy to read: bullets, the odd diagram, emoji, meme or GIF. A
 line number shows beside a line with a thread on it, and its edge takes the thread's colour. The agent's latest edit shows in green for a few minutes, what it took
 out struck through. Click a line, or move with `j` and `k` and press `c` or `⏎`, to comment on it.
 
