@@ -1,6 +1,7 @@
 package theme
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -46,18 +47,42 @@ type SyntaxDef struct {
 // HasVariants reports whether s has [dark] or [light] tables, so an edit belongs under one.
 func (s *Spec) HasVariants() bool { return !s.Dark.empty() || !s.Light.empty() }
 
+// FixedVariant is the one variant stack resolves at whatever's asked, or "" when it follows what's asked.
+func FixedVariant(stack []*Spec) Variant {
+	if d := Effective(stack, Dark); d == Effective(stack, Light) {
+		return d
+	}
+	return ""
+}
+
 // Effective is the variant stack resolves at when want is asked: the variant of the topmost theme that sets one,
-// unless a theme above or at it has [dark]/[light] tables, which follow what's asked.
+// unless a theme above or at it has [dark]/[light] tables for another variant, which follow what's asked.
 func Effective(stack []*Spec, want Variant) Variant {
-	for _, s := range slices.Backward(stack) {
+	return cmp.Or(pinned(stack), want)
+}
+
+// pinned is the variant stack is whatever's asked, or "". Tables only for the variant a theme names, or else the
+// one the themes beneath are pinned to, add no other, so they leave it pinned.
+func pinned(stack []*Spec) Variant {
+	for i, s := range slices.Backward(stack) {
 		if s.HasVariants() {
-			return want
+			if p := cmp.Or(s.Variant, pinned(stack[:i])); p != "" && s.variant(other(p)).empty() {
+				return p
+			}
+			return ""
 		}
 		if s.Variant != "" {
 			return s.Variant
 		}
 	}
-	return want
+	return ""
+}
+
+func other(v Variant) Variant {
+	if v == Dark {
+		return Light
+	}
+	return Dark
 }
 
 func (l *Layer) empty() bool {

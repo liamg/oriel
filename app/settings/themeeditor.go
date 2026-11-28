@@ -241,8 +241,8 @@ func (e *ThemeEditor) themeName() string {
 }
 
 // target is the file edits go to: the current theme's own file, or else (a built-in, a plugin's) a local theme in
-// the themes directory that extends it, made the current theme. v is the variant to write under: the current one
-// when the theme has [dark] and [light] tables, else none.
+// the themes directory that extends it, made the current theme. v is the variant to write under: the one a
+// single-variant theme is, else the current one when the theme has [dark] and [light] tables, else none.
 func (e *ThemeEditor) target() (path string, v theme.Variant, err error) {
 	name := e.themeName()
 	srcs := e.h.Themes()
@@ -282,7 +282,10 @@ func (e *ThemeEditor) target() (path string, v theme.Variant, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	if slices.ContainsFunc(st, (*theme.Spec).HasVariants) {
+	switch fixed := theme.FixedVariant(st); {
+	case fixed != "":
+		v = fixed
+	case slices.ContainsFunc(st, (*theme.Spec).HasVariants):
 		v = theme.Dark
 		if r := e.h.CurrentTheme(); r != nil {
 			v = r.Variant
@@ -550,6 +553,15 @@ func (e *ThemeEditor) base() string {
 	return st[len(st)-2].Name
 }
 
+// fixedVariant is the one variant the current theme has, or "" when it has both.
+func (e *ThemeEditor) fixedVariant() theme.Variant {
+	st, err := theme.Stack(e.h.Themes(), e.themeName())
+	if err != nil {
+		return ""
+	}
+	return theme.FixedVariant(st)
+}
+
 func (e *ThemeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 	c.Row("bar", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		vs := "SPLIT VS BASE"
@@ -561,7 +573,9 @@ func (e *ThemeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 		if th.Variant == theme.Light {
 			variant = 1
 		}
-		if widget.Segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, widget.SegmentedOpts{Help: "shell/theme#preview"}) {
+		if fixed := e.fixedVariant(); fixed != "" {
+			widget.Chip(c, "variant", string(fixed)+" only", th.C(theme.FgFaint), "shell/theme#preview")
+		} else if widget.Segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, widget.SegmentedOpts{Help: "shell/theme#preview"}) {
 			// A preview, for editing the other variant: saving it would stop Oriel following the system appearance.
 			e.previewing = true
 			e.fail(e.h.Options().Set("ui.variant", registry.LayerPreview, registry.At{}, []string{"dark", "light"}[variant]))

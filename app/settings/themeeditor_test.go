@@ -226,3 +226,74 @@ func TestThemeEditorSavesThemeChoices(t *testing.T) {
 		}
 	})
 }
+
+// A theme with one variant keeps it: its local theme takes overrides in that variant's tables, and the editor names
+// the variant in place of a toggle that couldn't change it.
+func TestThemeEditorOnASingleVariantTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight", "scope": "user"})
+	s.Retheme()
+	s.Run("theme.edit", nil)
+	s.Frame()
+	s.Frame()
+	if !strings.Contains(s.Text(), "DARK ONLY") || strings.Contains(s.Text(), "LIGHT") {
+		t.Errorf("the toolbar on tokyonight:\n%s", s.Text())
+	}
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+	b, err := os.ReadFile(filepath.Join(s.ConfigDir, "themes", "tokyonight-local.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(b), "name = \"tokyonight-local\"\nextends = \"tokyonight\"\n\n[dark.component]\n\"requests.avatar.you\" = \"#0000ff\"\n"; got != want {
+		t.Errorf("wrote:\n%s\nwant:\n%s", got, want)
+	}
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	if th := s.UI().Theme(); th.Name != "tokyonight-local" || th.Variant != theme.Dark {
+		t.Errorf("asked for light: %s %s", th.Name, th.Variant)
+	}
+}
+
+// A local theme written with [dark] overrides over a dark-only theme stays dark-only, and the editor changes its
+// values in place.
+func TestThemeEditorOnAnOlderLocalTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.WriteConfig(map[string]string{"themes/tokyonight-local.toml": "name = \"tokyonight-local\"\nextends = \"tokyonight\"\n\n[dark.component]\n\"requests.avatar.you\" = \"#0000ff\"\n"})
+	s = apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight-local", "scope": "user"})
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	th := s.UI().Theme()
+	if c, _ := th.Color("requests.avatar.you"); th.Variant != theme.Dark || theme.Hex(c) != "#0000ff" {
+		t.Errorf("asked for light: %s, avatar %s", th.Variant, theme.Hex(c))
+	}
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#00ff00"})
+	b, err := os.ReadFile(filepath.Join(s.ConfigDir, "themes", "tokyonight-local.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(b); strings.Count(got, "requests.avatar.you") != 1 || !strings.Contains(got, "[dark.component]\n\"requests.avatar.you\" = \"#00ff00\"") {
+		t.Errorf("after the edit:\n%s", got)
+	}
+}
+
+// Your own theme that names one variant keeps it when you edit it.
+func TestThemeEditorOnYourOwnSingleVariantTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.WriteConfig(map[string]string{"themes/mine.toml": "name = \"mine\"\nextends = \"oriel\"\nvariant = \"dark\"\n"})
+	s = apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "mine", "scope": "user"})
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	th := s.UI().Theme()
+	if c, _ := th.Color("requests.avatar.you"); th.Name != "mine" || th.Variant != theme.Dark || theme.Hex(c) != "#0000ff" {
+		t.Errorf("asked for light: %s %s, avatar %s", th.Name, th.Variant, theme.Hex(c))
+	}
+}

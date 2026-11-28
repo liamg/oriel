@@ -314,3 +314,25 @@ func TestTone(t *testing.T) {
 		t.Errorf("Tone declared %d tokens", after-before)
 	}
 }
+
+// A theme that names one variant and has no [dark]/[light] tables is that variant whatever's asked, and so is one
+// extending it that adds none, or only the variant it's pinned to; tables for another variant follow what's asked.
+func TestFixedVariant(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		stack []*Spec
+		want  Variant
+	}{
+		{"oriel", []*Spec{spec(t, "name = \"oriel\"\n[dark.semantic]\naccent = \"#ff0000\"\n[light.semantic]\naccent = \"#00ff00\"")}, ""},
+		{"dark only", []*Spec{spec(t, "name = \"base\"\n[dark.semantic]\naccent = \"#ff0000\""), spec(t, "name = \"night\"\nextends = \"base\"\nvariant = \"dark\"")}, Dark},
+		{"extending a dark-only theme", []*Spec{spec(t, "name = \"night\"\nvariant = \"dark\""), spec(t, "name = \"night-local\"\nextends = \"night\"\n[component]\n\"x\" = \"#0000ff\"")}, Dark},
+		{"its own variant's tables over it", []*Spec{spec(t, "name = \"night\"\nvariant = \"dark\""), spec(t, "name = \"night-local\"\nextends = \"night\"\n[dark.component]\n\"x\" = \"#0000ff\"")}, Dark},
+		{"its own variant and that variant's tables", []*Spec{spec(t, "name = \"base\"\n[dark.semantic]\naccent = \"#ff0000\"\n[light.semantic]\naccent = \"#00ff00\""), spec(t, "name = \"mine\"\nextends = \"base\"\nvariant = \"dark\"\n[dark.component]\n\"x\" = \"#0000ff\"")}, Dark},
+		{"its own variant and the other's tables", []*Spec{spec(t, "name = \"mine\"\nvariant = \"dark\"\n[light.component]\n\"x\" = \"#0000ff\"")}, ""},
+		{"the other variant's tables over it", []*Spec{spec(t, "name = \"night\"\nvariant = \"dark\""), spec(t, "name = \"day\"\nextends = \"night\"\n[light.component]\n\"x\" = \"#0000ff\"")}, ""},
+	} {
+		if got := FixedVariant(tt.stack); got != tt.want {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
