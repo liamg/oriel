@@ -36,6 +36,7 @@
 ---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)
 ---@field buffer_option table<string, any> The current buffer's settings
 ---@field session_option table<string, any> The current session's settings
+---@field preview_option table<string, any> Settings only being tried out, over every other layer and saved nowhere; nil ends one
 ---@field platform string The OS Oriel runs on: darwin or linux
 ---@field api { version: string }
 oriel = {}

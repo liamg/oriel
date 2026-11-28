@@ -48,13 +48,14 @@ type ThemeEditor struct {
 	h   plugin.Host
 	Dir string // the user's themes directory, where a local theme goes
 
-	open    bool
-	picking bool
-	probe   *image.RGBA // the window in probeTh, taken as pick mode starts
-	probeTh *theme.Resolved
-	hoverAt render.Point
-	hover   string
-	hoverR  render.Rect
+	open       bool
+	picking    bool
+	previewing bool        // ui.variant is the toggle's, at the preview layer
+	probe      *image.RGBA // the window in probeTh, taken as pick mode starts
+	probeTh    *theme.Resolved
+	hoverAt    render.Point
+	hover      string
+	hoverR     render.Rect
 
 	picked string // what was picked: a token, "palette:x" or "@capture"
 	sel    string // the link of its chain being edited
@@ -119,6 +120,7 @@ func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range e.keymaps() {
 		e.Add(h.Keymap(k))
 	}
+	e.Add(registry.DisposeFunc(e.endPreview))
 	e.Add(h.View(kit.OverlayPrefix+"theme", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "theme", Fn: e.build}
 	})))
@@ -332,6 +334,14 @@ func (e *ThemeEditor) edit(name string, drag bool, fn func(src []byte, v theme.V
 	return nil
 }
 
+// endPreview puts back the variant the settings choose, if the toggle changed it.
+func (e *ThemeEditor) endPreview() {
+	if e.previewing {
+		e.previewing = false
+		e.h.Options().Unset("ui.variant", registry.LayerPreview, registry.At{})
+	}
+}
+
 // saveOption writes the option to the user's settings file, so a restart or another workspace keeps it.
 func (e *ThemeEditor) saveOption(name string, v any) error {
 	if e.h.Available("settings.set", nil) {
@@ -390,6 +400,9 @@ func (e *ThemeEditor) fail(err error) {
 // --- the editor ---
 
 func (e *ThemeEditor) build(c *ui.Ctx) {
+	if !e.open && !e.picking {
+		e.endPreview()
+	}
 	if !e.open || c.Theme().IsProbe() {
 		return
 	}
@@ -549,8 +562,9 @@ func (e *ThemeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 			variant = 1
 		}
 		if widget.Segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, widget.SegmentedOpts{Help: "shell/theme#preview"}) {
-			// Only for editing the other variant: saving it would stop Oriel following the system appearance.
-			e.fail(e.h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, []string{"dark", "light"}[variant]))
+			// A preview, for editing the other variant: saving it would stop Oriel following the system appearance.
+			e.previewing = true
+			e.fail(e.h.Options().Set("ui.variant", registry.LayerPreview, registry.At{}, []string{"dark", "light"}[variant]))
 		}
 		pink := th.C(tThemePick)
 		if widget.Clickable(c, "pick", ui.Style{Dir: ui.Row, H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center, Stroke: pink, Border: 1, Radius: 12,

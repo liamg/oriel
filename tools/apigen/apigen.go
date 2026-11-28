@@ -257,6 +257,7 @@ func Types(nss []Namespace, version string) []byte {
 	b.WriteString("---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)\n")
 	b.WriteString("---@field buffer_option table<string, any> The current buffer's settings\n")
 	b.WriteString("---@field session_option table<string, any> The current session's settings\n")
+	b.WriteString("---@field preview_option table<string, any> Settings only being tried out, over every other layer and saved nowhere; nil ends one\n")
 	b.WriteString("---@field platform string The OS Oriel runs on: darwin or linux\n")
 	b.WriteString("---@field api { version: string }\noriel = {}\n\n")
 	for _, ns := range nss {

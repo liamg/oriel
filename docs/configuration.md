@@ -25,7 +25,9 @@ layout = "unified"
 
 Later layers win: built-in defaults, `~/.config/oriel/settings.toml`, `init.lua`, `<repo>/.oriel/settings.toml`, the
 session, the file's own conventions (`.editorconfig`, `.gitattributes`, modelines when on), then the buffer and window
-(`:set`). A value set in `init.lua` is shown read-only on the settings page, with a link to its line.
+(`:set`). Over them all sits a preview layer: a value only being tried out, such as the theme editor's dark/light
+toggle, saved nowhere and gone when whatever set it ends it (`oriel.preview_option`). A value set in `init.lua` is
+shown read-only on the settings page, with a link to its line.
 
 ## Example init.lua
 

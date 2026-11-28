@@ -200,18 +200,29 @@ func TestThemeEditorSavesThemeChoices(t *testing.T) {
 			t.Errorf("ui.theme is %v in the later app", v)
 		}
 	})
-	t.Run("the variant toggle lasts only this app", func(t *testing.T) {
+	t.Run("the variant toggle is a preview", func(t *testing.T) {
 		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
-		before := option(s, "ui.variant")
+		s.Run("settings.set", registry.Args{"name": "ui.variant", "value": "dark", "scope": "user"})
 		s.Run("theme.edit", nil)
 		s.Frame()
 		s.Frame()
 		s.Click(apptest.Centre(s.Node("LIGHT").Bounds), 0)
-		if v := option(s, "ui.variant"); v != "light" {
-			t.Fatalf("ui.variant is %v after the toggle", v)
+		if v, l, _ := s.Registry().Options().Get("ui.variant", registry.At{}); v != "light" || l != registry.LayerPreview {
+			t.Fatalf("after the toggle: %v from %v", v, l)
 		}
-		if v := option(later(t, s), "ui.variant"); v != before {
-			t.Errorf("ui.variant is %v in the later app, want %v", v, before)
+		// The first override on a built-in theme writes settings.toml, which reads the file back in.
+		s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+		s.Frame()
+		if v := option(s, "ui.variant"); v != "light" {
+			t.Errorf("settings.toml read back over the preview: %v", v)
+		}
+		s.Type("Esc")
+		s.Frame()
+		if v, l, _ := s.Registry().Options().Get("ui.variant", registry.At{}); v != "dark" || l != registry.LayerUser {
+			t.Errorf("after closing the editor: %v from %v", v, l)
+		}
+		if v := option(later(t, s), "ui.variant"); v != "dark" {
+			t.Errorf("ui.variant is %v in the later app", v)
 		}
 	})
 }
