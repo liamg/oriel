@@ -836,3 +836,25 @@ func TestInitLuaSetsAPluginOptionDeclaredLater(t *testing.T) {
 		t.Errorf("plugin.late.greeting = %v, want hi", v)
 	}
 }
+
+// oriel.preview_option tries a value out over every other layer, whatever the option's scopes; nil ends it.
+func TestLuaPreviewOption(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	vm := s.PluginVM(plugin.Caller{ID: "init.lua"})
+	o := s.Registry().Options()
+	if err := o.Set("ui.variant", registry.LayerUser, registry.At{}, "dark"); err != nil {
+		t.Fatal(err)
+	}
+	if err := luaErr(t, vm, `oriel.preview_option["ui.variant"] = "light"`); err != "" {
+		t.Fatal(err)
+	}
+	if v, l, _ := o.Get("ui.variant", registry.At{}); v != "light" || l != registry.LayerPreview {
+		t.Errorf("previewing: %v from %v", v, l)
+	}
+	if err := luaErr(t, vm, `oriel.preview_option["ui.variant"] = nil`); err != "" {
+		t.Fatal(err)
+	}
+	if v, l, _ := o.Get("ui.variant", registry.At{}); v != "dark" || l != registry.LayerUser {
+		t.Errorf("after the preview: %v from %v", v, l)
+	}
+}

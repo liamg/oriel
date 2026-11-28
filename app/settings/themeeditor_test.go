@@ -168,3 +168,132 @@ func TestThemeEditorWritesOverrides(t *testing.T) {
 		t.Error("a broken expression was written")
 	}
 }
+
+// Theme choices made in the editor reach a later app on the same config: a restart, or a new workspace.
+func TestThemeEditorSavesThemeChoices(t *testing.T) {
+	// later starts another app on s's config directory.
+	later := func(t *testing.T, s *apptest.Scene) *apptest.Scene {
+		t.Helper()
+		return apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	}
+	option := func(s *apptest.Scene, name string) any {
+		v, _, _ := s.Registry().Options().Get(name, registry.At{})
+		return v
+	}
+	t.Run("an override of a built-in theme", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight", "scope": "user"})
+		s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+		next := later(t, s)
+		next.Retheme()
+		if v := option(next, "ui.theme"); v != "tokyonight-local" {
+			t.Errorf("ui.theme is %v in the later app", v)
+		}
+		if c, _ := next.UI().Theme().Color("requests.avatar.you"); theme.Hex(c) != "#0000ff" {
+			t.Errorf("requests.avatar.you is %s in the later app", theme.Hex(c))
+		}
+	})
+	t.Run(":Theme with a name", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		s.Run("theme.edit", registry.Args{"args": "tokyonight"})
+		if v := option(later(t, s), "ui.theme"); v != "tokyonight" {
+			t.Errorf("ui.theme is %v in the later app", v)
+		}
+	})
+	t.Run("the variant toggle is a preview", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		s.Run("settings.set", registry.Args{"name": "ui.variant", "value": "dark", "scope": "user"})
+		s.Run("theme.edit", nil)
+		s.Frame()
+		s.Frame()
+		s.Click(apptest.Centre(s.Node("LIGHT").Bounds), 0)
+		if v, l, _ := s.Registry().Options().Get("ui.variant", registry.At{}); v != "light" || l != registry.LayerPreview {
+			t.Fatalf("after the toggle: %v from %v", v, l)
+		}
+		// The first override on a built-in theme writes settings.toml, which reads the file back in.
+		s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+		s.Frame()
+		if v := option(s, "ui.variant"); v != "light" {
+			t.Errorf("settings.toml read back over the preview: %v", v)
+		}
+		s.Type("Esc")
+		s.Frame()
+		if v, l, _ := s.Registry().Options().Get("ui.variant", registry.At{}); v != "dark" || l != registry.LayerUser {
+			t.Errorf("after closing the editor: %v from %v", v, l)
+		}
+		if v := option(later(t, s), "ui.variant"); v != "dark" {
+			t.Errorf("ui.variant is %v in the later app", v)
+		}
+	})
+}
+
+// A theme with one variant keeps it: its local theme takes overrides in that variant's tables, and the editor names
+// the variant in place of a toggle that couldn't change it.
+func TestThemeEditorOnASingleVariantTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight", "scope": "user"})
+	s.Retheme()
+	s.Run("theme.edit", nil)
+	s.Frame()
+	s.Frame()
+	if !strings.Contains(s.Text(), "DARK ONLY") || strings.Contains(s.Text(), "LIGHT") {
+		t.Errorf("the toolbar on tokyonight:\n%s", s.Text())
+	}
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+	b, err := os.ReadFile(filepath.Join(s.ConfigDir, "themes", "tokyonight-local.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(b), "name = \"tokyonight-local\"\nextends = \"tokyonight\"\n\n[dark.component]\n\"requests.avatar.you\" = \"#0000ff\"\n"; got != want {
+		t.Errorf("wrote:\n%s\nwant:\n%s", got, want)
+	}
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	if th := s.UI().Theme(); th.Name != "tokyonight-local" || th.Variant != theme.Dark {
+		t.Errorf("asked for light: %s %s", th.Name, th.Variant)
+	}
+}
+
+// A local theme written with [dark] overrides over a dark-only theme stays dark-only, and the editor changes its
+// values in place.
+func TestThemeEditorOnAnOlderLocalTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.WriteConfig(map[string]string{"themes/tokyonight-local.toml": "name = \"tokyonight-local\"\nextends = \"tokyonight\"\n\n[dark.component]\n\"requests.avatar.you\" = \"#0000ff\"\n"})
+	s = apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight-local", "scope": "user"})
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	th := s.UI().Theme()
+	if c, _ := th.Color("requests.avatar.you"); th.Variant != theme.Dark || theme.Hex(c) != "#0000ff" {
+		t.Errorf("asked for light: %s, avatar %s", th.Variant, theme.Hex(c))
+	}
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#00ff00"})
+	b, err := os.ReadFile(filepath.Join(s.ConfigDir, "themes", "tokyonight-local.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := string(b); strings.Count(got, "requests.avatar.you") != 1 || !strings.Contains(got, "[dark.component]\n\"requests.avatar.you\" = \"#00ff00\"") {
+		t.Errorf("after the edit:\n%s", got)
+	}
+}
+
+// Your own theme that names one variant keeps it when you edit it.
+func TestThemeEditorOnYourOwnSingleVariantTheme(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.WriteConfig(map[string]string{"themes/mine.toml": "name = \"mine\"\nextends = \"oriel\"\nvariant = \"dark\"\n"})
+	s = apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "mine", "scope": "user"})
+	s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+	if err := s.Registry().Options().Set("ui.variant", registry.LayerUser, registry.At{}, "light"); err != nil {
+		t.Fatal(err)
+	}
+	s.Retheme()
+	th := s.UI().Theme()
+	if c, _ := th.Color("requests.avatar.you"); th.Name != "mine" || th.Variant != theme.Dark || theme.Hex(c) != "#0000ff" {
+		t.Errorf("asked for light: %s %s, avatar %s", th.Name, th.Variant, theme.Hex(c))
+	}
+}

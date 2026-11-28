@@ -313,3 +313,46 @@ func TestOptionRegistered(t *testing.T) {
 		t.Errorf("heard %d registrations, want 2", heard)
 	}
 }
+
+// The preview layer holds a value someone is only trying out: it wins everywhere, takes any option whatever its
+// scopes, and leaves the layers beneath it as they are.
+func TestOptionPreviewLayer(t *testing.T) {
+	r := registry.New()
+	r.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system", Scopes: registry.ScopeUser})
+	r.Option(lineNumbers())
+	o := r.Options()
+	if err := o.Set("ui.variant", registry.LayerUser, registry.At{}, "dark"); err != nil {
+		t.Fatal(err)
+	}
+	if err := o.Set("ui.variant", registry.LayerPreview, registry.At{}, "light"); err != nil {
+		t.Fatalf("a user-only option at the preview layer: %v", err)
+	}
+	if err := o.Set("ui.variant", registry.LayerUser, registry.At{}, "dark"); err != nil {
+		t.Fatal(err)
+	}
+	here := registry.At{Project: "/src/oriel", Session: "s1", Buffer: "b1", Window: "w1"}
+	for _, at := range []registry.At{{}, here} {
+		if v, l, _ := o.Get("ui.variant", at); v != "light" || l != registry.LayerPreview {
+			t.Errorf("at %+v: %v from %v", at, v, l)
+		}
+	}
+	if err := o.Set("editor.line_numbers", registry.LayerWindow, registry.At{Window: "w1"}, "off"); err != nil {
+		t.Fatal(err)
+	}
+	if err := o.Set("editor.line_numbers", registry.LayerPreview, registry.At{}, "relative"); err != nil {
+		t.Fatal(err)
+	}
+	if v, l, _ := o.Get("editor.line_numbers", here); v != "relative" || l != registry.LayerPreview {
+		t.Errorf("over the window's value: %v from %v", v, l)
+	}
+	if err := o.Set("ui.variant", registry.LayerPreview, registry.At{}, "sepia"); err == nil {
+		t.Error("a value off the enum was taken at the preview layer")
+	}
+	o.Unset("ui.variant", registry.LayerPreview, registry.At{})
+	if v, l, _ := o.Get("ui.variant", registry.At{}); v != "dark" || l != registry.LayerUser {
+		t.Errorf("after the preview: %v from %v", v, l)
+	}
+	if registry.LayerPreview.String() != "preview" {
+		t.Errorf("the layer's name is %q", registry.LayerPreview)
+	}
+}

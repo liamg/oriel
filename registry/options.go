@@ -53,9 +53,10 @@ const (
 	LayerFile // a file's own conventions: .editorconfig, .gitattributes, a modeline; keyed by buffer
 	LayerBuffer
 	LayerWindow
+	LayerPreview // a value only being tried out, over every other layer and kept in no file
 )
 
-var layerNames = [...]string{"default", "user", "lua", "project", "session", "file", "buffer", "window"}
+var layerNames = [...]string{"default", "user", "lua", "project", "session", "file", "buffer", "window", "preview"}
 
 func (l Layer) String() string { return layerNames[l] }
 
@@ -71,9 +72,14 @@ func (l Layer) scope() Scope {
 		return ScopeBuffer
 	case LayerWindow:
 		return ScopeWindow
+	case LayerPreview:
+		return ScopeUser | ScopeProject | ScopeSession | ScopeBuffer | ScopeWindow
 	}
 	return 0
 }
+
+// keyed reports whether the layer holds a value per project, session, buffer or window.
+func (l Layer) keyed() bool { return l >= LayerProject && l <= LayerWindow }
 
 // At is where an option is read or set. A layer only reads the field it is keyed by.
 type At struct {
@@ -294,9 +300,9 @@ func (o *options) resolve(s OptionSpec, at At, depth int) (any, Layer, error) {
 }
 
 func (o *options) winner(s OptionSpec, at At) (value, Layer) {
-	for l := LayerWindow; l > LayerDefault; l-- {
+	for l := LayerPreview; l > LayerDefault; l-- {
 		k := at.key(l)
-		if l >= LayerProject && k == "" {
+		if l.keyed() && k == "" {
 			continue
 		}
 		if v, ok := o.values[valueKey{s.Name, l, k}]; ok {
@@ -346,7 +352,7 @@ func (o *options) SetFrom(name string, l Layer, at At, v any, source string) err
 	case l == LayerDefault || s.Scopes&l.scope() == 0:
 		o.mu.Unlock()
 		return fmt.Errorf("%s can't be set at the %s layer", s.Name, l)
-	case l >= LayerProject && at.key(l) == "":
+	case l.keyed() && at.key(l) == "":
 		o.mu.Unlock()
 		return fmt.Errorf("setting %s at the %s layer needs a %s", s.Name, l, l)
 	}

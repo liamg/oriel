@@ -20,6 +20,9 @@ overrides. Type to filter.
 The fixture workspace in your theme, or split against the theme yours extends. Hover anything in it to see the
 token that painted it, outlined and named; click to pick it.
 
+DARK and LIGHT switch the variant you're editing while the editor is open; your saved variant comes back when it
+closes. A theme with one variant, such as tokyonight, shows which instead, and your edits to it keep it that way.
+
 ## Pick mode {#pick}
 
 `p`, or `:Theme pick`, hides the editor so you can click anything in the real window. Hover shows the token
