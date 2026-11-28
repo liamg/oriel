@@ -139,7 +139,7 @@ func (e *ThemeEditor) commands() []registry.Command {
 				case "pick":
 					return e.startPick()
 				default:
-					return e.h.Options().Set("ui.theme", registry.LayerUser, registry.At{}, arg)
+					return e.saveOption("ui.theme", arg)
 				}
 				return nil
 			}},
@@ -269,7 +269,7 @@ func (e *ThemeEditor) target() (path string, v theme.Variant, err error) {
 			}
 		}
 		e.liveFor(path)
-		if err := e.h.Options().Set("ui.theme", registry.LayerUser, registry.At{}, local); err != nil {
+		if err := e.saveOption("ui.theme", local); err != nil {
 			return "", "", err
 		}
 		name = local
@@ -330,6 +330,14 @@ func (e *ThemeEditor) edit(name string, drag bool, fn func(src []byte, v theme.V
 	delete(e.files, path)
 	e.liveFor(path).changed()
 	return nil
+}
+
+// saveOption writes the option to the user's settings file, so a restart or another workspace keeps it.
+func (e *ThemeEditor) saveOption(name string, v any) error {
+	if e.h.Available("settings.set", nil) {
+		return e.h.Run(context.Background(), "settings.set", registry.Args{"name": name, "value": v, "scope": "user"})
+	}
+	return e.h.Options().Set(name, registry.LayerUser, registry.At{}, v)
 }
 
 func (e *ThemeEditor) set(name, expr string) error { return e.setting(name, expr, false) }
@@ -541,6 +549,7 @@ func (e *ThemeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 			variant = 1
 		}
 		if widget.Segmented(c, "variant", []string{"DARK", "LIGHT"}, &variant, widget.SegmentedOpts{Help: "shell/theme#preview"}) {
+			// Only for editing the other variant: saving it would stop Oriel following the system appearance.
 			e.fail(e.h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, []string{"dark", "light"}[variant]))
 		}
 		pink := th.C(tThemePick)

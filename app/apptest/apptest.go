@@ -81,6 +81,9 @@ type Options struct {
 	WorkDir  string            // files are relative to it
 	Size     render.Point      // MockupSize if zero
 	Config   func(*app.Config) // changes the config before the app starts: the session host, say
+	// ConfigDir is the config directory to start on: another scene's, as a restart or a new window would. A new
+	// one if empty.
+	ConfigDir string
 	// Now is the window's clock as the app starts. Scene.SetNow later jumps the clock under work already timed
 	// by it: a load begun at the old time reads as long overdue, and what it holds back until a moment later waits
 	// for a clock only Advance moves.
@@ -118,12 +121,15 @@ func New(t testing.TB, o Options) *Scene {
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	conf := filepath.Join(home, ".config", "oriel")
-	if err := os.MkdirAll(conf, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644); err != nil {
-		t.Fatal(err)
+	conf := o.ConfigDir
+	if conf == "" {
+		conf = filepath.Join(home, ".config", "oriel")
+		if err := os.MkdirAll(conf, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf, now: o.Now}
 	s.clock = &sceneClock{now: s.Now}

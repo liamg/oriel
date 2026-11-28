@@ -168,3 +168,50 @@ func TestThemeEditorWritesOverrides(t *testing.T) {
 		t.Error("a broken expression was written")
 	}
 }
+
+// Theme choices made in the editor reach a later app on the same config: a restart, or a new workspace.
+func TestThemeEditorSavesThemeChoices(t *testing.T) {
+	// later starts another app on s's config directory.
+	later := func(t *testing.T, s *apptest.Scene) *apptest.Scene {
+		t.Helper()
+		return apptest.New(t, apptest.Options{WorkDir: t.TempDir(), ConfigDir: s.ConfigDir})
+	}
+	option := func(s *apptest.Scene, name string) any {
+		v, _, _ := s.Registry().Options().Get(name, registry.At{})
+		return v
+	}
+	t.Run("an override of a built-in theme", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		s.Run("settings.set", registry.Args{"name": "ui.theme", "value": "tokyonight", "scope": "user"})
+		s.Run("theme.set", registry.Args{"name": "requests.avatar.you", "value": "#0000ff"})
+		next := later(t, s)
+		next.Retheme()
+		if v := option(next, "ui.theme"); v != "tokyonight-local" {
+			t.Errorf("ui.theme is %v in the later app", v)
+		}
+		if c, _ := next.UI().Theme().Color("requests.avatar.you"); theme.Hex(c) != "#0000ff" {
+			t.Errorf("requests.avatar.you is %s in the later app", theme.Hex(c))
+		}
+	})
+	t.Run(":Theme with a name", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		s.Run("theme.edit", registry.Args{"args": "tokyonight"})
+		if v := option(later(t, s), "ui.theme"); v != "tokyonight" {
+			t.Errorf("ui.theme is %v in the later app", v)
+		}
+	})
+	t.Run("the variant toggle lasts only this app", func(t *testing.T) {
+		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+		before := option(s, "ui.variant")
+		s.Run("theme.edit", nil)
+		s.Frame()
+		s.Frame()
+		s.Click(apptest.Centre(s.Node("LIGHT").Bounds), 0)
+		if v := option(s, "ui.variant"); v != "light" {
+			t.Fatalf("ui.variant is %v after the toggle", v)
+		}
+		if v := option(later(t, s), "ui.variant"); v != before {
+			t.Errorf("ui.variant is %v in the later app, want %v", v, before)
+		}
+	})
+}
